@@ -1,0 +1,13 @@
+<header class="basic-header">
+  <small>MY CORNER OF FORMA</small>
+  <h1 id="basic-name"></h1>
+  <p id="basic-bio"></p>
+</header>
+<script>
+  profileData
+    .then((d) => {
+      document.getElementById("basic-name").textContent = d.owner.name;
+      document.getElementById("basic-bio").textContent = d.owner.bio;
+    })
+    .catch(() => {});
+</script>

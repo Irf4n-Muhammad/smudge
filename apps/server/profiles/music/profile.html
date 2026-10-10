@@ -1,0 +1,132 @@
+<style>
+  .mz-profile {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: #c7ff48;
+    color: #111;
+    padding: 44px 30px 32px;
+    min-height: 340px;
+    border-bottom: 8px solid #111;
+  }
+  .mz-profile * {
+    box-sizing: border-box;
+  }
+  .mz-profile .mz-kicker {
+    font: 700 13px monospace;
+    letter-spacing: 0.16em;
+    position: relative;
+    z-index: 2;
+  }
+  .mz-profile h1 {
+    position: relative;
+    z-index: 2;
+    font:
+      950 clamp(44px, 8vw, 100px) / 0.9 Arial,
+      sans-serif;
+    letter-spacing: -0.075em;
+    max-width: 70%;
+    margin: 30px 0 18px;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+  .mz-profile p {
+    position: relative;
+    z-index: 2;
+    max-width: 55%;
+    font: 16px/1.5 Arial;
+  }
+  .mz-profile .mz-record {
+    position: absolute;
+    right: -55px;
+    top: 26px;
+    width: 340px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: repeating-radial-gradient(#191919 0 3px, #343434 4px 5px);
+    border: 10px solid #111;
+    animation: mz-spin 18s linear infinite;
+    display: grid;
+    place-items: center;
+    box-shadow: 8px 12px 0 #1112;
+  }
+  .mz-record span {
+    width: 34%;
+    aspect-ratio: 1;
+    background: #ff533e;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    border: 8px solid #111;
+    font: 900 20px Arial;
+  }
+  .mz-profile .mz-stamp {
+    position: relative;
+    display: inline-block;
+    padding: 8px 14px;
+    border: 2px solid #111;
+    transform: rotate(-5deg);
+    font: 700 14px monospace;
+  }
+  .mz-profile img {
+    position: relative;
+    z-index: 2;
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 10px;
+  }
+  @keyframes mz-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (max-width: 600px) {
+    .mz-profile {
+      padding: 28px 20px;
+      min-height: 330px;
+    }
+    .mz-profile .mz-record {
+      width: 220px;
+      right: -85px;
+      top: 70px;
+      opacity: 0.9;
+    }
+    .mz-profile h1 {
+      max-width: 60%;
+      font-size: clamp(32px, 8vw, 44px);
+    }
+    .mz-profile p {
+      max-width: 60%;
+      font-size: 14px;
+    }
+  }
+</style>
+<header class="mz-profile">
+  <div class="mz-kicker">SIDE A / A PERSONAL FREQUENCY</div>
+  <div class="mz-record" aria-hidden="true">
+    <span>33⅓<br />RPM</span>
+  </div>
+  <h1 id="mz-name">Your frequency</h1>
+  <p id="mz-bio"></p>
+  <div class="mz-stamp" id="mz-handle"></div>
+</header>
+<script>
+  forma.profile
+    .read()
+    .then(({ owner }) => {
+      document.getElementById("mz-name").textContent = owner.name;
+      document.getElementById("mz-bio").textContent = owner.bio;
+      const h = document.getElementById("mz-handle");
+      h.textContent = "@" + owner.handle;
+      if (owner.avatarSrc) {
+        const img = document.createElement("img");
+        img.src = owner.avatarSrc;
+        img.alt = owner.name + " avatar";
+        h.before(img);
+      }
+    })
+    .catch(() => (document.getElementById("mz-bio").textContent = "Could not load this profile."));
+</script>

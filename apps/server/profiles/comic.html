@@ -1,0 +1,234 @@
+<style>
+  :root {
+    --paper: #f3dfb6;
+    --ink: #202334;
+    --red: #e66344;
+  }
+  html[data-theme="dark"] {
+    --paper: #c4b18c;
+    --ink: #19232d;
+    --red: #b6513b;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Arial, sans-serif;
+    overflow-x: hidden;
+  }
+  header {
+    padding: 35px 7% 20px;
+    border-bottom: 3px solid var(--ink);
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+  }
+  header p {
+    font: 10px monospace;
+    letter-spacing: 2px;
+  }
+  header h1 {
+    font-size: 45px;
+    letter-spacing: -2px;
+    margin: 5px 0;
+  }
+  header > span {
+    font: 10px monospace;
+    border: 2px solid;
+    padding: 9px;
+    transform: rotate(5deg);
+  }
+  .opening {
+    margin: 45px 7% 65px;
+    position: relative;
+    border: 4px solid;
+    background: var(--red);
+    padding: 40px 9%;
+    box-shadow: 9px 9px 0 var(--ink);
+    transform: rotate(-2deg);
+  }
+  .opening:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(#23202d33 1px, transparent 1px);
+    background-size: 5px 5px;
+    pointer-events: none;
+  }
+  .opening h2 {
+    font-size: clamp(50px, 9vw, 95px);
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -5px;
+    position: relative;
+    margin: 10px 0 25px;
+    color: #ffedc6;
+    text-shadow: 4px 4px 0 var(--ink);
+  }
+  #bio {
+    position: relative;
+    font: 16px/1.6 Georgia;
+    max-width: 390px;
+  }
+  .bubble {
+    position: absolute;
+    right: -5%;
+    bottom: -38px;
+    border: 3px solid;
+    background: #fcf0ce;
+    border-radius: 50%;
+    padding: 20px 27px;
+    font-size: 12px;
+    transform: rotate(8deg);
+  }
+  #panels {
+    margin: 0 9%;
+    display: grid;
+    gap: 45px;
+  }
+  .panel {
+    border: 3px solid var(--ink);
+    display: grid;
+    grid-template-columns: 75px 1fr;
+    background: #efe7d1;
+    transform: rotate(1deg);
+    box-shadow: 6px 6px 0 #202334;
+    position: relative;
+  }
+  .panel:nth-child(even) {
+    transform: rotate(-2deg);
+    background: #b3c9c4;
+  }
+  .panel:before {
+    content: "↘";
+    position: absolute;
+    right: 15px;
+    top: -33px;
+    font-size: 43px;
+  }
+  .number {
+    background: var(--ink);
+    color: #f4d898;
+    font: italic 49px Georgia;
+    display: grid;
+    place-items: center;
+  }
+  .copy {
+    padding: 25px;
+  }
+  .copy h3 {
+    font: 700 25px/1.1 Arial;
+    margin: 0 0 12px;
+    letter-spacing: -1px;
+  }
+  .copy p {
+    font: 14px/1.6 Georgia;
+    margin: 0 0 18px;
+    max-width: 550px;
+  }
+  .copy button {
+    background: #e76543;
+    color: #211e2a;
+    border: 2px solid;
+    padding: 10px 16px;
+    font-weight: 700;
+    box-shadow: 3px 3px 0;
+  }
+  .copy button:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0;
+  }
+  .ending {
+    padding: 55px 10%;
+    font: italic 24px Georgia;
+    text-align: right;
+  }
+  #status {
+    padding: 20px 9%;
+    font: 13px monospace;
+  }
+  @media (max-width: 600px) {
+    header h1 {
+      font-size: 29px;
+    }
+    header > span {
+      font-size: 8px;
+    }
+    .opening {
+      padding: 30px 8%;
+    }
+    .opening h2 {
+      font-size: 58px;
+    }
+    .bubble {
+      font-size: 10px;
+      padding: 15px;
+    }
+    .panel {
+      grid-template-columns: 45px 1fr;
+    }
+    .number {
+      font-size: 32px;
+    }
+    .copy {
+      padding: 19px;
+    }
+    .copy h3 {
+      font-size: 23px;
+    }
+    .copy p {
+      font-size: 12px;
+    }
+  }
+</style>
+<header>
+  <div>
+    <p id="handle">PERSONAL ARCHIVE</p>
+    <h1 id="name">Loading the next issue…</h1>
+  </div>
+  <span>INDEPENDENT<br />PUBLICATION</span>
+</header>
+<section class="opening">
+  <h2>STILL<br />FIGURING<br />IT OUT.</h2>
+  <p id="bio"></p>
+  <div class="bubble">start anywhere.<br />it’s all part of the story.</div>
+</section>
+<main id="panels"></main>
+<p id="status" role="status"></p>
+<footer class="ending">to be continued… ↗</footer>
+<script>
+  (async () => {
+    try {
+      const { owner, posts } = await forma.profile.read();
+      document.getElementById("name").textContent = owner.name;
+      document.getElementById("handle").textContent = "@" + owner.handle + " / COLLECTED MOMENTS";
+      document.getElementById("bio").textContent = owner.bio;
+      posts.forEach((post, i) => {
+        const panel = document.createElement("section");
+        panel.className = "panel";
+        const number = document.createElement("span");
+        number.className = "number";
+        number.textContent = String(i + 1).padStart(2, "0");
+        const copy = document.createElement("div");
+        copy.className = "copy";
+        const title = document.createElement("h3");
+        title.textContent = post.title;
+        const p = document.createElement("p");
+        p.textContent = post.caption;
+        const b = document.createElement("button");
+        b.textContent = "Open " + post.title + " ↗";
+        b.onclick = () =>
+          forma.profile
+            .openPost(post.id)
+            .catch((e) => (document.getElementById("status").textContent = e.message));
+        copy.append(title, p, b);
+        panel.append(number, copy);
+        document.getElementById("panels").append(panel);
+      });
+      if (!posts.length)
+        document.getElementById("status").textContent =
+          "First issue coming soon. No published stories yet.";
+    } catch (e) {
+      document.getElementById("status").textContent = e.message;
+    }
+  })();
+</script>

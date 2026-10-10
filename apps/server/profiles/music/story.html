@@ -1,0 +1,88 @@
+<style>
+  .mz-stories {
+    background: #f3ead9;
+    color: #161616;
+    padding: 24px 20px;
+    overflow: hidden;
+  }
+  .mz-stories h2 {
+    font: 700 13px monospace;
+    letter-spacing: 0.14em;
+    margin: 0 0 18px;
+  }
+  .mz-tickets {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 5px 0 12px;
+  }
+  .mz-ticket {
+    flex: 0 0 210px;
+    background: #f7bbd8;
+    color: #111;
+    padding: 16px 24px;
+    min-height: 105px;
+    border: 2px solid #111;
+    border-radius: 0;
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% 40%,
+      96% 50%,
+      100% 60%,
+      100% 100%,
+      0 100%,
+      0 60%,
+      4% 50%,
+      0 40%
+    );
+    text-align: left;
+    transform: rotate(-2deg);
+  }
+  .mz-ticket:nth-child(even) {
+    background: #c7ff48;
+    transform: rotate(2deg);
+  }
+  .mz-ticket small {
+    display: block;
+    font: 11px monospace;
+    border-bottom: 1px dashed #111;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .mz-ticket strong {
+    font: 900 20px/1.1 Arial;
+    display: block;
+  }
+  .mz-ticket:hover {
+    transform: rotate(0);
+  }
+</style>
+<section class="mz-stories">
+  <h2>ADMIT ONE / HIGHLIGHTS</h2>
+  <div class="mz-tickets" id="mz-tickets"></div>
+</section>
+<script>
+  forma.profile
+    .read()
+    .then(({ posts }) => {
+      const root = document.getElementById("mz-tickets");
+      let highlights = posts.filter((p) => p.format === "story");
+      if (!highlights.length) highlights = posts.slice(0, 3);
+      highlights.slice(0, 8).forEach((p, i) => {
+        const b = document.createElement("button");
+        b.className = "mz-ticket";
+        b.setAttribute("aria-label", "Open highlight " + p.title);
+        const n = document.createElement("small");
+        n.textContent = "NO. " + String(i + 1).padStart(3, "0") + " / " + p.format.toUpperCase();
+        const h = document.createElement("strong");
+        h.textContent = p.title;
+        b.append(n, h);
+        b.onclick = () =>
+          forma.profile.openPost(p.id).catch(() => (h.textContent = "Please try again"));
+        root.append(b);
+      });
+      if (!highlights.length) root.textContent = "No published highlights yet.";
+    })
+    .catch(() => {});
+</script>

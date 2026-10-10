@@ -1,0 +1,978 @@
+:root {
+  --paper: #f5f3ee;
+  --ink: #151514;
+  --muted: #615e56;
+  --red: #e93122;
+  --line: #bcb6aa;
+  --surface: #faf8f2;
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  --paper: #242322;
+  --ink: #eee9df;
+  --muted: #bdb6aa;
+  --surface: #33312e;
+  --line: #625d54;
+  color-scheme: dark;
+}
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+.art-library {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.world {
+  position: relative;
+  max-width: 1024px;
+  margin: auto;
+  padding: 0 26px 25px;
+  overflow: hidden;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.09' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+button {
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button:focus-visible {
+  outline: 3px solid #357ac8 !important;
+  outline-offset: 5px;
+}
+.masthead {
+  position: relative;
+  isolation: isolate;
+}
+.red-paper {
+  position: absolute;
+  background: var(--red);
+  z-index: -1;
+  clip-path: polygon(
+    0 17%,
+    3% 19%,
+    5% 9%,
+    9% 13%,
+    11% 7%,
+    14% 12%,
+    20% 4%,
+    25% 9%,
+    30% 3%,
+    34% 7%,
+    37% 0,
+    40% 6%,
+    43% 2%,
+    48% 8%,
+    51% 0,
+    55% 5%,
+    62% 3%,
+    67% 9%,
+    74% 1%,
+    78% 9%,
+    87% 1%,
+    88% 9%,
+    95% 4%,
+    98% 12%,
+    100% 9%,
+    97% 80%,
+    99% 86%,
+    91% 84%,
+    88% 93%,
+    82% 86%,
+    76% 95%,
+    72% 90%,
+    65% 100%,
+    60% 94%,
+    53% 99%,
+    48% 93%,
+    44% 98%,
+    40% 88%,
+    33% 97%,
+    29% 92%,
+    24% 99%,
+    20% 91%,
+    15% 96%,
+    12% 89%,
+    8% 99%,
+    5% 90%,
+    0 97%
+  );
+}
+.red-paper:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.35' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+.portrait {
+  position: absolute;
+  z-index: 3;
+  transform: rotate(-5deg);
+}
+.masthead h1 {
+  position: absolute;
+  margin: 0;
+  font:
+    900 100px/1 "Comic Sans MS",
+    cursive;
+  letter-spacing: -8px;
+  transform: rotate(-7deg);
+  color: #141414;
+  display: grid;
+  place-items: center;
+}
+.wordmark {
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+.raka-wordmark .wordmark {
+  display: block;
+}
+.raka-wordmark .name-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.drawing-hand {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+}
+.motto {
+  position: absolute;
+  font:
+    700 16px/1.3 "Comic Sans MS",
+    cursive;
+  transform: rotate(-5deg);
+  color: #151515;
+}
+.margin-note {
+  position: absolute;
+  font:
+    italic 14px/1.25 "Comic Sans MS",
+    cursive;
+  pointer-events: none;
+}
+.left-note {
+  transform: rotate(-14deg);
+  color: #141414;
+}
+.right-note {
+  transform: rotate(-13deg);
+  z-index: 5;
+}
+.identity {
+  position: absolute;
+  z-index: 5;
+}
+.identity strong {
+  font-weight: 800;
+}
+.handle {
+  font:
+    16px/1.5 Arial,
+    sans-serif;
+  color: var(--muted);
+}
+.bio {
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.personal-note {
+  font:
+    italic 14px "Comic Sans MS",
+    cursive;
+}
+.stories {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 23px;
+  z-index: 6;
+  pointer-events: none;
+}
+.story {
+  font:
+    13px Arial,
+    sans-serif;
+  text-align: center;
+  padding: 0;
+  pointer-events: auto;
+}
+.story-icon {
+  display: block;
+  border: 1px solid var(--muted);
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--paper);
+  overflow: hidden;
+  margin-bottom: 7px;
+}
+.story-icon svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+  object-fit: cover;
+}
+.story:hover .story-icon {
+  transform: rotate(7deg);
+}
+.relay {
+  position: relative;
+  color: #171716;
+  isolation: isolate;
+  filter: drop-shadow(2px 6px 2px #0003);
+}
+.relay-paper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+.relay-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.relay h2 {
+  font:
+    700 italic clamp(23px, 3.4vw, 41px) / 1.1 "Comic Sans MS",
+    "Segoe Print",
+    cursive;
+  margin: 0;
+  transform: rotate(-3deg);
+  border-bottom: 4px solid #de3024;
+  padding-bottom: 4px;
+}
+.relay > p:not(.relay-status) {
+  font:
+    italic 19px/1.3 "Comic Sans MS",
+    cursive;
+}
+.relay .tag {
+  font:
+    italic 15px/1.2 "Comic Sans MS",
+    cursive;
+  border: 2px solid #191918;
+  border-radius: 47%;
+  transform: rotate(6deg);
+}
+.canvas-wrap {
+  position: relative;
+  color: #171716;
+}
+.canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  touch-action: pan-y;
+  cursor: default;
+}
+.canvas-wrap canvas.drawing {
+  touch-action: none;
+  cursor: crosshair;
+}
+.canvas-note {
+  position: absolute;
+  right: 12px;
+  top: 14px;
+  font:
+    italic 20px "Comic Sans MS",
+    cursive;
+  transform: rotate(6deg);
+  pointer-events: none;
+}
+.relay-side-note {
+  position: absolute;
+  top: 45%;
+  font:
+    italic 15px/1.3 "Comic Sans MS",
+    cursive;
+  color: var(--ink);
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+.relay-left-note {
+  position: absolute;
+  top: 9px;
+  font:
+    italic 14px/1.3 "Comic Sans MS",
+    cursive;
+  transform: rotate(-15deg);
+  color: var(--ink);
+  pointer-events: none;
+}
+.relay-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.contributors {
+  font:
+    italic 14px "Comic Sans MS",
+    cursive;
+  max-width: 45%;
+  overflow-wrap: anywhere;
+}
+.relay-actions button {
+  font-size: 12px;
+  padding: 10px;
+  color: #171716;
+}
+.relay-actions .primary {
+  font-weight: bold;
+  background: var(--red);
+  color: #fff;
+  clip-path: polygon(
+    5% 3%,
+    22% 0,
+    25% 6%,
+    37% 0,
+    59% 6%,
+    77% 0,
+    100% 6%,
+    97% 22%,
+    100% 49%,
+    97% 64%,
+    100% 92%,
+    81% 98%,
+    61% 93%,
+    41% 100%,
+    22% 94%,
+    0 98%,
+    3% 61%,
+    0 32%
+  );
+}
+.relay-tools {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 10px 0;
+}
+.relay-tools button {
+  border: 1px solid #9a9080;
+  background: #f8f3e6;
+  padding: 8px 12px;
+  color: #171716;
+}
+.relay-tools .swatch {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f9f3e8;
+  border-radius: 50%;
+  padding: 0;
+  outline: 1px solid #bcb3a4;
+}
+.relay-tools .swatch[aria-pressed="true"] {
+  outline: 3px solid #111;
+}
+.relay-status {
+  min-height: 15px;
+  font: 12px Arial;
+  line-height: 1.4;
+  margin: 5px 0 0;
+}
+.post-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.published-posts {
+  position: relative;
+  margin: 0 5px;
+}
+.published-posts:before {
+  content: "";
+  width: 6px;
+  height: 145px;
+  position: absolute;
+  top: -95px;
+  left: -3px;
+  background: #191918;
+  transform: rotate(-43deg);
+  pointer-events: none;
+  z-index: 4;
+  clip-path: polygon(30% 0, 100% 10%, 65% 50%, 100% 100%, 0 96%, 25% 60%, 0 30%);
+}
+.post-tile {
+  text-align: left;
+  background: var(--surface);
+  padding: 0 0 18px;
+  width: 100%;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.post-tile .art {
+  overflow: hidden;
+  background: #e4ded2;
+}
+.post-tile .art svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.post-tile strong,
+.post-tile p,
+.post-tile small {
+  display: block;
+  margin: 11px 15px 0;
+}
+.post-tile p {
+  line-height: 1.3;
+}
+.post-tile small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.post-tile:hover p {
+  text-decoration: underline;
+}
+.post-grid-comic .post-tile:nth-child(odd) {
+  transform: rotate(-2deg);
+  clip-path: polygon(0 1%, 100% 0, 100% 96%, 94% 100%, 0 99%);
+}
+.post-grid-comic .post-tile:nth-child(even) {
+  transform: rotate(1.5deg);
+  margin-top: 9px;
+  clip-path: polygon(0 0, 100% 1%, 99% 100%, 4% 100%, 0 97%);
+}
+.signoff {
+  display: flex;
+  justify-content: space-between;
+  margin: 30px 12px 0;
+  font:
+    italic 15px "Comic Sans MS",
+    cursive;
+}
+.signoff em {
+  background: #191918;
+  color: #fff;
+  padding: 16px 30px;
+  transform: rotate(-5deg);
+}
+.basic-header h1 {
+  font-size: 48px;
+}
+.empty {
+  padding: 35px;
+  border: 1px dashed var(--line);
+}
+html[data-theme="dark"] .right-note {
+  color: #eee;
+}
+html[data-theme="dark"] .drawing-hand {
+  filter: drop-shadow(0 0 1px #eee);
+}
+@media (max-width: 600px) {
+  .world {
+    padding: 0 14px 20px;
+  }
+  .masthead h1 {
+    font-size: 60px;
+    letter-spacing: -4px;
+  }
+  .left-note {
+    left: -8px;
+    top: 37px;
+    font-size: 9px;
+  }
+  .right-note {
+    font-size: 8px;
+    right: -2px;
+    top: 4px;
+  }
+  .bio {
+    white-space: normal;
+    max-width: 100%;
+    margin-bottom: 7px;
+  }
+  .personal-note {
+    font-size: 11px;
+  }
+  .relay > p:not(.relay-status) {
+    margin: 8px 0;
+  }
+  .canvas-note {
+    font-size: 11px;
+    right: 0;
+    top: 9px;
+  }
+  .relay-left-note,
+  .relay-side-note {
+    display: none;
+  }
+  .contributors {
+    max-width: 100%;
+    width: 100%;
+    font-size: 11px;
+  }
+  .relay-actions button {
+    font-size: 11px;
+    padding: 6px;
+  }
+  .relay-tools {
+    gap: 8px;
+  }
+  .relay-tools button {
+    font-size: 11px;
+  }
+  .relay-status {
+    font-size: 10px;
+  }
+  .post-tile strong,
+  .post-tile p,
+  .post-tile small {
+    margin: 10px 9px 0;
+  }
+  .post-tile small {
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .signoff {
+    font-size: 11px;
+    margin: 24px 4px 0;
+  }
+  .signoff em {
+    padding: 10px 15px;
+  }
+  .published-posts {
+    margin: 0 1px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+html[data-motion="reduce"] * {
+  transition: none !important;
+}
+.canvas-wrap:before {
+  content: "COOL CATS\a PUSH FURTHER ♡";
+  white-space: pre;
+  position: absolute;
+  font:
+    italic 17px/1.2 "Comic Sans MS",
+    cursive;
+  color: #296ccc;
+  transform: rotate(-9deg);
+  pointer-events: none;
+}
+.canvas-wrap:after {
+  content: "Same direction.\a Brighter days. ♡";
+  white-space: pre;
+  position: absolute;
+  font:
+    italic 18px/1.3 "Comic Sans MS",
+    cursive;
+  color: #ce352a;
+  transform: rotate(5deg);
+  pointer-events: none;
+}
+.basic-header {
+  min-height: 395px;
+  padding: 65px 30px 130px;
+}
+@media (max-width: 600px) {
+  .basic-header {
+    min-height: 318px;
+    padding: 45px 12px;
+  }
+}
+/* Reference composition: 1024px artboard, then a readable narrow-screen reflow. */
+.masthead {
+  height: 390px;
+}
+.red-paper {
+  inset: -65px 18% 150px -65px;
+}
+.portrait {
+  left: 30px;
+  top: 30px;
+  width: 228px;
+  height: 228px;
+}
+.masthead h1 {
+  left: 25%;
+  width: 46%;
+}
+.drawing-hand {
+  top: -48px;
+  right: -35px;
+  width: 51%;
+  height: 380px;
+}
+.motto {
+  left: 39%;
+  font-weight: 400;
+}
+.identity {
+  top: 244px;
+  left: 40px;
+  width: 53%;
+}
+.identity strong {
+  font-size: 34px;
+}
+.handle {
+  font-size: 19px;
+}
+.bio {
+  font-size: 19px;
+  margin: 3px 0 8px;
+}
+.follow-line {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  font-size: 18px;
+}
+.follow-line button {
+  background: #121212;
+  color: white;
+  border-radius: 40px;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 10px 43px;
+  min-width: 152px;
+}
+#follow-status {
+  font: 12px Arial;
+}
+.left-note {
+  top: 39px;
+  left: -10px;
+}
+.right-note {
+  top: -6px;
+  right: 0;
+}
+.stories {
+  margin-top: -151px;
+  height: 151px;
+  gap: 19px;
+  padding-right: 29px;
+  padding-top: 7px;
+}
+.story-icon {
+  width: 101px;
+  height: 101px;
+}
+.story {
+  font-size: 16px;
+}
+.relay {
+  margin: 0 38px 20px;
+  padding: 24px 55px 12px;
+}
+.relay h2 {
+  font-size: 40px;
+  letter-spacing: 1px;
+}
+.relay > p:not(.relay-status) {
+  font-size: 22px;
+  margin: 8px 0 0;
+}
+.relay .tag {
+  position: absolute;
+  right: 60px;
+  top: 95px;
+  font-size: 21px;
+  padding: 9px 24px;
+  z-index: 2;
+}
+.canvas-wrap canvas {
+  height: 206px;
+}
+.canvas-note {
+  display: none;
+}
+.canvas-wrap:before {
+  font-size: 22px;
+  left: 0;
+  top: 17%;
+}
+.canvas-wrap:after {
+  font-size: 21px;
+  right: 8%;
+  top: 48%;
+}
+.relay-actions {
+  margin-top: -4px;
+}
+.relay-actions .primary {
+  padding: 17px 42px;
+  font-size: 20px;
+}
+.relay-status:empty {
+  display: none;
+}
+.relay-left-note {
+  left: -56px;
+}
+.relay-side-note {
+  right: -58px;
+}
+.post-grid {
+  gap: 24px;
+}
+.post-tile {
+  padding-bottom: 12px;
+}
+.post-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  text-align: left;
+}
+.post-tile .art {
+  height: 366px;
+}
+.post-tile strong {
+  font-size: 18px;
+  margin-top: 10px;
+}
+.post-tile p {
+  font-size: 20px;
+  margin-top: 3px;
+}
+.tile-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 10px 16px 0;
+}
+.tile-actions button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 16px;
+  padding: 2px;
+}
+.tile-actions svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tile-like[aria-pressed="true"] svg {
+  fill: #ed302d;
+  stroke: #ed302d;
+}
+.tile-save[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+.tile-more {
+  margin-left: auto;
+}
+.post-status:empty {
+  display: none;
+}
+.signoff {
+  margin-top: 25px;
+  min-height: 85px;
+}
+@media (max-width: 600px) {
+  .masthead {
+    height: 329px;
+  }
+  .red-paper {
+    inset: -30px -5px 167px -30px;
+  }
+  .portrait {
+    left: 0;
+    top: 27px;
+    width: 132px;
+    height: 132px;
+  }
+  .masthead h1 {
+    left: 26%;
+    width: 49%;
+  }
+  .drawing-hand {
+    top: -14px;
+    right: -23px;
+    height: 209px;
+    width: 51%;
+  }
+  .motto {
+    left: 38%;
+    font-size: 9px;
+  }
+  .identity {
+    top: 161px;
+    left: 9px;
+    width: 96%;
+  }
+  .identity strong {
+    font-size: 26px;
+  }
+  .handle {
+    font-size: 14px;
+  }
+  .bio {
+    font-size: 13px;
+    margin: 3px 0 9px;
+  }
+  .follow-line {
+    gap: 20px;
+    font-size: 13px;
+  }
+  .follow-line button {
+    font-size: 15px;
+    padding: 9px 26px;
+    min-width: 116px;
+  }
+  .stories {
+    height: 91px;
+    margin-top: -17px;
+    padding: 0 9px;
+    justify-content: flex-start;
+    gap: 22px;
+  }
+  .story-icon {
+    height: 58px;
+    width: 58px;
+  }
+  .story {
+    font-size: 11px;
+  }
+  .relay {
+    margin: 9px 0 20px;
+    padding: 20px 22px 13px;
+  }
+  .relay h2 {
+    font-size: 24px;
+    letter-spacing: 0;
+  }
+  .relay > p:not(.relay-status) {
+    font-size: 12px;
+  }
+  .relay .tag {
+    right: 22px;
+    top: 75px;
+    font-size: 12px;
+    padding: 7px 13px;
+  }
+  .canvas-wrap canvas {
+    height: 166px;
+  }
+  .canvas-wrap:before,
+  .canvas-wrap:after {
+    font-size: 11px;
+  }
+  .relay-actions .primary {
+    padding: 12px 21px;
+    font-size: 14px;
+  }
+  .post-grid {
+    gap: 12px;
+  }
+  .post-tile .art {
+    height: 190px;
+  }
+  .post-tile strong {
+    font-size: 13px;
+  }
+  .post-tile p {
+    font-size: 13px;
+    min-height: 34px;
+  }
+  .tile-actions {
+    gap: 9px;
+    padding: 10px 7px 0;
+  }
+  .tile-actions button {
+    gap: 3px;
+    font-size: 11px;
+  }
+  .tile-actions svg {
+    width: 20px;
+    height: 20px;
+  }
+  .tile-more {
+    display: none;
+  }
+}
+/* The host toolbar sits over the artboard; its reserved space belongs to the shell. */
+.world {
+  padding-top: 65px;
+}
+.red-paper {
+  bottom: 173px;
+}
+#relay-starter-art[hidden] {
+  display: none;
+}
+@media (max-width: 600px) {
+  .red-paper {
+    bottom: 167px;
+  }
+}
+@media (max-width: 600px) {
+  .world {
+    padding-top: 65px;
+  }
+}
+.masthead h1 {
+  top: -120px;
+  height: 310px;
+}
+.red-paper {
+  transform: rotate(-3deg);
+}
+.motto {
+  top: 145px;
+}
+.identity strong {
+  display: block;
+  line-height: 1.05;
+}
+.handle {
+  line-height: 1.2;
+}
+.relay-people {
+  font: 15px Arial;
+  max-width: 35%;
+  text-align: right;
+}
+@media (max-width: 600px) {
+  .masthead h1 {
+    top: -48px;
+    height: 195px;
+  }
+  .motto {
+    top: 116px;
+  }
+  .relay-people {
+    font-size: 10px;
+    max-width: 25%;
+  }
+}
+@media (max-width: 600px) {
+  .masthead {
+    height: 295px;
+  }
+}
+html[data-theme="dark"] .motto {
+  color: #f4eee4;
+}

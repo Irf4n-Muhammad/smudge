@@ -1,0 +1,36 @@
+<section
+  class="stories stories-comic"
+  aria-label="Story highlights"
+  id="story-highlights"
+></section>
+<script>
+  profileData
+    .then((d) => {
+      const root = document.getElementById("story-highlights");
+      const stories = d.posts.filter((p) => p.format === "story");
+      const photos = d.posts.filter((p) => p.format !== "story");
+      const highlights = [photos[0], stories[0], photos[1]].filter(Boolean);
+      for (const [i, p] of highlights.entries()) {
+        const b = document.createElement("button");
+        b.className = "story";
+        const art = document.createElement("span");
+        art.className = "story-icon";
+        art.innerHTML =
+          d.owner.id === "raka"
+            ? '<svg viewBox="' +
+              ["631 316 96 96", "752 316 96 96", "869 316 96 96"][i] +
+              '" aria-hidden="true"><use href="#raka-reference"/></svg>'
+            : '<svg viewBox="30 480 465 470" aria-hidden="true"><use href="#raka-art" clip-path="url(#clip-skate)"/></svg>';
+        const text = document.createElement("span");
+        text.textContent = p.format === "story" ? p.title : i === 0 ? "Today" : "Out there";
+        b.append(art, text);
+        b.onclick = () =>
+          forma.profile.openPost(p.id).catch(() => {
+            text.textContent = "Please try again";
+          });
+        root.append(b);
+      }
+      if (!highlights.length) root.textContent = "No highlights yet.";
+    })
+    .catch(() => {});
+</script>

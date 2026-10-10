@@ -1,0 +1,69 @@
+<header class="masthead">
+  <svg class="reference-header" viewBox="0 0 1024 450" aria-hidden="true">
+    <use href="#raka-clean-paper" />
+  </svg>
+  <div class="red-paper" aria-hidden="true"></div>
+  <svg class="portrait" viewBox="548 20 465 440" aria-hidden="true">
+    <use href="#raka-art" clip-path="url(#clip-avatar)" />
+  </svg>
+  <h1 id="profile-name">
+    <span class="name-text">Raka</span
+    ><svg class="wordmark" viewBox="1010 0 526 450" aria-hidden="true">
+      <use href="#raka-art" clip-path="url(#clip-name)" />
+    </svg>
+  </h1>
+  <svg class="drawing-hand" viewBox="0 0 540 475" aria-hidden="true">
+    <use href="#raka-art" clip-path="url(#clip-hand)" />
+  </svg>
+  <span class="margin-note left-note" aria-hidden="true"
+    >SAME<br />SKATE<br />DIFFERENT<br />DAY …</span
+  >
+  <span class="margin-note right-note" aria-hidden="true"
+    >GOOD<br />SKETCHES<br />BAD DAYS<br />STILL HERE ✶</span
+  >
+  <span class="motto" aria-hidden="true">DRAW MORE.<br />SKATE MORE.<br />BE KIND ANYWAY.</span>
+  <div class="identity">
+    <strong id="owner-name"></strong>
+    <div class="handle" id="owner-handle"></div>
+    <p class="bio" id="owner-bio"></p>
+    <div class="follow-line">
+      <button id="profile-follow" disabled>Follow</button><span id="profile-followers"></span>
+    </div>
+    <span id="follow-status" role="status"></span>
+  </div>
+</header>
+<script>
+  window.addEventListener("profile-social", ({ detail: s }) => {
+    const b = document.getElementById("profile-follow");
+    b.textContent = s.ownProfile ? "Your profile" : s.following ? "Following" : "Follow";
+    b.disabled = !s.writable || s.ownProfile;
+    b.setAttribute("aria-pressed", String(s.following));
+    document.getElementById("profile-followers").textContent =
+      s.followers + (s.followers === 1 ? " follower" : " followers");
+  });
+  document.getElementById("profile-follow").onclick = async function () {
+    this.disabled = true;
+    try {
+      const s = await forma.profile.social.toggle({ action: "follow" });
+      window.dispatchEvent(new CustomEvent("profile-social", { detail: s }));
+    } catch (e) {
+      document.getElementById("follow-status").textContent = e.message;
+      this.disabled = false;
+    }
+  };
+  refreshSocial();
+  profileData
+    .then((d) => {
+      document.querySelector(".world").classList.toggle("is-raka", d.owner.id === "raka");
+      const h = document.getElementById("profile-name");
+      h.querySelector(".name-text").textContent = d.owner.name.split(" ")[0];
+      h.classList.toggle("raka-wordmark", d.owner.id === "raka");
+      document.getElementById("owner-name").textContent = d.owner.name;
+      document.getElementById("owner-handle").textContent = "@" + d.owner.handle;
+      document.getElementById("owner-bio").textContent = d.owner.bio;
+    })
+    .catch(() => {
+      document.getElementById("owner-bio").textContent =
+        "Could not load this profile. Try refreshing.";
+    });
+</script>

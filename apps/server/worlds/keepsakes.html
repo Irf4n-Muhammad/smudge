@@ -1,0 +1,439 @@
+<style>
+  :root {
+    --ink: #373b30;
+    --faint: #777b65;
+    --note: #e7ef93;
+    --paper: #fffdf3;
+  }
+  html[data-theme="dark"] {
+    --ink: #eee8d8;
+    --faint: #acb3a0;
+    --note: #b9c870;
+    --paper: #eee7d5;
+  }
+  body {
+    color: var(--ink);
+    background: transparent;
+    overflow: hidden;
+  }
+  main {
+    height: 780px;
+    position: relative;
+    max-width: 1240px;
+    margin: auto;
+    overflow: hidden;
+  }
+  button {
+    color: inherit;
+  }
+  small {
+    font: 10px Arial;
+    letter-spacing: 2.5px;
+  }
+  .intro {
+    position: absolute;
+    top: 106px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    pointer-events: none;
+  }
+  .intro h1 {
+    font: italic clamp(48px, 6.5vw, 86px) / 0.98 Georgia;
+    letter-spacing: -4px;
+    margin: 15px 0;
+  }
+  .intro h1 span {
+    display: block;
+  }
+  .intro p {
+    font: 13px Georgia;
+    color: var(--faint);
+    margin: 20px 0;
+  }
+  .photo {
+    position: absolute;
+    z-index: 2;
+    border: 0;
+    padding: 12px 12px 37px;
+    background: var(--paper);
+    box-shadow: 0 15px 26px #0002;
+    transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--r));
+    touch-action: none;
+    cursor: grab;
+    transition: box-shadow 0.2s;
+  }
+  .photo:active {
+    cursor: grabbing;
+    box-shadow: 0 25px 50px #0003;
+    z-index: 5;
+  }
+  .photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+  .photo span {
+    font: italic 14px Georgia;
+    color: #504932;
+    position: absolute;
+    bottom: 12px;
+    left: 14px;
+    pointer-events: none;
+  }
+  .photo:before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    width: 74px;
+    height: 25px;
+    left: 30%;
+    background: #d6ca9c88;
+    transform: rotate(-5deg);
+  }
+  .one {
+    --r: -12deg;
+    left: 8%;
+    top: 252px;
+    width: 27%;
+    height: 284px;
+  }
+  .two {
+    --r: 11deg;
+    right: 8%;
+    top: 238px;
+    width: 24%;
+    height: 254px;
+  }
+  .three {
+    --r: 7deg;
+    left: 41%;
+    top: 454px;
+    width: 23%;
+    height: 208px;
+    z-index: 3;
+  }
+  .one img {
+    object-position: 45%;
+  }
+  .sticker {
+    position: absolute;
+    right: 12%;
+    top: 520px;
+    background: var(--note);
+    color: #3e4928;
+    border: 0;
+    border-radius: 44% 56% 52% 48%/49% 46% 54% 51%;
+    height: 128px;
+    width: 128px;
+    transform: rotate(13deg);
+    font: bold 20px/0.93 Arial;
+    box-shadow: 2px 5px 0 #0000000b;
+    z-index: 4;
+    cursor: pointer;
+  }
+  .sticker span {
+    display: block;
+    font-size: 26px;
+    margin-top: 7px;
+  }
+  .scribble {
+    position: absolute;
+    left: 13%;
+    top: 580px;
+    font: italic 23px/1.2 Georgia;
+    transform: rotate(-7deg);
+    color: var(--faint);
+    max-width: 210px;
+  }
+  .doodle {
+    position: absolute;
+    left: 35%;
+    top: 347px;
+    width: 31%;
+    height: 132px;
+    pointer-events: none;
+    opacity: 0.8;
+  }
+  .star {
+    position: absolute;
+    left: 10%;
+    top: 150px;
+    font: 80px Georgia;
+    color: #b38d51;
+    transform: rotate(10deg);
+  }
+  .edition {
+    position: absolute;
+    right: 8%;
+    top: 145px;
+    font: 10px monospace;
+    letter-spacing: 2px;
+    transform: rotate(90deg);
+    transform-origin: right;
+  }
+  .hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 21px;
+    text-align: center;
+    color: var(--faint);
+    font: 9px Arial;
+    letter-spacing: 2px;
+  }
+  .memory {
+    position: absolute;
+    z-index: 6;
+    left: 35%;
+    top: 360px;
+    width: 250px;
+    padding: 24px;
+    background: var(--note);
+    color: #3d4229;
+    transform: rotate(-5deg);
+    box-shadow: 0 8px 25px #0002;
+    display: none;
+    font: italic 20px/1.45 Georgia;
+  }
+  .memory.open {
+    display: block;
+  }
+  .memory button {
+    display: block;
+    margin: 12px 0 0 auto;
+    background: transparent;
+    border: 0;
+    font: 10px Arial;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .photo:focus-visible,
+  .sticker:focus-visible {
+    outline: 3px solid #bb553b;
+    outline-offset: 6px;
+  }
+  @media (max-width: 600px) {
+    .intro {
+      top: 115px;
+    }
+    .intro h1 {
+      font-size: 49px;
+      letter-spacing: -2px;
+    }
+    .intro p {
+      font-size: 11px;
+      max-width: 220px;
+      margin: 18px auto;
+    }
+    .one {
+      left: 5%;
+      top: 316px;
+      width: 43%;
+      height: 201px;
+      padding: 8px 8px 30px;
+    }
+    .two {
+      right: 5%;
+      top: 307px;
+      width: 38%;
+      height: 181px;
+      padding: 8px 8px 30px;
+    }
+    .three {
+      left: 33%;
+      top: 515px;
+      width: 39%;
+      height: 163px;
+      padding: 8px 8px 30px;
+    }
+    .photo span {
+      font-size: 10px;
+      left: 10px;
+      bottom: 10px;
+    }
+    .sticker {
+      right: 5%;
+      top: 625px;
+      width: 85px;
+      height: 85px;
+      font-size: 13px;
+    }
+    .sticker span {
+      font-size: 19px;
+    }
+    .scribble {
+      left: 7%;
+      top: 548px;
+      font-size: 17px;
+      max-width: 112px;
+    }
+    .doodle {
+      top: 455px;
+      left: 31%;
+      width: 42%;
+      height: 85px;
+    }
+    .star {
+      left: 6%;
+      top: 86px;
+      font-size: 47px;
+    }
+    .edition {
+      right: 8%;
+      top: 106px;
+      font-size: 8px;
+    }
+    .memory {
+      left: 18%;
+      top: 385px;
+      width: 65%;
+      font-size: 19px;
+    }
+    .hint {
+      bottom: 23px;
+      font-size: 8px;
+    }
+  }
+</style>
+<main>
+  <span class="star" aria-hidden="true">✳</span
+  ><span class="edition">NO. 001 / THE UNPLANNED</span>
+  <div class="intro">
+    <small>A FEW THINGS I COULDN’T THROW AWAY</small>
+    <h1>A beautiful<span>little mess.</span></h1>
+    <p>Nothing arranged. Everything remembered.</p>
+  </div>
+  <button class="photo one" data-key="one" aria-label="Move or open the coast memory">
+    <img
+      src="asset:10000000-0000-4000-8000-000000000001"
+      alt="A turquoise cove between cliffs"
+    /><span>we were supposed to turn left.</span>
+  </button>
+  <button class="photo two" data-key="two" aria-label="Move or open the lake memory">
+    <img
+      src="asset:10000000-0000-4000-8000-000000000002"
+      alt="A boat facing a lake and mountains"
+    /><span>stayed a little longer ♡</span>
+  </button>
+  <button class="photo three" data-key="three" aria-label="Move or open the forest memory">
+    <img src="asset:10000000-0000-4000-8000-000000000003" alt="Sunlight in a forest" /><span
+      >somewhere in between.</span
+    >
+  </button>
+  <svg class="doodle" viewBox="0 0 320 130" fill="none" aria-hidden="true">
+    <path
+      d="M6 79C69 8 154 125 194 64C224 12 275 17 303 74M279 64l25 12 0-28"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+    <path
+      d="M109 78C83 42 71 91 109 107C152 75 122 53 109 78Z"
+      stroke="currentColor"
+      stroke-width="2"
+    />
+  </svg>
+  <p class="scribble">a little salt in the air,<br />and nowhere to be.</p>
+  <button class="sticker" id="open-note" aria-expanded="false">
+    lost in<br />the right<br />place.<span>↗</span>
+  </button>
+  <aside class="memory" id="memory" aria-live="polite">
+    <span id="memory-text"
+      >We missed the turn, found this view, and forgot what time it was. Keeping this one.</span
+    ><button id="close-note">Tuck it away ↙</button>
+  </aside>
+  <p class="hint">DRAG THE PHOTOS · OPEN A MEMORY · MAKE A LITTLE MESS</p>
+</main>
+<script>
+  let state = {},
+    moved = false;
+  const notes = {
+    one: "We missed the turn, found this view, and forgot what time it was. Keeping this one.",
+    two: "We said five more minutes. Three times. Some places make clocks feel ridiculous.",
+    three: "There was nothing to post here, really. Just the sound of leaves. That was enough.",
+  };
+  function show(key) {
+    document.getElementById("memory-text").textContent = notes[key] || notes.one;
+    document.getElementById("memory").classList.add("open");
+    document.getElementById("open-note").setAttribute("aria-expanded", "true");
+  }
+  document.getElementById("open-note").onclick = () => show("one");
+  document.getElementById("close-note").onclick = () => {
+    document.getElementById("memory").classList.remove("open");
+    document.getElementById("open-note").setAttribute("aria-expanded", "false");
+  };
+  function place(el, x, y) {
+    el.style.setProperty("--dx", x + "px");
+    el.style.setProperty("--dy", y + "px");
+    state[el.dataset.key + "X"] = x;
+    state[el.dataset.key + "Y"] = y;
+  }
+  function save() {
+    forma.progress.write(state).catch(() => {});
+  }
+  document.querySelectorAll(".photo").forEach((el) => {
+    let start = null;
+    el.onpointerdown = (e) => {
+      moved = false;
+      start = {
+        x: e.clientX,
+        y: e.clientY,
+        ox: Number(state[el.dataset.key + "X"] || 0),
+        oy: Number(state[el.dataset.key + "Y"] || 0),
+      };
+      el.setPointerCapture(e.pointerId);
+    };
+    el.onpointermove = (e) => {
+      if (!start) return;
+      const dx = e.clientX - start.x,
+        dy = e.clientY - start.y;
+      if (Math.abs(dx) + Math.abs(dy) > 7) moved = true;
+      place(
+        el,
+        Math.max(-75, Math.min(75, start.ox + dx)),
+        Math.max(-60, Math.min(70, start.oy + dy)),
+      );
+    };
+    el.onpointerup = () => {
+      start = null;
+      if (moved) save();
+    };
+    el.onpointercancel = () => {
+      start = null;
+    };
+    el.onclick = () => {
+      if (!moved) show(el.dataset.key);
+    };
+    el.onkeydown = (e) => {
+      const moves = {
+        ArrowLeft: [-10, 0],
+        ArrowRight: [10, 0],
+        ArrowUp: [0, -10],
+        ArrowDown: [0, 10],
+      };
+      if (!moves[e.key]) return;
+      e.preventDefault();
+      const [x, y] = moves[e.key];
+      place(
+        el,
+        Math.max(-75, Math.min(75, Number(state[el.dataset.key + "X"] || 0) + x)),
+        Math.max(-60, Math.min(70, Number(state[el.dataset.key + "Y"] || 0) + y)),
+      );
+      save();
+    };
+  });
+  forma.progress
+    .read()
+    .then((s) => {
+      state = s;
+      document
+        .querySelectorAll(".photo")
+        .forEach((el) =>
+          place(el, Number(s[el.dataset.key + "X"] || 0), Number(s[el.dataset.key + "Y"] || 0)),
+        );
+    })
+    .catch(() => {});
+</script>

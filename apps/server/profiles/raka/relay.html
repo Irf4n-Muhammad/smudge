@@ -1,0 +1,63 @@
+<section class="relay" aria-label="Drawing Relay">
+  <svg class="reference-relay" viewBox="0 450 1024 394" aria-hidden="true">
+    <use href="#raka-clean-paper" />
+  </svg>
+  <svg class="relay-paper" viewBox="1036 468 486 490" preserveAspectRatio="none" aria-hidden="true">
+    <use href="#raka-art" clip-path="url(#clip-paper)" />
+  </svg>
+  <span class="relay-left-note" aria-hidden="true"
+    >PEOPLE<br />PLACES<br />PENCILS<br />PROGRESS …</span
+  >
+  <span class="relay-side-note" aria-hidden="true"
+    >A MESSY<br />WORLD,<br />STILL<br />BEAUTIFUL …</span
+  >
+  <div class="relay-heading">
+    <h2>DRAWING RELAY</h2>
+    <span id="relay-people" class="relay-people"></span>
+    <span class="tag">Your turn<br />:)</span>
+  </div>
+  <p>One canvas. Everyone leaves a mark.</p>
+  <div class="canvas-wrap">
+    <img class="relay-mobile-drawing" src="asset:30000000-0000-4000-8000-000000000002" alt="" />
+    <img
+      id="relay-starter-art"
+      src="asset:30000000-0000-4000-8000-000000000002"
+      alt="Illustrated starter: a cat riding a skateboard"
+      hidden
+    />
+    <canvas id="relay-canvas" width="1000" height="600" aria-label="Shared drawing canvas"></canvas
+    ><span class="canvas-note">Make something weird. ↙</span>
+  </div>
+  <div class="relay-tools" id="relay-tools" hidden>
+    <button
+      class="swatch"
+      style="background: #202020"
+      data-color="#202020"
+      aria-label="Black ink"
+      aria-pressed="true"
+    ></button
+    ><button
+      class="swatch"
+      style="background: #e83727"
+      data-color="#e83727"
+      aria-label="Red ink"
+      aria-pressed="false"
+    ></button
+    ><button
+      class="swatch"
+      style="background: #296ccc"
+      data-color="#296ccc"
+      aria-label="Blue ink"
+      aria-pressed="false"
+    ></button
+    ><button id="relay-undo">Undo stroke</button><button id="relay-star">Add a star</button
+    ><button id="relay-cancel">Cancel drawing</button>
+  </div>
+  <div class="relay-actions">
+    <span class="contributors" id="relay-contributors">Loading contributions…</span
+    ><button id="relay-refresh">Refresh canvas</button
+    ><button class="primary" id="relay-submit" disabled>Add your mark ↗</button>
+  </div>
+  <p class="relay-status" id="relay-status" role="status" aria-live="polite"></p>
+</section>
+<script src="raka/relay.js"></script>

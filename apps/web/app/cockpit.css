@@ -1,0 +1,952 @@
+/* A host-owned spatial navigation prototype. Every selector stays inside its own mode. */
+.enter-cockpit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid currentColor;
+  border-radius: 30px;
+  padding: 9px 15px;
+  font-size: 11px;
+  white-space: nowrap;
+  background: transparent;
+  color: inherit;
+}
+.cockpit {
+  --cyan: #9edbdc;
+  --orange: #efac77;
+  position: relative;
+  isolation: isolate;
+  min-height: 850px;
+  height: 100svh;
+  overflow: hidden;
+  background: #060c14;
+  color: #d6e8e9;
+  font-family: Arial, Helvetica, sans-serif;
+  color-scheme: dark;
+}
+.cockpit button {
+  font-family: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+.cockpit button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.cockpit button:focus-visible,
+.cockpit [tabindex]:focus-visible {
+  outline: 2px solid #f6c48b;
+  outline-offset: 7px;
+}
+.space-dust {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.space-dust i {
+  position: absolute;
+  background: #c9edf4;
+  border-radius: 50%;
+  box-shadow: 0 0 5px #a9cddc;
+}
+.nebula {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 37% 56%, #415c671c, transparent 49%),
+    radial-gradient(ellipse at 5% 95%, #16464b55, transparent 43%),
+    linear-gradient(115deg, transparent 36%, #49647b0c 47%, transparent 63%);
+}
+.flight-header {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100px;
+  margin: 0 5%;
+  border-bottom: 1px solid #a5c8d521;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.flight-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: none;
+  font-weight: 700;
+  letter-spacing: 5px;
+  font-size: 17px;
+}
+.flight-brand > span {
+  font-size: 33px;
+  color: var(--orange);
+}
+.flight-brand small {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #839da7;
+  margin-left: 12px;
+}
+.flight-coordinate {
+  color: #839da7;
+  font-size: 9px;
+  letter-spacing: 3px;
+}
+.flight-exit {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: none;
+  border: 0;
+  font-size: 11px;
+}
+.flight-heading {
+  position: absolute;
+  top: 145px;
+  left: 7%;
+  z-index: 3;
+  pointer-events: none;
+}
+.signal-label {
+  font: 9px monospace;
+  letter-spacing: 2.5px;
+  color: #a3bcbf;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.signal-label i {
+  width: 5px;
+  height: 5px;
+  background: #a7eed6;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #a7eed6;
+}
+.flight-heading h1 {
+  font-size: clamp(36px, 4vw, 62px);
+  font-weight: 400;
+  letter-spacing: -2px;
+  line-height: 1.05;
+  margin: 20px 0 14px;
+}
+.flight-heading p {
+  font-size: 12px;
+  color: #91a8b0;
+  letter-spacing: 0.5px;
+}
+.sector-label {
+  position: absolute;
+  top: 145px;
+  right: 7%;
+  font: 9px monospace;
+  letter-spacing: 3px;
+  color: #9eafb4;
+}
+.sector-label span {
+  color: var(--orange);
+  margin: 0 15px;
+}
+.galaxy {
+  position: absolute;
+  width: min(57vw, max(440px, calc(100svh - 410px)));
+  height: min(57vw, max(440px, calc(100svh - 410px)));
+  left: 6%;
+  top: 270px;
+}
+.orbit-track {
+  position: absolute;
+  border: 1px solid #8ccbdc30;
+  border-radius: 50%;
+  inset: 7%;
+  pointer-events: none;
+}
+.track-outer {
+  inset: 0;
+  border-style: dashed;
+  border-color: #8ccbdc20;
+}
+.track-inner {
+  inset: 15%;
+  border-color: #8ccbdc18;
+}
+.orbital-plane {
+  position: absolute;
+  inset: 18% -12%;
+  border: 1px solid #ace0db40;
+  transform: rotate(-32deg) scaleY(0.47);
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 24px #7cd0d005,
+    0 0 0 25px #ace0db15;
+}
+.main-planet {
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--planet-tone);
+  box-shadow:
+    -12px -8px 32px #f3d1a017,
+    15px 15px 70px #000,
+    0 0 90px #c5936630;
+  transition: background 0.8s;
+}
+.planet-bands {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  transform: rotate(-27deg);
+  background: repeating-linear-gradient(
+    0deg,
+    #181b2430 0px,
+    transparent 4px,
+    #f3d7b340 7px,
+    transparent 12px,
+    #2a223b60 20px,
+    transparent 26px,
+    #eecaaa20 36px,
+    transparent 40px
+  );
+  filter: blur(2px);
+}
+.planet-shade {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 28% 23%, #fff3ce6b, transparent 35%),
+    radial-gradient(circle at 24% 21%, transparent 23%, #081018b0 65%, #02060bf5 85%);
+  box-shadow:
+    inset 3px 3px 8px #fff2c178,
+    inset -5px -5px 12px #000;
+}
+.planet-ring {
+  position: absolute;
+  inset: 13% 7%;
+  border: 22px solid #c9b39235;
+  border-left-color: #b9a08485;
+  border-bottom-color: #d6bd905c;
+  border-radius: 50%;
+  transform: rotate(-32deg) scaleY(0.32);
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px #e3bf9240,
+    0 0 0 8px #cdb08617,
+    0 0 0 11px #d8bc8830;
+}
+.planet-moon {
+  position: absolute;
+  left: 76%;
+  top: 24%;
+  width: 6%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 28%, #c9d6db, #536979 45%, #06121f 78%);
+  box-shadow: 0 0 35px #97c1d31c;
+  pointer-events: none;
+}
+.planet-shadow {
+  position: absolute;
+  inset: 13%;
+  border-radius: 50%;
+  background: #bc935718;
+  filter: blur(50px);
+}
+.orbit-dial {
+  position: absolute;
+  inset: 15%;
+  border-radius: 50%;
+  touch-action: none;
+  cursor: grab;
+  z-index: 2;
+}
+.orbit-dial:active {
+  cursor: grabbing;
+}
+.dial-hint {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font: 8px monospace;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  color: #b0c9d0;
+}
+.dial-hint span {
+  font-size: 18px;
+  margin-left: 8px;
+}
+.orbit-node {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 75px;
+  min-height: 48px;
+  text-align: left;
+  transition:
+    left 0.6s,
+    top 0.6s;
+}
+.node-planet {
+  display: block;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, #ffffeaaa, var(--node-tone) 22%, #08121f 80%);
+  box-shadow: 0 0 17px #7dd2ec22;
+}
+.node-caption {
+  font-size: 10px;
+  color: #97acb4;
+  letter-spacing: 1px;
+}
+.node-caption small {
+  display: block;
+  font: 8px monospace;
+  margin-top: 5px;
+  color: #607987;
+}
+.orbit-node.active .node-planet {
+  outline: 1px solid #edbd86;
+  outline-offset: 7px;
+  box-shadow: 0 0 30px #efc08055;
+}
+.orbit-node.active .node-caption {
+  color: #f1c996;
+}
+.orbit-node:hover .node-planet {
+  outline: 1px solid #aedce3;
+  outline-offset: 5px;
+}
+.orbital-caption {
+  position: absolute;
+  bottom: 5%;
+  left: 26%;
+  font: 7px monospace;
+  color: #68838f;
+  letter-spacing: 3px;
+}
+.signal-console {
+  position: absolute;
+  z-index: 4;
+  left: 63%;
+  top: 28%;
+  width: 29%;
+  max-width: 420px;
+  animation: signal-in 0.7s both;
+}
+.signal-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #83c8c9;
+}
+.signal-line > span {
+  height: 1px;
+  background: #7ad2d3;
+  flex: 1;
+  box-shadow: 0 0 10px #7ad2d3;
+}
+.signal-line small {
+  font: 8px monospace;
+  letter-spacing: 2px;
+}
+.signal-number {
+  font-size: 74px;
+  font-weight: 200;
+  color: #accdd321;
+  letter-spacing: -5px;
+  margin: 22px 0 -7px;
+}
+.signal-number span {
+  font: 12px monospace;
+  letter-spacing: 1px;
+  color: #739099;
+}
+.signal-author {
+  font: 9px monospace;
+  letter-spacing: 2px;
+  color: #7c9ca7;
+  margin-top: 25px;
+}
+.signal-author strong {
+  font-weight: 400;
+  color: #b1cdd3;
+  margin-left: 8px;
+}
+.signal-author > span {
+  color: var(--orange);
+  margin-left: 12px;
+}
+.signal-console h2 {
+  font-size: clamp(29px, 3.3vw, 49px);
+  line-height: 1.1;
+  letter-spacing: -1.6px;
+  font-weight: 400;
+  margin: 18px 0;
+  color: #e1eeee;
+  text-wrap: balance;
+}
+.signal-caption {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #91adb7;
+  max-width: 310px;
+}
+.launch-world {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 29px;
+  padding: 20px 22px;
+  border: 0;
+  background: #c4e5e2 !important;
+  color: #102d35 !important;
+  clip-path: polygon(0 0, 94% 0, 100% 25%, 100% 100%, 6% 100%, 0 75%);
+  text-align: left;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+.launch-world:hover {
+  background: #edc094 !important;
+  transform: translateX(5px);
+}
+.launch-world > span {
+  font-size: 13px;
+  flex: 1;
+}
+.launch-world small {
+  display: block;
+  font: 7px monospace;
+  letter-spacing: 2px;
+  margin-top: 5px;
+}
+.signal-actions {
+  display: flex;
+  gap: 25px;
+  margin-top: 22px;
+}
+.signal-actions button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: none;
+  border: 0;
+  font: 11px monospace;
+  color: #a9cbd0;
+}
+.signal-actions button[aria-pressed="true"] {
+  color: #efad7a;
+}
+.canopy-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.canopy-frame i {
+  position: absolute;
+  background: linear-gradient(110deg, #101d27, #26343a 45%, #0b151f 47%, #020810 65%);
+  filter: drop-shadow(0 0 1px #61868c);
+}
+.canopy-frame i:nth-child(1) {
+  left: -2%;
+  top: 0;
+  width: 10%;
+  height: 100%;
+  clip-path: polygon(0 0, 27% 0, 55% 37%, 23% 72%, 100% 100%, 60% 100%, 0 73%);
+}
+.canopy-frame i:nth-child(2) {
+  right: -2%;
+  top: 0;
+  width: 9%;
+  height: 100%;
+  clip-path: polygon(78% 0, 100% 0, 100% 100%, 0 100%, 80% 67%, 60% 30%);
+}
+.canopy-frame i:nth-child(3) {
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  clip-path: polygon(0 0, 17% 75%, 79% 75%, 100% 0, 100% 100%, 0 100%);
+}
+.canopy-frame i:nth-child(4) {
+  top: 0;
+  width: 100%;
+  height: 17px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 72% 22%, 25% 22%, 0 100%);
+}
+.flight-deck {
+  position: absolute;
+  z-index: 6;
+  bottom: 42px;
+  left: 7%;
+  right: 7%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #91c2c82b;
+  padding-top: 23px;
+  gap: 20px;
+}
+.deck-status {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font: 8px monospace;
+  letter-spacing: 2px;
+  color: #aac3cc;
+}
+.deck-status small {
+  display: block;
+  font: 9px Arial;
+  letter-spacing: 0.3px;
+  margin-top: 7px;
+  color: #72939d;
+}
+.radar-icon {
+  width: 33px;
+  height: 33px;
+  border: 1px solid #7eb8be;
+  border-radius: 50%;
+  background: conic-gradient(from 45deg, transparent 70%, #91d3c975);
+  position: relative;
+}
+.radar-icon:after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid #7eb8be50;
+  border-radius: 50%;
+}
+.orbit-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.orbit-controls button {
+  border: 1px solid #a1cbcd44;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  background: #10212a;
+}
+.orbit-controls span {
+  font: 8px monospace;
+  letter-spacing: 2px;
+  color: #abc6cb;
+}
+.motion-toggle {
+  font: 8px monospace !important;
+  letter-spacing: 1px;
+  border: 0;
+  background: transparent;
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  color: #84a9b0 !important;
+}
+.motion-toggle span {
+  color: #d0e0d5;
+  font-size: 18px;
+}
+.motion-on .radar-icon {
+  animation: radar-turn 12s linear infinite;
+}
+.motion-on .planet-bands {
+  animation: planet-drift 45s ease-in-out infinite alternate;
+}
+.motion-on .planet-moon {
+  animation: moon-float 9s ease-in-out infinite alternate;
+}
+.transmission-panel {
+  position: absolute;
+  z-index: 9;
+  right: 0;
+  top: 100px;
+  bottom: 0;
+  width: min(420px, 100%);
+  padding: 30px 28px;
+  background: linear-gradient(145deg, #12303bf5, #07141cfb);
+  border-left: 1px solid #8ae5e46b;
+  box-shadow: -25px 0 100px #0008;
+  display: flex;
+  flex-direction: column;
+  animation: channel-in 0.35s ease-out;
+}
+.transmission-panel header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 11px monospace;
+  letter-spacing: 2px;
+  border-bottom: 1px solid #8ae5e433;
+  padding-bottom: 24px;
+}
+.transmission-panel header > div {
+  flex: 1;
+}
+.transmission-panel header small {
+  display: block;
+  font: 10px Arial;
+  letter-spacing: 0;
+  color: #92b6c1;
+  margin-top: 10px;
+  line-height: 1.6;
+}
+.transmission-panel header button {
+  background: none;
+  border: 0;
+}
+.transmission-messages {
+  flex: 1;
+  overflow: auto;
+  padding: 22px 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.transmission-messages > p {
+  color: #90afb8;
+}
+.transmission-messages > div {
+  padding: 15px 0;
+  border-bottom: 1px solid #8ae5e421;
+  overflow-wrap: anywhere;
+}
+.transmission-messages small {
+  font: 9px monospace;
+  color: #eab57f;
+  letter-spacing: 1px;
+}
+.transmission-messages p {
+  margin: 5px 0;
+}
+.transmission-panel label {
+  font: 9px monospace;
+  letter-spacing: 2px;
+  color: #95b8c1;
+}
+.transmission-panel textarea {
+  margin: 12px 0;
+  background: #04131c;
+  border: 1px solid #77b5bc55;
+  width: 100%;
+  padding: 14px;
+  color: #d2e6e9;
+  min-height: 105px;
+  resize: vertical;
+  font-size: 13px;
+}
+.transmission-panel form button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 15px;
+  background: #b4dad7;
+  color: #0e2833;
+  border: 0;
+  font-size: 12px;
+}
+.hologram-overlay .modal-backdrop {
+  background: #020914d9;
+  backdrop-filter: blur(12px);
+  z-index: 20;
+}
+.hologram-overlay .modal {
+  background: #0a1b25 !important;
+  border: 1px solid #8cddd788;
+  box-shadow: 0 0 60px #5dcbd824;
+  color: #d6efee !important;
+  border-radius: 2px;
+}
+.hologram-overlay .modal-header {
+  color: #d6efee;
+  background: #0a1b25;
+  border-bottom: 1px solid #91d6de40;
+}
+.hologram-overlay .modal-header h2 {
+  color: #d6efee;
+}
+.hologram-overlay .modal-header .eyebrow {
+  display: none;
+}
+.hologram-label {
+  font: 8px monospace;
+  letter-spacing: 2px;
+  padding: 14px 24px;
+  color: #9edbdc;
+}
+.hologram-overlay .runtime {
+  margin: 0;
+}
+@keyframes radar-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes planet-drift {
+  to {
+    transform: rotate(-20deg) translateY(7%);
+  }
+}
+@keyframes moon-float {
+  to {
+    transform: translate(-10px, 15px);
+  }
+}
+@keyframes signal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes channel-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@media (min-width: 1700px) {
+  .galaxy {
+    left: 5%;
+  }
+}
+@media (max-width: 1000px) {
+  .flight-brand small,
+  .flight-coordinate {
+    display: none;
+  }
+  .galaxy {
+    width: 65vw;
+    height: 65vw;
+    left: -7%;
+    top: 320px;
+  }
+  .signal-console {
+    left: 59%;
+    width: 33%;
+    top: 31%;
+  }
+  .flight-heading {
+    top: 135px;
+  }
+  .flight-deck {
+    gap: 12px;
+  }
+  .deck-status {
+    display: none;
+  }
+  .signal-console h2 {
+    font-size: 34px;
+  }
+}
+@media (max-width: 620px) {
+  .enter-cockpit {
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+  .cockpit {
+    height: auto;
+    min-height: 1100px;
+  }
+  .flight-header {
+    height: 75px;
+    margin: 0 6%;
+  }
+  .flight-brand {
+    font-size: 13px;
+    letter-spacing: 3px;
+  }
+  .flight-brand > span {
+    font-size: 25px;
+  }
+  .flight-exit {
+    font-size: 10px;
+  }
+  .flight-heading {
+    top: 107px;
+    left: 8%;
+  }
+  .flight-heading h1 {
+    font-size: 38px;
+    margin-top: 15px;
+  }
+  .flight-heading p {
+    font-size: 11px;
+  }
+  .signal-label {
+    font-size: 7px;
+    letter-spacing: 1.7px;
+  }
+  .sector-label {
+    display: none;
+  }
+  .galaxy {
+    width: 94vw;
+    height: 94vw;
+    left: 3%;
+    top: 286px;
+    transform: none;
+  }
+  .main-planet {
+    inset: 23%;
+  }
+  .orbit-node {
+    min-width: 52px;
+    gap: 6px;
+  }
+  .node-caption {
+    font-size: 8px;
+  }
+  .node-planet {
+    width: 21px;
+    height: 21px;
+  }
+  .orbital-caption {
+    display: none;
+  }
+  .dial-hint {
+    font-size: 6px;
+    letter-spacing: 1px;
+  }
+  .signal-console {
+    left: 9%;
+    top: calc(286px + 94vw + 24px);
+    width: 82%;
+    max-width: none;
+  }
+  .signal-line small {
+    font-size: 7px;
+  }
+  .signal-number {
+    position: absolute;
+    right: 0;
+    top: 20px;
+    font-size: 43px;
+    margin: 0;
+  }
+  .signal-number span {
+    font-size: 8px;
+  }
+  .signal-author {
+    font-size: 8px;
+    margin-top: 25px;
+    padding-right: 70px;
+  }
+  .signal-console h2 {
+    font-size: 30px;
+    max-width: 270px;
+    margin: 16px 0 10px;
+  }
+  .signal-caption {
+    font-size: 11px;
+    margin: 0;
+    line-height: 1.6;
+    max-width: 90%;
+  }
+  .launch-world {
+    margin-top: 19px;
+    padding: 14px 19px;
+    max-width: none;
+  }
+  .signal-actions {
+    margin-top: 15px;
+  }
+  .flight-deck {
+    bottom: 22px;
+    left: 8%;
+    right: 8%;
+    padding-top: 15px;
+  }
+  .orbit-controls {
+    gap: 10px;
+  }
+  .orbit-controls span {
+    font-size: 6px;
+    letter-spacing: 1px;
+  }
+  .orbit-controls button {
+    width: 34px;
+    height: 34px;
+  }
+  .motion-toggle {
+    font-size: 7px !important;
+    max-width: 110px;
+    text-align: right;
+  }
+  .canopy-frame i:nth-child(3) {
+    height: 22px;
+  }
+  .transmission-panel {
+    position: fixed;
+    top: 75px;
+    padding: 24px;
+    bottom: 0;
+  }
+  .hologram-overlay .modal {
+    max-height: 94svh;
+  }
+  .cockpit {
+    min-height: calc(94vw + 805px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cockpit *,
+  .cockpit *:before,
+  .cockpit *:after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* Dense libraries use a scrollable strip instead of overlapping hit targets around one ring. */
+.orbit-catalog {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 116px;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  z-index: 12;
+  padding: 8px;
+  background: #0b151ed9;
+  border-block: 1px solid #93b9c633;
+}
+.orbit-catalog .orbit-node {
+  position: relative;
+  left: auto !important;
+  top: auto !important;
+  transform: none;
+  flex: 0 0 100px;
+  width: 100px;
+  height: 90px;
+}
+.orbit-catalog .node-caption {
+  white-space: normal;
+}

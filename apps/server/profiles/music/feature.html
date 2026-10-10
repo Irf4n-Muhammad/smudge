@@ -1,0 +1,133 @@
+<style>
+  .mz-poll {
+    position: relative;
+    margin: 24px 16px;
+    background: #ff5b42;
+    color: #101010;
+    padding: 30px 24px;
+    transform: rotate(-1deg);
+    box-shadow: 8px 8px 0 #111;
+  }
+  .mz-poll:before {
+    content: "YOU PICK THE ENCORE";
+    position: absolute;
+    right: 15px;
+    top: -12px;
+    background: #c7ff48;
+    color: #111;
+    padding: 8px 14px;
+    font: 700 12px monospace;
+    transform: rotate(4deg);
+  }
+  .mz-poll h2 {
+    font: 950 clamp(28px, 5vw, 52px) / 1 Arial;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+    margin: 12px 0 8px;
+  }
+  .mz-poll p {
+    font: 14px/1.5 monospace;
+  }
+  .mz-votes {
+    display: grid;
+    gap: 10px;
+    margin: 22px 0;
+  }
+  .mz-votes button {
+    position: relative;
+    text-align: left;
+    background: #f7edda;
+    color: #111;
+    border: 2px solid #111;
+    padding: 15px;
+    min-height: 50px;
+    font: 700 17px Arial;
+    overflow: hidden;
+  }
+  .mz-votes button[aria-pressed="true"] {
+    background: #c7ff48;
+    box-shadow: 4px 4px 0 #111;
+    transform: translate(-2px, -2px);
+  }
+  .mz-votes small {
+    float: right;
+    margin-left: 8px;
+    font: 13px monospace;
+  }
+  .mz-poll .mz-refresh {
+    background: none;
+    border: 0;
+    border-bottom: 1px solid #111;
+    color: #111;
+    padding: 8px 0;
+    font: 13px monospace;
+  }
+  .mz-poll [role="status"] {
+    min-height: 20px;
+  }
+  .mz-votes button:disabled {
+    opacity: 0.6;
+  }
+  @media (max-width: 600px) {
+    .mz-poll {
+      margin: 20px 12px;
+      padding: 30px 16px;
+    }
+    .mz-votes button {
+      font-size: 15px;
+    }
+  }
+</style>
+<section class="mz-poll" aria-label="Setlist voting">
+  <h2 id="mz-question">Choose the encore</h2>
+  <p>One person, one pick. Change your mind anytime.</p>
+  <div class="mz-votes" id="mz-votes"></div>
+  <p id="mz-total"></p>
+  <button class="mz-refresh" id="mz-refresh">Refresh votes</button>
+  <p role="status" id="mz-vote-status"></p>
+</section>
+<script>
+  (() => {
+    const root = document.getElementById("mz-votes"),
+      status = document.getElementById("mz-vote-status");
+    function draw(data) {
+      document.getElementById("mz-question").textContent = data.question;
+      document.getElementById("mz-total").textContent =
+        data.total +
+        " " +
+        (data.total === 1 ? "vote" : "votes") +
+        (data.preview ? " · Practice votes — private to this draft" : "");
+      root.replaceChildren();
+      data.options.forEach((o) => {
+        const b = document.createElement("button");
+        b.setAttribute("aria-label", "Vote for " + o.label);
+        b.setAttribute("aria-pressed", String(data.selected === o.id));
+        const name = document.createElement("span");
+        name.textContent = o.label;
+        const count = document.createElement("small");
+        count.textContent = o.votes + " votes";
+        b.append(name, count);
+        b.onclick = async () => {
+          root.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          try {
+            draw(await forma.profile.poll.vote(o.id));
+            status.textContent = data.preview ? "Practice vote saved." : "Your vote is saved.";
+          } catch (e) {
+            status.textContent = e.message;
+            root.querySelectorAll("button").forEach((b) => (b.disabled = false));
+          }
+        };
+        root.append(b);
+      });
+    }
+    async function load() {
+      try {
+        draw(await forma.profile.poll.read());
+      } catch (e) {
+        status.textContent = e.message;
+      }
+    }
+    document.getElementById("mz-refresh").onclick = load;
+    load();
+  })();
+</script>

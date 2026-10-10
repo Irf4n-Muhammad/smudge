@@ -1,0 +1,329 @@
+<style>
+  :root {
+    --wall: #ded5bc;
+    --ink: #443b2e;
+    --paper: #f4eedc;
+    --wood: #866b4b;
+  }
+  html[data-theme="dark"] {
+    --wall: #2b302b;
+    --ink: #e3decb;
+    --paper: #414738;
+    --wood: #63563e;
+  }
+  body {
+    background: var(--wall);
+    color: var(--ink);
+    font-family: Georgia, serif;
+    overflow-x: hidden;
+  }
+  button {
+    color: inherit;
+  }
+  header {
+    padding: 36px 7%;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+  }
+  header p {
+    font: 12px monospace;
+    opacity: 0.6;
+  }
+  h1 {
+    font-size: 34px;
+    margin: 10px 0;
+    font-weight: 400;
+  }
+  #bio {
+    max-width: 260px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .room {
+    height: 590px;
+    position: relative;
+    margin: 0 7%;
+    border-bottom: 22px solid var(--wood);
+    background: linear-gradient(90deg, transparent 49.8%, #776b4711 50%, transparent 50.2%);
+  }
+  .window {
+    position: absolute;
+    left: 7%;
+    top: 25px;
+    width: 36%;
+    height: 275px;
+    background: linear-gradient(#98bbc2, #dcdfbf);
+    border: 14px solid var(--paper);
+    box-shadow: 6px 10px 0 #55472a20;
+    overflow: hidden;
+    border-radius: 110px 110px 0 0;
+  }
+  .window:before {
+    content: "";
+    position: absolute;
+    left: 48%;
+    height: 100%;
+    width: 10px;
+    background: var(--paper);
+  }
+  .window:after {
+    content: "";
+    position: absolute;
+    top: 61%;
+    width: 100%;
+    height: 9px;
+    background: var(--paper);
+  }
+  .sun {
+    position: absolute;
+    right: 15%;
+    top: 38px;
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    background: #e9ce8c;
+  }
+  .plant {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100px;
+    height: 100px;
+    background: #b47352;
+    clip-path: polygon(0 0, 100% 0, 82% 100%, 20% 100%);
+  }
+  .leaves {
+    position: absolute;
+    bottom: 100px;
+    left: 20px;
+    width: 50px;
+    height: 135px;
+    background: #627b51;
+    border-radius: 0 100%;
+    transform: rotate(-25deg);
+    box-shadow: 55px 30px 0 #718458;
+  }
+  .rug {
+    position: absolute;
+    right: 5%;
+    bottom: 0;
+    width: 62%;
+    height: 100px;
+    background: repeating-linear-gradient(90deg, #b18b65 0 13px, #c4ab82 14px 20px);
+    transform: skew(-25deg);
+    opacity: 0.6;
+  }
+  #objects {
+    position: absolute;
+    inset: 30px 0 0 38%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-content: center;
+    gap: 40px 25px;
+    z-index: 1;
+  }
+  #objects button {
+    position: relative;
+    background: var(--paper);
+    border: 0;
+    box-shadow: 5px 8px 0 #32241925;
+    padding: 12px 12px 20px;
+    transform: rotate(-5deg);
+    font: 15px Georgia;
+    transition: transform 0.2s;
+    min-height: 100px;
+  }
+  #objects button:nth-child(even) {
+    transform: rotate(6deg);
+  }
+  #objects button:hover {
+    transform: rotate(0) translateY(-8px);
+  }
+  #objects button:nth-child(3n) {
+    background: #c9c18e;
+    color: #423d26;
+    border-radius: 2px 2px 16px 2px;
+  }
+  #objects img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 12px;
+  }
+  #objects span {
+    display: block;
+    font: 10px monospace;
+    margin-top: 8px;
+    opacity: 0.6;
+  }
+  .note {
+    position: absolute;
+    left: 10%;
+    top: 330px;
+    font-size: 20px;
+    line-height: 1.3;
+    transform: rotate(-8deg);
+    max-width: 160px;
+  }
+  .tape {
+    position: absolute;
+    top: -9px;
+    left: 33%;
+    height: 20px;
+    width: 50px;
+    background: #cdbd8699;
+  }
+  .shelf-footer {
+    padding: 30px 7%;
+    display: flex;
+    gap: 30px;
+    align-items: start;
+  }
+  .shelf-footer > p {
+    font: 12px/1.7 monospace;
+    max-width: 210px;
+    opacity: 0.65;
+  }
+  #more {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  #more button {
+    border: 1px solid #877c5a66;
+    background: transparent;
+    padding: 12px;
+    font: 13px Georgia;
+  }
+  #status {
+    padding: 0 7%;
+    font-size: 13px;
+    color: #a54b35;
+  }
+  button:focus-visible {
+    outline: 3px solid #c55832;
+    outline-offset: 5px;
+  }
+  @media (max-width: 600px) {
+    header {
+      padding: 25px 7%;
+    }
+    header > p {
+      display: none;
+    }
+    h1 {
+      font-size: 28px;
+    }
+    .room {
+      height: 690px;
+      margin: 0 5%;
+    }
+    .window {
+      left: 6%;
+      width: 55%;
+      height: 230px;
+    }
+    .note {
+      top: 80px;
+      left: 70%;
+      font-size: 15px;
+      width: 90px;
+    }
+    #objects {
+      inset: 310px 4% 30px 20%;
+      gap: 25px 18px;
+    }
+    #objects button {
+      font-size: 12px;
+      padding: 9px;
+      min-height: 80px;
+    }
+    #objects img {
+      height: 70px;
+    }
+    .plant {
+      width: 60px;
+      height: 70px;
+    }
+    .leaves {
+      bottom: 70px;
+      width: 30px;
+      height: 110px;
+      left: 0;
+    }
+    .shelf-footer {
+      display: block;
+    }
+    .shelf-footer > p {
+      max-width: none;
+    }
+    .rug {
+      width: 80%;
+    }
+  }
+</style>
+<header>
+  <div>
+    <p id="handle"></p>
+    <h1 id="name">Opening the door…</h1>
+    <div id="bio"></div>
+  </div>
+  <p>shoes off, make yourself at home ↙</p>
+</header>
+<main class="room">
+  <div class="window"><div class="sun"></div></div>
+  <div class="note">a few things<br />I keep coming<br />back to.</div>
+  <div class="rug"></div>
+  <div class="leaves"></div>
+  <div class="plant"></div>
+  <div id="objects"></div>
+</main>
+<section class="shelf-footer">
+  <p>Pick up a photo or a notebook.<br />There’s a real story inside.</p>
+  <div id="more"></div>
+</section>
+<p id="status" role="status"></p>
+<script>
+  (async () => {
+    try {
+      const data = await forma.profile.read();
+      document.getElementById("name").textContent = data.owner.name + "’s room";
+      document.getElementById("handle").textContent = "@" + data.owner.handle;
+      document.getElementById("bio").textContent = data.owner.bio;
+      data.posts.forEach((post, i) => {
+        const b = document.createElement("button");
+        b.setAttribute("aria-label", "Open " + post.title);
+        if (i < 2) {
+          const img = document.createElement("img");
+          img.src =
+            i === 0
+              ? "asset:10000000-0000-4000-8000-000000000001"
+              : "asset:10000000-0000-4000-8000-000000000002";
+          img.alt = "";
+          b.append(img);
+        }
+        const title = document.createElement("div");
+        title.textContent = post.title;
+        b.append(title);
+        if (i < 4) {
+          const tape = document.createElement("i");
+          tape.className = "tape";
+          b.append(tape);
+        }
+        b.onclick = () =>
+          forma.profile
+            .openPost(post.id)
+            .catch((e) => (document.getElementById("status").textContent = e.message));
+        document.getElementById(i < 4 ? "objects" : "more").append(b);
+      });
+      if (!data.posts.length)
+        document.getElementById("status").textContent =
+          "No published stories yet. The room is ready for the first one.";
+    } catch (e) {
+      document.getElementById("status").textContent = e.message;
+    }
+  })();
+</script>

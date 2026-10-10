@@ -1,0 +1,316 @@
+# Experience contracts
+
+## Public profile packages (separate v1 contract)
+
+`packages/contracts/src/profile.ts` defines a separate `kind: "profile"` package. Post versions
+remain unchanged. Example:
+
+```json
+{
+  "manifest": {
+    "kind": "profile",
+    "schemaVersion": 1,
+    "runtimeVersion": "web-v1",
+    "name": "My own place",
+    "entrypoint": "index.html",
+    "height": 1000,
+    "assets": [],
+    "capabilities": ["profile.read", "profile.openPost"]
+  },
+  "files": {
+    "index.html": "<h1 id='name'></h1><script>forma.profile.read().then(d=>document.getElementById('name').textContent=d.owner.name)</script>"
+  }
+}
+```
+
+Height is an integer 600–4000 CSS pixels. The same post file/path and asset limits apply.
+Larger documents scroll inside the frame; automatic content sizing is not implemented.
+Profile capabilities are independent of post capabilities:
+
+- `profile.read`: `await forma.profile.read()` returns `{owner, posts}`. Owner is the public
+  user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`. No draft, bookmark, session,
+  or viewer identity is supplied, including in visitor preview.
+- `profile.openPost`: `await forma.profile.openPost(postId)` asks the host to open a published
+  post. The server checks that it belongs to this profile owner before the host opens it.
+
+Declared assets must belong to the author or the shared demo namespace. Profile code cannot
+follow, report, publish or restore; those operations remain in host UI/API/MCP with actor checks.
+Theme is delivered through `forma:appearance` as before; reduced motion sets
+`html[data-motion=reduce]` and the injected SDK disables CSS animations/transitions. Authors must
+also respect system reduced-motion settings and the attribute in JavaScript animations; it is
+a preference, not a hard execution quota. Autoplay is not granted to frames.
+
+Draft writes require their current revision. Publishing requires that revision plus the current
+profile state `version` as `expectedVersion`. It writes an immutable snapshot and atomically
+advances the active pointer/version. A retry of the just-completed publish is idempotent; stale
+writes after a restore fail with `PROFILE_CONFLICT`. Restore accepts an owned publication ID or
+null (default profile), with current expectedVersion. It never edits or deletes the snapshots.
+
+Runtime tickets distinguish profile/post, bind the viewer/session and immutable target, and bind
+preview to a draft revision. Foreign previews, stale previews and cross-session replay fail.
+The browser and server each validate the appropriate bridge schema before handling a request.
+
+Executable definitions: `packages/contracts/src/experience.ts` and the original v1 `index.ts`.
+Do not silently change old package semantics. New incompatible behavior requires a new version
+and compatibility fixtures. A published revision is immutable.
+
+## v2 example
+
+```json
+{
+  "manifest": {
+    "schemaVersion": 2,
+    "runtimeVersion": "web-v1",
+    "name": "A little notebook",
+    "entrypoint": "index.html",
+    "capabilities": ["viewer.progress.read", "viewer.progress.write"],
+    "assets": []
+  },
+  "files": {
+    "index.html": "<button id='next'>Next page</button><script>document.getElementById('next').onclick=()=>forma.progress.write({page:2})</script>"
+  }
+}
+```
+
+Package limits: strict known object fields; at most 20 html/css/js text files; 100,000 JavaScript
+string code units per file; 120 characters per path; mandatory index.html; name 1-100 characters.
+Path segments allow alphanumerics, underscore and hyphen. No traversal or absolute paths.
+The HTTP layer rejects bodies over 6 MB before schema validation.
+
+Classic inline JavaScript and quoted local script `src` / stylesheet `href` references are supported.
+This is not an npm bundler: no import resolution, remote dependencies, eval or server-side code.
+Files and asset references are processed from the package, never read as host filesystem paths.
+Package validation checks shape and resource references, not safety of arbitrary program behavior.
+
+## World stages and appearance
+
+v2 may add `manifest.stage` to request a full-width world. Existing packages without it keep
+their original presentation. The strict object requires `background`, `ink`, `nightBackground`,
+and `nightInk` as six-digit hex colors, plus integer `height` from 560 to 960 CSS pixels.
+These bounded values style the host stage; arbitrary host CSS is not accepted.
+
+The host supplies light/dark appearance through the nonce-bound `forma:appearance` message.
+The SDK checks the parent window and nonce, sets `document.documentElement.dataset.theme`,
+and dispatches `forma:theme`. Read `forma.appearance.theme` or style
+`html[data-theme="dark"]`. Appearance does not require a data capability and does not reload
+the experience. Authors choose their own night palette; existing artwork is never inverted.
+Use a transparent body to blend with the stage. The host keeps the iframe's CSS color scheme
+normal so browser dark-mode canvas defaults do not turn transparent worlds opaque.
+
+## Assets
+
+v2 declares up to 12 UUID asset IDs in `manifest.assets`. Reference them as `asset:UUID` in HTML/CSS;
+the renderer embeds local bytes. Upload supports JPEG/PNG/WebP, max 3 MB decoded, with MIME/signature
+checks. The creator must own an asset or use a shared demo asset before publishing it. Publication
+makes declared media viewable with the public post. No video processing is implemented.
+
+## SDK and permissions
+
+| Capability            | Browser SDK                                        | Server rule                                           |
+| --------------------- | -------------------------------------------------- | ----------------------------------------------------- |
+| viewer.progress.read  | `await forma.progress.read()`                      | Current viewer's state only                           |
+| viewer.progress.write | `await forma.progress.write({page:2})`             | Current viewer; at most 20 bounded scalar fields      |
+| contributions.read    | `await forma.contributions.list()`                 | This post's contributions                             |
+| contributions.create  | `await forma.contributions.add({text:'A memory'})` | Owner or invited contributor; text max 500 characters |
+| polls.read            | `await forma.poll.read()`                          | This post's aggregate counts and viewer choice        |
+| polls.vote            | `await forma.poll.vote(0)`                         | Valid option; replaces current viewer's vote          |
+
+Declare each capability used. A poll also requires `manifest.poll` with question and 2-6 option
+labels. Writes are not inferred from read permission or vice versa. Preview uses separate state.
+SDK calls reject with a code when permission fails; creator UI should catch and display the failure.
+
+Draft metadata is separate: title, caption, format (`photo`, `scrapbook`, `story`, `collaborative`,
+`custom`) and contributor IDs. Format is a feed label, not a restriction on source behavior.
+The creator is always allowed to contribute when the capability is declared. Demo IDs are `you`,
+`maya`, `leo`, `ines`. Public identity and contributor discovery need a separate production design.
+
+## Versioning and concurrency
+
+v1 packages with their original three capabilities remain accepted. v2 adds media, poll definitions,
+poll capabilities, and reading contributions. Editing a draft requires its current revision. A stale
+write or publish returns REVISION_CONFLICT. Repeating publish for the same revision returns the same
+publication; publishing an edited revision creates a new post.
+
+## Error and trace behavior
+
+Responses include `error` and `traceId` on failure. Schema failures provide sanitized field paths and
+messages, never raw submitted values. Logs contain trace ID, HTTP method, route pattern, status and
+duration; they omit request bodies, actor identifiers, session credentials and runtime ticket URLs.
+
+Common errors: UNAUTHENTICATED, NOT_FOUND (also used for foreign drafts), REVISION_CONFLICT,
+CAPABILITY_DENIED, CONTRIBUTOR_REQUIRED, RUNTIME_EXPIRED, PREVIEW_STALE, ASSET_NOT_ACCESSIBLE,
+INVALID_INPUT, INVALID_IMAGE, ORIGIN_DENIED, PAYLOAD_TOO_LARGE.
+
+MCP tool arguments are constrained to known properties and validated again in the shared API/core.
+See docs/mcp.md for tool names and workflow. The SDK does not expose credentials, direct database
+queries, arbitrary target IDs or arbitrary network calls to post code.
+
+## Profile v2: composition and Drawing Relay
+
+Post package versions are unchanged; profile v1 stays accepted. Profile v2 adds `manifest.parts`:
+an object with optional `profile`, `post`, `story`, and `feature` entries. Each entry is
+`{name, entrypoint, capabilities}`. The entrypoint references a local HTML fragment (not index.html).
+The shell in index.html includes matching markers such as `<!--forma:post-->`. Selected fragments
+replace markers once, before local CSS/JS bundling. No recursive slot expansion occurs.
+
+The top-level capability list must grant every selected part's requirements. All installed source
+shares one iframe and these permissions, not separate per-mod permissions. Validate both the raw
+package and assembled document. Profile v1 cannot declare relay capabilities or composition.
+
+`POST /api/profile-drafts/:id/compose` accepts `{revision,slot,donor}` where donor is a v2 package
+or null to remove the selected part. It saves a new owned draft revision; it does not publish.
+Unselected parts remain. Conflicting source paths fail with PART_FILE_CONFLICT. Missing donor parts
+fail with PART_NOT_PROVIDED. Preview and publish use the existing version/permission boundaries.
+The editor exposes Raka and Essentials; import/MCP support original arbitrary HTML/CSS/JS packages.
+
+- `relay.read`: `await forma.relay.read()` returns public contributions for this profile.
+- `relay.add`: `await forma.relay.add({submissionId,strokes})` adds a public contribution.
+- `submissionId`: UUID, reuse for retry; duplicate by another actor returns SUBMISSION_CONFLICT.
+- `strokes`: 1–32 strict objects `{color,width,points}`. Color is six-digit hex, width 1–12,
+  points 1–128 pairs of finite x (0–1000) and y (0–600). No actor, target or author fields accepted.
+- Returns `{id,userId,name,createdAt,strokes}`; author fields come from the authenticated demo session.
+- 200 contributions maximum, then RELAY_FULL. Concurrent additions append without replacing others.
+- Published data is owner-bound and survives redesign/restoration. Preview is draft/revision-bound.
+- Historical publication tickets cannot use relay methods disabled by the current profile.
+
+Raka story highlights open published `story` posts; this is not an expiring-story backend. Post
+parts control profile previews, not the independent published post's executable package or feed.
+Per-part sandboxing remains future work. Optional bounded automatic height is described below. See ADR 0004.
+
+Profile v2 may set `mobileHeight` (600–4000 CSS pixels). The host uses it at widths up to 600px
+and in the explicit mobile preview. This is bounded declarative sizing, not automatic measurement.
+
+## In-profile social controls (additive profile v2 extension)
+
+Optional `profile.social.read` and `profile.social.toggle` grants let arbitrary profile parts render
+live Follow, Like and Save controls. v1 remains unchanged and rejects these grants. Existing v2
+packages need no migration. `forma.profile.social.read()` returns `{writable,ownProfile,following,
+followers,posts:[{id,likes,liked,saved,comments}]}` scoped to this profile's publications. It exposes
+only this visitor's relevant social selections, never a viewer ID or their wider saved/follow lists.
+`forma.profile.social.toggle({action:'follow'})` targets the profile owner; actions `like` and `save`
+require an owner-bound `postId`. Extra identity/target fields are rejected. Toggle returns the same
+snapshot. Preview is read-only (`PREVIEW_READ_ONLY`); old publications recheck current grants.
+Comments and options still open the host post dialog. Permissions are shared across installed parts;
+these grants are not evidence of a human click. Production distribution needs a consent/abuse design.
+
+Profile v2 `headerOverlay: true` optionally puts the host toolbar over the top 65px of the
+profile artboard. Authors must leave that area clear of interactive content. The default keeps
+the toolbar in normal flow; arbitrary packages are not forced into Raka's shell geometry.
+
+## Explicit post covers (additive)
+
+Post metadata accepts optional `coverAssetId: UUID`. It must be declared in a v2 post's
+`manifest.assets` and pass the same owner/shared checks at create, update and publish. No cover
+is inferred from the first asset: it may be decoration. Reuse copies/remaps the cover with media.
+Old metadata without a cover remains valid; v1 post packages cannot declare covers.
+
+Profile v2 adds optional `profile.cover` (seven possible grants). `forma.profile.cover(postId)`
+returns `{src: dataURL, alt: postTitle}` or null. Only this profile owner's published posts qualify;
+no arbitrary asset ID or private draft is accepted. Preview may read public covers. Historical
+runtimes also require the active profile's grant. Legacy profile v1 capabilities are unchanged.
+`profile.read` adds `hasCover`; it does not return media bytes. Consumers should fetch visible
+covers lazily. Data URLs keep the sandbox's external networking restriction intact.
+
+## Optional profile v2 content height
+
+`manifest.autoHeight: true` opts into content sizing. Height/mobileHeight remain the loading
+fallback. After ready, the host sends nonce-bound `forma:layout` with autoHeight true. The SDK
+observes the body (flow layout, no viewport minimum height) and reports `forma:size` with an
+integer height clamped to 600–4000. The host accepts only the current frame, opaque origin,
+matching nonce, strict shape and bounded integer; updates are coalesced at 100 ms. This is a
+layout hint, not a capability or access to host DOM. Content beyond 4000 still scrolls in-frame.
+Viewport-height-based creator layouts should leave this option off to avoid resize feedback.
+Legacy profiles and post runtimes ignore sizing messages.
+
+## Draft identity (additive; package versions unchanged)
+
+Profile drafts and publications may include `identity: {name,bio,avatarAssetId}`. Name is trimmed,
+1–80 characters; bio is trimmed, at most 300; avatarAssetId is a UUID or null (initials).
+This strict object is outside the package manifest and cannot contain actor IDs, handles or grants.
+New drafts snapshot the owner's current identity. Existing records without it remain valid.
+`PUT /api/profile-drafts/:id` and MCP `update_profile_draft` accept optional identity alongside
+package and revision; omission preserves the existing snapshot. Owned/shared image assets only.
+Actor identity remains session-bound. Identity and package share a revision/concurrency boundary.
+
+Draft `profile.read` returns the private snapshot only to its owner. Public reads return the current
+account identity. Optional `owner.avatarSrc` is a data URL for that bound owner's avatar, not a
+general asset reader. `GET /api/users/:id/avatar` serves only that user's current public avatar;
+private draft selections do not become public through this route. Responses use no-store.
+Publication commits the package, active pointer and account identity in one transaction. Restore
+applies the selected publication's snapshot; legacy publications and null/default restoration leave
+the account identity unchanged. Posts remain independently published content.
+
+The visual composition helper is not a new package/runtime contract. For the compatible Raka shell
+it writes bounded settings to `personal/design.js`, `personal/boot.js`, and `personal/design.css`,
+and reorders the existing slot markers. It validates settings before writing source and never
+evaluates imported settings. Mod fragments, permissions and custom source remain intact. Changes
+to those generated files may be overwritten by the next visual edit; other source is preserved.
+These controls do not imply universal compatibility, per-mod isolation, or a secure code validator.
+
+## Local mod library (additive HTTP/MCP contract)
+
+- `GET /api/mods`: latest metadata, author, selected slots, capabilities, declared asset count.
+- `GET /api/mods/:id?version=N`: exact shared source version; omission selects the latest.
+- `POST /api/mods`: strict `{submissionId,draftId,revision,name,description,slots,shareAssets:true,
+thumbnailAssetId?,modId?,expectedVersion?}`. Names 1–80, descriptions 1–400, slots 1–4 unique
+  existing v2 parts. Optional thumbnail is an owned/shared UUID or null. `modId` and expectedVersion
+  are paired for owned updates; starter records cannot be updated by clients. Repeating the same
+  submissionId/input by the same actor returns the same version; differing input conflicts.
+- `POST /api/mods/:id/install`: strict `{version,draftId?,revision?,slot?}`. Without a draft, creates
+  a private copy. Mixing requires all three optional fields and preserves other parts and identity.
+  Source/asset/file-count/conflict checks apply. Failure creates neither assets nor draft changes.
+- `GET /api/mods/:id/assets/:assetId?version=N`: only media included in that exact public mod version.
+
+A shared record includes id, monotonic version, session-bound creatorId, name/description, slots,
+createdAt, package and nullable thumbnailAssetId. Identity is not part of it. Sharing retains all
+source/dependency files and declared design assets, including inactive dependencies; UI explicitly
+discloses this. Private account avatar/post media are not inferred or copied. Owned included assets
+are cloned with new UUIDs, and source references are remapped. Installing copies those assets again
+for the installer; original private IDs never become generally readable. Immutable installs do not
+auto-update. Library thumbnails can be chosen from owned/shared assets; generated graphic covers are
+not screenshots. Built-in starter source changes advance its library version, never a live profile.
+
+Partial package composition retains the existing shared-runtime contract. A fragment must load its
+own CSS/JS dependencies or expect a compatible shell. Source path conflicts reject the operation;
+the UI suggests a fresh draft or explicit source adjustment. No universal compatibility is claimed.
+
+## Profile polls (additive v2 extension)
+
+Optional `manifest.poll` is strict `{id,question,options:[{id,label}]}` and requires a feature part.
+IDs match `[a-zA-Z0-9_-]{1,40}`, question 1–120 chars, 2–8 options with distinct IDs and 1–80 char
+labels. `profile.poll.read` and `profile.poll.vote` grants require this definition; v2 now accepts
+up to nine profile grants. v1 is unchanged. Composing the feature carries/removes its poll definition.
+
+`forma.profile.poll.read()` accepts no payload. `.vote(optionId)` sends strict `{option}` only;
+the actor/owner come from the ticket. Each actor can replace their one vote. Return value is
+`{question,options:[{id,label,votes}],selected,total,preview}`, with no other voter identities.
+Preview data is draft/revision-bound; public votes are owner/complete-definition-bound and capped
+at 10,000 voters. Changed definitions start separate results. Removing or changing the active poll
+denies historical access; restoring an unchanged definition restores its counts. Updates are
+request/refresh based, not realtime. These are simulated accounts, not vote-fraud protection.
+
+## Profile discovery and staged reuse (additive)
+
+Draft/publication records may have server-managed `origins` keyed by profile/post/story/feature:
+`{modId,version,modified}`. These are not package fields and cannot be submitted with draft writes.
+Install records pin direct provenance; publication/restoration preserves the snapshot. Identity-only
+edits preserve it. Source edits conservatively mark remaining credits modified; replacing/removing
+part metadata clears that part's credit. Legacy/imported source has no inferred attribution.
+
+- `GET /api/profiles/:id/mods`: active publication ID and four surface credits, including creator.
+- `GET /api/mod-creators/:id`: public creator details, latest shared mods and distinct active profile
+  counts. `forma` is the built-in collection. Historical publications and private drafts do not count.
+- `POST /api/mods/:id/preview`: same strict input as install, but always creates a separate owned
+  preview draft. A mixed preview records the original target ID/revision; it never changes that draft.
+- `POST /api/mod-previews/:id/apply`: strict empty object; actor must own the unchanged preview.
+  A target draft must still match its recorded revision. It receives the preview atomically; a new
+  composition remains a separate private draft. Neither operation publishes a profile.
+- `POST /api/profiles/:id/combination`: strict `{publicationId:UUID}` must match the current public
+  pointer. Copies exact source and declared design media, remapping owned asset IDs, and preserves
+  provenance. Identity, bio/avatar and public posts are the recipient's. Visitor state and
+  private undeclared assets are not copied. Hardcoded source text/art is still design content.
+
+Previews are retained as private drafts on cancel; practice state is draft/revision-bound. Credits
+record direct installation lineage, not verified authorship, a license, transitive credit or proof
+of unchanged dependencies. Undo via arbitrary source update follows the same conservative rules.
+Existing MCP installation automatically records provenance; new discovery routes are HTTP/UI only.

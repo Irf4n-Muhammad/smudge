@@ -1,0 +1,142 @@
+<style>
+  .mz-posts {
+    padding: 28px 20px 40px;
+    background: #191919;
+    color: #f4f0e6;
+  }
+  .mz-posts > h2 {
+    font: 700 14px monospace;
+    letter-spacing: 0.15em;
+    margin: 0 0 24px;
+  }
+  .mz-posters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px 18px;
+  }
+  .mz-poster {
+    position: relative;
+    background: #f6efe0;
+    color: #111;
+    border: 0;
+    padding: 0 0 20px;
+    text-align: left;
+    transform: rotate(-1deg);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .mz-poster:nth-child(even) {
+    background: #ff614a;
+    transform: rotate(1deg);
+  }
+  .mz-poster:before {
+    content: "LIVE / ARCHIVE";
+    display: block;
+    background: #111;
+    color: #c7ff48;
+    padding: 8px 14px;
+    font: 12px monospace;
+    letter-spacing: 0.2em;
+  }
+  .mz-poster strong {
+    display: block;
+    font: 900 clamp(20px, 3.5vw, 46px) / 0.95 Arial;
+    text-transform: uppercase;
+    letter-spacing: -0.055em;
+    overflow-wrap: anywhere;
+    padding: 18px 14px;
+  }
+  .mz-poster p {
+    font: 14px/1.5 Arial;
+    padding: 0 14px;
+    margin: 8px 0;
+  }
+  .mz-poster .mz-cover {
+    width: 100%;
+    aspect-ratio: 1.25;
+    object-fit: cover;
+    display: block;
+    filter: saturate(0.85);
+  }
+  .mz-poster .mz-open {
+    display: block;
+    border-top: 2px dashed #1118;
+    margin: 16px 14px 0;
+    padding-top: 10px;
+    font: 700 12px monospace;
+  }
+  .mz-posters .empty {
+    grid-column: 1/-1;
+    padding: 30px;
+  }
+  @media (max-width: 600px) {
+    .mz-posts {
+      padding: 24px 12px;
+    }
+    .mz-posters {
+      gap: 18px 12px;
+    }
+    .mz-poster strong {
+      font-size: 24px;
+      padding: 14px 10px;
+    }
+    .mz-poster p {
+      font-size: 13px;
+      padding: 0 10px;
+    }
+  }
+</style>
+<section class="mz-posts">
+  <h2>THE ARCHIVE / MOMENTS ON REPEAT</h2>
+  <div class="mz-posters" id="mz-posters"></div>
+</section>
+<script>
+  forma.profile
+    .read()
+    .then(({ posts }) => {
+      const root = document.getElementById("mz-posters");
+      const observer = new IntersectionObserver(
+        (es) =>
+          es.forEach((e) => {
+            if (!e.isIntersecting) return;
+            observer.unobserve(e.target);
+            forma.profile
+              .cover(e.target.dataset.post)
+              .then((c) => {
+                if (c) {
+                  const img = document.createElement("img");
+                  img.src = c.src;
+                  img.alt = c.alt;
+                  img.className = "mz-cover";
+                  e.target.querySelector("strong").after(img);
+                }
+              })
+              .catch(() => {});
+          }),
+        { rootMargin: "200px" },
+      );
+      posts
+        .filter((p) => p.format !== "story")
+        .forEach((p) => {
+          const b = document.createElement("button");
+          b.className = "mz-poster";
+          b.dataset.post = p.id;
+          b.setAttribute("aria-label", "Open " + p.title);
+          const h = document.createElement("strong");
+          h.textContent = p.title;
+          const text = document.createElement("p");
+          text.textContent = p.caption || "A moment worth keeping.";
+          const foot = document.createElement("span");
+          foot.className = "mz-open";
+          foot.textContent = "OPEN THIS MOMENT ↗";
+          b.append(h, text, foot);
+          b.onclick = () =>
+            forma.profile.openPost(p.id).catch(() => (foot.textContent = "Please try again"));
+          root.append(b);
+          if (p.hasCover) observer.observe(b);
+        });
+      if (!root.children.length)
+        root.textContent = "Your next release goes here. Publish a photo to start.";
+    })
+    .catch(() => (document.getElementById("mz-posters").textContent = "Could not load posts."));
+</script>

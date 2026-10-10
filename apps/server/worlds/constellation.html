@@ -1,0 +1,365 @@
+<style>
+  :root {
+    --star: #e6ddff;
+    --fade: #a69bba;
+  }
+  body {
+    background: transparent;
+    color: var(--star);
+    overflow: hidden;
+  }
+  main {
+    position: relative;
+    height: 790px;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 62% 46%, #7460ac25, transparent 54%);
+  }
+  main:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(#fff9 0.7px, transparent 0.8px),
+      radial-gradient(#b4a2e577 1px, transparent 1.5px);
+    background-size:
+      47px 61px,
+      131px 113px;
+    background-position:
+      12px 29px,
+      43px 17px;
+    opacity: 0.5;
+    mask-image: linear-gradient(transparent, #000 17%, #000 85%, transparent);
+  }
+  .orbit {
+    position: absolute;
+    border: 1px solid #d8c4ff15;
+    border-radius: 50%;
+    width: 750px;
+    height: 450px;
+    left: calc(50% - 375px);
+    top: 205px;
+    transform: rotate(-25deg);
+  }
+  .orbit.second {
+    transform: rotate(35deg);
+    width: 650px;
+    left: calc(50% - 325px);
+    height: 520px;
+    top: 175px;
+  }
+  .intro {
+    position: absolute;
+    top: 112px;
+    left: 8%;
+    z-index: 2;
+  }
+  small {
+    font: 9px Arial;
+    letter-spacing: 3px;
+    color: #a497be;
+  }
+  h1 {
+    font: italic clamp(49px, 6vw, 78px) / 1.05 Georgia;
+    margin: 22px 0 17px;
+    letter-spacing: -2px;
+  }
+  h1 span {
+    color: #c7b5ed;
+  }
+  p {
+    font: 13px/1.8 Georgia;
+    color: #a69bba;
+    margin: 0;
+    max-width: 285px;
+  }
+  .sky {
+    position: absolute;
+    inset: 0;
+  }
+  .lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  .star {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background: none;
+    border: 0;
+    color: #ddd0f5;
+    text-align: left;
+    padding: 14px;
+    cursor: pointer;
+    z-index: 3;
+  }
+  .star b {
+    display: block;
+    font: 35px Georgia;
+    text-shadow:
+      0 0 25px #c3a3ff,
+      0 0 60px #b8a0f888;
+    transition: transform 0.25s;
+  }
+  .star:hover b,
+  .star[aria-pressed="true"] b {
+    transform: scale(1.35);
+    color: white;
+  }
+  .star span {
+    display: block;
+    font: 9px Arial;
+    letter-spacing: 2px;
+    margin-top: 9px;
+    white-space: nowrap;
+    color: #b4a4cd;
+  }
+  .star:nth-of-type(1) {
+    left: 61%;
+    top: 35%;
+  }
+  .star:nth-of-type(2) {
+    left: 79%;
+    top: 50%;
+  }
+  .star:nth-of-type(3) {
+    left: 57%;
+    top: 65%;
+  }
+  .star:nth-of-type(4) {
+    left: 31%;
+    top: 62%;
+  }
+  .star:nth-of-type(5) {
+    left: 39%;
+    top: 43%;
+  }
+  .moon {
+    position: absolute;
+    right: 12%;
+    top: 106px;
+    border-radius: 50%;
+    width: 72px;
+    height: 72px;
+    box-shadow: 13px 8px 0 -2px #e9dcbe;
+    transform: rotate(-15deg);
+    opacity: 0.85;
+  }
+  .memory {
+    position: absolute;
+    left: 9%;
+    bottom: 106px;
+    width: 34%;
+    border-left: 1px solid #8d77b866;
+    padding: 0 0 0 20px;
+    z-index: 4;
+  }
+  .memory h2 {
+    font: italic 26px Georgia;
+    color: #e8ddfa;
+    margin: 12px 0;
+  }
+  .memory p {
+    font-size: 13px;
+  }
+  .memory small {
+    font-size: 8px;
+  }
+  .hint {
+    position: absolute;
+    bottom: 27px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font: 9px Arial;
+    letter-spacing: 3px;
+    color: #8c7b9c;
+  }
+  .dust {
+    position: absolute;
+    right: 16%;
+    bottom: 146px;
+    font: italic 19px Georgia;
+    color: #a38dbd;
+    transform: rotate(-12deg);
+  }
+  .dust span {
+    font-size: 38px;
+    margin-left: 20px;
+  }
+  .star:focus-visible {
+    outline: 1px solid #bd9be6;
+    border-radius: 50%;
+  }
+  @media (max-width: 600px) {
+    .intro {
+      left: 8%;
+      top: 102px;
+    }
+    h1 {
+      font-size: 46px;
+    }
+    .intro p {
+      font-size: 11px;
+      max-width: 205px;
+    }
+    .moon {
+      right: 13%;
+      top: 126px;
+      width: 45px;
+      height: 45px;
+    }
+    .star:nth-of-type(1) {
+      left: 70%;
+      top: 40%;
+    }
+    .star:nth-of-type(2) {
+      left: 80%;
+      top: 54%;
+    }
+    .star:nth-of-type(3) {
+      left: 59%;
+      top: 65%;
+    }
+    .star:nth-of-type(4) {
+      left: 23%;
+      top: 59%;
+    }
+    .star:nth-of-type(5) {
+      left: 35%;
+      top: 42%;
+    }
+    .lines {
+      display: none;
+    }
+    .star span {
+      font-size: 7px;
+      letter-spacing: 1px;
+    }
+    .memory {
+      left: 9%;
+      bottom: 92px;
+      width: 75%;
+    }
+    .memory h2 {
+      font-size: 24px;
+    }
+    .memory p {
+      font-size: 12px;
+      max-width: none;
+    }
+    .dust {
+      display: none;
+    }
+    .orbit {
+      width: 430px;
+      height: 290px;
+      left: calc(50% - 215px);
+      top: 260px;
+    }
+    .orbit.second {
+      width: 340px;
+      height: 350px;
+      left: calc(50% - 170px);
+      top: 237px;
+    }
+    .hint {
+      font-size: 8px;
+      letter-spacing: 2px;
+    }
+  }
+</style>
+<main>
+  <div class="orbit"></div>
+  <div class="orbit second"></div>
+  <div class="moon" aria-hidden="true"></div>
+  <header class="intro">
+    <small>FIVE NIGHTS. FIVE LITTLE UNIVERSES.</small>
+    <h1>Somewhere<br />between <span>midnights.</span></h1>
+    <p>A week of things I almost forgot to notice.<br />Pick a star. Stay a while.</p>
+  </header>
+  <svg class="lines" viewBox="0 0 1000 790" preserveAspectRatio="none" aria-hidden="true">
+    <path
+      d="M610 276 L790 395 L570 513 L310 490 L390 339 L610 276"
+      fill="none"
+      stroke="#bda4ec"
+      stroke-width="1"
+      stroke-dasharray="3 6"
+    />
+  </svg>
+  <div class="sky">
+    <button class="star" data-night="0" aria-label="Open Monday's memory" aria-pressed="false">
+      <b>✧</b><span>01 / MONDAY</span></button
+    ><button class="star" data-night="1" aria-label="Open Tuesday's memory" aria-pressed="false">
+      <b>✦</b><span>02 / TUESDAY</span></button
+    ><button class="star" data-night="2" aria-label="Open Wednesday's memory" aria-pressed="false">
+      <b>✧</b><span>03 / WEDNESDAY</span></button
+    ><button class="star" data-night="3" aria-label="Open Thursday's memory" aria-pressed="false">
+      <b>✴</b><span>04 / THURSDAY</span></button
+    ><button class="star" data-night="4" aria-label="Open Friday's memory" aria-pressed="false">
+      <b>✧</b><span>05 / FRIDAY</span>
+    </button>
+  </div>
+  <section class="memory" aria-live="polite">
+    <small id="date">A NOTE TO MY FUTURE SELF</small>
+    <h2 id="title">Even ordinary days leave stars.</h2>
+    <p id="text">Tap any little light to find the moment behind it.</p>
+  </section>
+  <span class="dust">you are here <span>↗</span></span>
+  <div class="hint">A SKY TO EXPLORE, NOT A STORY TO FINISH</div>
+</main>
+<script>
+  const nights = [
+    [
+      "MONDAY / 11:42 PM",
+      "The long way home.",
+      "Missed my stop. Walked back under a sky that made it feel like the right decision.",
+    ],
+    [
+      "TUESDAY / 1:06 AM",
+      "Someone was still awake.",
+      "A three-minute voice note from an old friend. A small light across a very big distance.",
+    ],
+    [
+      "WEDNESDAY / 10:18 PM",
+      "Dinner for one.",
+      "Cooked something complicated just for myself. Burnt the garlic. Ate it anyway.",
+    ],
+    [
+      "THURSDAY / 12:03 AM",
+      "A window left open.",
+      "The city finally got quiet enough to hear the rain. I put my phone down for a while.",
+    ],
+    [
+      "FRIDAY / 2:14 AM",
+      "Nothing left to say.",
+      "We sat on the roof after everyone had gone. Sometimes company is better without conversation.",
+    ],
+  ];
+  function select(n) {
+    const data = nights[n];
+    if (!data) return;
+    document.getElementById("date").textContent = data[0];
+    document.getElementById("title").textContent = data[1];
+    document.getElementById("text").textContent = data[2];
+    document
+      .querySelectorAll(".star")
+      .forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.night) === n)));
+  }
+  document.querySelectorAll(".star").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const n = Number(b.dataset.night);
+        select(n);
+        forma.progress.write({ night: n }).catch(() => {});
+      }),
+  );
+  forma.progress
+    .read()
+    .then((s) => {
+      if (typeof s.night === "number") select(s.night);
+    })
+    .catch(() => {});
+</script>
