@@ -23,6 +23,7 @@ export function Studio({
   onPublished,
   notify,
   onImport,
+  editing = false,
 }: {
   boot: Boot;
   draftId?: string;
@@ -30,6 +31,8 @@ export function Studio({
   onPublished: () => Promise<void>;
   notify: (s: string) => void;
   onImport?: () => void;
+  /** Opened from a published post's menu: publishing updates that post in place. */
+  editing?: boolean;
 }) {
   const [drafts, setDrafts] = useState<DraftView[]>([]),
     [draft, setDraft] = useState<DraftView | null>(null),
@@ -591,7 +594,7 @@ export function Studio({
                     })
                   }
                 >
-                  Publish story <ArrowUpRight size={16} />
+                  {editing ? "Update post" : "Publish story"} <ArrowUpRight size={16} />
                 </button>
               </footer>
             </>

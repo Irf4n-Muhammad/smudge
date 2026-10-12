@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   ArrowUpRight,
+  ArrowLeft,
   Check,
   Feather,
   Layers,
@@ -76,6 +77,10 @@ export function FormaApp() {
     [momentOpen, setMomentOpen] = useState(false),
     [importOpen, setImportOpen] = useState(false),
     [postEditor, setPostEditor] = useState<{ draftId?: string } | null>(null),
+    /** The editor was opened from a published post, so publishing updates it in place. */
+    [editingPost, setEditingPost] = useState(false),
+    /** A single post opened from a link or a notification. */
+    [focusPost, setFocusPost] = useState<string | null>(null),
     [auth, setAuth] = useState<AuthState | null>(null),
     [authDialog, setAuthDialog] = useState<AuthMode | null>(null),
     [resetToken, setResetToken] = useState<string | null>(null),
@@ -144,6 +149,11 @@ export function FormaApp() {
     }
     setCockpit(new URLSearchParams(window.location.search).get("mode") === "cockpit");
     setBreakout(new URLSearchParams(window.location.search).get("mode") === "breakout");
+    const shared = new URLSearchParams(window.location.search).get("post");
+    if (shared) {
+      setFocusPost(shared);
+      setView("post");
+    }
     const id = new URLSearchParams(window.location.search).get("draft");
     if (id) {
       setActiveDraft(id);
@@ -177,12 +187,38 @@ export function FormaApp() {
     }
   }
   function create() {
+    setEditingPost(false);
     setActiveDraft(undefined);
     setStudio(true);
   }
   /** "Create a post" opens the easy post editor; the studio stays one tap away inside it. */
   function createPost() {
+    setEditingPost(false);
     setPostEditor({});
+  }
+  /** The post's draft opens in the easy editor, which hands studio-made posts to the studio. */
+  async function editPost(id: string) {
+    try {
+      const draft = await api<DraftView>(`/posts/${id}/edit`, {});
+      setEditingPost(true);
+      setPostEditor({ draftId: draft.id });
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }
+  function openUser(userId: string) {
+    setProfile(userId);
+    setView("profile");
+    setFilter("all");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function openPost(id: string) {
+    setFocusPost(id);
+    setView("post");
+    setFilter("all");
+    setProfile(null);
+    window.history.replaceState(null, "", `/?post=${encodeURIComponent(id)}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
   async function signedIn(fresh: boolean) {
     setStudio(false);
@@ -231,6 +267,7 @@ export function FormaApp() {
     (p) =>
       (view !== "following" || boot?.following.includes(p.ownerId)) &&
       (view !== "saved" || p.saved) &&
+      (view !== "post" || p.id === focusPost) &&
       (view !== "profile" || p.ownerId === (profile ?? boot?.actor.userId)) &&
       (filter === "all" || p.metadata.format === filter) &&
       `${p.metadata.title} ${p.metadata.caption} ${p.author.name}`
@@ -238,6 +275,7 @@ export function FormaApp() {
         .includes(query.toLowerCase()),
   );
   function navigate(next: string) {
+    if (view === "post") window.history.replaceState(null, "", "/");
     setView(next);
     setFilter("all");
     setProfile(null);
@@ -544,6 +582,7 @@ export function FormaApp() {
                   setProfile(id);
                   setView("profile");
                 }}
+                onOpenPost={openPost}
               />
             ) : view === "messages" && boot ? (
               <MessagesPanel
@@ -566,7 +605,13 @@ export function FormaApp() {
             ) : (
               <>
                 {view !== "profile" && <SeasonLayer />}
-                {view === "profile" && selectedUser ? (
+                {view === "post" ? (
+                  <section className="single-post-heading">
+                    <button className="quiet-button" onClick={() => navigate("home")}>
+                      <ArrowLeft size={15} /> Back to your feed
+                    </button>
+                  </section>
+                ) : view === "profile" && selectedUser ? (
                   <section className="profile-heading">
                     <Avatar user={selectedUser} />
                     <div>
@@ -636,33 +681,35 @@ export function FormaApp() {
                     </button>
                   </section>
                 )}
-                <div className="feed-toolbar">
-                  <div className="feed-tabs" aria-label="Filter post formats">
-                    {[
-                      ["all", "For you"],
-                      ["scrapbook", "Scrapbooks"],
-                      ["story", "Stories"],
-                      ["collaborative", "Together"],
-                    ].map(([id, label]) => (
-                      <button
-                        key={id}
-                        aria-pressed={filter === id}
-                        className={filter === id ? "selected" : ""}
-                        onClick={() => setFilter(id!)}
-                      >
-                        {id === "all" && <Sparkles size={13} />} {label}
-                      </button>
-                    ))}
+                {view !== "post" && (
+                  <div className="feed-toolbar">
+                    <div className="feed-tabs" aria-label="Filter post formats">
+                      {[
+                        ["all", "For you"],
+                        ["scrapbook", "Scrapbooks"],
+                        ["story", "Stories"],
+                        ["collaborative", "Together"],
+                      ].map(([id, label]) => (
+                        <button
+                          key={id}
+                          aria-pressed={filter === id}
+                          className={filter === id ? "selected" : ""}
+                          onClick={() => setFilter(id!)}
+                        >
+                          {id === "all" && <Sparkles size={13} />} {label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      className="icon-button refresh-feed"
+                      aria-label="Refresh feed"
+                      title="Refresh feed"
+                      onClick={() => void refresh()}
+                    >
+                      <RefreshCw size={16} />
+                    </button>
                   </div>
-                  <button
-                    className="icon-button refresh-feed"
-                    aria-label="Refresh feed"
-                    title="Refresh feed"
-                    onClick={() => void refresh()}
-                  >
-                    <RefreshCw size={16} />
-                  </button>
-                </div>
+                )}
                 {loading && (
                   <div className="empty-state">
                     <span className="tiny-flower">✳</span>
@@ -682,18 +729,22 @@ export function FormaApp() {
                   <div className="empty-state">
                     <Feather size={30} />
                     <h2>
-                      {view === "saved"
-                        ? "Keep something you love."
-                        : "A little room for something new."}
+                      {view === "post"
+                        ? "This post isn’t here anymore."
+                        : view === "saved"
+                          ? "Keep something you love."
+                          : "A little room for something new."}
                     </h2>
                     <p>
                       {query
                         ? "Try a different search."
-                        : view === "saved"
-                          ? "Tap the bookmark on a post to find it here."
-                          : view === "following"
-                            ? "Follow someone to bring their stories here."
-                            : "Your next story could start here."}
+                        : view === "post"
+                          ? "It may have been deleted, or it isn’t shared with you."
+                          : view === "saved"
+                            ? "Tap the bookmark on a post to find it here."
+                            : view === "following"
+                              ? "Follow someone to bring their stories here."
+                              : "Your next story could start here."}
                     </p>
                     <button
                       className="quiet-button"
@@ -714,12 +765,10 @@ export function FormaApp() {
                         onRefresh={refresh}
                         notify={notify}
                         onFollow={() => void follow(post.ownerId)}
-                        onProfile={() => {
-                          setProfile(post.ownerId);
-                          setView("profile");
-                          setFilter("all");
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }}
+                        onProfile={() => openUser(post.ownerId)}
+                        onUser={openUser}
+                        onEdit={() => void editPost(post.id)}
+                        openComments={view === "post"}
                         onReuse={async () => {
                           try {
                             const d = await api<DraftView>(`/posts/${post.id}/reuse`, {});
@@ -909,13 +958,20 @@ export function FormaApp() {
           draftId={activeDraft}
           onClose={() => {
             setStudio(false);
+            setEditingPost(false);
             window.history.replaceState(null, "", "/");
           }}
+          editing={editingPost}
           onPublished={async () => {
             setStudio(false);
-            navigate("home");
+            setEditingPost(false);
+            if (!editingPost) navigate("home");
             await refresh();
-            notify("Published. Your story has a home in the feed.");
+            notify(
+              editingPost
+                ? "Updated. Everyone sees the new version."
+                : "Published. Your story has a home in the feed.",
+            );
           }}
           notify={notify}
           onImport={() => {
@@ -927,12 +983,21 @@ export function FormaApp() {
       {postEditor && (
         <PostEditor
           draftId={postEditor.draftId}
-          onClose={() => setPostEditor(null)}
+          editing={editingPost}
+          onClose={() => {
+            setPostEditor(null);
+            setEditingPost(false);
+          }}
           onPublished={async () => {
             setPostEditor(null);
-            navigate("home");
+            setEditingPost(false);
+            if (!editingPost) navigate("home");
             await refresh();
-            notify("Published. Your post is in the feed.");
+            notify(
+              editingPost
+                ? "Updated. Everyone sees the new version."
+                : "Published. Your post is in the feed.",
+            );
           }}
           onStudio={(id) => {
             setPostEditor(null);

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, CSSProperties } from "react";
 import {
   MoreHorizontal,
@@ -11,7 +11,14 @@ import {
   Bookmark,
   ArrowDown,
   Ban,
+  Link2,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
+import { CommentList } from "./comments";
+import type { CommentItem } from "./comments";
+import { MentionText } from "./mention-text";
 import { ReportDialog, toggleBlock } from "./community";
 import { api, Runtime } from "./runtime";
 import { Avatar } from "./ui";
@@ -37,6 +44,9 @@ export function PostCard({
   onProfile,
   onReuse,
   onSkip,
+  onEdit,
+  onUser,
+  openComments: startOpen = false,
 }: {
   post: DecoratedPost;
   boot: Boot;
@@ -46,11 +56,18 @@ export function PostCard({
   onProfile: () => void;
   onReuse: () => void;
   onSkip: () => void;
+  /** Owner only: open this post's draft in the editor it was made with. */
+  onEdit?: () => void;
+  /** Opens a profile from an @mention. */
+  onUser?: (userId: string) => void;
+  /** Show comments from the start (a post opened from a notification or link). */
+  openComments?: boolean;
 }) {
   const stage = post.manifest.schemaVersion === 2 ? post.manifest.stage : undefined;
   const [commentsOpen, setCommentsOpen] = useState(false),
-    [comments, setComments] = useState<{ id: string; userId: string; text: string }[]>([]),
+    [comments, setComments] = useState<CommentItem[]>([]),
     [comment, setComment] = useState(""),
+    [replyTo, setReplyTo] = useState<CommentItem | null>(null),
     [menu, setMenu] = useState(false),
     [busy, setBusy] = useState(false),
     [full, setFull] = useState(false),
@@ -64,10 +81,62 @@ export function PostCard({
       notify((e as Error).message);
     }
   };
+  const mine = post.ownerId === boot.actor.userId;
+  const userByHandle = (handle: string) => boot.users.find((u) => u.handle === handle);
+  async function loadComments() {
+    const list = await api<{ id: string; userId: string; text: string; parentId?: string }[]>(
+      `/posts/${post.id}/comments`,
+    );
+    setComments(
+      list.map((c) => {
+        const u = boot.users.find((x) => x.id === c.userId);
+        return {
+          id: c.id,
+          text: c.text,
+          parentId: c.parentId,
+          author: u ? { id: u.id, name: u.name, handle: u.handle } : null,
+        };
+      }),
+    );
+  }
   async function openComments() {
     try {
-      setComments(await api(`/posts/${post.id}/comments`));
+      await loadComments();
       setCommentsOpen((v) => !v);
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }
+  useEffect(() => {
+    if (startOpen) void openComments();
+    // Opening once on arrival; later toggles are the person's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  async function copyLink() {
+    const url = `${window.location.origin}/p/${post.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      notify("Link copied. Anyone with it can see this post.");
+    } catch {
+      notify(url);
+    }
+  }
+  async function remove() {
+    if (!window.confirm(`Delete “${post.metadata.title}”? Likes and comments go with it.`)) return;
+    try {
+      await api(`/posts/${post.id}`, undefined, "DELETE");
+      notify("Post deleted. Its draft is still in your studio.");
+      await onRefresh();
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }
+  async function removeComment(c: CommentItem) {
+    if (!window.confirm("Delete this comment?")) return;
+    try {
+      await api(`/comments/${c.id}`, undefined, "DELETE");
+      await loadComments();
+      await onRefresh();
     } catch (e) {
       notify((e as Error).message);
     }
@@ -77,9 +146,13 @@ export function PostCard({
     if (!comment.trim()) return;
     setBusy(true);
     try {
-      await api(`/posts/${post.id}/comments`, { text: comment });
+      await api(`/posts/${post.id}/comments`, {
+        text: comment,
+        ...(replyTo ? { parentId: replyTo.id } : {}),
+      });
       setComment("");
-      setComments(await api(`/posts/${post.id}/comments`));
+      setReplyTo(null);
+      await loadComments();
       await onRefresh();
     } catch (e) {
       notify((e as Error).message);
@@ -119,6 +192,12 @@ export function PostCard({
                 month: "short",
                 day: "numeric",
               })}
+              {post.editedAt && (
+                <>
+                  <span className="meta-dot">·</span>
+                  <span title={new Date(post.editedAt).toLocaleString()}>Edited</span>
+                </>
+              )}
             </span>
           </span>
         </button>
@@ -139,6 +218,28 @@ export function PostCard({
             </button>
             {menu && (
               <div className="post-menu">
+                {mine && !moment && onEdit && (
+                  <button
+                    onClick={() => {
+                      setMenu(false);
+                      onEdit();
+                    }}
+                  >
+                    <Pencil size={14} />
+                    Edit post
+                  </button>
+                )}
+                {!moment && (
+                  <button
+                    onClick={() => {
+                      setMenu(false);
+                      void copyLink();
+                    }}
+                  >
+                    <Link2 size={14} />
+                    Copy link
+                  </button>
+                )}
                 {!moment && (
                   <button
                     onClick={() => {
@@ -150,15 +251,28 @@ export function PostCard({
                     Use this format
                   </button>
                 )}
-                <button
-                  onClick={() => {
-                    setMenu(false);
-                    setReporting(true);
-                  }}
-                >
-                  <Flag size={14} />
-                  Report post
-                </button>
+                {mine ? (
+                  <button
+                    className="danger"
+                    onClick={() => {
+                      setMenu(false);
+                      void remove();
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    Delete post
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setMenu(false);
+                      setReporting(true);
+                    }}
+                  >
+                    <Flag size={14} />
+                    Report post
+                  </button>
+                )}
                 {post.ownerId !== boot.actor.userId && (
                   <button
                     onClick={async () => {
@@ -181,6 +295,7 @@ export function PostCard({
         ) : (
           <Runtime
             target={post.id}
+            version={post.revision}
             height={stage?.height ?? (post.metadata.format === "scrapbook" ? 510 : 460)}
             onSkip={onSkip}
           />
@@ -241,7 +356,12 @@ export function PostCard({
           </button>
         </div>
         <p className="post-caption">
-          <strong>{post.author.handle}</strong> {post.metadata.caption}
+          <strong>{post.author.handle}</strong>{" "}
+          <MentionText
+            text={post.metadata.caption}
+            known={(h) => !!userByHandle(h)}
+            onOpen={(h) => onUser?.(userByHandle(h)!.id)}
+          />
         </p>
         <DecorCredit post={post} />
         <div className="post-bottom">
@@ -256,16 +376,37 @@ export function PostCard({
         {commentsOpen && (
           <section className="comments" aria-label="Comments">
             {comments.length === 0 && <p className="fineprint">Start a little conversation.</p>}
-            {comments.map((c) => (
-              <p key={c.id}>
-                <strong>{boot.users.find((u) => u.id === c.userId)?.name ?? "Someone"}</strong>{" "}
-                {c.text}
-              </p>
-            ))}
+            <CommentList
+              comments={comments}
+              known={(h) => !!userByHandle(h)}
+              onOpen={(h) => onUser?.(userByHandle(h)!.id)}
+              onReply={(c) => {
+                setReplyTo(c);
+                if (c.author && c.author.id !== boot.actor.userId && !comment.trim())
+                  setComment(`@${c.author.handle} `);
+              }}
+              canDelete={(c) => mine || c.author?.id === boot.actor.userId}
+              onDelete={(c) => void removeComment(c)}
+            />
+            {replyTo && (
+              <div className="replying-to">
+                Replying to {replyTo.author?.name ?? "a comment"}
+                <button
+                  type="button"
+                  aria-label="Cancel reply"
+                  onClick={() => {
+                    setReplyTo(null);
+                    if (comment.trim() === `@${replyTo.author?.handle}`) setComment("");
+                  }}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
             <form onSubmit={submit}>
               <input
-                aria-label="Write a comment"
-                placeholder="Leave a little thought…"
+                aria-label={replyTo ? "Write a reply" : "Write a comment"}
+                placeholder={replyTo ? "Write a reply…" : "Leave a little thought…"}
                 maxLength={1000}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}

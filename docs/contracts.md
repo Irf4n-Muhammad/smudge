@@ -426,3 +426,36 @@ the studio. Title, cover and format follow the design; caption and button stay t
 Edit mode (see The Wall and easy editing) now also applies to post draft previews: the host may
 put a post draft preview in edit mode and accepts `forma:edit` only from such a frame. Easy posts
 tag `kicker`, `headline`, `text`, `quote`, `photos` and `photo-N`.
+
+## Editing, deleting, replies, mentions and share links (additive)
+
+- **Editing.** `POST /api/posts/:id/edit` (owner only, body `{}`) returns the post's source draft,
+  or creates one from the published package and links it. Publishing a draft that already has a
+  post now **updates that post in place**: same id, `createdAt`, likes, comments and feed position;
+  `package`, `metadata`, `revision` and `digest` change and `editedAt` is set. Publishing the same
+  revision twice is still a no-op. Moments refuse with `MOMENT_NOT_EDITABLE`. `PostView` gains
+  `revision` and optional `editedAt`; the web runtime reloads when `revision` changes.
+- **Deleting.** `DELETE /api/posts/:id` (owner only, else `FORBIDDEN`, or `NOT_FOUND` when the post
+  is not visible) removes the post with its likes, saves, reports, progress, votes, comments,
+  contributions, reactions, moment record, notifications and moderation record. The draft and the
+  uploaded photos stay with the owner.
+- **Replies.** `POST /api/posts/:id/comments` accepts `{ text, parentId? }`. Replies are one level
+  deep: answering a reply attaches to its top-level comment. Comments carry `parentId` when they
+  are replies. `DELETE /api/comments/:id` is allowed for the comment's author and the post owner,
+  and removes its replies too.
+- **Mentions.** `@handle` (3–24 of `a-z0-9._`, trailing dots ignored, first ten per text) in a
+  comment or a post caption notifies that person, if they exist, can see the post and nobody is
+  blocked. Editing a caption only notifies newly named people; people already notified about a
+  comment (post owner, person answered) are not notified twice. New notification types: `reply`,
+  `mention`.
+- **Share links** need no account. `/p/:postId` and `/u/:handle` in the web app read
+  `GET /api/public/posts/:id`, `GET /api/public/posts/:id/cover` and `GET /api/public/users/:handle`
+  (rate limited per client). Guests see what a stranger would: no removed posts, circle-only or
+  moment posts, or suspended and deleted people; comments by hidden people are left out.
+  `POST /api/public/runtime { target, kind }` issues a guest ticket (10 minutes, a separate pool of
+  300). Guest posts get no capabilities. Guest profiles get read-only ones through
+  `POST /api/public/capability`: `profile.read`, `profile.openPost`, `profile.cover`,
+  `profile.social.read` (nothing liked or followed), `relay.read` and `profile.wall.read`
+  (nothing removable or reportable); anything else answers `SIGN_IN_REQUIRED`. A guest ticket is
+  never accepted by `/api/capability`. Avatars of visible people are served without a session.
+  Signed-in people opening a share link are sent to the post (`/?post=id`) or profile in the app.

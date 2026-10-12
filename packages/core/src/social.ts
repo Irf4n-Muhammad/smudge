@@ -23,6 +23,8 @@ export interface Publication extends DraftView {
   digest: string;
   createdAt: string;
   sourceDraftId: string;
+  /** Set when the owner republishes the post's draft; the post keeps its id and place. */
+  editedAt?: string | undefined;
 }
 export interface Asset {
   id: string;
@@ -38,6 +40,8 @@ export interface Note {
   text: string;
   createdAt: string;
   assetId?: string | undefined;
+  /** Comments only: the top-level comment this one answers. Replies are one level deep. */
+  parentId?: string | undefined;
 }
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);
@@ -52,6 +56,17 @@ function canonical(value: unknown): unknown {
 export const reportReasons = ["spam", "harassment", "nudity", "violence", "fake", "other"] as const;
 export const reportReasonSchema = z.enum(reportReasons);
 
+/** `@handle` mentions in free text, lowercased, first ten distinct. */
+export function mentionedHandles(text: string) {
+  const found = new Set<string>();
+  for (const match of text.matchAll(/(?:^|[^a-z0-9._@])@([a-z0-9._]{3,24})/gi)) {
+    // A sentence can end right after a handle: "thanks @budi."
+    const handle = match[1]!.toLowerCase().replace(/\.+$/, "");
+    if (handle.length >= 3) found.add(handle);
+    if (found.size === 10) break;
+  }
+  return [...found];
+}
 export function packageDigest(value: Experience) {
   return createHash("sha256")
     .update(JSON.stringify(canonical(value)))
@@ -60,7 +75,12 @@ export function packageDigest(value: Experience) {
 /** Something one person did to another's account or post; used for notifications. */
 export type SocialEvent =
   | { type: "follow"; actorId: string; targetId: string }
-  | { type: "like" | "comment" | "reaction"; actorId: string; targetId: string; postId: string }
+  | {
+      type: "like" | "comment" | "reaction" | "reply" | "mention";
+      actorId: string;
+      targetId: string;
+      postId: string;
+    }
   | { type: "partner-request"; actorId: string; targetId: string };
 
 export class SocialService {
@@ -75,6 +95,10 @@ export class SocialService {
     string,
     (actor: Actor, postId: string, payload: unknown, preview: boolean) => unknown
   > = {};
+  /** Cleanup for records other layers keep per post; called inside the deletion transaction. */
+  postRemovers: ((postId: string) => void)[] = [];
+  /** Refuses republishing over a post another layer owns the meaning of (moments); throws. */
+  editGuard: (post: Publication) => void = () => {};
   constructor(public readonly store: Store) {}
   emit(event: SocialEvent) {
     if (event.actorId === event.targetId) return;
@@ -155,10 +179,29 @@ export class SocialService {
     if (draft.revision !== revision) throw new AppError("REVISION_CONFLICT", 409);
     this.checkAssets(actor, draft.package, draft.metadata.coverAssetId);
     experienceSchema.parse(draft.package);
-    const existing = this.store
-      .all<Publication>("post")
-      .find((p) => p.sourceDraftId === id && p.revision === revision);
+    const published = this.store.all<Publication>("post").filter((p) => p.sourceDraftId === id);
+    const existing = published.find((p) => p.revision === revision);
     if (existing) return existing;
+    // Republishing a draft edits its post in place: same id, likes, comments and feed position.
+    const earlier = published.at(-1);
+    if (earlier) {
+      this.editGuard(earlier);
+      const edited: Publication = {
+        ...earlier,
+        package: draft.package,
+        metadata: draft.metadata,
+        revision: draft.revision,
+        updatedAt: draft.updatedAt,
+        digest: packageDigest(draft.package),
+        editedAt: new Date().toISOString(),
+      };
+      const before = new Set(mentionedHandles(earlier.metadata.caption));
+      this.store.transaction(() => {
+        this.store.put("post", edited.id, edited);
+        this.mention(edited, actor.userId, edited.metadata.caption, (h) => before.has(h));
+      });
+      return edited;
+    }
     const post: Publication = {
       ...draft,
       id: randomUUID(),
@@ -169,8 +212,68 @@ export class SocialService {
     this.store.transaction(() => {
       this.store.put("post", post.id, post);
       within?.(post);
+      this.mention(post, actor.userId, post.metadata.caption);
     });
     return post;
+  }
+  /** Notifies people named with @handle who can see the post. Runs inside the caller's transaction. */
+  private mention(
+    post: Publication,
+    actorId: string,
+    text: string,
+    skip: (handle: string, userId: string) => boolean = () => false,
+  ) {
+    const users = this.users();
+    for (const handle of mentionedHandles(text)) {
+      const user = users.find((u) => u.handle === handle);
+      if (!user || skip(handle, user.id) || !this.viewFilter(user.id, post)) continue;
+      this.emit({ type: "mention", actorId, targetId: user.id, postId: post.id });
+    }
+  }
+  /** The owner's own post, or NOT_FOUND/FORBIDDEN as a visitor would see it. */
+  private ownPost(actor: Actor, id: string) {
+    const me = this.actor(actor);
+    const post = this.post(id);
+    if (post.ownerId !== me) {
+      this.visiblePost(actor, id);
+      throw new AppError("FORBIDDEN", 403);
+    }
+    return post;
+  }
+  /** The draft that edits this post: its source draft, or a fresh one linked to it. */
+  editPost(actor: Actor, id: string) {
+    const post = this.ownPost(actor, id);
+    this.editGuard(post);
+    const source = this.store.get<DraftView>("draft", post.sourceDraftId);
+    if (source && source.ownerId === post.ownerId) return source;
+    const draft: DraftView = {
+      id: randomUUID(),
+      ownerId: post.ownerId,
+      package: post.package,
+      metadata: post.metadata,
+      revision: post.revision,
+      updatedAt: new Date().toISOString(),
+    };
+    this.store.transaction(() => {
+      this.store.put("draft", draft.id, draft);
+      this.store.put("post", post.id, { ...post, sourceDraftId: draft.id });
+    });
+    return draft;
+  }
+  /** Deletes the owner's post and everything people left on it. The draft stays in the studio. */
+  deletePost(actor: Actor, id: string) {
+    this.ownPost(actor, id);
+    this.store.transaction(() => {
+      this.store.remove("post", id);
+      for (const kind of ["like", "save", "report", "progress", "vote"])
+        for (const key of this.store.ids(kind))
+          if (key.startsWith(`${id}:`)) this.store.remove(kind, key);
+      for (const kind of ["comment", "contribution"])
+        for (const note of this.store.all<Note>(kind))
+          if (note.postId === id) this.store.remove(kind, note.id);
+      for (const remove of this.postRemovers) remove(id);
+    });
+    return { deleted: true };
   }
   post(id: string) {
     const post = this.store.get<Publication>("post", id);
@@ -193,6 +296,8 @@ export class SocialService {
       .map((p) => ({
         id: p.id,
         ownerId: p.ownerId,
+        revision: p.revision,
+        ...(p.editedAt ? { editedAt: p.editedAt } : {}),
         author: users.find((u) => u.id === p.ownerId)!,
         metadata: p.metadata,
         digest: p.digest,
@@ -244,20 +349,47 @@ export class SocialService {
     this.post(id);
     return this.store.all<Note>("comment").filter((n) => n.postId === id);
   }
-  comment(actor: Actor, id: string, text: unknown) {
+  comment(actor: Actor, id: string, text: unknown, parentId?: string) {
     const post = this.visiblePost(actor, id);
+    let parent = parentId ? this.store.get<Note>("comment", parentId) : undefined;
+    if (parentId && (!parent || parent.postId !== id)) throw new AppError("NOT_FOUND", 404);
+    // Answering a reply joins the same thread rather than nesting deeper.
+    if (parent?.parentId) parent = this.store.get<Note>("comment", parent.parentId) ?? parent;
     const note: Note = {
       id: randomUUID(),
       postId: id,
       userId: actor.userId,
       text: z.string().trim().min(1).max(1000).parse(text),
       createdAt: new Date().toISOString(),
+      ...(parent ? { parentId: parent.id } : {}),
     };
+    const replyTo = parentId ? this.store.get<Note>("comment", parentId)!.userId : undefined;
     this.store.transaction(() => {
       this.store.put("comment", note.id, note);
-      this.emit({ type: "comment", actorId: actor.userId, targetId: post.ownerId, postId: id });
+      if (replyTo !== post.ownerId)
+        this.emit({ type: "comment", actorId: actor.userId, targetId: post.ownerId, postId: id });
+      if (replyTo)
+        this.emit({ type: "reply", actorId: actor.userId, targetId: replyTo, postId: id });
+      // People already told about this comment are not told twice.
+      this.mention(post, actor.userId, note.text, (_h, userId) =>
+        [post.ownerId, replyTo].includes(userId),
+      );
     });
     return note;
+  }
+  /** Authors delete their own comments; post owners delete any on their post. Replies go too. */
+  deleteComment(actor: Actor, commentId: string) {
+    const me = this.actor(actor);
+    const note = this.store.get<Note>("comment", commentId);
+    if (!note) throw new AppError("NOT_FOUND", 404);
+    const post = this.visiblePost(actor, note.postId);
+    if (note.userId !== me && post.ownerId !== me) throw new AppError("FORBIDDEN", 403);
+    this.store.transaction(() => {
+      this.store.remove("comment", note.id);
+      for (const reply of this.store.all<Note>("comment"))
+        if (reply.parentId === note.id) this.store.remove("comment", reply.id);
+    });
+    return { deleted: true };
   }
   report(actor: Actor, id: string, reason: unknown = "other") {
     this.visiblePost(actor, id);

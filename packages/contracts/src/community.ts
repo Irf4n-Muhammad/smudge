@@ -30,6 +30,8 @@ export type NotificationType =
   | "like"
   | "comment"
   | "reaction"
+  | "reply"
+  | "mention"
   | "partner-request"
   | "post-removed";
 

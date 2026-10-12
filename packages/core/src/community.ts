@@ -70,6 +70,11 @@ export class CommunityService {
         throw new AppError("NOT_AVAILABLE", 403);
     };
     social.listeners.push((event) => this.onEvent(event));
+    social.postRemovers.push((postId) => {
+      for (const n of this.store.all<Notification>("notification"))
+        if (n.postId === postId) this.store.remove("notification", n.id);
+      this.store.remove("moderation", `post:${postId}`);
+    });
   }
   private get store() {
     return this.social.store;

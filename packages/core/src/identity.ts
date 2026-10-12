@@ -121,6 +121,15 @@ export class IdentityService {
     private readonly localInbox = true,
   ) {
     social.viewFilter = (viewerId, post) => this.canView(viewerId, post.id, post.ownerId);
+    // A moment's page only means something with its proof, so it cannot be rewritten later.
+    social.editGuard = (post) => {
+      if (this.isMoment(post.id)) throw new AppError("MOMENT_NOT_EDITABLE", 403);
+    };
+    social.postRemovers.push((postId) => {
+      this.store.remove("moment", postId);
+      for (const key of this.store.ids("reaction"))
+        if (key.startsWith(`${postId}:`)) this.store.remove("reaction", key);
+    });
     const practice = {
       options: defaultEmotes.map((id) => stickerById(id)!),
       counts: {},

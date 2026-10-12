@@ -194,6 +194,22 @@ export function ProfilePage({
             </button>
             <button
               hidden={editing}
+              onClick={async (e) => {
+                if (profile?.manifest?.schemaVersion === 2)
+                  e.currentTarget.closest("details")?.removeAttribute("open");
+                const url = `${window.location.origin}/u/${encodeURIComponent(owner.handle)}`;
+                try {
+                  await navigator.clipboard.writeText(url);
+                  setError("Profile link copied. Anyone with it can see this page.");
+                } catch {
+                  setError(url);
+                }
+              }}
+            >
+              Copy profile link
+            </button>
+            <button
+              hidden={editing}
               onClick={(e) => {
                 setDiscovery("credits");
                 if (profile?.manifest?.schemaVersion === 2)

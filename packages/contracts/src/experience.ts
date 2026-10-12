@@ -156,6 +156,9 @@ export interface User {
 export interface PostView {
   id: string;
   ownerId: string;
+  /** Bumps when the owner edits the post; the runtime reloads on change. */
+  revision: number;
+  editedAt?: string | undefined;
   author: User;
   metadata: Metadata;
   digest: string;

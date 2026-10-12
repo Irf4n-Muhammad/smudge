@@ -154,6 +154,9 @@ Desktop account switching is a simulation feature, not public authentication.
 - Four seeded formats: photo, scrapbook, branching story/poll, collaborative notes.
 - Three additional full-width worlds with custom interactions, plus persisted day/night appearance.
 - Easy post editor (ADR 0018): five styles, tap to edit, photos, colours, fonts and motion.
+- Edit and delete your posts, one-level comment replies, deleting comments, @mentions with
+  notifications, and public share links for posts and profiles that open without an account
+  (ADR 0019).
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.
@@ -243,6 +246,14 @@ bottom bar switches style, adds up to 12 photos, changes colours and font, turns
 and sets the button and feed caption. Publish puts it in the feed; it opens full size in the
 in-app page sheet. **Advanced editor** opens the same draft in the studio, which is still there as
 **My studio**.
+
+## Edit, delete, reply, mention, share
+
+Your own posts have **Edit post** and **Delete post** in their ⋯ menu; edits keep likes and
+comments and show "Edited". Comments have **Reply** and, for your own comments or on your own
+posts, **Delete**. Write `@handle` in a comment or caption to notify someone. **Copy link** on a
+post, or **Copy profile link** in a profile's ☰ menu, gives a `/p/…` or `/u/…` link anyone can
+open without signing up.
 
 ## Website import
 

@@ -33,6 +33,7 @@ export function Runtime({
   editing = false,
   onEdit,
   onReady,
+  guest = false,
 }: {
   target: string;
   preview?: boolean;
@@ -51,6 +52,8 @@ export function Runtime({
   onEdit?: (field: string) => void;
   /** Called once the frame has drawn (and, with autoHeight, measured itself) or failed. */
   onReady?: () => void;
+  /** Opened from a share link without an account: read-only, through the public endpoints. */
+  guest?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null),
     frame = useRef<HTMLIFrameElement>(null);
@@ -92,7 +95,7 @@ export function Runtime({
     setReady(false);
     setError("");
     if (!visible) return;
-    api("/runtime", { target, preview, kind })
+    (guest ? api("/public/runtime", { target, kind }) : api("/runtime", { target, preview, kind }))
       .then((value) => {
         if (!disposed) setTicket(value);
       })
@@ -102,7 +105,7 @@ export function Runtime({
     return () => {
       disposed = true;
     };
-  }, [target, preview, version, visible, retry, kind]);
+  }, [target, preview, version, visible, retry, kind, guest]);
   useEffect(() => {
     if (!ticket) return;
     let active = true;
@@ -192,7 +195,12 @@ export function Runtime({
       if (++requests > 20) return;
       const source = event.source as Window;
       try {
-        const result = await api("/capability", { ticket: ticket.ticket, request: parsed.data });
+        // Guests get read-only profile capabilities and none inside posts.
+        if (guest && kind !== "profile") throw new Error("SIGN_IN_REQUIRED");
+        const result = await api(guest ? "/public/capability" : "/capability", {
+          ticket: ticket.ticket,
+          request: parsed.data,
+        });
         if (
           active &&
           kind === "profile" &&
@@ -232,7 +240,7 @@ export function Runtime({
       appearanceObserver.disconnect();
       window.removeEventListener("message", receive);
     };
-  }, [ticket, kind, autoHeight, preview]);
+  }, [ticket, kind, autoHeight, preview, guest]);
   useEffect(() => {
     if (error || (ready && (!autoHeight || kind !== "profile" || measuredHeight !== null)))
       readyNow.current?.();

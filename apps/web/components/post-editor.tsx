@@ -57,12 +57,15 @@ export function PostEditor({
   draftId,
   onClose,
   onPublished,
+  editing = false,
   onStudio,
   onImport,
 }: {
   draftId?: string | undefined;
   onClose: () => void;
   onPublished: () => Promise<void>;
+  /** Opened from a published post's menu: publishing updates that post in place. */
+  editing?: boolean;
   onStudio: (draftId?: string) => void;
   onImport: () => void;
 }) {
@@ -426,17 +429,19 @@ export function PostEditor({
       <header className="easy-bar">
         <button onClick={onClose}>Cancel</button>
         <div>
-          <strong>New post</strong>
+          <strong>{editing ? "Edit post" : "New post"}</strong>
           <small role="status">
             {saving === "saving"
               ? "Saving…"
               : saving === "error"
                 ? "Not saved"
-                : "Draft saved · only you see it"}
+                : editing
+                  ? "Saved · people see changes when you update"
+                  : "Draft saved · only you see it"}
           </small>
         </div>
         <button className="easy-publish" disabled={busy} onClick={() => void publish()}>
-          Publish
+          {editing ? "Update" : "Publish"}
         </button>
       </header>
       <div className="easy-stage">

@@ -9,6 +9,7 @@ import "./smudge.css";
 import "./easy-editor.css";
 import "./site-import.css";
 import "./post-editor.css";
+import "./social-basics.css";
 import { seasonScript } from "../components/season-script";
 
 export const metadata: Metadata = {

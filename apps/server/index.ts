@@ -41,6 +41,7 @@ import { reportInputSchema } from "../../packages/contracts/src/community.js";
 import { communityRoutes } from "./community-routes.js";
 import { googleFinish, googleStart } from "./google.js";
 import { importSite } from "./site-import.js";
+import { SharingService } from "../../packages/core/src/sharing.js";
 
 const config = loadConfig();
 const production = config.mode === "production";
@@ -115,6 +116,7 @@ if (config.demoContent) {
   seedProfiles(profiles);
   seedSmudge(service);
 }
+const sharing = new SharingService(service, community, identity, profiles);
 const mods = new ModService(profiles);
 if (config.demoContent) {
   mods.seed(
@@ -142,6 +144,8 @@ if (!existsSync(tokenPath))
 const mcpToken = readFileSync(tokenPath, "utf8").trim();
 interface Ticket {
   kind?: "profile" | "post";
+  /** Opened from a share link without an account: renders, but can call no capabilities. */
+  guest?: boolean;
   actor: Actor;
   target: string;
   preview: boolean;
@@ -151,6 +155,21 @@ interface Ticket {
   session: string;
 }
 const tickets = new Map<string, Ticket>();
+function issueTicket(ticket: Omit<Ticket, "nonce" | "expires">) {
+  const id = randomBytes(32).toString("hex");
+  const nonce = randomUUID();
+  for (const [key, t] of tickets) if (t.expires < Date.now()) tickets.delete(key);
+  if (tickets.size > 1000) throw new AppError("TOO_MANY_RUNTIMES", 429);
+  // Guests share a smaller pool and shorter lifetime so share links cannot starve members.
+  if (ticket.guest && [...tickets.values()].filter((t) => t.guest).length >= 300)
+    throw new AppError("TOO_MANY_RUNTIMES", 429);
+  tickets.set(id, {
+    ...ticket,
+    nonce,
+    expires: Date.now() + (ticket.guest ? 600000 : 1800000),
+  });
+  return { ticket: id, nonce, url: new URL(`/run/${id}`, config.runtimeUrl).href };
+}
 // The API listens on loopback only; the web server (or the edge proxy) forwards the public Host.
 const allowedHosts = [
   `127.0.0.1:${config.apiPort}`,
@@ -185,6 +204,10 @@ function clearSession(res: Response) {
   res.clearCookie("forma_session", cookie);
 }
 // Endpoints that work before signing in. Everything else needs a session.
+const isPublicRoute = (path: string) =>
+  publicRoutes.has(path) ||
+  path.startsWith("/api/public/") ||
+  /^\/api\/users\/[^/]+\/avatar$/.test(path);
 const publicRoutes = new Set([
   "/api/health",
   "/api/auth/state",
@@ -260,7 +283,7 @@ api.use((req, res, next) => {
     res.locals.actor = { userId: "you" };
     res.locals.session = accounts.resolve(token)!.id;
     res.cookie("forma_session", token, { ...cookie, maxAge: 30 * 86400000 });
-  } else if (!publicRoutes.has(req.path)) return next(new AppError("UNAUTHENTICATED", 401));
+  } else if (!isPublicRoute(req.path)) return next(new AppError("UNAUTHENTICATED", 401));
   next();
 });
 const actor = (res: Response) => res.locals.actor as Actor;
@@ -590,15 +613,68 @@ api.get("/api/posts/:id/comments", (req, res) => {
     service.comments(String(req.params.id)).filter((c) => community.canSeeUser(viewer, c.userId)),
   );
 });
-api.post("/api/posts/:id/comments", (req, res) =>
-  res.json(
-    service.comment(
-      actor(res),
-      String(req.params.id),
-      z.object({ text: z.string() }).strict().parse(req.body).text,
-    ),
-  ),
+api.post("/api/posts/:id/comments", (req, res) => {
+  const input = z
+    .object({ text: z.string(), parentId: z.string().uuid().optional() })
+    .strict()
+    .parse(req.body);
+  res.json(service.comment(actor(res), String(req.params.id), input.text, input.parentId));
+});
+api.delete("/api/comments/:id", (req, res) =>
+  res.json(service.deleteComment(actor(res), String(req.params.id))),
 );
+api.delete("/api/posts/:id", (req, res) =>
+  res.json(service.deletePost(actor(res), String(req.params.id))),
+);
+/** The draft that edits a published post; publishing it updates the post in place. */
+api.post("/api/posts/:id/edit", (req, res) => {
+  z.object({})
+    .strict()
+    .parse(req.body ?? {});
+  res.json(service.editPost(actor(res), String(req.params.id)));
+});
+// Share links: read-only views anyone can open without an account.
+const guestLimit = rateLimit({ windowMs: 60_000, max: 120 });
+api.get("/api/public/posts/:id", guestLimit, (req, res) =>
+  res.json(sharing.post(String(req.params.id))),
+);
+api.get("/api/public/posts/:id/cover", guestLimit, (req, res) => {
+  const asset = sharing.cover(String(req.params.id));
+  res.type(asset.mime).send(Buffer.from(asset.base64, "base64"));
+});
+api.get("/api/public/users/:handle", guestLimit, (req, res) =>
+  res.json(sharing.profile(z.string().min(1).max(30).parse(req.params.handle))),
+);
+api.post("/api/public/capability", guestLimit, (req, res) => {
+  const { ticket: ticketId, request } = z
+    .object({ ticket: z.string().length(64), request: profileRequestSchema })
+    .strict()
+    .parse(req.body);
+  const ticket = tickets.get(ticketId);
+  if (!ticket || !ticket.guest || ticket.expires < Date.now())
+    throw new AppError("RUNTIME_EXPIRED", 403);
+  // Guests run posts with no capabilities at all, and profiles with read-only ones.
+  if (ticket.kind !== "profile") throw new AppError("SIGN_IN_REQUIRED", 401);
+  res.json({ value: sharing.profileCapability(ticket.target, request.method, request.payload) });
+});
+api.post("/api/public/runtime", guestLimit, (req, res) => {
+  const { target, kind } = z
+    .object({ target: z.string().uuid(), kind: z.enum(["post", "profile"]).default("post") })
+    .strict()
+    .parse(req.body);
+  const item = kind === "profile" ? sharing.profileRecord(target) : sharing.postRecord(target);
+  res.json(
+    issueTicket({
+      kind,
+      guest: true,
+      actor: { userId: "" },
+      target,
+      preview: false,
+      revision: item.revision,
+      session: `guest:${randomUUID()}`,
+    }),
+  );
+});
 api.get("/api/drafts", (_req, res) => res.json(service.drafts(actor(res))));
 api.get("/api/drafts/:id", (req, res) =>
   res.json(service.draft(actor(res), String(req.params.id))),
@@ -669,7 +745,9 @@ api.get("/api/assets/:id", (req, res) => {
   res.type(a.mime).send(Buffer.from(a.base64, "base64"));
 });
 api.get("/api/users/:id/avatar", (req, res) => {
-  const asset = profiles.publicAvatar(String(req.params.id));
+  const asset = res.locals.actor
+    ? profiles.publicAvatar(String(req.params.id))
+    : sharing.avatar(String(req.params.id));
   res.setHeader("Cache-Control", "no-store");
   res.type(asset.mime).send(Buffer.from(asset.base64, "base64"));
 });
@@ -690,21 +768,16 @@ api.post("/api/runtime", (req, res) => {
       : preview
         ? service.draft(actor(res), target)
         : service.visiblePost(actor(res), target);
-  const id = randomBytes(32).toString("hex");
-  const nonce = randomUUID();
-  for (const [key, t] of tickets) if (t.expires < Date.now()) tickets.delete(key);
-  if (tickets.size > 1000) throw new AppError("TOO_MANY_RUNTIMES", 429);
-  tickets.set(id, {
-    kind,
-    actor: actor(res),
-    target,
-    preview,
-    nonce,
-    expires: Date.now() + 1800000,
-    revision: item.revision,
-    session: res.locals.session as string,
-  });
-  res.json({ ticket: id, nonce, url: new URL(`/run/${id}`, config.runtimeUrl).href });
+  res.json(
+    issueTicket({
+      kind,
+      actor: actor(res),
+      target,
+      preview,
+      revision: item.revision,
+      session: res.locals.session as string,
+    }),
+  );
 });
 api.post("/api/capability", (req, res) => {
   const { ticket: ticketId, request } = z
@@ -717,6 +790,7 @@ api.post("/api/capability", (req, res) => {
   const ticket = tickets.get(ticketId);
   if (
     !ticket ||
+    ticket.guest ||
     ticket.expires < Date.now() ||
     ticket.session !== res.locals.session ||
     ticket.actor.userId !== actor(res).userId

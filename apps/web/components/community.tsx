@@ -275,6 +275,10 @@ function describe(n: NotificationView) {
       return `liked ${title}.`;
     case "comment":
       return `commented on ${title}.`;
+    case "reply":
+      return `replied to your comment on ${n.post ? title : "a post"}.`;
+    case "mention":
+      return `mentioned you on ${n.post ? title : "a post"}.`;
     case "reaction":
       return `left a sticker on ${title}.`;
     case "partner-request":
@@ -287,9 +291,11 @@ function describe(n: NotificationView) {
 }
 export function NotificationsPanel({
   onOpenUser,
+  onOpenPost,
   onRead,
 }: {
   onOpenUser: (id: string) => void;
+  onOpenPost?: (id: string) => void;
   onRead: () => void;
 }) {
   const [items, setItems] = useState<NotificationView[] | null>(null);
@@ -328,6 +334,14 @@ export function NotificationsPanel({
             <p>
               {n.actor && <strong>{n.actor.name} </strong>}
               {describe(n)}
+              {n.post && onOpenPost && n.type !== "post-removed" && (
+                <>
+                  {" "}
+                  <button className="link-button" onClick={() => onOpenPost(n.post!.id)}>
+                    View post
+                  </button>
+                </>
+              )}
             </p>
             <time dateTime={n.createdAt}>{ago(n.createdAt)}</time>
           </li>

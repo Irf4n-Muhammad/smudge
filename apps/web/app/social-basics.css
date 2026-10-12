@@ -1,0 +1,262 @@
+/* Replies, mentions, post menu extras and the share-link pages. */
+.mention {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.mention:hover {
+  text-decoration: underline;
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.post-menu button.danger {
+  color: #d22c4f;
+}
+.comments .comment-thread {
+  margin-bottom: 12px;
+}
+.comments .comment p {
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.comments .comment.reply {
+  margin: 8px 0 0 18px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+.comment-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+}
+.comment-actions button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.comment-actions button:hover {
+  color: var(--ink);
+}
+.replying-to {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 0 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--accent-light);
+  color: var(--ink);
+  font-size: 12px;
+}
+.replying-to button {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.single-post-heading {
+  margin: 8px 0 16px;
+}
+
+/* Share-link pages -------------------------------------------------------------------- */
+.share-page {
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+.share-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+.share-bar .brand {
+  font-family: var(--wordmark);
+  font-size: 24px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.share-bar nav {
+  display: flex;
+  gap: 8px;
+}
+.share-bar a {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+}
+.share-bar a.join {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.share-main {
+  width: min(640px, 100%);
+  margin: 0 auto;
+  padding: 20px 16px 64px;
+}
+.share-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+.share-author small {
+  display: block;
+  color: var(--muted);
+}
+.share-post {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+.share-post .runtime {
+  border-radius: 0;
+}
+.share-post-body {
+  padding: 14px 16px 18px;
+}
+.share-post-body h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+.share-post-body .meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+.share-post-body .comments {
+  margin-top: 14px;
+}
+.share-cta {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--paper);
+  text-align: center;
+}
+.share-cta h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+.share-cta p {
+  margin: 0 0 12px;
+  opacity: 0.8;
+  font-size: 14px;
+}
+.share-cta a {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+}
+.share-profile-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.share-profile-head .avatar {
+  width: 72px;
+  height: 72px;
+  font-size: 24px;
+}
+.share-profile-head h1 {
+  margin: 0;
+  font-size: 26px;
+}
+.share-profile-head p {
+  margin: 4px 0 0;
+}
+.share-counts {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.share-counts strong {
+  color: var(--ink);
+}
+.share-profile-world {
+  overflow: hidden;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.share-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.share-grid a {
+  display: block;
+  overflow: hidden;
+  height: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+  color: inherit;
+  text-decoration: none;
+}
+.share-grid img,
+.share-grid .no-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  background: var(--accent-light);
+}
+.share-grid .no-cover {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  font-family: var(--hand);
+  font-size: 22px;
+  text-align: center;
+}
+.share-grid span {
+  display: block;
+  padding: 8px 10px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.share-missing {
+  padding: 64px 16px;
+  text-align: center;
+}
