@@ -230,7 +230,7 @@ const tools: Tool[] = [
   ),
   tool(
     "create_draft",
-    "Create an editable draft for Alex. Does not publish. metadata requires title; optional caption, format, coverAssetId (a declared package asset) and contributors (user IDs).",
+    "Create an editable draft for Alex. Does not publish. metadata requires title; optional caption, format, coverAssetId (a declared package asset), contributors (user IDs) and link ({label, url?}: a button under the post; without url it opens the post itself in the in-app sheet, with an https url it opens that page there).",
     { package: object, metadata: object },
     ["package", "metadata"],
   ),

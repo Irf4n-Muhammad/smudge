@@ -4,7 +4,10 @@ import {
   profilePackageSchema,
   profileIdentitySchema,
   relaySubmissionSchema,
+  wallNoteSubmissionSchema,
+  wallReportSchema,
   type RelayContribution,
+  type WallNote,
   type ProfileDraft,
   type ProfilePublication,
   type ProfileState,
@@ -239,7 +242,9 @@ export class ProfileService {
   capability(actor: Actor, id: string, preview: boolean, method: string, payload: unknown) {
     this.social.actor(actor);
     const item = preview ? this.draft(actor, id) : this.publication(id);
-    if (!(item.package.manifest.capabilities as string[]).includes(method))
+    // Reporting a wall note rides on the read grant (see the Wall below).
+    const declared = method === "profile.wall.report" ? "profile.wall.read" : method;
+    if (!(item.package.manifest.capabilities as string[]).includes(declared))
       throw new AppError("CAPABILITY_DENIED", 403);
     if (method === "profile.poll.read" || method === "profile.poll.vote") {
       const poll =
@@ -358,6 +363,91 @@ export class ProfileService {
         this.social.store.put("profile-relay", key, [...entries, entry]),
       );
       return entry;
+    }
+    if (method.startsWith("profile.wall.")) {
+      // Same rule as the relay: the owner's current publication decides whether the Wall is on.
+      // Reporting rides on the read grant, so a wall people can see can always be flagged.
+      const grant = method === "profile.wall.report" ? "profile.wall.read" : method;
+      if (!preview) {
+        const active = this.state(item.ownerId).publicationId;
+        if (
+          !active ||
+          !(this.publication(active).package.manifest.capabilities as string[]).includes(grant)
+        )
+          throw new AppError("CAPABILITY_DENIED", 403);
+      }
+      // A draft gets its own wall, so trying it out never writes on the live one.
+      const key = preview ? `preview:${id}` : `owner:${item.ownerId}`;
+      const notes = this.social.store.get<WallNote[]>("profile-wall", key) ?? [];
+      const reported = (n: WallNote) =>
+        !preview &&
+        Boolean(this.social.store.get("wall-report", `${item.ownerId}:${n.id}:${actor.userId}`));
+      // A note someone reported disappears for them straight away; moderators decide the rest.
+      const view = (list: WallNote[]) => ({
+        notes: list
+          .filter((n) => !reported(n))
+          .slice(-60)
+          .reverse()
+          .map((n) => ({
+            ...n,
+            removable: n.userId === actor.userId || item.ownerId === actor.userId,
+            reportable: !preview && n.userId !== actor.userId,
+          })),
+        total: list.length,
+      });
+      if (method === "profile.wall.read") {
+        z.undefined().parse(payload);
+        return view(notes);
+      }
+      if (method === "profile.wall.remove") {
+        const { noteId } = z.object({ noteId: z.string().uuid() }).strict().parse(payload);
+        const note = notes.find((n) => n.id === noteId);
+        if (!note) throw new AppError("NOT_FOUND", 404);
+        // Authors can take their note back; owners can clear anything off their own wall.
+        if (note.userId !== actor.userId && item.ownerId !== actor.userId)
+          throw new AppError("FORBIDDEN", 403);
+        const next = notes.filter((n) => n.id !== noteId);
+        this.social.store.transaction(() => this.social.store.put("profile-wall", key, next));
+        return view(next);
+      }
+      if (method === "profile.wall.report") {
+        const { noteId, reason } = wallReportSchema.parse(payload);
+        const note = notes.find((n) => n.id === noteId);
+        if (preview || !note) throw new AppError("NOT_FOUND", 404);
+        if (note.userId === actor.userId) throw new AppError("CANNOT_REPORT_OWN_NOTE");
+        this.social.store.transaction(() =>
+          this.social.store.put("wall-report", `${item.ownerId}:${noteId}:${actor.userId}`, {
+            ownerId: item.ownerId,
+            noteId,
+            reporterId: actor.userId,
+            reason,
+            createdAt: new Date().toISOString(),
+          }),
+        );
+        return view(notes);
+      }
+      const input = wallNoteSubmissionSchema.parse(payload);
+      const existing = notes.find((n) => n.id === input.submissionId);
+      if (existing) {
+        if (existing.userId !== actor.userId) throw new AppError("SUBMISSION_CONFLICT", 409);
+        return view(notes);
+      }
+      // Blocked people (either way) and suspended accounts can't write on someone's wall.
+      if (actor.userId !== item.ownerId) this.social.relationGuard(actor.userId, item.ownerId);
+      if (notes.length >= 200) throw new AppError("WALL_FULL", 409);
+      if (notes.filter((n) => n.userId === actor.userId).length >= 5)
+        throw new AppError("WALL_NOTE_LIMIT", 409);
+      const note: WallNote = {
+        id: input.submissionId,
+        userId: actor.userId,
+        name: this.social.users().find((u) => u.id === actor.userId)!.name,
+        text: input.text,
+        tone: input.tone,
+        createdAt: new Date().toISOString(),
+      };
+      const next = [...notes, note];
+      this.social.store.transaction(() => this.social.store.put("profile-wall", key, next));
+      return view(next);
     }
     if (method === "profile.cover") {
       const { postId } = z.object({ postId: z.string().uuid() }).strict().parse(payload);

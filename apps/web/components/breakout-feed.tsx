@@ -153,7 +153,7 @@ export function BreakoutFeed({
           <ArrowLeft size={16} /> Feed
         </button>
         <a href="#break-start" className="break-brand">
-          forma<span>✳</span>
+          smudge<span>✳</span>
         </a>
         <div>
           <ThemeToggle />

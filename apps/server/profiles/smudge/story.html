@@ -1,0 +1,46 @@
+<!-- smudge:v3 -->
+<link rel="stylesheet" href="smudge/parts.css" />
+<script src="smudge/helpers.js"></script>
+<div class="sm sm-flow">
+  <section
+    class="now"
+    id="now"
+    aria-label="Latest"
+    data-sm-section="latest"
+    data-edit="latest"
+    hidden
+  >
+    <div class="label"><span>(02) — LATEST</span><span id="now-kind"></span></div>
+    <button class="nowcard" id="now-card">
+      <span class="nowcard-art" id="now-art"></span>
+      <span class="ov">
+        <strong id="now-title"></strong>
+        <small id="now-caption"></small>
+        <span class="nowcard-go">Open ↗</span>
+      </span>
+    </button>
+    <small class="part-status" id="now-status" role="status"></small>
+  </section>
+</div>
+<script>
+  profileData
+    .then(async (d) => {
+      const post = d.posts.find((p) => p.format === "story") || d.posts[0];
+      if (!post) return;
+      const $ = (id) => document.getElementById(id);
+      $("now").hidden = false;
+      $("now-kind").textContent = post.format === "story" ? "STORY ●" : "NEW ●";
+      $("now-title").textContent = post.title;
+      $("now-caption").textContent = post.caption || "";
+      $("now-card").setAttribute("aria-label", "Open " + post.title);
+      $("now-card").onclick = () => openProfilePost(post.id, $("now-status"));
+      const cover = await coverFor(post);
+      if (cover) {
+        const img = document.createElement("img");
+        img.src = cover.src;
+        img.alt = cover.alt;
+        $("now-art").append(img);
+      } else $("now-art").classList.add("paint-fill");
+    })
+    .catch(() => {});
+</script>

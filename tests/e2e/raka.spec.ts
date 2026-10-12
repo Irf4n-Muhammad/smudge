@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { resolve } from "node:path";
@@ -39,7 +39,7 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
   await api(page, "/session", { userId: "you" });
   await page.reload();
   const frame = page.locator(".profile-world").frameLocator("iframe");
-  await expect(frame.getByRole("heading", { name: "Raka", exact: true })).toBeVisible();
+  await expect(frame.getByRole("heading", { name: "Kai", exact: true })).toBeVisible();
   await expect(frame.locator(".drawing-hand use")).toHaveAttribute("clip-path", "url(#clip-hand)");
   await expect(frame.locator(".portrait use")).toHaveAttribute("href", "#raka-art");
   await expect(frame.locator(".post-grid-comic")).toBeVisible();
@@ -72,10 +72,15 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
       .getByRole("button", { name: "Explore sketchbook", exact: true })
       .boundingBox();
     const nav = await page.locator(".profile-bottom-nav").boundingBox();
-    expect(endButton!.y + endButton!.height).toBeLessThan(nav!.y);
+    if (width <= 700) expect(endButton!.y + endButton!.height).toBeLessThan(nav!.y);
+    // Wider screens move the navigation into a left sidebar beside the profile.
+    else
+      expect(nav!.x + nav!.width).toBeLessThanOrEqual(
+        (await page.locator(".profile-world").boundingBox())!.x,
+      );
     await page.screenshot({ path: `artifacts/raka-finished-bottom-${width}.png` });
     await page.evaluate(() => window.scrollTo(0, 0));
-    await expect(frame.getByRole("heading", { name: "Raka", exact: true })).toBeInViewport();
+    await expect(frame.getByRole("heading", { name: "Kai", exact: true })).toBeInViewport();
     if (width <= 390) {
       const sizes = await frame.locator(".identity").evaluate((el) => {
         const follow = el.querySelector("button")!.getBoundingClientRect();
@@ -218,15 +223,15 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
     await expect(preview.locator(".post-grid")).not.toHaveClass(/post-grid-comic/);
     await expect(preview.locator(".masthead")).toBeVisible();
     await expect(preview.getByRole("heading", { name: "DRAWING RELAY" })).toBeVisible();
-    await page.getByRole("button", { name: "Compare with live", exact: true }).click();
+    await clickSettled(page.getByRole("button", { name: "Compare with live", exact: true }));
     await expect(page.locator(".profile-preview")).toHaveAttribute("inert", "");
     await expect(preview.locator(".post-grid")).toHaveClass(/post-grid-comic/);
-    await page.getByRole("button", { name: "Back to draft", exact: true }).click();
+    await clickSettled(page.getByRole("button", { name: "Back to draft", exact: true }));
     await expect(preview.locator(".post-grid")).not.toHaveClass(/post-grid-comic/);
-    await page.getByRole("button", { name: "Undo last part change", exact: true }).click();
+    await clickSettled(page.getByRole("button", { name: "Undo last part change", exact: true }));
     await expect(preview.locator(".post-grid")).toHaveClass(/post-grid-comic/);
-    await page.getByRole("button", { name: "Posts", exact: true }).click();
-    await page.getByRole("button", { name: "Use Forma / Straight", exact: true }).click();
+    await clickSettled(page.getByRole("button", { name: "Posts", exact: true }));
+    await clickSettled(page.getByRole("button", { name: "Use Smudge / Straight", exact: true }));
     await expect(preview.locator(".post-grid")).not.toHaveClass(/post-grid-comic/);
     await page.screenshot({ path: "artifacts/profile-visual-editor.png", fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
@@ -258,22 +263,22 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
     await expect(preview.locator(".stack-counter")).toHaveText("2 / 2");
     await preview.getByRole("button", { name: "Open post", exact: false }).click();
     await expect(dialog).toBeVisible();
-    await page.getByRole("button", { name: "Close dialog" }).click();
-    await page.getByRole("button", { name: "Undo last part change", exact: true }).click();
+    await clickSettled(page.getByRole("button", { name: "Close dialog" }));
+    await clickSettled(page.getByRole("button", { name: "Undo last part change", exact: true }));
     await expect(preview.locator(".post-grid")).toBeVisible();
     await changePart(page, "feature", "none");
     await page.locator(".profile-preview").scrollIntoViewIfNeeded();
-    await expect(preview.getByRole("heading", { name: "Raka", exact: true })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "Kai", exact: true })).toBeVisible();
     await expect(preview.getByRole("heading", { name: "DRAWING RELAY" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Publish profile", exact: true }).click();
+    await clickSettled(page.getByRole("button", { name: "Publish profile", exact: true }));
     await expect(page.getByRole("status")).toContainText("Profile published");
     await changePart(page, "feature", "raka");
     await page.locator(".profile-preview").scrollIntoViewIfNeeded();
     await expect(preview.locator("#relay-contributors")).toContainText("0 contributions");
-    await page.getByRole("button", { name: "Publish profile", exact: true }).click();
+    await clickSettled(page.getByRole("button", { name: "Publish profile", exact: true }));
     await expect(page.getByRole("status")).toContainText("Profile published");
     await page.getByLabel("Profile options", { exact: true }).click();
-    await page.getByRole("button", { name: "View published profile" }).click();
+    await clickSettled(page.getByRole("button", { name: "View published profile" }));
     await expect(frame.locator("#relay-contributors")).toContainText(`${before + 1} contributions`);
   } finally {
     const state = (await api(page, "/profile-history")).data.state;
@@ -308,7 +313,7 @@ test("MCP composes a partial package, checks revisions and creates a visitor pre
     };
     const mixed = await tool("compose_profile_part", args);
     expect(mixed.error).toBeFalsy();
-    expect(mixed.data.package.manifest.parts.post.name).toBe("Forma / Straight");
+    expect(mixed.data.package.manifest.parts.post.name).toBe("Smudge / Straight");
     expect((await tool("compose_profile_part", args)).data.error).toBe("REVISION_CONFLICT");
     const preview = (await tool("preview_profile_draft", { draftId: draft.id })).data;
     await page.goto(preview.url);
@@ -323,6 +328,16 @@ test("MCP composes a partial package, checks revisions and creates a visitor pre
   }
 });
 
+/**
+ * Scrolls a host control into view before clicking it. When Playwright's click has to scroll the
+ * page itself, Chromium can route the click into the cross-origin profile frame underneath while
+ * the scroll settles, and the host button never sees it.
+ */
+async function clickSettled(target: Locator) {
+  await target.scrollIntoViewIfNeeded();
+  await expect(target).toBeInViewport();
+  await target.click();
+}
 async function changePart(page: Page, slot: string, choice: string) {
   await page
     .getByRole("button", {

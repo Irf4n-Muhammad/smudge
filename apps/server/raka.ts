@@ -22,7 +22,7 @@ export const rakaPackage: ProfilePackage = profilePackageSchema.parse({
     kind: "profile",
     schemaVersion: 2,
     runtimeVersion: "web-v1",
-    name: "Raka · Make your mark",
+    name: "Ink & Paper · Make your mark",
     entrypoint: "index.html",
     height: 1520,
     mobileHeight: 1260,
@@ -45,12 +45,12 @@ export const rakaPackage: ProfilePackage = profilePackageSchema.parse({
     ],
     parts: {
       profile: {
-        name: "Raka / Comic",
+        name: "Ink & Paper / Comic",
         entrypoint: "raka/profile.html",
         capabilities: ["profile.read", "profile.social.read", "profile.social.toggle"],
       },
       post: {
-        name: "Raka / Cutouts",
+        name: "Ink & Paper / Cutouts",
         entrypoint: "raka/post.html",
         capabilities: [
           "profile.read",
@@ -61,7 +61,7 @@ export const rakaPackage: ProfilePackage = profilePackageSchema.parse({
         ],
       },
       story: {
-        name: "Raka / Orbit",
+        name: "Ink & Paper / Orbit",
         entrypoint: "raka/story.html",
         capabilities: ["profile.read", "profile.openPost"],
       },
@@ -77,7 +77,7 @@ export const rakaPackage: ProfilePackage = profilePackageSchema.parse({
 export const basicPackage: ProfilePackage = profilePackageSchema.parse({
   manifest: {
     ...rakaPackage.manifest,
-    name: "Forma / Essentials",
+    name: "Smudge / Essentials",
     capabilities: [
       "profile.read",
       "profile.openPost",
@@ -87,12 +87,12 @@ export const basicPackage: ProfilePackage = profilePackageSchema.parse({
     ],
     parts: {
       profile: {
-        name: "Forma / Simple",
+        name: "Smudge / Simple",
         entrypoint: "basic/profile.html",
         capabilities: ["profile.read"],
       },
       post: {
-        name: "Forma / Straight",
+        name: "Smudge / Straight",
         entrypoint: "basic/post.html",
         capabilities: [
           "profile.read",
@@ -103,7 +103,7 @@ export const basicPackage: ProfilePackage = profilePackageSchema.parse({
         ],
       },
       story: {
-        name: "Forma / Circles",
+        name: "Smudge / Circles",
         entrypoint: "basic/story.html",
         capabilities: ["profile.read", "profile.openPost"],
       },
@@ -159,17 +159,19 @@ export function seedRaka(profiles: ProfileService) {
         base64: readFileSync(resolve("assets/raka/artwork.png")).toString("base64"),
       }),
     );
-  if (!store.get("user", "raka"))
-    store.transaction(() =>
-      store.put("user", "raka", {
-        id: "raka",
-        name: "Raka",
-        handle: "rakadulu",
-        initials: "RK",
-        color: "#e83727",
-        bio: "Sketches, skate spots, unfinished things.",
-      }),
-    );
+  // The demo illustrator. The internal id stays "raka" so existing data, mods and tests keep
+  // working; an untouched old seed record is renamed in place.
+  const illustrator = {
+    id: "raka",
+    name: "Kai Moreno",
+    handle: "kai.inks",
+    initials: "KM",
+    color: "#e83727",
+    bio: "Sketches, skate spots, unfinished things.",
+  };
+  const existing = store.get<{ name: string; handle: string }>("user", "raka");
+  if (!existing || (existing.name === "Raka" && existing.handle === "rakadulu"))
+    store.transaction(() => store.put("user", "raka", { ...existing, ...illustrator }));
   if (store.get("seed", "raka-v2")) return;
   const actor = { userId: "raka" };
   // Existing profiles and posts are preserved, including an interrupted seed run.

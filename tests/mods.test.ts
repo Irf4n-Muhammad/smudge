@@ -360,3 +360,22 @@ test("partial sharing and profile polls isolate viewers, previews, owners and hi
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("Smudge Paint wall parts mix with Ink & Paper both ways without file conflicts", async () => {
+  const { smudgeProfilePackage } = await import("../apps/server/smudge-profile.js");
+  const { rakaPackage } = await import("../apps/server/raka.js");
+  // Smudge posts on an Ink & Paper profile bring their own scoped styles and helpers.
+  const mixed = composeProfilePart(rakaPackage, smudgeProfilePackage, "post");
+  assert.equal(
+    mixed.manifest.schemaVersion === 2 && mixed.manifest.parts.post?.name,
+    "Smudge / Selected walls",
+  );
+  for (const file of ["smudge/post.html", "smudge/parts.css", "smudge/helpers.js"])
+    assert.ok(mixed.files[file], file);
+  assert.match(mixed.files["smudge/post.html"]!, /href="smudge\/parts\.css"/);
+  assert.match(mixed.files["smudge/post.html"]!, /src="smudge\/helpers\.js"/);
+  // The Drawing Relay feature fits into the Smudge shell, which keeps a feature marker.
+  const relay = composeProfilePart(smudgeProfilePackage, rakaPackage, "feature");
+  assert.ok((relay.manifest.capabilities as string[]).includes("relay.add"));
+  assert.match(relay.files["index.html"]!, /<!--forma:feature-->/);
+});

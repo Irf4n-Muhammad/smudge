@@ -9,8 +9,8 @@ import { SocialService, AppError } from "../../packages/core/src/social.js";
 import type { Asset } from "../../packages/core/src/social.js";
 import type { Actor } from "../../packages/core/src/index.js";
 import { bridgeRequestSchema } from "../../packages/contracts/src/experience.js";
-import { renderDocument, runtimeCsp } from "../../packages/runtime/src/document.js";
-import { seed } from "./seed.js";
+import { renderDocument, runtimeCspFor } from "../../packages/runtime/src/document.js";
+import { seed, seedSharedAssets } from "./seed.js";
 import { seedWorlds } from "./seed-worlds.js";
 import { ProfileService } from "../../packages/core/src/profiles.js";
 import { ModService } from "../../packages/core/src/mods.js";
@@ -24,6 +24,25 @@ import {
   profileIdentitySchema,
 } from "../../packages/contracts/src/profile.js";
 import { seedProfiles, profileTemplates } from "./seed-profiles.js";
+import { IdentityService } from "../../packages/core/src/identity.js";
+import { signupSchema } from "../../packages/contracts/src/identity.js";
+import { renderMoment } from "./moments.js";
+import { seedIdentity } from "./seed-identity.js";
+import { seedSmudge } from "./seed-smudge.js";
+import { identityRoutes } from "./identity-routes.js";
+import { AccountService } from "../../packages/core/src/accounts.js";
+import type { AuthState } from "../../packages/contracts/src/accounts.js";
+import { loadConfig } from "./config.js";
+import { deliveryFor, startMailWorker } from "./mail.js";
+import { rateLimit } from "./rate-limit.js";
+import { CommunityService } from "../../packages/core/src/community.js";
+import { MessageService } from "../../packages/core/src/messages.js";
+import { reportInputSchema } from "../../packages/contracts/src/community.js";
+import { communityRoutes } from "./community-routes.js";
+import { googleFinish, googleStart } from "./google.js";
+
+const config = loadConfig();
+const production = config.mode === "production";
 
 const dataDir = resolve(process.env.FORMA_DATA_DIR ?? ".local");
 mkdirSync(dataDir, { recursive: true });
@@ -31,7 +50,8 @@ const lockPath = resolve(dataDir, "server.lock");
 if (existsSync(lockPath)) {
   const pid = Number(readFileSync(lockPath, "utf8"));
   let alive = false;
-  if (Number.isInteger(pid) && pid > 0)
+  // After a container restart the stale lock can name this very process id.
+  if (Number.isInteger(pid) && pid > 0 && pid !== process.pid)
     try {
       process.kill(pid, 0);
       alive = true;
@@ -47,28 +67,78 @@ process.on("exit", () => {
 });
 const store = await Store.open(resolve(dataDir, "forma.sqlite"));
 const service = new SocialService(store);
-await seed(service);
-seedWorlds(service);
+seedSharedAssets(service);
+if (config.demoContent) {
+  await seed(service);
+  seedWorlds(service);
+}
+// FORMA_TODAY=YYYY-MM-DD pins the calendar for trying seasons and birthdays locally.
+const today = process.env.FORMA_TODAY;
+if (today !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(today))
+  throw new Error("FORMA_TODAY must be YYYY-MM-DD");
+if (today && production) throw new Error("FORMA_TODAY is for local trials only");
+const clock = () =>
+  today ? new Date(`${today}T${new Date().toISOString().slice(11)}`) : new Date();
+const identity = new IdentityService(
+  service,
+  renderMoment,
+  clock,
+  config.mail.provider === "inbox",
+);
+const accounts = new AccountService(
+  service,
+  identity,
+  {
+    verify: (token) => new URL(`/?verify=${token}`, config.publicUrl).href,
+    reset: (token) => new URL(`/?reset=${token}`, config.publicUrl).href,
+  },
+  clock,
+);
+// Moderators: Alex in the playground; in production, accounts whose confirmed email is listed.
+const isAdmin = (userId: string) => {
+  if (!production && userId === "you") return true;
+  const account = accounts.account({ userId });
+  return account.emailVerified && !!account.email && config.adminEmails.includes(account.email);
+};
+const community = new CommunityService(service, isAdmin, clock);
+accounts.loginGate = (userId) => {
+  if (community.isSuspended(userId)) throw new AppError("ACCOUNT_SUSPENDED", 403);
+};
+accounts.erasers.push((userId) => community.erase(userId));
+const messages = new MessageService(service, community, clock);
+const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
+if (deliver) startMailWorker(store, deliver);
 const profiles = new ProfileService(service);
-seedProfiles(profiles);
+if (config.demoContent) {
+  seedIdentity(identity, service);
+  seedProfiles(profiles);
+  seedSmudge(service);
+}
 const mods = new ModService(profiles);
-mods.seed(
-  "50000000-0000-4000-8000-000000000001",
-  "Raka / Ink & paper",
-  "Cut paper posts, orbit highlights and a collaborative drawing relay.",
-  profileTemplates.raka,
-);
-mods.seed(
-  "50000000-0000-4000-8000-000000000002",
-  "After Hours / Music zine",
-  "A spinning record, gig posters, ticket highlights and a persistent audience setlist vote.",
-  musicPackage,
-);
+if (config.demoContent) {
+  mods.seed(
+    "50000000-0000-4000-8000-000000000001",
+    "Ink & Paper",
+    "Cut paper posts, orbit highlights and a collaborative drawing relay.",
+    profileTemplates.raka,
+  );
+  mods.seed(
+    "50000000-0000-4000-8000-000000000003",
+    "Smudge · Paint wall",
+    "A giant painted name, tap-to-throw paint, your latest post and a sideways strip of picks.",
+    profileTemplates.smudge,
+  );
+  mods.seed(
+    "50000000-0000-4000-8000-000000000002",
+    "After Hours / Music zine",
+    "A spinning record, gig posters, ticket highlights and a persistent audience setlist vote.",
+    musicPackage,
+  );
+}
 const tokenPath = resolve(dataDir, "mcp-token");
 if (!existsSync(tokenPath))
   writeFileSync(tokenPath, randomBytes(32).toString("hex"), { mode: 0o600 });
 const mcpToken = readFileSync(tokenPath, "utf8").trim();
-const sessions = new Map<string, Actor>();
 interface Ticket {
   kind?: "profile" | "post";
   actor: Actor;
@@ -80,6 +150,52 @@ interface Ticket {
   session: string;
 }
 const tickets = new Map<string, Ticket>();
+// The API listens on loopback only; the web server (or the edge proxy) forwards the public Host.
+const allowedHosts = [
+  `127.0.0.1:${config.apiPort}`,
+  config.publicUrl.host,
+  ...(production ? [] : ["127.0.0.1:3000", "localhost:3000"]),
+];
+const allowedOrigins = [
+  config.publicUrl.origin,
+  ...(production ? [] : ["http://127.0.0.1:3000", "http://localhost:3000"]),
+];
+const cookie = {
+  httpOnly: true,
+  sameSite: "strict" as const,
+  secure: config.publicUrl.protocol === "https:",
+  path: "/",
+};
+function readCookie(req: Request) {
+  return req.headers.cookie
+    ?.split(";")
+    .map((s) => s.trim())
+    .find((s) => s.startsWith("forma_session="))
+    ?.slice(14);
+}
+function setSession(res: Response, token: string) {
+  const old = res.locals.session as string | undefined;
+  for (const [key, ticket] of tickets) if (old && ticket.session === old) tickets.delete(key);
+  res.cookie("forma_session", token, { ...cookie, maxAge: 30 * 86400000 });
+}
+function clearSession(res: Response) {
+  const old = res.locals.session as string | undefined;
+  for (const [key, ticket] of tickets) if (old && ticket.session === old) tickets.delete(key);
+  res.clearCookie("forma_session", cookie);
+}
+// Endpoints that work before signing in. Everything else needs a session.
+const publicRoutes = new Set([
+  "/api/health",
+  "/api/auth/state",
+  "/api/auth/signup",
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/auth/forgot",
+  "/api/auth/reset",
+  "/api/auth/verify",
+  "/api/auth/google/start",
+  "/api/auth/google/callback",
+]);
 const api = express();
 api.disable("x-powered-by");
 api.use((req, res, next) => {
@@ -103,11 +219,10 @@ api.use((req, res, next) => {
       }),
     );
   });
-  if (!["127.0.0.1:3001", "127.0.0.1:3000", "localhost:3000"].includes(req.headers.host ?? ""))
+  if (!allowedHosts.includes(req.headers.host ?? ""))
     return next(new AppError("INVALID_HOST", 403));
   const origin = req.headers.origin;
-  if (origin && !["http://127.0.0.1:3000", "http://localhost:3000"].includes(origin))
-    return next(new AppError("ORIGIN_DENIED", 403));
+  if (origin && !allowedOrigins.includes(origin)) return next(new AppError("ORIGIN_DENIED", 403));
   next();
 });
 api.use(express.json({ limit: "6mb" }));
@@ -119,35 +234,32 @@ function bearer(req: Request) {
   );
 }
 api.use((req, res, next) => {
-  if (req.path === "/api/health") return next();
-  if (bearer(req)) {
+  if (req.method !== "GET" && !req.headers.origin && !(!production && bearer(req)))
+    return next(new AppError("ORIGIN_REQUIRED", 403));
+  // The MCP token stands in for Alex's demo account and exists only in the local playground.
+  if (!production && bearer(req)) {
     res.locals.actor = { userId: "you" };
     res.locals.session = "mcp";
     return next();
   }
-  const sid = req.headers.cookie
-    ?.split(";")
-    .map((s) => s.trim())
-    .find((s) => s.startsWith("forma_session="))
-    ?.slice(14);
-  if (sid && sessions.has(sid)) {
-    res.locals.actor = sessions.get(sid);
-    res.locals.session = sid;
-  } else if (req.path === "/api/bootstrap" && req.method === "GET") {
-    const id = randomBytes(32).toString("hex");
-    const actor = { userId: "you" };
-    sessions.set(id, actor);
-    res.locals.actor = actor;
-    res.locals.session = id;
-    res.cookie("forma_session", id, {
-      httpOnly: true,
-      sameSite: "strict",
-      path: "/",
-      maxAge: 86400000,
-    });
-  } else return next(new AppError("UNAUTHENTICATED", 401));
-  if (req.method !== "GET" && !req.headers.origin)
-    return next(new AppError("ORIGIN_REQUIRED", 403));
+  const session = accounts.resolve(readCookie(req));
+  if (session) {
+    res.locals.actor = session.actor;
+    res.locals.session = session.id;
+    if (session.renewed)
+      res.cookie("forma_session", readCookie(req)!, { ...cookie, maxAge: 30 * 86400000 });
+  } else if (
+    !production &&
+    req.path === "/api/bootstrap" &&
+    req.method === "GET" &&
+    store.get("user", "you")
+  ) {
+    // Demo convenience: a first visit is signed in as Alex.
+    const token = accounts.startSession("you");
+    res.locals.actor = { userId: "you" };
+    res.locals.session = accounts.resolve(token)!.id;
+    res.cookie("forma_session", token, { ...cookie, maxAge: 30 * 86400000 });
+  } else if (!publicRoutes.has(req.path)) return next(new AppError("UNAUTHENTICATED", 401));
   next();
 });
 const actor = (res: Response) => res.locals.actor as Actor;
@@ -160,24 +272,116 @@ api.get("/api/bootstrap", (_req, res) =>
     assets: service.assets(actor(res)),
   }),
 );
-api.post("/api/session", (req, res) => {
+const authLimit = rateLimit({ windowMs: 15 * 60_000, max: 30 });
+const signupLimit = rateLimit({ windowMs: 60 * 60_000, max: 10 });
+const signedIn = (res: Response) => (res.locals.actor ? (res.locals.actor as Actor) : undefined);
+api.get("/api/auth/state", (_req, res) => {
+  const current = signedIn(res);
+  res.json({
+    mode: config.mode,
+    signedIn: !!current,
+    account: current ? accounts.account(current) : null,
+    google: !!config.google,
+    moderator: current ? community.canModerate(current) : false,
+  } satisfies AuthState);
+});
+api.post("/api/auth/signup", signupLimit, (req, res) => {
   if (res.locals.session === "mcp") throw new AppError("MCP_IDENTITY_FIXED", 403);
-  const { userId } = z.object({ userId: z.string() }).strict().parse(req.body);
-  service.actor({ userId });
-  const old = res.locals.session as string;
-  const id = randomBytes(32).toString("hex");
-  sessions.delete(old);
-  sessions.set(id, { userId });
-  for (const [key, ticket] of tickets) if (ticket.session === old) tickets.delete(key);
-  res.cookie("forma_session", id, {
-    httpOnly: true,
-    sameSite: "strict",
-    path: "/",
-    maxAge: 86400000,
-  });
+  const { user, session } = accounts.register(req.body);
+  setSession(res, session);
+  res.status(201).json(user);
+});
+api.post("/api/auth/login", authLimit, (req, res) => {
+  if (res.locals.session === "mcp") throw new AppError("MCP_IDENTITY_FIXED", 403);
+  const { userId, session } = accounts.login(req.body);
+  setSession(res, session);
+  res.json({ userId });
+});
+api.post("/api/auth/logout", (req, res) => {
+  accounts.logout(readCookie(req));
+  clearSession(res);
   res.json({ ok: true });
 });
-api.get("/api/feed", (_req, res) => res.json(service.feed(actor(res))));
+api.post("/api/auth/logout-everywhere", (_req, res) => {
+  accounts.logoutEverywhere(actor(res));
+  clearSession(res);
+  res.json({ ok: true });
+});
+api.post("/api/auth/verify", authLimit, (req, res) => res.json(accounts.verifyEmail(req.body)));
+api.post("/api/auth/verify/resend", (_req, res) =>
+  res.json(accounts.resendVerification(actor(res))),
+);
+api.post("/api/auth/forgot", authLimit, (req, res) =>
+  res.json(accounts.requestPasswordReset(req.body)),
+);
+api.post("/api/auth/reset", authLimit, (req, res) => {
+  const { userId, session } = accounts.resetPassword(req.body);
+  setSession(res, session);
+  res.json({ userId });
+});
+api.post("/api/auth/password", authLimit, (req, res) =>
+  res.json(accounts.changePassword(actor(res), readCookie(req), req.body)),
+);
+// Demo only: switch between the seeded people without passwords.
+api.post("/api/session", (req, res) => {
+  if (production) throw new AppError("NOT_FOUND", 404);
+  if (res.locals.session === "mcp") throw new AppError("MCP_IDENTITY_FIXED", 403);
+  const { userId } = z.object({ userId: z.string() }).strict().parse(req.body);
+  const token = accounts.startSession(userId);
+  accounts.logout(readCookie(req));
+  setSession(res, token);
+  res.json({ ok: true });
+});
+// Demo only: the older name-and-handle signup, kept for scripts.
+api.post("/api/signup", (req, res) => {
+  if (production) throw new AppError("NOT_FOUND", 404);
+  if (res.locals.session === "mcp") throw new AppError("MCP_IDENTITY_FIXED", 403);
+  signupSchema.parse(req.body);
+  const user = identity.signup(req.body);
+  const token = accounts.startSession(user.id);
+  accounts.logout(readCookie(req));
+  setSession(res, token);
+  res.json(user);
+});
+api.get("/api/feed", (_req, res) =>
+  res.json(identity.decorate(actor(res), service.feed(actor(res)))),
+);
+identityRoutes(api, identity);
+communityRoutes(api, community, messages, accounts, clearSession, authLimit);
+// Google sign-in. The state and PKCE verifier live in a short-lived cookie scoped to the
+// callback path; SameSite=Lax because Google sends the browser back with a top-level GET.
+const googleCookie = { ...cookie, sameSite: "lax" as const, path: "/api/auth/google" };
+const googleConfig = config.google && {
+  ...config.google,
+  redirectUri: new URL("/api/auth/google/callback", config.publicUrl).href,
+};
+api.get("/api/auth/google/start", authLimit, (_req, res) => {
+  if (!googleConfig) throw new AppError("NOT_FOUND", 404);
+  const { url, state, verifier } = googleStart(googleConfig);
+  res.cookie("forma_google", `${state}.${verifier}`, { ...googleCookie, maxAge: 600_000 });
+  res.redirect(url);
+});
+api.get("/api/auth/google/callback", authLimit, async (req, res) => {
+  if (!googleConfig) throw new AppError("NOT_FOUND", 404);
+  const raw = req.headers.cookie
+    ?.split(";")
+    .map((s) => s.trim())
+    .find((s) => s.startsWith("forma_google="))
+    ?.slice(13);
+  res.clearCookie("forma_google", googleCookie);
+  const [state, verifier] = (raw ?? "").split(".");
+  const fail = (code: string) => res.redirect(`/?auth_error=${code}`);
+  if (!state || !verifier || req.query.state !== state || typeof req.query.code !== "string")
+    return fail("GOOGLE_STATE_MISMATCH");
+  try {
+    const profile = await googleFinish(googleConfig, req.query.code, verifier);
+    const { session } = accounts.externalLogin("google", profile);
+    setSession(res, session);
+    res.redirect("/");
+  } catch (error) {
+    fail(error instanceof AppError || error instanceof Error ? error.message : "GOOGLE_FAILED");
+  }
+});
 api.get("/api/profile-spec", (_req, res) =>
   res.json({
     kind: "profile",
@@ -220,12 +424,14 @@ api.get("/api/profile-spec", (_req, res) =>
   }),
 );
 api.get("/api/profile-templates", (_req, res) => res.json(profileTemplates));
-api.get("/api/profiles/:ownerId", (req, res) =>
-  res.json(profiles.public(String(req.params.ownerId))),
-);
-api.get("/api/profiles/:ownerId/data", (req, res) =>
-  res.json(profiles.data(actor(res), String(req.params.ownerId))),
-);
+api.get("/api/profiles/:ownerId", (req, res) => {
+  community.assertVisibleUser(actor(res), String(req.params.ownerId));
+  res.json(profiles.public(String(req.params.ownerId)));
+});
+api.get("/api/profiles/:ownerId/data", (req, res) => {
+  community.assertVisibleUser(actor(res), String(req.params.ownerId));
+  res.json(profiles.data(actor(res), String(req.params.ownerId)));
+});
 api.post("/api/profiles/:ownerId/report", (req, res) =>
   res.json(profiles.report(actor(res), String(req.params.ownerId))),
 );
@@ -368,9 +574,21 @@ api.post("/api/posts/:id/save", (req, res) =>
   res.json(service.toggle(actor(res), String(req.params.id), "save")),
 );
 api.post("/api/posts/:id/report", (req, res) =>
-  res.json(service.report(actor(res), String(req.params.id))),
+  res.json(
+    service.report(
+      actor(res),
+      String(req.params.id),
+      req.body && Object.keys(req.body).length ? reportInputSchema.parse(req.body).reason : "other",
+    ),
+  ),
 );
-api.get("/api/posts/:id/comments", (req, res) => res.json(service.comments(String(req.params.id))));
+api.get("/api/posts/:id/comments", (req, res) => {
+  service.visiblePost(actor(res), String(req.params.id));
+  const viewer = actor(res).userId;
+  res.json(
+    service.comments(String(req.params.id)).filter((c) => community.canSeeUser(viewer, c.userId)),
+  );
+});
 api.post("/api/posts/:id/comments", (req, res) =>
   res.json(
     service.comment(
@@ -397,7 +615,9 @@ api.post("/api/drafts/:id/publish", (req, res) => {
   res.json(service.publish(actor(res), String(req.params.id), revision));
 });
 api.post("/api/posts/:id/reuse", (req, res) => {
-  const post = service.post(String(req.params.id));
+  const post = service.visiblePost(actor(res), String(req.params.id));
+  // A moment's page only means something with its proof; copying it would launder the look.
+  if (identity.isMoment(post.id)) throw new AppError("MOMENT_NOT_REUSABLE", 403);
   // Copy published media into the new creator's namespace, so private asset ACLs remain meaningful.
   let pkg = structuredClone(post.package);
   let coverAssetId = post.metadata.coverAssetId;
@@ -456,7 +676,7 @@ api.post("/api/runtime", (req, res) => {
         : profiles.publication(target)
       : preview
         ? service.draft(actor(res), target)
-        : service.post(target);
+        : service.visiblePost(actor(res), target);
   const id = randomBytes(32).toString("hex");
   const nonce = randomUUID();
   for (const [key, t] of tickets) if (t.expires < Date.now()) tickets.delete(key);
@@ -471,7 +691,7 @@ api.post("/api/runtime", (req, res) => {
     revision: item.revision,
     session: res.locals.session as string,
   });
-  res.json({ ticket: id, nonce, url: `http://127.0.0.1:3002/run/${id}` });
+  res.json({ ticket: id, nonce, url: new URL(`/run/${id}`, config.runtimeUrl).href });
 });
 api.post("/api/capability", (req, res) => {
   const { ticket: ticketId, request } = z
@@ -570,15 +790,21 @@ api.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
             ? "PAYLOAD_TOO_LARGE"
             : "INTERNAL_ERROR",
     traceId: res.locals.traceId,
+    ...(error instanceof AppError && error.details !== undefined ? { details: error.details } : {}),
     ...(error instanceof z.ZodError
       ? { issues: error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) }
       : {}),
   });
 });
+const runtimeHost = config.runtimeUrl.host;
+const runtimeCsp = runtimeCspFor(
+  production ? [config.publicUrl.origin] : ["http://127.0.0.1:3000", "http://localhost:3000"],
+);
 const runtime = express();
 runtime.disable("x-powered-by");
 runtime.get("/run/:id", (req, res) => {
-  if (req.headers.host !== "127.0.0.1:3002") return res.sendStatus(403);
+  if (req.headers.host !== runtimeHost && req.headers.host !== `127.0.0.1:${config.runtimePort}`)
+    return res.sendStatus(403);
   const ticket = tickets.get(String(req.params.id));
   if (!ticket || ticket.expires < Date.now()) return res.sendStatus(404);
   try {
@@ -621,15 +847,15 @@ runtime.get("/run/:id", (req, res) => {
     res.sendStatus(404);
   }
 });
-const apiServer = api.listen(3001, "127.0.0.1", () =>
-  console.log("Forma API ready on 127.0.0.1:3001"),
+const apiServer = api.listen(config.apiPort, "127.0.0.1", () =>
+  console.log(`Forma API (${config.mode}) ready on 127.0.0.1:${config.apiPort}`),
 );
 // Outlive Node's five-second client pool idle timeout. Equal client/server defaults can
 // race when Next reuses a socket just as this upstream closes it (ECONNRESET).
 apiServer.keepAliveTimeout = 60000;
 apiServer.headersTimeout = 65000;
-const runtimeServer = runtime.listen(3002, "127.0.0.1", () =>
-  console.log("Forma runtime ready on 127.0.0.1:3002"),
+const runtimeServer = runtime.listen(config.runtimePort, "127.0.0.1", () =>
+  console.log(`Forma runtime ready on 127.0.0.1:${config.runtimePort}`),
 );
 for (const server of [apiServer, runtimeServer])
   server.on("error", (error) => {

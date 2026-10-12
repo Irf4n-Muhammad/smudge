@@ -764,7 +764,7 @@ html[data-theme="dark"] .profile-page {
   gap: 22px;
   flex-wrap: nowrap;
 }
-.profile-overlay .profile-back {
+.profile-overlay .profile-controls .profile-back {
   font-size: 0;
   padding: 0;
   width: 28px;
@@ -796,7 +796,7 @@ html[data-theme="dark"] .profile-brand svg {
   width: 28px;
   height: 28px;
 }
-.profile-bottom-nav button:nth-child(3) svg {
+.profile-bottom-nav .nav-create svg {
   background: #111;
   color: white;
   border-radius: 9px;

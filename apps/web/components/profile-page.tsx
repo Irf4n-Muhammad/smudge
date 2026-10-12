@@ -9,6 +9,7 @@ import type {
   ProfileIdentity,
 } from "../../../packages/contracts/src/profile";
 import { api, Runtime } from "./runtime";
+import { PostLink } from "./post-link";
 import { Dialog, Avatar } from "./ui";
 import { ThemeToggle } from "./theme-toggle";
 import type { Boot } from "./types";
@@ -17,11 +18,14 @@ import { ProfilePersonalizer } from "./profile-personalizer";
 import { ProfilePhotoComposer } from "./profile-photo-composer";
 import { ProfileModLibrary } from "./profile-mod-library";
 import { ProfileDiscovery } from "./profile-discovery";
+import { EasyEditor } from "./easy-editor";
 import {
   applyProfileDesign,
   defaultProfileDesign,
 } from "../../../packages/core/src/profile-design";
-import { Home, Search, Bell, Plus, UserRound } from "lucide-react";
+import { Home, Search, Bell, Plus, UserRound, BadgeCheck, Pencil } from "lucide-react";
+import type { Chapter } from "../../../packages/contracts/src/identity";
+import { ChapterList } from "./identity-hub";
 
 type PublicProfile = ProfileState & { manifest: ProfilePackage["manifest"] | null };
 type History = { state: ProfileState; publications: ProfilePublication[] };
@@ -53,7 +57,15 @@ export function ProfilePage({
     [motion, setMotion] = useState(false),
     [busy, setBusy] = useState(false);
   const [draftLink, setDraftLink] = useState<string | undefined>();
+  const [easy, setEasy] = useState(false);
   const [discovery, setDiscovery] = useState<"credits" | "creator" | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]),
+    [showChapters, setShowChapters] = useState(false);
+  useEffect(() => {
+    api<Chapter[]>(`/users/${encodeURIComponent(ownerId)}/chapters`).then(setChapters, () =>
+      setChapters([]),
+    );
+  }, [ownerId]);
   const refresh = useCallback(async () => {
     try {
       setProfile(await api(`/profiles/${encodeURIComponent(ownerId)}`));
@@ -107,9 +119,20 @@ export function ProfilePage({
         <p>Profile not found.</p>
       </main>
     );
+  const chapterDialog = showChapters && (
+    <Dialog
+      title={mine ? "Who you are" : `Who ${owner.name} is`}
+      onClose={() => setShowChapters(false)}
+    >
+      <ChapterList chapters={chapters} />
+      <p className="fineprint">
+        Each chapter was proven by email, an organisation, a partner or a photo.
+      </p>
+    </Dialog>
+  );
   return (
     <main
-      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""}`}
+      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${profile?.manifest?.schemaVersion === 2 && !editing ? "has-side-nav" : ""}`}
     >
       <header className="profile-controls">
         <button className="profile-back" aria-label="Back to feed" onClick={onBack}>
@@ -117,13 +140,7 @@ export function ProfilePage({
         </button>
         {profile?.manifest?.schemaVersion === 2 && (
           <span className="profile-brand" aria-hidden="true">
-            <svg viewBox="70 0 132 55" width="132" height="55">
-              <image
-                href="/api/assets/30000000-0000-4000-8000-000000000003"
-                width="1024"
-                height="1536"
-              />
-            </svg>
+            smudge
           </span>
         )}
         <div className="profile-identity">
@@ -132,7 +149,21 @@ export function ProfilePage({
             <strong>{owner.name}</strong>
             <small>@{owner.handle}</small>
           </span>
+          {chapters.length > 0 && (
+            <button
+              className="chapter-chip"
+              aria-label={`Who ${mine ? "you are" : "they are"}: ${chapters.length} proven chapters`}
+              onClick={() => setShowChapters(true)}
+            >
+              <BadgeCheck size={13} /> {chapters.length}
+            </button>
+          )}
         </div>
+        {mine && !editing && (
+          <button className="profile-edit" aria-label="Edit profile" onClick={() => setEasy(true)}>
+            <Pencil size={16} /> Edit<span className="profile-edit-long"> profile</span>
+          </button>
+        )}
         {profile?.manifest?.schemaVersion === 2 ? (
           <button
             className="profile-search"
@@ -282,8 +313,10 @@ export function ProfilePage({
           <p>{owner.bio}</p>
           {mine && (
             <p>
-              Your profile can be a room, a comic, or something entirely yours. Start with Customize
-              profile.
+              Your profile can be a painted wall, a comic, or something entirely yours.{" "}
+              <button className="profile-edit" onClick={() => setEasy(true)}>
+                <Pencil size={16} /> Edit profile
+              </button>
             </p>
           )}
           <div>
@@ -309,8 +342,28 @@ export function ProfilePage({
           onClose={() => setDiscovery(null)}
         />
       )}
+      {easy && mine && (
+        <EasyEditor
+          owner={owner}
+          onClose={() => setEasy(false)}
+          onPublished={async () => {
+            setEasy(false);
+            await Promise.all([refresh(), onRefresh()]);
+            setError("Profile published. This is what visitors see now.");
+          }}
+          onAdvanced={(id) => {
+            setEasy(false);
+            setDraftLink(id);
+            setEditing(true);
+          }}
+        />
+      )}
       {profile?.manifest?.schemaVersion === 2 && !editing && (
+        // A bottom bar on phones; on wider screens CSS turns it into the left sidebar.
         <nav className="profile-bottom-nav" aria-label="Profile navigation">
+          <a className="profile-nav-brand" href="/" aria-label="Smudge home">
+            smudge
+          </a>
           <button onClick={() => onNavigate("home")}>
             <Home />
             <span>Home</span>
@@ -319,7 +372,7 @@ export function ProfilePage({
             <Search />
             <span>Search</span>
           </button>
-          <button onClick={() => onNavigate("create")}>
+          <button className="nav-create" onClick={() => onNavigate("create")}>
             <Plus />
             <span>Create</span>
           </button>
@@ -327,7 +380,11 @@ export function ProfilePage({
             <Bell />
             <span>Activity</span>
           </button>
-          <button onClick={() => onNavigate("profile")}>
+          <button
+            className={ownerId === boot.actor.userId ? "active" : undefined}
+            aria-current={ownerId === boot.actor.userId ? "page" : undefined}
+            onClick={() => onNavigate("profile")}
+          >
             <UserRound />
             <span>Profile</span>
           </button>
@@ -391,6 +448,7 @@ export function ProfilePage({
             post={posts.find((p) => p.id === open.id) ?? open}
             onRefresh={onRefresh}
           />
+          <PostLink post={open} notify={setError} />
           <Runtime
             target={open.id}
             height={open.manifest.schemaVersion === 2 ? (open.manifest.stage?.height ?? 510) : 510}
@@ -399,6 +457,7 @@ export function ProfilePage({
           />
         </Dialog>
       )}
+      {chapterDialog}
     </main>
   );
 }
@@ -510,7 +569,7 @@ function ProfileEditor({
     [message, setMessage] = useState(""),
     [mobile, setMobile] = useState(false),
     [preview, setPreview] = useState(false),
-    [template, setTemplate] = useState("room");
+    [template, setTemplate] = useState("smudge");
   const [undoPackage, setUndoPackage] = useState<ProfilePackage | null>(null);
   const [undoIdentity, setUndoIdentity] = useState<ProfileIdentity | undefined>();
   const [undoLabel, setUndoLabel] = useState("Undo last part change");
@@ -633,10 +692,11 @@ function ProfileEditor({
             value={template}
             onChange={(e) => setTemplate(e.target.value)}
           >
+            <option value="smudge">Smudge · Paint wall</option>
             <option value="room">Interactive room</option>
             <option value="comic">Vertical comic</option>
-            <option value="raka">Raka · Comic + Drawing Relay</option>
-            <option value="basic">Forma · Modular essentials</option>
+            <option value="raka">Ink &amp; Paper · Comic + Drawing Relay</option>
+            <option value="basic">Smudge · Modular essentials</option>
           </select>
         </label>
         <button disabled={busy || !templates[template]} onClick={() => void create()}>

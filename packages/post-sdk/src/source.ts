@@ -15,6 +15,7 @@ export function sdkSource(nonce: string) {
       if(event.data.type==='forma:appearance' && ['light','dark'].includes(event.data.theme)){
         document.documentElement.dataset.theme=event.data.theme;
         document.documentElement.dataset.motion=event.data.reducedMotion?'reduce':'normal';
+        if(['paint','halloween'].includes(event.data.season))document.documentElement.dataset.season=event.data.season;
         let style=document.getElementById('forma-motion-policy');
         if(!style){style=document.createElement('style');style.id='forma-motion-policy';document.head.append(style)}
         style.textContent=event.data.reducedMotion?'*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}':'';
@@ -25,6 +26,15 @@ export function sdkSource(nonce: string) {
         style.textContent='html,body{min-height:0}body{display:flow-root}';
         document.head.append(style);
         resizeObserver=new ResizeObserver(measure);resizeObserver.observe(document.body);measure();
+      }
+      if(event.data.type==='forma:editing' && typeof event.data.on==='boolean'){
+        if(event.data.on)document.documentElement.dataset.editing='on';else delete document.documentElement.dataset.editing;
+        if(!document.getElementById('forma-edit-policy')){
+          const style=document.createElement('style');style.id='forma-edit-policy';
+          style.textContent='html[data-editing=on] :where([data-edit]){outline:2px dashed #2b3cff;outline-offset:4px;cursor:pointer}';
+          document.head.prepend(style);
+        }
+        window.dispatchEvent(new CustomEvent('forma:editing',{detail:{on:event.data.on}}));
       }
       if(event.data.type==='forma:result'){
         const p=pending.get(event.data.id);if(!p)return;
@@ -39,13 +49,22 @@ export function sdkSource(nonce: string) {
       parent.postMessage({nonce,request:{type:'forma:request',id,method,...(payload===undefined?{}:{payload})}},'*');
     });
     Object.defineProperty(window,'forma',{value:Object.freeze({
-      appearance:{get theme(){return document.documentElement.dataset.theme||'light'}},
-      profile:{poll:{read:()=>request('profile.poll.read'),vote:option=>request('profile.poll.vote',{option})},read:()=>request('profile.read'),cover:postId=>request('profile.cover',{postId}),openPost:postId=>request('profile.openPost',{postId}),social:{read:()=>request('profile.social.read'),toggle:input=>request('profile.social.toggle',input)}},
+      appearance:{get theme(){return document.documentElement.dataset.theme||'light'},get season(){return document.documentElement.dataset.season||'paint'}},
+      profile:{poll:{read:()=>request('profile.poll.read'),vote:option=>request('profile.poll.vote',{option})},read:()=>request('profile.read'),cover:postId=>request('profile.cover',{postId}),openPost:postId=>request('profile.openPost',{postId}),social:{read:()=>request('profile.social.read'),toggle:input=>request('profile.social.toggle',input)},wall:{read:()=>request('profile.wall.read'),add:value=>request('profile.wall.add',value),remove:noteId=>request('profile.wall.remove',{noteId}),report:(noteId,reason)=>request('profile.wall.report',reason===undefined?{noteId}:{noteId,reason})}},
+      edit:{get active(){return document.documentElement.dataset.editing==='on'},select:field=>{if(document.documentElement.dataset.editing==='on'&&/^[a-z][a-z0-9-]{0,30}$/.test(String(field)))parent.postMessage({type:'forma:edit',nonce,field:String(field)},'*')}},
       relay:{read:()=>request('relay.read'),add:value=>request('relay.add',value)},
       progress:{read:()=>request('viewer.progress.read'),write:value=>request('viewer.progress.write',value)},
       contributions:{list:()=>request('contributions.read'),add:value=>request('contributions.create',value)},
-      poll:{read:()=>request('polls.read'),vote:option=>request('polls.vote',{option})}
+      poll:{read:()=>request('polls.read'),vote:option=>request('polls.vote',{option})},
+      reactions:{read:()=>request('reactions.read'),place:sticker=>request('reactions.place',{sticker})}
     }),writable:false});
+    // While the owner edits a draft, a tap picks what to change instead of using the page.
+    window.addEventListener('click',event=>{
+      if(document.documentElement.dataset.editing!=='on')return;
+      event.preventDefault();event.stopImmediatePropagation();
+      const target=event.target&&event.target.closest&&event.target.closest('[data-edit]');
+      if(target)window.forma.edit.select(target.dataset.edit);
+    },true);
     window.addEventListener('error',()=>parent.postMessage({type:'forma:error',nonce},'*'));
     window.addEventListener('unhandledrejection',()=>parent.postMessage({type:'forma:error',nonce},'*'));
     window.addEventListener('DOMContentLoaded',()=>parent.postMessage({type:'forma:ready',nonce},'*'));

@@ -67,6 +67,23 @@ export function starterPackage(): Experience {
     `<style>main{min-height:420px;background:#ece9e0;display:grid;place-content:center;padding:45px;text-align:center}h1{font:italic 46px Georgia;margin:20px 0}button{background:#d9563b;color:white;margin-top:24px}</style><main><small>A page from my day</small><h1>The little things.</h1><p id="note">Something worth keeping.</p><button onclick="document.getElementById('note').textContent='You found the small surprise. ✦'">Open a little surprise ↗</button></main>`,
   );
 }
+/** Stock photos that templates and bundled designs reference; safe for every mode. */
+export function seedSharedAssets(service: SocialService) {
+  const missing = Object.entries(media).filter(([, id]) => !service.store.get("asset", id));
+  if (missing.length === 0) return;
+  service.store.transaction(() => {
+    for (const [name, id] of missing)
+      service.store.put("asset", id, {
+        id,
+        ownerId: "shared",
+        name: `${name}.jpg`,
+        mime: "image/jpeg",
+        base64: readFileSync(resolve(`assets/demo/${name}.jpg`)).toString("base64"),
+      });
+  });
+}
+
+/** Demo people, posts and follows for the local playground. Never runs in production. */
 export async function seed(service: SocialService) {
   if (service.store.get("system", "seed-v1")) return;
   service.store.transaction(() => {

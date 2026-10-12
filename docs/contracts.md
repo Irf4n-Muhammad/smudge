@@ -94,6 +94,9 @@ The SDK checks the parent window and nonce, sets `document.documentElement.datas
 and dispatches `forma:theme`. Read `forma.appearance.theme` or style
 `html[data-theme="dark"]`. Appearance does not require a data capability and does not reload
 the experience. Authors choose their own night palette; existing artwork is never inverted.
+The message may also carry `season` (`paint` or `halloween`, additive): the SDK sets
+`html[data-season]` and exposes `forma.appearance.season` (default `paint`). Older hosts omit it
+and older packages ignore it; it never changes a package's content on its own.
 Use a transparent body to blend with the stage. The host keeps the iframe's CSS color scheme
 normal so browser dark-mode canvas defaults do not turn transparent worlds opaque.
 
@@ -114,6 +117,8 @@ makes declared media viewable with the public post. No video processing is imple
 | contributions.create  | `await forma.contributions.add({text:'A memory'})` | Owner or invited contributor; text max 500 characters |
 | polls.read            | `await forma.poll.read()`                          | This post's aggregate counts and viewer choice        |
 | polls.vote            | `await forma.poll.vote(0)`                         | Valid option; replaces current viewer's vote          |
+| reactions.read        | `await forma.reactions.read()`                     | Preset options, counts, own choice, recent wall       |
+| reactions.place       | `await forma.reactions.place("proud")`             | One preset sticker per viewer; `null` removes it      |
 
 Declare each capability used. A poll also requires `manifest.poll` with question and 2-6 option
 labels. Writes are not inferred from read permission or vice versa. Preview uses separate state.
@@ -314,3 +319,65 @@ Previews are retained as private drafts on cancel; practice state is draft/revis
 record direct installation lineage, not verified authorship, a license, transitive credit or proof
 of unchanged dependencies. Undo via arbitrary source update follows the same conservative rules.
 Existing MCP installation automatically records provenance; new discovery routes are HTTP/UI only.
+
+## Reactions (additive, v2 posts)
+
+`reactions.read` / `reactions.place` raise the v2 capability limit from 6 to 8. Options are chosen
+by the host (moment template, or the owner's current decoration plus defaults), never by the
+package, and visitors cannot submit text. Preview is read-only. Audience rules apply: a viewer who
+cannot see the post gets `NOT_FOUND`. See ADR 0011.
+
+## Post buttons (additive)
+
+Post metadata accepts an optional `link: { label, url? }`. `label` is 1 to 32 characters and is the
+text of a button shown under the post. Without `url`, the button opens the post's own page full
+size in the in-app page sheet. With `url`, it opens that page in the sheet in a sandboxed frame
+(no top navigation, no referrer) with an **Open in browser** fallback, because many sites refuse
+to be framed and the app cannot detect that reliably. `url` must be an absolute `https:` URL of at
+most 500 characters with no username or password; `javascript:`, `data:` and plain `http:` are
+rejected. Unknown keys are rejected. Old metadata without `link` stays valid, and reusing a post's
+format carries the button over with the rest of the metadata.
+
+## The Wall and easy editing (additive, profile v2)
+
+Three profile methods let a page keep a guestbook. Each needs its manifest grant and, outside a
+draft preview, the owner's current publication must still grant it (like the relay).
+
+- `forma.profile.wall.read()` → `{ notes, total }`, newest first, at most 60. Each note is
+  `{ id, userId, name, text, tone, createdAt, removable }`; `removable` is true for its author and
+  for the profile owner.
+- `forma.profile.wall.add({ submissionId, text, tone })`: `text` 1–140 characters, `tone` 0–3.
+  The author and name come from the session, never the frame. A repeated `submissionId` from the
+  same person returns the wall unchanged; from someone else it is `SUBMISSION_CONFLICT`. Limits:
+  200 notes per wall (`WALL_FULL`), five per person (`WALL_NOTE_LIMIT`). Blocked or suspended
+  accounts are refused. Returns the same shape as `read`.
+- `forma.profile.wall.remove(noteId)`: the author or the owner only (`FORBIDDEN` otherwise).
+- `forma.profile.wall.report(noteId, reason?)`, `reason` one of `spam`, `harassment`, `other`
+  (default). It needs no grant of its own: a page granted `profile.wall.read` can always report,
+  so existing walls get it without republishing their manifest. Notes carry `reportable` (not your
+  own, not on a draft). A reported note is hidden for the reporter at once and queued for
+  moderators as target `wall-note` with id `ownerId:noteId`; `remove` takes it off the wall,
+  `dismiss` keeps it. Your own note gives `CANNOT_REPORT_OWN_NOTE`; draft walls can't be reported.
+
+A draft preview has its own wall, kept per draft, so trying a page never writes on the live one.
+Deleting an account removes its notes everywhere and its own wall.
+
+Edit mode, for owner draft previews only: the host may send
+`{ type: "forma:editing", nonce, on: boolean }`. The SDK then sets `html[data-editing="on"]` and
+dispatches a `forma:editing` event. While it is on, `forma.edit.select(field)` posts
+`{ type: "forma:edit", nonce, field }`, where `field` matches `^[a-z][a-z0-9-]{0,30}$`. The host
+ignores it unless the frame is a draft preview that it put in edit mode. `forma.edit.active`
+reports the state. No server call is involved. While edit mode is on, the SDK itself turns any
+click into an edit: it cancels the click and, if it landed inside an element with a `data-edit`
+attribute, selects that field. It also outlines `[data-edit]` elements with a zero-specificity
+default style that page styles can override.
+
+The Room and Comic vibes keep easy choices in a marked block at the top of `index.html`
+(`<!-- smudge-look:start -->` … `<!-- smudge-look:end -->`, `window.smudgeLook = {tint, line}`),
+validated by `lookSettingsSchema` in `packages/core/src/easy-look.ts`. Ink & Paper and Essentials
+keep using `personal/design.js`; its generated boot script now tags their parts with `data-edit`.
+
+The Smudge Paint wall stores easy-editor choices in an ordinary file, `smudge/settings.js`
+(`window.smudgeSettings = {…};`), validated by `smudgeSettingsSchema` in
+`packages/core/src/smudge-design.ts`. Writing it adds the Wall grants only while the Wall section
+is shown.

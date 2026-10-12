@@ -830,7 +830,7 @@ html[data-motion="reduce"] * {
     font-size: 14px;
   }
   .bio {
-    font-size: 13px;
+    font-size: 14px;
     margin: 3px 0 9px;
   }
   .follow-line {
@@ -841,6 +841,7 @@ html[data-motion="reduce"] * {
     font-size: 15px;
     padding: 9px 26px;
     min-width: 116px;
+    min-height: 44px;
   }
   .stories {
     height: 91px;

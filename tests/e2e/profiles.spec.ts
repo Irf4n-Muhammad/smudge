@@ -61,6 +61,8 @@ test("profile editor saves, previews, publishes, imports and restores immutable 
   await page.goto("/?profile=you");
   await page.getByRole("button", { name: "Customize profile" }).click();
   const initial = (await request(page, "/profile-history")).data.state;
+  // The single-file room opens straight in the source editor; modular starters open visually.
+  await page.getByLabel("Profile starting point").selectOption("room");
   await page.getByRole("button", { name: "Create profile draft" }).click();
   const code = page.getByRole("textbox", { name: "Profile source code" });
   await code.fill(

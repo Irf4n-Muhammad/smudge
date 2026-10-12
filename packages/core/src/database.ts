@@ -45,6 +45,17 @@ export class Store {
       statement.free();
     }
   }
+  ids(kind: string): string[] {
+    const statement = this.db.prepare("SELECT id FROM records WHERE kind=? ORDER BY rowid");
+    try {
+      statement.bind([kind]);
+      const ids: string[] = [];
+      while (statement.step()) ids.push(String(statement.get()[0]));
+      return ids;
+    } finally {
+      statement.free();
+    }
+  }
   put(kind: string, id: string, value: unknown) {
     this.db.run(
       "INSERT INTO records(kind,id,body) VALUES(?,?,?) ON CONFLICT(kind,id) DO UPDATE SET body=excluded.body",

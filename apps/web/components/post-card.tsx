@@ -10,12 +10,24 @@ import {
   Layers,
   Bookmark,
   ArrowDown,
+  Ban,
 } from "lucide-react";
-import type { PostView } from "../../../packages/contracts/src/experience";
+import { ReportDialog, toggleBlock } from "./community";
 import { api, Runtime } from "./runtime";
 import { Avatar } from "./ui";
+import { PostLink } from "./post-link";
 import { labels } from "./types";
 import type { Boot } from "./types";
+import {
+  DecorCredit,
+  DecorFrame,
+  FullScreenButton,
+  FullScreenPost,
+  MomentCover,
+  MomentMark,
+  ReactionBar,
+} from "./post-decor";
+import type { DecoratedPost } from "./post-decor";
 export function PostCard({
   post,
   boot,
@@ -26,7 +38,7 @@ export function PostCard({
   onReuse,
   onSkip,
 }: {
-  post: PostView;
+  post: DecoratedPost;
   boot: Boot;
   onRefresh: () => Promise<void>;
   notify: (s: string) => void;
@@ -40,7 +52,10 @@ export function PostCard({
     [comments, setComments] = useState<{ id: string; userId: string; text: string }[]>([]),
     [comment, setComment] = useState(""),
     [menu, setMenu] = useState(false),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [full, setFull] = useState(false),
+    [reporting, setReporting] = useState(false);
+  const moment = post.moment;
   const action = async (kind: string) => {
     try {
       await api(`/posts/${post.id}/${kind}`, {});
@@ -98,7 +113,7 @@ export function PostCard({
               <small>@{post.author.handle}</small>
             </strong>
             <span>
-              {labels[post.metadata.format]}
+              {moment ? moment.name : labels[post.metadata.format]}
               <span className="meta-dot">·</span>
               {new Date(post.createdAt).toLocaleDateString("en-US", {
                 month: "short",
@@ -124,51 +139,76 @@ export function PostCard({
             </button>
             {menu && (
               <div className="post-menu">
+                {!moment && (
+                  <button
+                    onClick={() => {
+                      setMenu(false);
+                      onReuse();
+                    }}
+                  >
+                    <Copy size={14} />
+                    Use this format
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setMenu(false);
-                    onReuse();
-                  }}
-                >
-                  <Copy size={14} />
-                  Use this format
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      await api(`/posts/${post.id}/report`, {});
-                      notify("Report recorded locally for this demo.");
-                      setMenu(false);
-                    } catch (e) {
-                      notify((e as Error).message);
-                    }
+                    setReporting(true);
                   }}
                 >
                   <Flag size={14} />
                   Report post
                 </button>
+                {post.ownerId !== boot.actor.userId && (
+                  <button
+                    onClick={async () => {
+                      setMenu(false);
+                      if ((await toggleBlock(post.author, notify)) !== null) await onRefresh();
+                    }}
+                  >
+                    <Ban size={14} />
+                    Block @{post.author.handle}
+                  </button>
+                )}
               </div>
             )}
           </div>
         </div>
       </header>
-      <Runtime
-        target={post.id}
-        height={stage?.height ?? (post.metadata.format === "scrapbook" ? 510 : 460)}
-        onSkip={onSkip}
-      />
+      <DecorFrame post={post}>
+        {moment ? (
+          <MomentCover post={post} onOpen={() => setFull(true)} />
+        ) : (
+          <Runtime
+            target={post.id}
+            height={stage?.height ?? (post.metadata.format === "scrapbook" ? 510 : 460)}
+            onSkip={onSkip}
+          />
+        )}
+      </DecorFrame>
+      <PostLink post={post} notify={notify} onOpenSelf={() => setFull(true)} />
+      {full && <FullScreenPost post={post} notify={notify} onClose={() => setFull(false)} />}
       <div className="post-body">
+        {moment && (
+          <div className="moment-line">
+            <MomentMark post={post} />
+          </div>
+        )}
+        <ReactionBar post={post} notify={notify} onChange={onRefresh} />
         <div className="post-actions">
           <div>
-            <button
-              className={post.liked ? "action-button liked" : "action-button"}
-              aria-label={post.liked ? "Unlike post" : "Like post"}
-              aria-pressed={post.liked}
-              onClick={() => void action("like")}
-            >
-              <Heart size={21} fill={post.liked ? "currentColor" : "none"} />
-              <span>{post.likes}</span>
-            </button>
+            {/* Moments carry no public like counter: they are for the people who care. */}
+            {!moment && (
+              <button
+                className={post.liked ? "action-button liked" : "action-button"}
+                aria-label={post.liked ? "Unlike post" : "Like post"}
+                aria-pressed={post.liked}
+                onClick={() => void action("like")}
+              >
+                <Heart size={21} fill={post.liked ? "currentColor" : "none"} />
+                <span>{post.likes}</span>
+              </button>
+            )}
             <button
               className="action-button"
               aria-label="Open comments"
@@ -178,15 +218,18 @@ export function PostCard({
               <MessageCircle size={20} />
               <span>{post.comments}</span>
             </button>
-            <button
-              className="action-button reuse-action"
-              aria-label="Use format"
-              title="Use format"
-              onClick={onReuse}
-            >
-              <Layers size={18} />
-              <span>Use format</span>
-            </button>
+            {!moment && (
+              <button
+                className="action-button reuse-action"
+                aria-label="Use format"
+                title="Use format"
+                onClick={onReuse}
+              >
+                <Layers size={18} />
+                <span>Use format</span>
+              </button>
+            )}
+            <FullScreenButton onOpen={() => setFull(true)} />
           </div>
           <button
             className={post.saved ? "action-button saved" : "action-button"}
@@ -200,10 +243,11 @@ export function PostCard({
         <p className="post-caption">
           <strong>{post.author.handle}</strong> {post.metadata.caption}
         </p>
+        <DecorCredit post={post} />
         <div className="post-bottom">
           <span className={`format-tag ${post.metadata.format}`}>
             <span>✧</span>
-            {labels[post.metadata.format]}
+            {moment ? moment.name : labels[post.metadata.format]}
           </span>
           <button className="skip-post" onClick={onSkip}>
             Next story <ArrowDown size={12} />
@@ -233,6 +277,14 @@ export function PostCard({
           </section>
         )}
       </div>
+      {reporting && (
+        <ReportDialog
+          postId={post.id}
+          title={post.metadata.title}
+          onClose={() => setReporting(false)}
+          notify={notify}
+        />
+      )}
     </article>
   );
 }

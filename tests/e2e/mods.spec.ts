@@ -77,8 +77,8 @@ test("A shares a mod, B mixes it with Raka and publishes, C votes and revisits t
     await expect(preview.locator(".mz-profile h1")).toHaveText("Inès Laurent");
     await expect(preview.locator("#mz-total")).toContainText("0 votes");
     await page.getByRole("button", { name: "Browse & share mods", exact: true }).click();
-    await page.getByLabel("Search mods").fill("Raka");
-    await page.getByLabel("Mix Raka / Ink & paper", { exact: true }).selectOption("post");
+    await page.getByLabel("Search mods").fill("Ink");
+    await page.getByLabel("Mix Ink & Paper", { exact: true }).selectOption("post");
     await page.getByRole("button", { name: "Use this preview", exact: true }).click();
     await expect(preview.locator(".post-grid-comic")).toBeVisible();
     await expect(preview.locator(".mz-posters")).toHaveCount(0);
@@ -87,8 +87,8 @@ test("A shares a mod, B mixes it with Raka and publishes, C votes and revisits t
     await page.getByRole("button", { name: "Undo last part change", exact: true }).click();
     await expect(preview.locator(".mz-posters")).toBeVisible();
     await page.getByRole("button", { name: "Browse & share mods", exact: true }).click();
-    await page.getByLabel("Search mods").fill("Raka");
-    await page.getByLabel("Mix Raka / Ink & paper", { exact: true }).selectOption("post");
+    await page.getByLabel("Search mods").fill("Ink");
+    await page.getByLabel("Mix Ink & Paper", { exact: true }).selectOption("post");
     await page.getByRole("button", { name: "Use this preview", exact: true }).click();
     await expect(preview.locator(".post-grid-comic")).toBeVisible();
     await page.getByRole("button", { name: "Publish profile", exact: true }).click();

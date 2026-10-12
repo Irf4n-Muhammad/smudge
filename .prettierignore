@@ -1,0 +1,8 @@
+dist
+.next
+node_modules
+.local
+artifacts
+test-results
+package-lock.json
+apps/server/profiles/smudge/fonts.css

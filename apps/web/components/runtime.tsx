@@ -30,6 +30,9 @@ export function Runtime({
   reducedMotion = false,
   onOpenPost,
   onSocialChange,
+  editing = false,
+  onEdit,
+  onReady,
 }: {
   target: string;
   preview?: boolean;
@@ -43,6 +46,11 @@ export function Runtime({
   reducedMotion?: boolean;
   onOpenPost?: (id: string) => void;
   onSocialChange?: () => Promise<void>;
+  /** Draft previews only: the frame outlines editable parts and reports which one was tapped. */
+  editing?: boolean;
+  onEdit?: (field: string) => void;
+  /** Called once the frame has drawn (and, with autoHeight, measured itself) or failed. */
+  onReady?: () => void;
 }) {
   const container = useRef<HTMLDivElement>(null),
     frame = useRef<HTMLIFrameElement>(null);
@@ -50,8 +58,14 @@ export function Runtime({
   const socialChange = useRef(onSocialChange);
   socialChange.current = onSocialChange;
   openPost.current = onOpenPost;
+  const edit = useRef(onEdit);
+  edit.current = onEdit;
+  const editingNow = useRef(editing);
+  editingNow.current = editing;
   const motion = useRef(reducedMotion);
   motion.current = reducedMotion;
+  const readyNow = useRef(onReady);
+  readyNow.current = onReady;
   const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
   const [visible, setVisible] = useState(false),
     [ticket, setTicket] = useState<{ ticket: string; nonce: string; url: string } | null>(null),
@@ -102,6 +116,7 @@ export function Runtime({
           type: "forma:appearance",
           nonce: ticket.nonce,
           theme: document.documentElement.dataset.theme === "dark" ? "dark" : "light",
+          season: document.documentElement.dataset.season === "halloween" ? "halloween" : "paint",
           reducedMotion: motion.current,
         },
         "*",
@@ -109,7 +124,7 @@ export function Runtime({
     const appearanceObserver = new MutationObserver(sendAppearance);
     appearanceObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["data-theme"],
+      attributeFilter: ["data-theme", "data-season"],
     });
     const timeout = setTimeout(() => {
       if (active) setError("This experience is taking too long to open.");
@@ -130,7 +145,24 @@ export function Runtime({
             { type: "forma:layout", nonce: ticket.nonce, autoHeight: true },
             "*",
           );
+        if (kind === "profile" && preview)
+          frame.current?.contentWindow?.postMessage(
+            { type: "forma:editing", nonce: ticket.nonce, on: editingNow.current },
+            "*",
+          );
         setReady(true);
+        return;
+      }
+      if (event.data.type === "forma:edit") {
+        // Only a draft preview may steer the editor, and only with a short field name.
+        if (
+          kind === "profile" &&
+          preview &&
+          editingNow.current &&
+          typeof event.data.field === "string" &&
+          /^[a-z][a-z0-9-]{0,30}$/.test(event.data.field)
+        )
+          edit.current?.(event.data.field);
         return;
       }
       if (event.data.type === "forma:size") {
@@ -201,7 +233,18 @@ export function Runtime({
       appearanceObserver.disconnect();
       window.removeEventListener("message", receive);
     };
-  }, [ticket, kind, autoHeight]);
+  }, [ticket, kind, autoHeight, preview]);
+  useEffect(() => {
+    if (error || (ready && (!autoHeight || kind !== "profile" || measuredHeight !== null)))
+      readyNow.current?.();
+  }, [ready, error, measuredHeight, autoHeight, kind]);
+  useEffect(() => {
+    if (ticket && kind === "profile" && preview)
+      frame.current?.contentWindow?.postMessage(
+        { type: "forma:editing", nonce: ticket.nonce, on: editing },
+        "*",
+      );
+  }, [ticket, kind, preview, editing]);
   useEffect(() => {
     if (ticket)
       frame.current?.contentWindow?.postMessage(
@@ -209,6 +252,7 @@ export function Runtime({
           type: "forma:appearance",
           nonce: ticket.nonce,
           theme: document.documentElement.dataset.theme === "dark" ? "dark" : "light",
+          season: document.documentElement.dataset.season === "halloween" ? "halloween" : "paint",
           reducedMotion,
         },
         "*",

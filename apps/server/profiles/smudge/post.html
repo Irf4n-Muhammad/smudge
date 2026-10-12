@@ -1,0 +1,107 @@
+<!-- smudge:v3 -->
+<link rel="stylesheet" href="smudge/parts.css" />
+<script src="smudge/helpers.js"></script>
+<div class="sm sm-flow">
+  <section
+    class="selected"
+    id="selected"
+    aria-label="Selected posts"
+    data-sm-section="selected"
+    data-edit="selected"
+    hidden
+  >
+    <div class="label"><span>(03) — SELECTED</span><span id="selected-count"></span></div>
+    <h2>Things I <em>can't</em> take back</h2>
+    <div class="track" id="track" tabindex="0" aria-label="Selected posts, scroll sideways"></div>
+  </section>
+  <section
+    class="posts"
+    id="posts"
+    aria-label="All posts"
+    data-sm-section="posts"
+    data-edit="posts"
+  >
+    <div class="tabs" role="tablist" aria-label="Filter posts">
+      <button role="tab" aria-selected="true" data-filter="all">Posts</button>
+      <button role="tab" aria-selected="false" data-filter="story">Stories</button>
+      <button role="tab" aria-selected="false" data-filter="photo">Photos</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <p class="empty" id="grid-empty" hidden>Nothing here yet.</p>
+    <small class="part-status" id="posts-status" role="status"></small>
+  </section>
+</div>
+<script>
+  profileData
+    .then((d) => {
+      const $ = (id) => document.getElementById(id);
+      const status = $("posts-status");
+      const tones = ["p1", "p2", "p3", "p4"];
+      function tile(p, i, big) {
+        const b = document.createElement("button");
+        b.className = big ? "w" : "tile";
+        b.setAttribute("aria-label", "Open " + p.title);
+        const art = document.createElement("span");
+        art.className = "art paint-" + tones[i % tones.length];
+        const label = document.createElement("span");
+        label.className = "art-title";
+        label.textContent = p.title;
+        art.append(label);
+        if (big) {
+          const no = document.createElement("span");
+          no.className = "no";
+          no.textContent = String(i + 1).padStart(2, "0");
+          art.append(no);
+        }
+        b.append(art);
+        if (big) {
+          const t = document.createElement("strong");
+          t.textContent = p.title;
+          const c = document.createElement("small");
+          c.textContent = p.caption || "";
+          b.append(t, c);
+        }
+        b.onclick = () => openProfilePost(p.id, status);
+        coverFor(p).then((cover) => {
+          if (!cover) return;
+          const img = document.createElement("img");
+          img.src = cover.src;
+          img.alt = cover.alt;
+          art.classList.add("has-cover");
+          art.prepend(img);
+        });
+        return b;
+      }
+      const picks = d.posts.slice(0, 6);
+      if (picks.length > 1) {
+        $("selected").hidden = false;
+        $("selected-count").textContent = picks.length + " PICKS";
+        picks.forEach((p, i) => $("track").append(tile(p, i, true)));
+      }
+      function render(filter) {
+        const grid = $("grid");
+        grid.textContent = "";
+        const shown = d.posts.filter((p) =>
+          filter === "all"
+            ? true
+            : filter === "story"
+              ? p.format === "story"
+              : p.format !== "story",
+        );
+        shown.forEach((p, i) => grid.append(tile(p, i, false)));
+        $("grid-empty").hidden = shown.length > 0;
+      }
+      document.querySelectorAll(".tabs [data-filter]").forEach((t) => {
+        t.onclick = () => {
+          document
+            .querySelectorAll(".tabs [data-filter]")
+            .forEach((o) => o.setAttribute("aria-selected", String(o === t)));
+          render(t.dataset.filter);
+        };
+      });
+      render("all");
+    })
+    .catch(() => {
+      document.getElementById("posts-status").textContent = "Could not load posts. Try refreshing.";
+    });
+</script>

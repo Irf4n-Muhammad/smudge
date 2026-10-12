@@ -1,0 +1,242 @@
+<!-- smudge:v3 -->
+<link rel="stylesheet" href="smudge/parts.css" />
+<script src="smudge/helpers.js"></script>
+<div class="sm">
+  <section class="hero" id="hero" aria-label="About">
+    <svg class="thrown-paint" id="thrown-paint" aria-hidden="true"></svg>
+    <div class="idx">
+      <span>(01) — PROFILE</span><span id="hero-handle" data-edit="place"></span>
+    </div>
+    <h1 class="giant" id="giant" data-edit="name"><span id="giant-name"></span></h1>
+    <p class="giant2" id="giant-line" data-edit="tagline"></p>
+    <p class="tapnote" aria-hidden="true">
+      <svg
+        width="30"
+        height="26"
+        viewBox="0 0 30 26"
+        fill="none"
+        stroke-width="2.4"
+        stroke-linecap="round"
+      >
+        <path d="M6 24C10 14 16 8 26 4M26 4l-8 0M26 4l-2 8" /></svg
+      >tap anywhere to throw paint
+    </p>
+    <div class="role" data-edit="about">
+      <p><b id="owner-name"></b> <span id="owner-count"></span></p>
+      <div class="avatar" id="avatar" data-edit="photo">
+        <span class="sticker" id="sticker"></span>
+      </div>
+    </div>
+  </section>
+  <div class="actions">
+    <button class="btn main" id="profile-follow" disabled>Follow</button>
+    <button class="btn" id="see-posts">See posts</button>
+  </div>
+  <p class="follow-status" id="follow-status" role="status"></p>
+  <div class="marq" aria-hidden="true" data-edit="marquee">
+    <div class="marq-track" id="marq"></div>
+  </div>
+  <section class="quote" id="quote" data-edit="about" hidden>
+    <p id="quote-text"></p>
+    <small id="quote-by"></small>
+  </section>
+</div>
+<script>
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    // Easy-editor settings (smudge/settings.js); every field falls back to the profile's own data.
+    const settings = window.smudgeSettings || {};
+    let stats = { followers: null, posts: 0, stories: 0 };
+    function marquee() {
+      const parts = [];
+      const custom = (settings.marquee || "")
+        .split(/[&,]/)
+        .map((t) => t.trim().toUpperCase())
+        .filter(Boolean);
+      if (custom.length) parts.push(...custom);
+      else if (stats.followers !== null)
+        parts.push(stats.followers + (stats.followers === 1 ? " FOLLOWER" : " FOLLOWERS"));
+      if (!custom.length) parts.push(stats.posts + (stats.posts === 1 ? " POST" : " POSTS"));
+      if (!custom.length && stats.stories)
+        parts.push(stats.stories + (stats.stories === 1 ? " STORY" : " STORIES"));
+      const track = $("marq");
+      track.textContent = "";
+      // Two copies so the loop never shows a gap.
+      for (let copy = 0; copy < 2; copy++)
+        for (const text of parts.concat(["ON SMUDGE"])) {
+          const s = document.createElement("span");
+          s.textContent = text;
+          const amp = document.createElement("i");
+          amp.textContent = "&";
+          track.append(s, amp);
+        }
+    }
+    // Shrink the giant name until it fits the hero, whatever its length.
+    function fit() {
+      const h = $("giant"),
+        name = $("giant-name");
+      const max = Math.min(260, Math.max(120, h.clientWidth * 0.42));
+      let size = max;
+      name.style.fontSize = size + "px";
+      while (name.scrollWidth > h.clientWidth && size > 44) {
+        size -= 4;
+        name.style.fontSize = size + "px";
+      }
+    }
+    window.addEventListener("resize", fit);
+    window.addEventListener("profile-social", ({ detail: s }) => {
+      const b = $("profile-follow");
+      b.textContent = s.ownProfile ? "Your profile" : s.following ? "Following" : "Follow";
+      b.disabled = !s.writable || s.ownProfile;
+      b.setAttribute("aria-pressed", String(s.following));
+      stats.followers = s.followers;
+      marquee();
+    });
+    $("profile-follow").onclick = async function () {
+      this.disabled = true;
+      try {
+        const s = await forma.profile.social.toggle({ action: "follow" });
+        window.dispatchEvent(new CustomEvent("profile-social", { detail: s }));
+      } catch (e) {
+        $("follow-status").textContent =
+          e.message === "PREVIEW_READ_ONLY"
+            ? "Following works on the live profile."
+            : "Please try again.";
+        this.disabled = false;
+      }
+    };
+    $("see-posts").onclick = () =>
+      document.getElementById("posts")?.scrollIntoView({ block: "start" });
+    refreshSocial();
+    profileData
+      .then(async (d) => {
+        const first = d.owner.name.split(" ")[0] || d.owner.name;
+        $("giant-name").textContent =
+          settings.bigName === "full"
+            ? d.owner.name.split(/\s+/).join("\n")
+            : settings.bigName === "nickname" && settings.nickname
+              ? settings.nickname
+              : first;
+        $("hero-handle").textContent = settings.place || "@" + d.owner.handle;
+        // A line in *stars* turns italic; without stars the first word does.
+        const line = settings.tagline || "*@" + d.owner.handle + "*";
+        const marked = line.includes("*") ? line : line.replace(/^(\S+)/, "*$1*");
+        $("giant-line").textContent = "";
+        marked.split("*").forEach((piece, i) => {
+          if (!piece) return;
+          const node = i % 2 ? document.createElement("em") : document.createTextNode(piece);
+          if (i % 2) node.textContent = piece;
+          $("giant-line").append(node);
+        });
+        $("owner-name").textContent = d.owner.name + ".";
+        stats.posts = d.posts.length;
+        stats.stories = d.posts.filter((p) => p.format === "story").length;
+        $("owner-count").textContent =
+          d.posts.length === 0
+            ? "Nothing posted yet."
+            : d.posts.length + (d.posts.length === 1 ? " post" : " posts") + " so far.";
+        const avatar = $("avatar");
+        if (d.owner.avatarSrc) {
+          const img = document.createElement("img");
+          img.src = d.owner.avatarSrc;
+          img.alt = "";
+          avatar.prepend(img);
+        } else {
+          avatar.style.background = d.owner.color || "#ffcc00";
+          const initials = document.createElement("b");
+          initials.textContent = d.owner.initials || first.slice(0, 1);
+          avatar.prepend(initials);
+        }
+        $("sticker").textContent = d.posts.length ? "✦ " + d.posts.length : "✦ NEW";
+        if (d.owner.bio) {
+          $("quote").hidden = false;
+          $("quote-text").textContent = "“" + d.owner.bio + "”";
+          $("quote-by").textContent = "— " + first.toUpperCase() + ", IN THEIR OWN WORDS";
+        }
+        marquee();
+        fit();
+        // The newest post with a cover paints the giant name.
+        const covered = d.posts.find((p) => p.hasCover);
+        const cover = await coverFor(covered);
+        if (cover) {
+          $("giant-name").style.backgroundImage = "url(" + JSON.stringify(cover.src) + ")";
+          $("giant").classList.add("photo-fill");
+        }
+      })
+      .catch(() => {
+        $("owner-count").textContent = "Could not load this profile. Try refreshing.";
+      });
+    if (document.fonts) document.fonts.ready.then(fit);
+
+    // Tap to throw paint: a little splat where you tapped. It stays only for this visit.
+    const svg = $("thrown-paint");
+    const colors = () => {
+      const css = getComputedStyle(svg);
+      return ["--p1", "--p2", "--p3", "--p4"].map(
+        (v) => css.getPropertyValue(v).trim() || "#ff3d6e",
+      );
+    };
+    let seed = 11;
+    const rnd = () => ((seed = (seed * 9301 + 49297) % 233280), seed / 233280);
+    function splat(x, y, r, color) {
+      const ns = "http://www.w3.org/2000/svg";
+      const g = document.createElementNS(ns, "g");
+      g.setAttribute("fill", color);
+      let d = "";
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2,
+          rr = r * (0.62 + rnd() * 0.55);
+        d +=
+          (i ? "L" : "M") +
+          (x + Math.cos(a) * rr).toFixed(1) +
+          " " +
+          (y + Math.sin(a) * rr).toFixed(1);
+      }
+      const p = document.createElementNS(ns, "path");
+      p.setAttribute("d", d + "Z");
+      g.append(p);
+      for (let k = 0; k < 7; k++) {
+        const a = rnd() * Math.PI * 2,
+          dd = r * (1.3 + rnd() * 1.2);
+        const c = document.createElementNS(ns, "circle");
+        c.setAttribute("cx", x + Math.cos(a) * dd);
+        c.setAttribute("cy", y + Math.sin(a) * dd);
+        c.setAttribute("r", 1.5 + rnd() * 3.5);
+        g.append(c);
+      }
+      const drip = document.createElementNS(ns, "rect");
+      drip.setAttribute("x", x - 2.5);
+      drip.setAttribute("y", y);
+      drip.setAttribute("width", 5);
+      drip.setAttribute("height", r * 1.6 + rnd() * 20);
+      drip.setAttribute("rx", 2.5);
+      g.append(drip);
+      svg.append(g);
+      if (svg.childElementCount > 40) svg.firstElementChild.remove();
+    }
+    const wall = $("hero");
+    function size() {
+      svg.setAttribute("width", wall.clientWidth);
+      svg.setAttribute("height", wall.clientHeight);
+    }
+    new ResizeObserver(size).observe(wall);
+    $("hero").addEventListener("click", (e) => {
+      if (e.target.closest("button, a")) return;
+      const box = wall.getBoundingClientRect();
+      const palette = colors();
+      splat(
+        e.clientX - box.left,
+        e.clientY - box.top,
+        10 + rnd() * 10,
+        palette[Math.floor(rnd() * palette.length)],
+      );
+    });
+    // Two marks so the wall never starts clean.
+    requestAnimationFrame(() => {
+      size();
+      const palette = colors();
+      splat(wall.clientWidth - 30, wall.clientHeight * 0.55, 14, palette[2]);
+      splat(18, wall.clientHeight - 30, 9, palette[1]);
+    });
+  })();
+</script>

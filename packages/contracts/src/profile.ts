@@ -12,6 +12,10 @@ export const profileMethod = z.enum([
   "relay.add",
   "profile.poll.read",
   "profile.poll.vote",
+  "profile.wall.read",
+  "profile.wall.add",
+  "profile.wall.remove",
+  "profile.wall.report",
 ]);
 export const partSlots = ["profile", "post", "story", "feature"] as const;
 // Public presentation fields only. Account ID, handle and authorization are never draft input.
@@ -175,6 +179,29 @@ export interface RelayContribution {
   name: string;
   createdAt: string;
   strokes: z.infer<typeof relayStrokeSchema>[];
+}
+/** A visitor's note on a profile's Wall. Author and name come from the session, never the frame. */
+export const wallNoteSubmissionSchema = z
+  .object({
+    submissionId: z.string().uuid(),
+    text: z.string().trim().min(1).max(140),
+    tone: z.number().int().min(0).max(3),
+  })
+  .strict();
+/** Reporting a note needs no grant of its own: anyone who can read a wall can flag what is on it. */
+export const wallReportSchema = z
+  .object({
+    noteId: z.string().uuid(),
+    reason: z.enum(["spam", "harassment", "other"]).default("other"),
+  })
+  .strict();
+export interface WallNote {
+  id: string;
+  userId: string;
+  name: string;
+  text: string;
+  tone: number;
+  createdAt: string;
 }
 export const profileRequestSchema = z
   .object({

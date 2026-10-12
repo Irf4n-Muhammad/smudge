@@ -82,13 +82,24 @@ so preview interactions never leak into a published post.
 
 ## Identity
 
-The browser gets an opaque HttpOnly SameSite=Strict session. A dedicated local simulation endpoint
-selects one seeded account; business payloads cannot set Actor. This endpoint is explicitly not a
-real login mechanism. Account switching rotates the session and revokes its runtime tickets.
-Sessions live in memory. Restart returns the browser to Alex without deleting persisted content.
+The browser gets an opaque HttpOnly SameSite=Strict session (`Secure` on https). Sessions are
+created by email + password signup/login (`packages/core/src/accounts.ts`), stored as hashes in the
+database and survive restarts; business payloads cannot set Actor. In demo mode a dedicated
+simulation endpoint additionally selects one seeded account and a first visit is signed in as Alex;
+production disables both (ADR 0012). Signing in, out or switching revokes the old session's
+runtime tickets. Configuration and modes: `apps/server/config.ts`; deployment: `docs/deploy.md`.
+Google login (`apps/server/google.ts`, PKCE) ends in the same stored session; accounts link only
+through a confirmed email.
 
-MCP reads a local credential file. That credential always resolves to Alex (`you`), independent of
-the browser account. There is no OAuth or per-tool scope system in this local prototype.
+Community rules live in `packages/core/src/community.ts` (blocks, notifications, people search,
+reports and moderation, suspension, deletion) and `packages/core/src/messages.ts` (direct
+messages). Community installs one visibility filter and relation guard on the social service, so
+every read path hides removed posts and blocked, suspended or deleted people the same way.
+Social actions emit events inside their transaction; notifications are written from those
+events. HTTP: `apps/server/community-routes.ts`. Decision: ADR 0013.
+
+MCP reads a local credential file. In demo mode it always resolves to Alex (`you`), independent of
+the browser account; production ignores it. There is no OAuth or per-tool scope system.
 
 ## Runtime boundary
 
@@ -123,8 +134,8 @@ not a claim of complete adversarial containment. Untrusted public authors need f
 
 The store rewrites a file and has no distributed locking, power-loss durability guarantee, indexing
 strategy or large-library scalability claim. The local lock guards concurrent owners; any server
-database migration must replace this design deliberately. Sessions/tickets are ephemeral; there is
-no production rate limiter, moderation service, public auth, telemetry backend, or video pipeline.
+database migration must replace this design deliberately. Runtime tickets are ephemeral; auth
+rate limits are in memory. There is no moderation service, OAuth, telemetry backend, or video pipeline.
 
 See ADR 0002 for tradeoffs and the debugging runbook for reproduction paths.
 

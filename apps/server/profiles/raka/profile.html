@@ -54,10 +54,8 @@
   refreshSocial();
   profileData
     .then((d) => {
-      document.querySelector(".world").classList.toggle("is-raka", d.owner.id === "raka");
       const h = document.getElementById("profile-name");
       h.querySelector(".name-text").textContent = d.owner.name.split(" ")[0];
-      h.classList.toggle("raka-wordmark", d.owner.id === "raka");
       document.getElementById("owner-name").textContent = d.owner.name;
       document.getElementById("owner-handle").textContent = "@" + d.owner.handle;
       document.getElementById("owner-bio").textContent = d.owner.bio;

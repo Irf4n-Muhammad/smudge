@@ -2,6 +2,21 @@
 
 ## Implemented
 
+- [x] Real accounts and production mode: email + password signup/login, stored hashed sessions,
+      lockout and IP rate limits, email confirmation, password reset, change password, logout
+      everywhere, Resend delivery through a transactional outbox, production config checks, edge
+      proxy, Dockerfile and deployment guide. See ADR 0012 and docs/deploy.md.
+
+- [x] Community basics: block (both ways, silent), reports with reasons and a moderation queue
+      (remove/restore post, dismiss, suspend), in-app notifications with unread badges, people
+      search and suggestions, one-to-one messages between people who follow each other, optional
+      Google login, and account deletion. See ADR 0013.
+
+- [x] Proven chapters (campus/work email codes, organisation invites, partner confirmation, photo
+      GPS), proof-locked moment pages with circle/public audience, preset one-per-person reactions,
+      edge decorations with members-only, sponsored and seasonal tiers, local seasons by country,
+      simulated decaying creator pool, open signup and full-screen posts. See ADR 0011.
+
 - [x] Local versioned mod library, source/asset sharing, complete or partial installs, part mixing,
       owned version updates, covers, private preview, undo, and matching MCP tools.
 - [x] After Hours music zine with vinyl identity, poster posts, ticket highlights and persistent
@@ -37,6 +52,12 @@ the application does not include or automatically connect a hosted model.
 
 ## Explicit local-demo limits
 
+- Accounts: no Apple login, two-factor or data export. Notifications and messages poll; no push.
+  Single instance on one SQLite file. Not yet deployed anywhere; the owner chooses the host.
+
+- Identity: email is a local outbox, organisations/admins are a static catalog, photo location is
+  evidence not proof, no lunar-calendar seasons, user-made decorations and real payouts are not built.
+
 - Profiles use bounded iframe heights, with optional content sizing up to 4000px and internal
   scrolling for larger documents. Visual controls currently support the Raka shell and compatible
   parts; arbitrary imported mods use source/MCP for their own structure and behavior.
@@ -54,7 +75,7 @@ the application does not include or automatically connect a hosted model.
 - JPEG/PNG/WebP photo upload only; no video upload/transcoding or audio controls.
 - No hard CPU/memory containment for adversarial custom code.
 - Small single-process SQLite store; no production throughput claim or large-media optimization.
-- Local report records only; no moderation dashboard or automated abuse handling.
+- Moderation is manual (one queue, env-configured moderators); no automated abuse detection.
 - Local screenshots and Chromium tests; no claim of cross-browser, physical-device, or accessibility audit.
 - No cloud deployment, advertising, marketplace, arbitrary backend code, or user-defined dependencies.
 
@@ -68,7 +89,7 @@ the application does not include or automatically connect a hosted model.
 6. Deployment artifact identifiers, package-disable tools, observability and rollback runbooks.
 7. Estimate costs from measured traffic and storage before choosing paid infrastructure.
 
-Community/chat, games and marketplace expansion remain separate product decisions.
+Group chat, communities, games and marketplace expansion remain separate product decisions.
 
 ## Modular profile milestone
 

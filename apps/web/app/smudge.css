@@ -1,0 +1,785 @@
+/* Smudge: brand, type and colour on top of the existing shell, plus the in-app page sheet,
+   post buttons and seasons. Loaded last so it wins over the older layers. */
+
+:root {
+  --paper: #f7f3ea;
+  --white: #ffffff;
+  --ink: #121212;
+  --muted: #6b665c;
+  --line: #e6dfcf;
+  --accent: #ff3d6e;
+  --accent-light: #ffe4ea;
+  --p1: #ff3d6e;
+  --p2: #ffcc00;
+  --p3: #2b59ff;
+  --p4: #19c37d;
+  --wordmark: "Rubik Spray Paint", "Arial Black", Impact, sans-serif;
+  --ui: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --hand: "Caveat Brush", "Comic Sans MS", cursive;
+}
+html[data-theme="dark"] {
+  --paper: #17121f;
+  --white: #221b2c;
+  --ink: #f4efe6;
+  --muted: #a49cb0;
+  --line: #342a40;
+  --accent: #ff6f91;
+  --accent-light: #3a2433;
+}
+html[data-season="halloween"] {
+  --p1: #ff7a1a;
+  --p2: #c6ff3d;
+  --p3: #8a5cff;
+  --p4: #ff7a1a;
+  --accent: #ff7a1a;
+  --accent-light: #ffe7d4;
+}
+html[data-season="halloween"][data-theme="dark"] {
+  --accent-light: #3a2a22;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--ui);
+}
+
+/* Brand */
+.sidebar .brand {
+  position: relative;
+  isolation: isolate;
+}
+.sidebar .brand-mark {
+  font: 400 44px/1 var(--wordmark);
+  color: var(--ink);
+}
+.sidebar .brand-mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 34px;
+  height: 11px;
+  margin-left: -17px;
+  background: var(--p2);
+  border-radius: 6px 12px 4px 10px;
+  transform: rotate(-3deg);
+  z-index: -1;
+}
+.mobile-brand {
+  display: none;
+}
+.auth-page .brand,
+.auth-card .brand {
+  font-family: var(--wordmark);
+}
+
+/* Feed heading */
+.feed-heading {
+  position: relative;
+  z-index: 1;
+}
+.feed-heading h1 {
+  font-family: var(--ui);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+.feed-heading h1 em {
+  font-family: var(--hand);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--p1);
+}
+.feed-heading .eyebrow {
+  font-family: var(--ui);
+  font-weight: 700;
+}
+.season-chip {
+  position: absolute;
+  top: 34px;
+  right: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 99px;
+  padding: 7px 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font: 600 13px var(--ui);
+  cursor: pointer;
+}
+.season-chip:hover {
+  filter: brightness(1.15);
+}
+.feed-tabs button {
+  font-family: var(--ui);
+  font-weight: 600;
+}
+
+/* Seasons: splatters live behind the feed and show in its margins and gaps. */
+.feed-column {
+  position: relative;
+}
+.feed-column > :not(.season-layer) {
+  position: relative;
+  z-index: 1;
+}
+.season-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.season-layer > svg:first-child {
+  position: absolute;
+  inset: 0;
+}
+.season-layer .paint-1 {
+  fill: var(--p1);
+}
+.season-layer .paint-2 {
+  fill: var(--p2);
+}
+.season-layer .paint-3 {
+  fill: var(--p3);
+}
+.season-layer .paint-4 {
+  fill: var(--p4);
+}
+.season-layer .halloween-only {
+  display: none;
+  position: absolute;
+}
+html[data-season="halloween"] .season-layer .halloween-only {
+  display: block;
+}
+.season-layer .web {
+  top: 0;
+  right: 0;
+  stroke: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+.season-layer .bat {
+  width: 34px;
+  fill: var(--ink);
+  opacity: 0.85;
+}
+.season-layer .bat-0 {
+  top: 96px;
+  right: 120px;
+  transform: rotate(-12deg);
+}
+.season-layer .bat-1 {
+  top: 128px;
+  right: 70px;
+  width: 24px;
+  transform: rotate(8deg);
+}
+.season-layer .bat-2 {
+  top: 18px;
+  left: 46%;
+  width: 20px;
+  transform: rotate(-4deg);
+}
+
+/* Posts: ordinary, readable cards. Themes decorate around them, not on them. */
+.classic-post {
+  border-bottom: 0;
+}
+.classic-post .runtime {
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.post-card .author strong {
+  font-family: var(--ui);
+  font-weight: 700;
+}
+.post-caption {
+  font-family: var(--ui);
+}
+
+/* The button under a post that opens a page in the sheet */
+.post-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 0;
+  padding: 10px 10px 10px 14px;
+  border-radius: 14px;
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.post-link > div {
+  display: grid;
+  min-width: 0;
+}
+.post-link strong {
+  font: 700 14px var(--ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.post-link small {
+  font: 400 12px var(--ui);
+  color: var(--muted);
+}
+.post-link-go {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--ink);
+  color: var(--paper);
+  font: 700 13px var(--ui);
+  cursor: pointer;
+}
+.post-link-go:hover {
+  filter: brightness(1.2);
+}
+.world-stage .post-link {
+  position: relative;
+  z-index: 4;
+  margin: 0 42px 12px;
+}
+
+/* The in-app page sheet: a gap on top keeps the feed in view, the bar is always Smudge's own. */
+.page-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgb(10 8 14 / 62%);
+  display: flex;
+  justify-content: center;
+  animation: sheet-fade 0.18s ease-out;
+}
+.page-sheet {
+  position: absolute;
+  top: 48px;
+  bottom: 8px;
+  width: min(520px, calc(100% - 16px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #0d0b14;
+  box-shadow: 0 -10px 40px rgb(0 0 0 / 50%);
+  animation: sheet-rise 0.24s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.page-sheet-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px 10px;
+  background: #f7f3ea;
+  color: #121212;
+  flex: none;
+}
+.page-sheet-grab {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 38px;
+  height: 4px;
+  margin-left: -19px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 18%);
+}
+.page-sheet-site {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 7px 12px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 7%);
+}
+.page-sheet-site strong {
+  font: 700 13px var(--ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-sheet-site small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font: 500 11px var(--ui);
+  color: #6b6b6b;
+}
+.page-sheet-site small > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.made-tag {
+  flex: none;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: #ffcc00;
+  color: #121212;
+  font: 700 9px var(--ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.page-sheet-button {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #121212;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
+  cursor: pointer;
+}
+.page-sheet-button.close {
+  background: #121212;
+  color: #fff;
+}
+.page-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+}
+.page-sheet-body .fullscreen-post {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  min-height: 100%;
+}
+.outside-page {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+.page-sheet-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f7f3ea;
+  color: #4a4740;
+  font: 500 12px/1.3 var(--ui);
+  flex: none;
+}
+.page-sheet-foot a {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #121212;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+@keyframes sheet-rise {
+  from {
+    transform: translateY(40px);
+    opacity: 0.4;
+  }
+}
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-sheet,
+  .page-sheet-backdrop {
+    animation: none;
+  }
+}
+
+/* Studio: the post button fields */
+.link-fields {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.link-fields label {
+  display: grid;
+  gap: 5px;
+  font: 600 12px var(--ui);
+  color: var(--muted);
+}
+.link-fields input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink);
+  font: 400 14px var(--ui);
+}
+.link-fields input:disabled {
+  opacity: 0.55;
+}
+
+/* Phones: an app header, readable type and posts that use the full width */
+@media (max-width: 700px) {
+  .topbar {
+    height: 60px;
+    padding: 0 14px 0 16px;
+  }
+  .mobile-brand {
+    display: block;
+    position: relative;
+    isolation: isolate;
+    margin-right: auto;
+    font: 400 30px/1 var(--wordmark);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .mobile-brand::after {
+    content: "";
+    position: absolute;
+    left: -4px;
+    right: -6px;
+    bottom: 1px;
+    height: 10px;
+    background: var(--p2);
+    border-radius: 6px 12px 4px 10px;
+    transform: rotate(-2deg);
+    z-index: -1;
+  }
+  /* Wordmark, night mode and avatar on top; the two feed modes as small chips below. */
+  .topbar {
+    height: auto;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: 8px;
+    column-gap: 10px;
+    padding: 10px 14px 10px 16px;
+  }
+  .topbar::after {
+    content: "";
+    order: 4;
+    flex-basis: 100%;
+  }
+  .topbar-right {
+    display: contents;
+  }
+  .breadcrumb,
+  .topbar .account-button {
+    display: none;
+  }
+  .topbar .enter-cockpit {
+    order: 5;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .feed-heading {
+    padding: 22px 16px 14px;
+  }
+  .feed-heading .eyebrow {
+    font-size: 10px;
+    letter-spacing: 1.4px;
+  }
+  .feed-heading h1 {
+    font-size: 36px;
+    line-height: 1.02;
+    letter-spacing: -1.2px;
+    margin: 10px 0 8px;
+  }
+  .feed-heading h1 em {
+    font-size: 44px;
+  }
+  .feed-heading p {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .season-chip {
+    top: 18px;
+    right: 16px;
+    font-size: 12px;
+  }
+  .feed-toolbar {
+    padding: 0 12px 6px;
+  }
+  .feed-tabs button {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+  .classic-post {
+    width: auto;
+    margin: 22px 0;
+  }
+  .classic-post .post-header {
+    padding: 0 14px 10px;
+  }
+  .classic-post .runtime {
+    width: auto;
+    margin: 0 8px;
+  }
+  .classic-post .post-body {
+    padding: 10px 16px 0;
+  }
+  .post-card .author strong {
+    font-size: 14.5px;
+  }
+  .classic-post .author > span > span {
+    font-size: 12.5px;
+  }
+  .post-caption {
+    font-size: 14.5px;
+    line-height: 1.4;
+  }
+  .post-link {
+    margin: 10px 8px 0;
+  }
+  .world-stage .post-link {
+    margin: 0 16px 12px;
+  }
+  .world-stage .post-caption {
+    font-size: 14px;
+  }
+  .world-stage .author strong {
+    font-size: 14px;
+  }
+  .world-stage .author > span > span,
+  .world-stage .author small {
+    font-size: 12px;
+  }
+  .season-layer .web {
+    width: 72px;
+    height: 72px;
+  }
+  .season-layer .bat-0 {
+    top: 60px;
+    right: 128px;
+  }
+  .season-layer .bat-1 {
+    top: 64px;
+    right: 96px;
+  }
+  .season-layer .bat-2 {
+    display: none !important;
+  }
+  .page-sheet-foot span {
+    font-size: 11px;
+  }
+}
+
+/* Profile toolbar: the Smudge wordmark replaces the old artwork crop */
+.profile-brand,
+.profile-illustrated .profile-brand,
+.profile-overlay .profile-brand {
+  position: relative;
+  isolation: isolate;
+  width: auto;
+  height: auto;
+  font: 400 30px/1 var(--wordmark);
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.profile-brand::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -6px;
+  bottom: 1px;
+  height: 10px;
+  background: var(--p2);
+  border-radius: 6px 12px 4px 10px;
+  transform: rotate(-2deg);
+  z-index: -1;
+}
+@media (max-width: 600px) {
+  .profile-illustrated .profile-brand {
+    font-size: 26px;
+  }
+}
+/* Over illustrated headers the artwork carries the page; the wordmark would sit on top of it. */
+.profile-overlay .profile-brand {
+  display: none;
+}
+
+/* Profile navigation: a bottom bar on phones, a left sidebar like the feed's on wider screens. */
+.profile-nav-brand {
+  display: none;
+}
+@media (min-width: 701px) {
+  .profile-page.has-side-nav {
+    --profile-rail: 76px;
+    padding-left: var(--profile-rail);
+    padding-bottom: 0;
+  }
+  .has-side-nav.profile-illustrated .profile-controls {
+    padding-inline: max(20px, calc((100vw - var(--profile-rail) - 1024px) / 2 + 26px));
+  }
+  .has-side-nav.profile-overlay .profile-controls {
+    left: var(--profile-rail);
+  }
+  /* The sidebar's Home replaces the back link and its logo replaces the header's. */
+  .has-side-nav .profile-brand,
+  .has-side-nav .profile-back {
+    display: none;
+  }
+  .profile-bottom-nav {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: var(--profile-rail);
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 6px;
+    padding: 26px 10px 20px;
+    border-top: 0;
+    border-right: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .profile-nav-brand {
+    display: block;
+    position: relative;
+    isolation: isolate;
+    align-self: center;
+    margin: 0 0 26px;
+    font: 400 0/1 var(--wordmark);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .profile-nav-brand::before {
+    content: "s";
+    font-size: 40px;
+  }
+  .profile-nav-brand::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    width: 30px;
+    height: 10px;
+    margin-left: -15px;
+    background: var(--p2);
+    border-radius: 6px 12px 4px 10px;
+    transform: rotate(-3deg);
+    z-index: -1;
+  }
+  .profile-bottom-nav button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 10px;
+    border-radius: 12px;
+    font: 500 16px var(--ui);
+  }
+  /* Icon-only rail: the label stays for screen readers. */
+  .profile-bottom-nav button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .profile-bottom-nav button:hover {
+    background: var(--accent-light);
+  }
+  .profile-bottom-nav button.active {
+    font-weight: 700;
+  }
+  .profile-bottom-nav button.active svg {
+    stroke-width: 2.6;
+  }
+  .profile-bottom-nav svg {
+    width: 26px;
+    height: 26px;
+    flex: none;
+  }
+}
+@media (min-width: 1200px) {
+  .profile-page.has-side-nav {
+    --profile-rail: 232px;
+  }
+  .profile-bottom-nav {
+    padding: 32px 18px 22px;
+  }
+  .profile-nav-brand {
+    align-self: flex-start;
+    margin: 0 0 30px 10px;
+    font-size: 40px;
+  }
+  .profile-nav-brand::before {
+    content: none;
+  }
+  .profile-nav-brand::after {
+    left: 14px;
+    width: 34px;
+    margin-left: 0;
+  }
+  .profile-bottom-nav button {
+    justify-content: flex-start;
+    padding: 12px 14px;
+  }
+  .profile-bottom-nav button span {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+}
+html[data-theme="dark"] .profile-bottom-nav .nav-create svg {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* The owner's way into the easy editor, always in the profile header. */
+.profile-controls .profile-edit,
+.profile-default .profile-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0 !important;
+  border-radius: 99px !important;
+  background: var(--ink) !important;
+  color: var(--paper) !important;
+  font: 700 14px var(--ui);
+  cursor: pointer;
+}
+.profile-illustrated .profile-controls .profile-edit {
+  margin-left: auto;
+}
+.profile-illustrated .profile-controls .profile-edit + .profile-search {
+  margin-left: 0 !important;
+}
+@media (max-width: 600px) {
+  .profile-controls .profile-edit-long {
+    display: none;
+  }
+  .profile-controls .profile-edit {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+}

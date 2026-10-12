@@ -1,0 +1,10 @@
+node_modules
+.local
+.next
+apps/web/.next
+dist
+test-results
+artifacts
+.git
+*.log
+.env

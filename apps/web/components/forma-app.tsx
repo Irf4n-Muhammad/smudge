@@ -15,7 +15,30 @@ import {
   Sparkles,
   RefreshCw,
   X,
+  BadgeCheck,
+  Palette,
+  UserPlus,
+  Gift,
+  LogIn,
+  Settings,
+  Bell,
+  MessageCircle,
+  UserSearch,
+  ShieldCheck,
+  Menu,
 } from "lucide-react";
+import { MessagesPanel, ModerationPanel, NotificationsPanel, PeoplePanel } from "./community";
+import type { AuthState } from "../../../packages/contracts/src/accounts";
+import {
+  AccountPanel,
+  AuthDialog,
+  AuthScreen,
+  ResetPasswordForm,
+  VerifyBanner,
+  authApi,
+  authMessage,
+} from "./auth";
+import type { AuthMode } from "./auth";
 import type { DraftView, PostView } from "../../../packages/contracts/src/experience";
 import { api } from "./runtime";
 import { Avatar, Dialog } from "./ui";
@@ -26,12 +49,17 @@ import { ThemeToggle } from "./theme-toggle";
 import { Cockpit } from "./cockpit";
 import { BreakoutFeed } from "./breakout-feed";
 import { ProfilePage } from "./profile-page";
+import { IdentityHub } from "./identity-hub";
+import { MomentComposer } from "./moment-composer";
+import { DecorationsPanel } from "./decorations-panel";
+import type { DecoratedPost } from "./post-decor";
+import { SeasonChip, SeasonLayer } from "./season";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
   const [cockpit, setCockpit] = useState(false);
   const [breakout, setBreakout] = useState(false);
   const [boot, setBoot] = useState<Boot | null>(null),
-    [posts, setPosts] = useState<PostView[]>([]),
+    [posts, setPosts] = useState<DecoratedPost[]>([]),
     [view, setView] = useState("home"),
     [filter, setFilter] = useState("all"),
     [query, setQuery] = useState(""),
@@ -41,8 +69,22 @@ export function FormaApp() {
     [studio, setStudio] = useState(false),
     [activeDraft, setActiveDraft] = useState<string | undefined>(),
     [connect, setConnect] = useState(false),
-    [profile, setProfile] = useState<string | null>(null);
+    [profile, setProfile] = useState<string | null>(null),
+    [momentOpen, setMomentOpen] = useState(false),
+    [auth, setAuth] = useState<AuthState | null>(null),
+    [authDialog, setAuthDialog] = useState<AuthMode | null>(null),
+    [resetToken, setResetToken] = useState<string | null>(null),
+    [badges, setBadges] = useState({ notifications: 0, messages: 0 }),
+    [messageTo, setMessageTo] = useState<string | null>(null),
+    [more, setMore] = useState(false);
   const notify = useCallback((message: string) => setToast(message), []);
+  const refreshBadges = useCallback(async () => {
+    try {
+      setBadges(await api<{ notifications: number; messages: number }>("/badges"));
+    } catch {
+      // Signed out or offline: keep the last counts.
+    }
+  }, []);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 5500);
@@ -50,8 +92,21 @@ export function FormaApp() {
   }, [toast]);
   const refresh = useCallback(async () => {
     try {
+      let state = await authApi<AuthState>("/auth/state");
+      if (!state.signedIn && state.mode === "demo") {
+        // The playground signs a first visit in as a demo account.
+        await api<Boot>("/bootstrap").catch(() => null);
+        state = await authApi<AuthState>("/auth/state");
+      }
+      setAuth(state);
+      if (!state.signedIn) {
+        setBoot(null);
+        setPosts([]);
+        setFailure("");
+        return;
+      }
       const b = await api<Boot>("/bootstrap");
-      const p = await api<PostView[]>("/feed");
+      const p = await api<DecoratedPost[]>("/feed");
       setBoot(b);
       setPosts(p);
       setFailure("");
@@ -62,6 +117,20 @@ export function FormaApp() {
     }
   }, []);
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verify = params.get("verify"),
+      reset = params.get("reset"),
+      authError = params.get("auth_error");
+    if (verify || reset || authError) window.history.replaceState(null, "", "/");
+    if (authError) notify(authMessage(authError));
+    if (reset) setResetToken(reset);
+    if (verify)
+      void authApi("/auth/verify", { token: verify })
+        .then(() => {
+          notify("Email confirmed. Thanks!");
+          return refresh();
+        })
+        .catch((e: Error) => notify(e.message));
     void refresh();
     const requestedProfile = new URLSearchParams(window.location.search).get("profile");
     if (requestedProfile || new URLSearchParams(window.location.search).has("profileDraft")) {
@@ -76,6 +145,13 @@ export function FormaApp() {
       setStudio(true);
     }
   }, [refresh]);
+  const signedInNow = !!auth?.signedIn;
+  useEffect(() => {
+    if (!signedInNow) return;
+    void refreshBadges();
+    const timer = setInterval(() => void refreshBadges(), 20000);
+    return () => clearInterval(timer);
+  }, [signedInNow, refreshBadges, boot?.actor.userId]);
   async function switchUser(userId: string) {
     try {
       await api("/session", { userId });
@@ -99,6 +175,47 @@ export function FormaApp() {
     setActiveDraft(undefined);
     setStudio(true);
   }
+  async function signedIn(fresh: boolean) {
+    setStudio(false);
+    setProfile(null);
+    window.history.replaceState(null, "", "/");
+    await refresh();
+    navigate(fresh ? "who" : "home");
+    // Close the dialog only once the landing view is set, so nothing tapped meanwhile is undone.
+    setAuthDialog(null);
+    if (fresh) notify("Welcome. Check your email to confirm it, then add your first chapter.");
+  }
+  async function signedOut() {
+    setStudio(false);
+    setProfile(null);
+    setView("home");
+    await refresh();
+    notify("You are logged out.");
+  }
+  const production = auth?.mode === "production";
+  if (auth && !auth.signedIn)
+    return (
+      <>
+        <AuthScreen onSignedIn={signedIn} google={auth.google}>
+          {resetToken ? (
+            <ResetPasswordForm
+              token={resetToken}
+              onDone={async () => {
+                setResetToken(null);
+                await signedIn(false);
+                notify("Password saved. You are logged in.");
+              }}
+            />
+          ) : undefined}
+        </AuthScreen>
+        {toast && (
+          <div className="toast" role="status">
+            <span>✳</span>
+            {toast}
+          </div>
+        )}
+      </>
+    );
   const me = boot?.users.find((u) => u.id === boot.actor.userId);
   const selectedUser = profile ? boot?.users.find((u) => u.id === profile) : me;
   const visible = posts.filter(
@@ -173,8 +290,8 @@ export function FormaApp() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <a className="brand" href="/" aria-label="Forma home">
-          <span className="brand-mark">✳</span>forma<span className="brand-dot">.</span>
+        <a className="brand" href="/" aria-label="Smudge home">
+          <span className="brand-mark">s</span>smudge<span className="brand-dot">.</span>
         </a>
         <div className="sidebar-tagline">Life, in your own shape.</div>
         <nav className="main-nav" aria-label="Main navigation">
@@ -182,19 +299,35 @@ export function FormaApp() {
             ["home", Home, "Your feed"],
             ["following", Users, "Following"],
             ["saved", Bookmark, "Saved"],
+            ["who", BadgeCheck, "Who you are"],
+            ["decor", Palette, "Decorations"],
             ["profile", UserRound, "My profile"],
+            ["people", UserSearch, "Find people"],
+            ["notifications", Bell, "Notifications"],
+            ["messages", MessageCircle, "Messages"],
+            ...(auth?.moderator ? [["moderation", ShieldCheck, "Moderation"]] : []),
           ].map(([key, Icon, label]) => {
             const I = Icon as typeof Home;
+            const count =
+              key === "notifications"
+                ? badges.notifications
+                : key === "messages"
+                  ? badges.messages
+                  : 0;
             return (
               <button
                 key={String(key)}
-                aria-label={String(label)}
+                aria-label={count ? `${label} (${count} new)` : String(label)}
                 title={String(label)}
                 className={view === key ? "nav-item active" : "nav-item"}
-                onClick={() => navigate(String(key))}
+                onClick={() => {
+                  if (key === "messages") setMessageTo(null);
+                  navigate(String(key));
+                }}
               >
                 <I size={20} />
                 <span>{String(label)}</span>
+                {count > 0 && <span className="badge nav-badge">{count > 99 ? "99+" : count}</span>}
                 {view === key && <span className="nav-dot" />}
               </button>
             );
@@ -213,6 +346,14 @@ export function FormaApp() {
           <Plus size={19} />
           Create a post
         </button>
+        <button
+          className="quiet-button moment-button"
+          title="Share a moment"
+          onClick={() => setMomentOpen(true)}
+        >
+          <Gift size={16} />
+          Share a moment
+        </button>
         <div className="sidebar-note">
           <span className="note-star">✧</span>
           <p>
@@ -220,16 +361,33 @@ export function FormaApp() {
             <br />
             have to look alike.
           </p>
-          <button onClick={() => setConnect(true)}>
+          <button onClick={() => (production ? create() : setConnect(true))}>
             Make it yours <ArrowUpRight size={15} />
           </button>
         </div>
         <div className="sidebar-bottom">
-          <div className="local-label">
-            <span />
-            LOCAL PLAYGROUND
-          </div>
-          {me && (
+          {production ? (
+            me && (
+              <button
+                className="account-row"
+                aria-label="Account and sign-in"
+                title={`${me.name} · Account and sign-in`}
+                onClick={() => navigate("account")}
+              >
+                <Avatar user={me} />
+                <span>
+                  <strong>{me.name}</strong>
+                  <small>Account and sign-in</small>
+                </span>
+              </button>
+            )
+          ) : (
+            <div className="local-label">
+              <span />
+              LOCAL PLAYGROUND
+            </div>
+          )}
+          {!production && me && (
             <div className="account-switch">
               <Avatar user={me} />
               <label>
@@ -249,10 +407,31 @@ export function FormaApp() {
               <ChevronDown size={14} />
             </div>
           )}
+          {!production && (
+            <div className="demo-auth">
+              <button
+                className="text-button signup-link"
+                title="Create an account"
+                onClick={() => setAuthDialog("signup")}
+              >
+                <UserPlus size={14} /> Create an account
+              </button>
+              <button
+                className="text-button signup-link"
+                title="Log in"
+                onClick={() => setAuthDialog("login")}
+              >
+                <LogIn size={14} /> Log in
+              </button>
+            </div>
+          )}
         </div>
       </aside>
       <div className="workspace">
         <header className="topbar">
+          <a className="mobile-brand" href="/" aria-label="Smudge home">
+            smudge
+          </a>
           <div className="breadcrumb">
             Your space <span>/</span>{" "}
             <strong>
@@ -260,7 +439,15 @@ export function FormaApp() {
                 ? "The feed"
                 : view === "profile"
                   ? "Profile"
-                  : view[0]?.toUpperCase() + view.slice(1)}
+                  : view === "who"
+                    ? "Who you are"
+                    : view === "decor"
+                      ? "Decor"
+                      : view === "account"
+                        ? "Account"
+                        : view === "people"
+                          ? "People"
+                          : view[0]?.toUpperCase() + view.slice(1)}
             </strong>
           </div>
           <div className="topbar-right">
@@ -288,6 +475,14 @@ export function FormaApp() {
               />
               <kbd>⌕</kbd>
             </label>
+            <button
+              className="icon-button account-button"
+              aria-label="Account settings"
+              title="Account settings"
+              onClick={() => navigate("account")}
+            >
+              <Settings size={18} />
+            </button>
             {me && (
               <button
                 className="avatar-button"
@@ -301,169 +496,229 @@ export function FormaApp() {
         </header>
         <div className="content-layout">
           <main id="main" className="feed-column">
-            {view === "profile" && selectedUser ? (
-              <section className="profile-heading">
-                <Avatar user={selectedUser} />
-                <div>
-                  <span className="eyebrow">@{selectedUser.handle}</span>
-                  <h1>{selectedUser.name}</h1>
-                  <p>{selectedUser.bio}</p>
-                  <span className="profile-count">
-                    {posts.filter((p) => p.ownerId === selectedUser.id).length} published stories
-                  </span>
-                </div>
-              </section>
+            {auth && <VerifyBanner state={auth} notify={notify} />}
+            {view === "account" && auth ? (
+              <AccountPanel
+                state={auth}
+                handle={me?.handle ?? ""}
+                notify={notify}
+                onSignedOut={signedOut}
+                onChanged={refresh}
+              />
+            ) : view === "people" && boot ? (
+              <PeoplePanel
+                key={boot.actor.userId}
+                notify={notify}
+                onFollowChanged={refresh}
+                onMessage={(id) => {
+                  setMessageTo(id);
+                  navigate("messages");
+                }}
+                onOpen={(id) => {
+                  setProfile(id);
+                  setView("profile");
+                }}
+              />
+            ) : view === "notifications" && boot ? (
+              <NotificationsPanel
+                key={boot.actor.userId}
+                onRead={refreshBadges}
+                onOpenUser={(id) => {
+                  setProfile(id);
+                  setView("profile");
+                }}
+              />
+            ) : view === "messages" && boot ? (
+              <MessagesPanel
+                key={`${boot.actor.userId}:${messageTo ?? ""}`}
+                initialUser={messageTo}
+                notify={notify}
+                onRead={refreshBadges}
+              />
+            ) : view === "moderation" && boot && auth?.moderator ? (
+              <ModerationPanel notify={notify} />
+            ) : view === "who" && boot ? (
+              <IdentityHub
+                key={boot.actor.userId}
+                boot={boot}
+                notify={notify}
+                onMoment={() => setMomentOpen(true)}
+              />
+            ) : view === "decor" && boot ? (
+              <DecorationsPanel key={boot.actor.userId} notify={notify} onChanged={refresh} />
             ) : (
-              <section className="feed-heading">
-                <div>
-                  <div className="eyebrow">
-                    <span className="tiny-dot" /> DIFFERENT MINDS. DIFFERENT WORLDS.
+              <>
+                {view !== "profile" && <SeasonLayer />}
+                {view === "profile" && selectedUser ? (
+                  <section className="profile-heading">
+                    <Avatar user={selectedUser} />
+                    <div>
+                      <span className="eyebrow">@{selectedUser.handle}</span>
+                      <h1>{selectedUser.name}</h1>
+                      <p>{selectedUser.bio}</p>
+                      <span className="profile-count">
+                        {posts.filter((p) => p.ownerId === selectedUser.id).length} published
+                        stories
+                      </span>
+                    </div>
+                  </section>
+                ) : (
+                  <section className="feed-heading">
+                    <SeasonChip />
+                    <div>
+                      <div className="eyebrow">
+                        <span className="tiny-dot" /> DIFFERENT MINDS. DIFFERENT WORLDS.
+                      </div>
+                      <h1>
+                        {view === "saved" ? (
+                          "Worth keeping."
+                        ) : view === "following" ? (
+                          "A little closer."
+                        ) : (
+                          <>
+                            Life doesn’t fit <em>in a box.</em>
+                          </>
+                        )}
+                      </h1>
+                      <p>
+                        {view === "saved"
+                          ? "The stories you want to come back to."
+                          : view === "following"
+                            ? "Fresh pages from the people you follow."
+                            : "Wander into someone’s world. Leave a little of yourself."}
+                      </p>
+                    </div>
+                  </section>
+                )}
+                {view === "home" && (
+                  <section className="composer">
+                    <span className="composer-symbol">
+                      <Feather size={22} />
+                    </span>
+                    <button onClick={create}>
+                      <strong>What does your day look like?</strong>
+                      <span>A photo, a story, a whole little world.</span>
+                    </button>
+                    <button className="quiet-button" onClick={() => setMomentOpen(true)}>
+                      <Gift size={15} /> Moment
+                    </button>
+                    <button className="composer-plus" aria-label="Create a post" onClick={create}>
+                      <Plus size={21} />
+                    </button>
+                  </section>
+                )}
+                <div className="feed-toolbar">
+                  <div className="feed-tabs" aria-label="Filter post formats">
+                    {[
+                      ["all", "For you"],
+                      ["scrapbook", "Scrapbooks"],
+                      ["story", "Stories"],
+                      ["collaborative", "Together"],
+                    ].map(([id, label]) => (
+                      <button
+                        key={id}
+                        aria-pressed={filter === id}
+                        className={filter === id ? "selected" : ""}
+                        onClick={() => setFilter(id!)}
+                      >
+                        {id === "all" && <Sparkles size={13} />} {label}
+                      </button>
+                    ))}
                   </div>
-                  <h1>
-                    {view === "saved" ? (
-                      "Worth keeping."
-                    ) : view === "following" ? (
-                      "A little closer."
-                    ) : (
-                      <>
-                        Life doesn’t fit <em>in a box.</em>
-                        <span className="heading-spark">✳</span>
-                      </>
-                    )}
-                  </h1>
-                  <p>
-                    {view === "saved"
-                      ? "The stories you want to come back to."
-                      : view === "following"
-                        ? "Fresh pages from the people you follow."
-                        : "Wander into someone’s world. Leave a little of yourself."}
-                  </p>
-                </div>
-              </section>
-            )}
-            {view === "home" && (
-              <section className="composer">
-                <span className="composer-symbol">
-                  <Feather size={22} />
-                </span>
-                <button onClick={create}>
-                  <strong>What does your day look like?</strong>
-                  <span>A photo, a story, a whole little world.</span>
-                </button>
-                <button className="composer-plus" aria-label="Create a post" onClick={create}>
-                  <Plus size={21} />
-                </button>
-              </section>
-            )}
-            <div className="feed-toolbar">
-              <div className="feed-tabs" aria-label="Filter post formats">
-                {[
-                  ["all", "For you"],
-                  ["scrapbook", "Scrapbooks"],
-                  ["story", "Stories"],
-                  ["collaborative", "Together"],
-                ].map(([id, label]) => (
                   <button
-                    key={id}
-                    aria-pressed={filter === id}
-                    className={filter === id ? "selected" : ""}
-                    onClick={() => setFilter(id!)}
+                    className="icon-button refresh-feed"
+                    aria-label="Refresh feed"
+                    title="Refresh feed"
+                    onClick={() => void refresh()}
                   >
-                    {id === "all" && <Sparkles size={13} />} {label}
+                    <RefreshCw size={16} />
                   </button>
-                ))}
-              </div>
-              <button
-                className="icon-button refresh-feed"
-                aria-label="Refresh feed"
-                title="Refresh feed"
-                onClick={() => void refresh()}
-              >
-                <RefreshCw size={16} />
-              </button>
-            </div>
-            {loading && (
-              <div className="empty-state">
-                <span className="tiny-flower">✳</span>
-                <h2>Finding your stories…</h2>
-              </div>
-            )}
-            {failure && (
-              <div className="empty-state">
-                <h2>We couldn’t open your space.</h2>
-                <p>{failure}</p>
-                <button className="primary" onClick={() => void refresh()}>
-                  Try again
-                </button>
-              </div>
-            )}
-            {!loading && !failure && visible.length === 0 && (
-              <div className="empty-state">
-                <Feather size={30} />
-                <h2>
-                  {view === "saved"
-                    ? "Keep something you love."
-                    : "A little room for something new."}
-                </h2>
-                <p>
-                  {query
-                    ? "Try a different search."
-                    : view === "saved"
-                      ? "Tap the bookmark on a post to find it here."
-                      : view === "following"
-                        ? "Follow someone to bring their stories here."
-                        : "Your next story could start here."}
-                </p>
-                <button
-                  className="quiet-button"
-                  onClick={view === "profile" ? create : () => navigate("home")}
-                >
-                  {view === "profile" ? "Make your first post" : "Explore the feed"}
-                  <ArrowUpRight size={15} />
-                </button>
-              </div>
-            )}
-            <div className="post-list">
-              {boot &&
-                visible.map((post, index) => (
-                  <PostCard
-                    key={`${boot.actor.userId}:${post.id}`}
-                    post={post}
-                    boot={boot}
-                    onRefresh={refresh}
-                    notify={notify}
-                    onFollow={() => void follow(post.ownerId)}
-                    onProfile={() => {
-                      setProfile(post.ownerId);
-                      setView("profile");
-                      setFilter("all");
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    onReuse={async () => {
-                      try {
-                        const d = await api<DraftView>(`/posts/${post.id}/reuse`, {});
-                        setActiveDraft(d.id);
-                        setStudio(true);
-                      } catch (e) {
-                        notify((e as Error).message);
-                      }
-                    }}
-                    onSkip={() => {
-                      const next = document.querySelectorAll<HTMLElement>(".post-card")[index + 1];
-                      if (next) {
-                        next.scrollIntoView({ behavior: "smooth", block: "start" });
-                        next.focus({ preventScroll: true });
-                      } else notify("You’re all caught up. A good moment to make something.");
-                    }}
-                  />
-                ))}
-            </div>
-            {!loading && visible.length > 0 && (
-              <footer className="feed-end">
-                <span>✳</span>
-                <p>You’re all caught up.</p>
-                <small>Go make a moment worth keeping.</small>
-              </footer>
+                </div>
+                {loading && (
+                  <div className="empty-state">
+                    <span className="tiny-flower">✳</span>
+                    <h2>Finding your stories…</h2>
+                  </div>
+                )}
+                {failure && (
+                  <div className="empty-state">
+                    <h2>We couldn’t open your space.</h2>
+                    <p>{failure}</p>
+                    <button className="primary" onClick={() => void refresh()}>
+                      Try again
+                    </button>
+                  </div>
+                )}
+                {!loading && !failure && visible.length === 0 && (
+                  <div className="empty-state">
+                    <Feather size={30} />
+                    <h2>
+                      {view === "saved"
+                        ? "Keep something you love."
+                        : "A little room for something new."}
+                    </h2>
+                    <p>
+                      {query
+                        ? "Try a different search."
+                        : view === "saved"
+                          ? "Tap the bookmark on a post to find it here."
+                          : view === "following"
+                            ? "Follow someone to bring their stories here."
+                            : "Your next story could start here."}
+                    </p>
+                    <button
+                      className="quiet-button"
+                      onClick={view === "profile" ? create : () => navigate("home")}
+                    >
+                      {view === "profile" ? "Make your first post" : "Explore the feed"}
+                      <ArrowUpRight size={15} />
+                    </button>
+                  </div>
+                )}
+                <div className="post-list">
+                  {boot &&
+                    visible.map((post, index) => (
+                      <PostCard
+                        key={`${boot.actor.userId}:${post.id}`}
+                        post={post}
+                        boot={boot}
+                        onRefresh={refresh}
+                        notify={notify}
+                        onFollow={() => void follow(post.ownerId)}
+                        onProfile={() => {
+                          setProfile(post.ownerId);
+                          setView("profile");
+                          setFilter("all");
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        onReuse={async () => {
+                          try {
+                            const d = await api<DraftView>(`/posts/${post.id}/reuse`, {});
+                            setActiveDraft(d.id);
+                            setStudio(true);
+                          } catch (e) {
+                            notify((e as Error).message);
+                          }
+                        }}
+                        onSkip={() => {
+                          const next =
+                            document.querySelectorAll<HTMLElement>(".post-card")[index + 1];
+                          if (next) {
+                            next.scrollIntoView({ behavior: "smooth", block: "start" });
+                            next.focus({ preventScroll: true });
+                          } else notify("You’re all caught up. A good moment to make something.");
+                        }}
+                      />
+                    ))}
+                </div>
+                {!loading && visible.length > 0 && (
+                  <footer className="feed-end">
+                    <span>✳</span>
+                    <p>You’re all caught up.</p>
+                    <small>Go make a moment worth keeping.</small>
+                  </footer>
+                )}
+              </>
             )}
           </main>
           <aside className="right-column">
@@ -533,14 +788,14 @@ export function FormaApp() {
               <div>
                 <h3>Your AI. Your imagination.</h3>
                 <p>Bring an idea to life with the AI you already use.</p>
-                <button onClick={() => setConnect(true)}>
+                <button onClick={() => (production ? create() : setConnect(true))}>
                   Connect your creative tools <ArrowUpRight size={13} />
                 </button>
               </div>
             </section>
             <footer className="side-footer">
               <span>Made for a little more expression.</span>
-              <span>Forma · Local preview · No cloud required</span>
+              <span>{production ? "Smudge" : "Smudge · Local preview · No cloud required"}</span>
             </footer>
           </aside>
         </div>
@@ -549,19 +804,67 @@ export function FormaApp() {
         <button aria-label="Your feed" onClick={() => navigate("home")}>
           <Home size={21} />
         </button>
-        <button aria-label="Following" onClick={() => navigate("following")}>
-          <Users size={21} />
+        <button aria-label="Find people" onClick={() => navigate("people")}>
+          <UserSearch size={21} />
+        </button>
+        <button
+          aria-label={
+            badges.notifications ? `Notifications (${badges.notifications} new)` : "Notifications"
+          }
+          onClick={() => navigate("notifications")}
+        >
+          <Bell size={21} />
+          {badges.notifications > 0 && (
+            <span className="badge nav-badge">{badges.notifications}</span>
+          )}
         </button>
         <button className="mobile-create" aria-label="Create a post" onClick={create}>
           <Plus size={23} />
         </button>
-        <button aria-label="Saved" onClick={() => navigate("saved")}>
-          <Bookmark size={21} />
+        <button
+          aria-label={badges.messages ? `Messages (${badges.messages} new)` : "Messages"}
+          onClick={() => {
+            setMessageTo(null);
+            navigate("messages");
+          }}
+        >
+          <MessageCircle size={21} />
+          {badges.messages > 0 && <span className="badge nav-badge">{badges.messages}</span>}
         </button>
         <button aria-label="My profile" onClick={() => navigate("profile")}>
           <UserRound size={21} />
         </button>
+        <button aria-label="More" onClick={() => setMore(true)}>
+          <Menu size={21} />
+        </button>
       </nav>
+      {more && (
+        <Dialog title="More" onClose={() => setMore(false)}>
+          <div className="more-menu">
+            {(
+              [
+                ["following", Users, "Following"],
+                ["saved", Bookmark, "Saved"],
+                ["who", BadgeCheck, "Who you are"],
+                ["decor", Palette, "Decorations"],
+                ["account", Settings, "Account settings"],
+                ...(auth?.moderator ? [["moderation", ShieldCheck, "Moderation"]] : []),
+              ] as [string, typeof Home, string][]
+            ).map(([key, I, label]) => (
+              <button
+                key={key}
+                className="quiet-button"
+                onClick={() => {
+                  setMore(false);
+                  navigate(key);
+                }}
+              >
+                <I size={18} /> {label}
+              </button>
+            ))}
+          </div>
+        </Dialog>
+      )}
       {toast && (
         <div className="toast" role="status">
           <span>✳</span>
@@ -588,12 +891,48 @@ export function FormaApp() {
           notify={notify}
         />
       )}
+      {momentOpen && (
+        <MomentComposer
+          notify={notify}
+          onClose={() => setMomentOpen(false)}
+          onProve={() => {
+            setMomentOpen(false);
+            navigate("who");
+          }}
+          onPublished={async () => {
+            setMomentOpen(false);
+            navigate("home");
+            await refresh();
+            notify("Moment published. Visitors can leave one sticker each.");
+          }}
+        />
+      )}
+      {authDialog && (
+        <AuthDialog
+          initial={authDialog}
+          google={!!auth?.google}
+          onClose={() => setAuthDialog(null)}
+          onSignedIn={signedIn}
+        />
+      )}
+      {resetToken && auth?.signedIn && (
+        <Dialog title="New password" onClose={() => setResetToken(null)}>
+          <ResetPasswordForm
+            token={resetToken}
+            onDone={async () => {
+              setResetToken(null);
+              await refresh();
+              notify("Password saved. Other devices were signed out.");
+            }}
+          />
+        </Dialog>
+      )}
       {connect && (
         <Dialog title="Bring your own imagination." onClose={() => setConnect(false)}>
           <div className="connect-content">
             <span className="connect-symbol">✳</span>
             <p>
-              Forma gives your AI the tools to make a real, interactive post. You keep using the AI
+              Smudge gives your AI the tools to make a real, interactive post. You keep using the AI
               you already have.
             </p>
             <ol>

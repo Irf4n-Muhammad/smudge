@@ -299,10 +299,10 @@ html[data-theme="dark"] .is-raka .reference-relay {
     padding-top: 0;
   }
   .post-tile strong {
-    font-size: clamp(10px, 1.8cqw, 18px);
+    font-size: clamp(13px, 1.8cqw, 18px);
   }
   .post-tile p {
-    font-size: clamp(10px, 1.9cqw, 19px);
+    font-size: clamp(13px, 1.9cqw, 19px);
   }
   .tile-actions button {
     min-height: 32px;

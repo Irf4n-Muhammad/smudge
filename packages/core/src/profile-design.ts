@@ -92,13 +92,16 @@ export function applyProfileDesign(input: ProfilePackage, settings: unknown): Pr
   // Runs after the original fragments. This also upgrades old Raka copies without rewriting them.
   pkg.files["personal/boot.js"] = `
 document.addEventListener("DOMContentLoaded", () => {
+  // Parts the easy editor can open when the owner taps them on a draft.
+  for (const [selector, field] of [[".identity, .basic-header", "about"], [".stories", "story"], [".published-posts", "post"], [".relay", "feature"]])
+    document.querySelector(selector)?.setAttribute("data-edit", field);
   if (!window.profileData) return;
   window.profileData.then((d) => {
     const world = document.querySelector(".world");
     world.classList.remove("is-raka"); world.classList.add("is-personal");
     const target = document.querySelector(".identity, .basic-header h1");
     if (target) {
-      const avatar = document.createElement("div"); avatar.className = "personal-avatar";
+      const avatar = document.createElement("div"); avatar.className = "personal-avatar"; avatar.dataset.edit = "photo";
       if (d.owner.avatarSrc) {
         const img = document.createElement("img"); img.src = d.owner.avatarSrc;
         img.alt = d.owner.name + " avatar"; avatar.append(img);

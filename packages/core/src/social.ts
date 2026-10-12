@@ -49,13 +49,37 @@ function canonical(value: unknown): unknown {
     );
   return value;
 }
+export const reportReasons = ["spam", "harassment", "nudity", "violence", "fake", "other"] as const;
+export const reportReasonSchema = z.enum(reportReasons);
+
 export function packageDigest(value: Experience) {
   return createHash("sha256")
     .update(JSON.stringify(canonical(value)))
     .digest("hex");
 }
+/** Something one person did to another's account or post; used for notifications. */
+export type SocialEvent =
+  | { type: "follow"; actorId: string; targetId: string }
+  | { type: "like" | "comment" | "reaction"; actorId: string; targetId: string; postId: string }
+  | { type: "partner-request"; actorId: string; targetId: string };
+
 export class SocialService {
+  /** Called inside the transaction that records the action, so side effects commit with it. */
+  listeners: ((event: SocialEvent) => void)[] = [];
+  /** Relationship rule installed by the community layer (blocks); throws to refuse. */
+  relationGuard: (actorId: string, targetId: string) => void = () => {};
+  /** Audience rule installed by the identity layer (circle-only moments). */
+  viewFilter: (viewerId: string, post: Publication) => boolean = () => true;
+  /** Post capabilities implemented outside this module, keyed by method. */
+  capabilityHandlers: Record<
+    string,
+    (actor: Actor, postId: string, payload: unknown, preview: boolean) => unknown
+  > = {};
   constructor(public readonly store: Store) {}
+  emit(event: SocialEvent) {
+    if (event.actorId === event.targetId) return;
+    for (const listener of this.listeners) listener(event);
+  }
   users() {
     return this.store.all<User>("user");
   }
@@ -126,7 +150,7 @@ export class SocialService {
     this.store.transaction(() => this.store.put("draft", id, next));
     return next;
   }
-  publish(actor: Actor, id: string, revision: number) {
+  publish(actor: Actor, id: string, revision: number, within?: (post: Publication) => void) {
     const draft = this.draft(actor, id);
     if (draft.revision !== revision) throw new AppError("REVISION_CONFLICT", 409);
     this.checkAssets(actor, draft.package, draft.metadata.coverAssetId);
@@ -142,12 +166,21 @@ export class SocialService {
       digest: packageDigest(draft.package),
       createdAt: new Date().toISOString(),
     };
-    this.store.transaction(() => this.store.put("post", post.id, post));
+    this.store.transaction(() => {
+      this.store.put("post", post.id, post);
+      within?.(post);
+    });
     return post;
   }
   post(id: string) {
     const post = this.store.get<Publication>("post", id);
     if (!post) throw new AppError("NOT_FOUND", 404);
+    return post;
+  }
+  /** A post as seen by this actor; hidden posts are indistinguishable from missing ones. */
+  visiblePost(actor: Actor, id: string) {
+    const post = this.post(id);
+    if (!this.viewFilter(this.actor(actor), post)) throw new AppError("NOT_FOUND", 404);
     return post;
   }
   feed(actor: Actor): PostView[] {
@@ -156,6 +189,7 @@ export class SocialService {
     return this.store
       .all<Publication>("post")
       .reverse()
+      .filter((p) => this.viewFilter(actor.userId, p))
       .map((p) => ({
         id: p.id,
         ownerId: p.ownerId,
@@ -171,15 +205,17 @@ export class SocialService {
       }));
   }
   toggle(actor: Actor, id: string, kind: "like" | "save") {
-    this.actor(actor);
-    this.post(id);
+    const post = this.visiblePost(actor, id);
     const key = `${id}:${actor.userId}`;
     const exists = !!this.store.get(kind, key);
-    this.store.transaction(() =>
-      exists
-        ? this.store.remove(kind, key)
-        : this.store.put(kind, key, { postId: id, userId: actor.userId }),
-    );
+    this.store.transaction(() => {
+      if (exists) this.store.remove(kind, key);
+      else {
+        this.store.put(kind, key, { postId: id, userId: actor.userId });
+        if (kind === "like")
+          this.emit({ type: "like", actorId: actor.userId, targetId: post.ownerId, postId: id });
+      }
+    });
     return { active: !exists };
   }
   follow(actor: Actor, userId: string) {
@@ -188,11 +224,14 @@ export class SocialService {
       throw new AppError("INVALID_USER");
     const key = `${actor.userId}:${userId}`;
     const exists = !!this.store.get("follow", key);
-    this.store.transaction(() =>
-      exists
-        ? this.store.remove("follow", key)
-        : this.store.put("follow", key, { userId: actor.userId, target: userId }),
-    );
+    if (!exists) this.relationGuard(actor.userId, userId);
+    this.store.transaction(() => {
+      if (exists) this.store.remove("follow", key);
+      else {
+        this.store.put("follow", key, { userId: actor.userId, target: userId });
+        this.emit({ type: "follow", actorId: actor.userId, targetId: userId });
+      }
+    });
     return { active: !exists };
   }
   following(actor: Actor) {
@@ -206,8 +245,7 @@ export class SocialService {
     return this.store.all<Note>("comment").filter((n) => n.postId === id);
   }
   comment(actor: Actor, id: string, text: unknown) {
-    this.actor(actor);
-    this.post(id);
+    const post = this.visiblePost(actor, id);
     const note: Note = {
       id: randomUUID(),
       postId: id,
@@ -215,16 +253,20 @@ export class SocialService {
       text: z.string().trim().min(1).max(1000).parse(text),
       createdAt: new Date().toISOString(),
     };
-    this.store.transaction(() => this.store.put("comment", note.id, note));
+    this.store.transaction(() => {
+      this.store.put("comment", note.id, note);
+      this.emit({ type: "comment", actorId: actor.userId, targetId: post.ownerId, postId: id });
+    });
     return note;
   }
-  report(actor: Actor, id: string) {
-    this.actor(actor);
-    this.post(id);
+  report(actor: Actor, id: string, reason: unknown = "other") {
+    this.visiblePost(actor, id);
+    const parsed = reportReasonSchema.parse(reason ?? "other");
     this.store.transaction(() =>
       this.store.put("report", `${id}:${actor.userId}`, {
         postId: id,
         userId: actor.userId,
+        reason: parsed,
         createdAt: new Date().toISOString(),
       }),
     );
@@ -268,7 +310,10 @@ export class SocialService {
     const published = this.store
       .all<Publication>("post")
       .some(
-        (p) => p.package.manifest.schemaVersion === 2 && p.package.manifest.assets.includes(id),
+        (p) =>
+          p.package.manifest.schemaVersion === 2 &&
+          p.package.manifest.assets.includes(id) &&
+          this.viewFilter(actor.userId, p),
       );
     if (!asset || (asset.ownerId !== "shared" && asset.ownerId !== actor.userId && !published))
       throw new AppError("NOT_FOUND", 404);
@@ -276,7 +321,7 @@ export class SocialService {
   }
   capability(actor: Actor, postId: string, method: string, payload: unknown, preview = false) {
     this.actor(actor);
-    const post = preview ? this.draft(actor, postId) : this.post(postId);
+    const post = preview ? this.draft(actor, postId) : this.visiblePost(actor, postId);
     if (!(post.package.manifest.capabilities as string[]).includes(method))
       throw new AppError("CAPABILITY_DENIED", 403);
     if (preview) postId = `preview:${postId}:v${post.revision}`;
@@ -331,6 +376,8 @@ export class SocialService {
         selected: this.store.get<{ option: number }>("vote", key)?.option ?? null,
       };
     }
+    const handler = this.capabilityHandlers[method];
+    if (handler) return handler(actor, preview ? "" : post.id, payload, preview);
     throw new AppError("METHOD_NOT_SUPPORTED");
   }
 }

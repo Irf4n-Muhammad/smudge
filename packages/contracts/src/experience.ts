@@ -8,6 +8,8 @@ export const capabilities = [
   "contributions.read",
   "polls.read",
   "polls.vote",
+  "reactions.read",
+  "reactions.place",
 ] as const;
 export const capability = z.enum(capabilities);
 export const manifestV2 = z
@@ -18,7 +20,7 @@ export const manifestV2 = z
     entrypoint: z.literal("index.html"),
     capabilities: z
       .array(capability)
-      .max(6)
+      .max(8)
       .refine((v) => new Set(v).size === v.length, "Duplicate capability"),
     assets: z.array(z.string().uuid()).max(12).default([]),
     stage: z
@@ -68,6 +70,30 @@ export const experienceSchema = z.union([
     }),
 ]);
 export type Experience = z.infer<typeof experienceSchema>;
+/**
+ * A button under a post. Without a URL it opens the post's own page in the in-app sheet; with
+ * one it opens that https page there. Only https is accepted so a button can never run script
+ * (javascript:) or reach plain-text hosts.
+ */
+export const postLinkSchema = z
+  .object({
+    label: z.string().trim().min(1).max(32),
+    url: z
+      .string()
+      .trim()
+      .max(500)
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return url.protocol === "https:" && !url.username && !url.password;
+        } catch {
+          return false;
+        }
+      }, "Use a full https:// link")
+      .optional(),
+  })
+  .strict();
+export type PostLink = z.infer<typeof postLinkSchema>;
 export const metadataSchema = z
   .object({
     title: z.string().trim().min(1).max(100),
@@ -75,6 +101,7 @@ export const metadataSchema = z
     coverAssetId: z.string().uuid().optional(),
     format: z.enum(["photo", "scrapbook", "story", "collaborative", "custom"]).default("custom"),
     contributors: z.array(z.string().max(40)).max(10).default([]),
+    link: postLinkSchema.optional(),
   })
   .strict();
 export type Metadata = z.infer<typeof metadataSchema>;

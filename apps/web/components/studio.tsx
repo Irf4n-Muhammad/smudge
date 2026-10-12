@@ -26,6 +26,8 @@ export function Studio({
     [caption, setCaption] = useState(""),
     [coverAssetId, setCoverAssetId] = useState<string | undefined>(),
     [contributors, setContributors] = useState<string[]>([]),
+    [linkLabel, setLinkLabel] = useState(""),
+    [linkUrl, setLinkUrl] = useState(""),
     [tab, setTab] = useState("preview"),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -40,6 +42,8 @@ export function Studio({
     setCaption(d.metadata.caption);
     setCoverAssetId(d.metadata.coverAssetId);
     setContributors(d.metadata.contributors);
+    setLinkLabel(d.metadata.link?.label ?? "");
+    setLinkUrl(d.metadata.link?.url ?? "");
     setSource(JSON.stringify(d.package, null, 2));
     setDirty(false);
     setError("");
@@ -112,7 +116,16 @@ export function Studio({
       {
         revision: draft.revision,
         package: pkg,
-        metadata: { ...draft.metadata, title, caption, contributors, coverAssetId },
+        metadata: {
+          ...draft.metadata,
+          title,
+          caption,
+          contributors,
+          coverAssetId,
+          link: linkLabel.trim()
+            ? { label: linkLabel.trim(), ...(linkUrl.trim() ? { url: linkUrl.trim() } : {}) }
+            : undefined,
+        },
       },
       "PUT",
     );
@@ -319,6 +332,35 @@ export function Studio({
                     }}
                   />
                 </label>
+                <div className="link-fields">
+                  <label>
+                    Button under the post
+                    <input
+                      disabled={busy}
+                      value={linkLabel}
+                      maxLength={32}
+                      placeholder="Get tickets"
+                      onChange={(e) => {
+                        setLinkLabel(e.target.value);
+                        setDirty(true);
+                      }}
+                    />
+                  </label>
+                  <label>
+                    Opens
+                    <input
+                      disabled={busy || !linkLabel.trim()}
+                      value={linkUrl}
+                      maxLength={500}
+                      inputMode="url"
+                      placeholder="This post, full size (or paste an https:// link)"
+                      onChange={(e) => {
+                        setLinkUrl(e.target.value);
+                        setDirty(true);
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
               <div className="studio-tabs">
                 <div>
