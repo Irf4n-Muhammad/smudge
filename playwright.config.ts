@@ -14,11 +14,24 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  webServer: {
-    command: "node scripts/dev.mjs",
-    url: "http://127.0.0.1:3000",
-    timeout: 180000,
-    reuseExistingServer: false,
-    env: { FORMA_DATA_DIR: resolve(".local/e2e"), NEXT_TELEMETRY_DISABLED: "1" },
-  },
+  webServer: [
+    {
+      command: "node scripts/dev.mjs",
+      url: "http://127.0.0.1:3000",
+      timeout: 180000,
+      reuseExistingServer: false,
+      env: {
+        FORMA_DATA_DIR: resolve(".local/e2e"),
+        NEXT_TELEMETRY_DISABLED: "1",
+        // The website import may read the local trial sites below, and nothing else private.
+        FORMA_IMPORT_ALLOW_HOSTS: "127.0.0.1:3010",
+      },
+    },
+    {
+      command: "node tests/fixtures/sites/serve.mjs",
+      url: "http://127.0.0.1:3010",
+      reuseExistingServer: false,
+      env: { PORT: "3010" },
+    },
+  ],
 });

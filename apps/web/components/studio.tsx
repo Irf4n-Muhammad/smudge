@@ -1,6 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Plus, Upload, Feather, Eye, Code2, Check, RefreshCw, ArrowUpRight } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  Feather,
+  Eye,
+  Code2,
+  Check,
+  RefreshCw,
+  ArrowUpRight,
+  Globe,
+} from "lucide-react";
 import type { DraftView, Experience } from "../../../packages/contracts/src/experience";
 import { api, Runtime } from "./runtime";
 import { Avatar, Dialog } from "./ui";
@@ -12,12 +22,14 @@ export function Studio({
   onClose,
   onPublished,
   notify,
+  onImport,
 }: {
   boot: Boot;
   draftId?: string;
   onClose: () => void;
   onPublished: () => Promise<void>;
   notify: (s: string) => void;
+  onImport?: () => void;
 }) {
   const [drafts, setDrafts] = useState<DraftView[]>([]),
     [draft, setDraft] = useState<DraftView | null>(null),
@@ -236,6 +248,11 @@ export function Studio({
           >
             <Plus size={16} /> New photo post
           </button>
+          {onImport && (
+            <button className="quiet-button" disabled={busy || dirty} onClick={onImport}>
+              <Globe size={16} /> Import a website
+            </button>
+          )}
           {dirty && <p className="fineprint">Save your changes before starting another post.</p>}
           <input
             ref={photoInput}

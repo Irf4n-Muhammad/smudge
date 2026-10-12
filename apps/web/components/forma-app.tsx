@@ -26,6 +26,7 @@ import {
   UserSearch,
   ShieldCheck,
   Menu,
+  Globe,
 } from "lucide-react";
 import { MessagesPanel, ModerationPanel, NotificationsPanel, PeoplePanel } from "./community";
 import type { AuthState } from "../../../packages/contracts/src/accounts";
@@ -44,6 +45,7 @@ import { api } from "./runtime";
 import { Avatar, Dialog } from "./ui";
 import { PostCard } from "./post-card";
 import { Studio } from "./studio";
+import { SiteImport } from "./site-import";
 import type { Boot } from "./types";
 import { ThemeToggle } from "./theme-toggle";
 import { Cockpit } from "./cockpit";
@@ -71,6 +73,7 @@ export function FormaApp() {
     [connect, setConnect] = useState(false),
     [profile, setProfile] = useState<string | null>(null),
     [momentOpen, setMomentOpen] = useState(false),
+    [importOpen, setImportOpen] = useState(false),
     [auth, setAuth] = useState<AuthState | null>(null),
     [authDialog, setAuthDialog] = useState<AuthMode | null>(null),
     [resetToken, setResetToken] = useState<string | null>(null),
@@ -354,6 +357,14 @@ export function FormaApp() {
           <Gift size={16} />
           Share a moment
         </button>
+        <button
+          className="quiet-button moment-button import-button"
+          title="Import a website"
+          onClick={() => setImportOpen(true)}
+        >
+          <Globe size={16} />
+          Import a website
+        </button>
         <div className="sidebar-note">
           <span className="note-star">✧</span>
           <p>
@@ -601,6 +612,14 @@ export function FormaApp() {
                     </button>
                     <button className="quiet-button" onClick={() => setMomentOpen(true)}>
                       <Gift size={15} /> Moment
+                    </button>
+                    <button
+                      className="quiet-button composer-import"
+                      aria-label="Import a website"
+                      title="Import a website"
+                      onClick={() => setImportOpen(true)}
+                    >
+                      <Globe size={15} /> Website
                     </button>
                     <button className="composer-plus" aria-label="Create a post" onClick={create}>
                       <Plus size={21} />
@@ -889,6 +908,21 @@ export function FormaApp() {
             notify("Published. Your story has a home in the feed.");
           }}
           notify={notify}
+          onImport={() => {
+            setStudio(false);
+            setImportOpen(true);
+          }}
+        />
+      )}
+      {importOpen && (
+        <SiteImport
+          onClose={() => setImportOpen(false)}
+          onPublished={async () => {
+            setImportOpen(false);
+            navigate("home");
+            await refresh();
+            notify("Published. Your imported page opens right in the feed.");
+          }}
         />
       )}
       {momentOpen && (

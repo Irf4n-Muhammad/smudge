@@ -1,0 +1,281 @@
+/* Website import: paste a link, then tidy the page beside a live preview. Builds on the easy
+   editor's pieces (bar, frame, inputs, chips). */
+.import-link {
+  display: flex;
+  flex-direction: column;
+}
+.import-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 20px 18px 0;
+}
+.import-hero,
+.import-form {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding-inline: 18px;
+}
+.import-hero {
+  padding-top: 8vh;
+}
+.import-globe {
+  display: inline-grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: var(--lime);
+  color: #101010;
+  transform: rotate(-6deg);
+}
+.import-globe svg {
+  width: 30px;
+  height: 30px;
+}
+.import-hero h1 {
+  margin: 22px 0 12px;
+  font: 800 clamp(44px, 9vw, 84px) / 0.92 var(--big);
+  letter-spacing: -0.05em;
+}
+.import-hero h1 em {
+  font: italic 400 1.08em var(--serif);
+  color: var(--p1);
+}
+.import-hero p {
+  max-width: 34em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.5;
+}
+.import-form {
+  display: grid;
+  gap: 18px;
+  padding-top: 34px;
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+}
+.import-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font: 500 15px/1.4 var(--ui);
+  cursor: pointer;
+}
+.import-check input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+.import-form .easy-go {
+  flex: none;
+}
+.import-form .easy-go svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Edit */
+.import-body {
+  display: grid;
+  gap: 20px;
+  padding: 16px 0 60px;
+}
+.import-stage .easy-frame {
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--white);
+}
+.import-panel {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: 0 18px;
+}
+.import-found {
+  margin: 0;
+  font: 400 22px/1.1 var(--hand);
+  color: var(--p1);
+}
+.import-panel h2,
+.import-text summary {
+  margin: 0 0 10px;
+  font:
+    700 12px ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.import-panel h2 small,
+.import-text summary small {
+  margin-left: 6px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+}
+.import-panel [role="radio"][aria-checked="true"] {
+  background: var(--blue);
+  color: #fff !important;
+}
+.import-photos ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.import-photos li {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--line);
+  outline: 3px solid transparent;
+  outline-offset: -3px;
+}
+.import-photos li.cover {
+  outline-color: var(--blue);
+}
+.import-photos img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.import-photos button {
+  position: absolute;
+  top: 6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(16 16 16 / 0.7);
+  color: #fff !important;
+}
+.import-photos svg {
+  width: 15px;
+  height: 15px;
+}
+.import-star {
+  left: 6px;
+}
+.import-star[aria-pressed="true"] {
+  background: var(--blue);
+}
+.import-star[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+.import-x {
+  right: 6px;
+}
+.import-products {
+  display: grid;
+  gap: 8px;
+}
+.import-product,
+.import-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.import-product input,
+.import-block textarea {
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--ink);
+  font: 500 15px var(--ui);
+}
+.import-product input {
+  width: 0;
+}
+.import-product input:first-child {
+  flex: 2;
+}
+.import-product input:nth-child(2) {
+  flex: 1;
+}
+.import-block {
+  align-items: flex-start;
+  margin-top: 8px;
+}
+.import-block textarea {
+  flex: 1;
+  resize: vertical;
+  line-height: 1.4;
+}
+.import-block textarea.block-h {
+  font-weight: 700;
+}
+.import-block textarea.block-quote {
+  font-style: italic;
+}
+.import-product button,
+.import-block button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--paper);
+}
+.import-product svg,
+.import-block svg {
+  width: 16px;
+  height: 16px;
+}
+.import-text summary {
+  cursor: pointer;
+}
+
+/* "Imported from" line under an imported post in the pop-up. */
+.import-source {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 16px;
+  font: 500 13px var(--ui);
+  color: var(--muted);
+}
+.import-source a {
+  color: inherit;
+  font-weight: 700;
+}
+
+@media (min-width: 900px) {
+  .import-body {
+    grid-template-columns: minmax(0, 1fr) 400px;
+    align-items: start;
+    padding: 24px 24px 60px;
+  }
+  .import-stage {
+    position: sticky;
+    top: 84px;
+  }
+  .import-stage .easy-frame.phone {
+    border: 10px solid #101010;
+    border-radius: 44px;
+  }
+  .import-panel {
+    width: auto;
+    min-width: 0;
+    padding: 0;
+  }
+}

@@ -381,3 +381,33 @@ The Smudge Paint wall stores easy-editor choices in an ordinary file, `smudge/se
 (`window.smudgeSettings = {…};`), validated by `smudgeSettingsSchema` in
 `packages/core/src/smudge-design.ts`. Writing it adds the Wall grants only while the Wall section
 is shown.
+
+## Website import (additive)
+
+Post metadata accepts an optional `source: { url, host }`: where an imported page came from.
+`url` is an absolute `http:` or `https:` URL of at most 500 characters with no username or
+password; `host` is 1 to 120 characters. It is shown under the post in the page sheet as
+"Imported from {host} · Visit original site", opening in a new tab with
+`rel="noopener noreferrer"`. It is the importer's claim, not a verified fact. Old metadata without
+it stays valid.
+
+`POST /api/imports` (signed in; 20 per 10 minutes per client) takes
+`{ url, permission: true }` and returns `{ page, found: { words, photos, photosKept, products } }`.
+A missing scheme means `https://`. It reads one page and stores nothing but photos; it never
+publishes. `page` matches `importedPageSchema` in `packages/core/src/site-import.ts` and is turned
+into an ordinary v2 post package (`index.html` + `page.css`, no script) by `buildImportedPage`,
+which the client sends through the normal draft routes. Every string is escaped; nothing from the
+site's markup is copied.
+
+Fetch rules (`apps/server/site-fetch.ts`): `https:` only on port 443; no credentials in the URL;
+every DNS answer must be a public address (private, loopback, link-local, CGNAT, multicast,
+documentation, ULA and IPv4-mapped forms are refused) and the connection goes to exactly the
+address that was checked; at most three redirects, each checked again; 8 seconds and 2 MB for the
+page. Photos: JPEG, PNG, WebP, GIF or AVIF up to 6 MB, at least 120 px, re-encoded with sharp to
+WebP (at most 1200×1600, 900 KB, first frame only, metadata dropped), at most 12, saved as the
+person's own assets. Errors are `422` with codes `SITE_URL_INVALID`, `SITE_NEEDS_HTTPS`,
+`SITE_NOT_ALLOWED`, `SITE_NOT_FOUND`, `SITE_REFUSED`, `SITE_UNREACHABLE`, `SITE_TOO_SLOW`,
+`SITE_TOO_LARGE`, `SITE_NOT_A_PAGE`, `SITE_TOO_MANY_REDIRECTS` and `SITE_EMPTY`.
+
+`FORMA_IMPORT_ALLOW_HOSTS` (comma-separated `host:port`) lets a local trial read those hosts over
+plain `http:` despite the rules above. It is ignored in production.

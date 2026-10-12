@@ -6,3 +6,4 @@ artifacts
 test-results
 package-lock.json
 apps/server/profiles/smudge/fonts.css
+tests/fixtures/sites

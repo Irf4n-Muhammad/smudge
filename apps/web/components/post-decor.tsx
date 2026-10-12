@@ -149,6 +149,7 @@ export function FullScreenPost({
   notify?: (message: string) => void;
 }) {
   const [height, setHeight] = useState(800);
+  const source = post.metadata.source;
   useEffect(() => {
     // Sheet gap on top (48), its bar (64) and the bottom margin (8).
     const update = () => setHeight(Math.max(420, window.innerHeight - 120));
@@ -166,7 +167,17 @@ export function FullScreenPost({
     >
       <div className="fullscreen-post">
         <MomentMark post={post} />
-        <Runtime target={post.id} height={height} />
+        <Runtime target={post.id} height={source ? height - 40 : height} />
+        {source && (
+          // The person who imported it says where it came from; the link leaves Smudge in a new tab.
+          <p className="import-source">
+            <span>Imported from {source.host}</span>
+            <span aria-hidden="true">·</span>
+            <a href={source.url} target="_blank" rel="noopener noreferrer">
+              Visit original site ↗
+            </a>
+          </p>
+        )}
       </div>
     </PageSheet>
   );

@@ -1150,14 +1150,16 @@ export function EasyEditor({
  * hidden behind the current one and takes its place only once it has drawn, so editing never
  * flashes a blank or loading screen.
  */
-function SmoothPreview({
+export function SmoothPreview({
+  kind = "profile",
   draft,
   height,
   heights,
   editing,
   onEdit,
 }: {
-  draft: ProfileDraft;
+  kind?: "profile" | "post";
+  draft: { id: string; revision: number };
   height: number;
   heights: { autoHeight?: boolean | undefined; mobileHeight?: number | undefined };
   editing: boolean;
@@ -1193,7 +1195,7 @@ function SmoothPreview({
           aria-hidden={i === 0 ? undefined : true}
         >
           <Runtime
-            kind="profile"
+            kind={kind}
             preview
             target={draft.id}
             version={layer.revision}

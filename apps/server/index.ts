@@ -40,6 +40,7 @@ import { MessageService } from "../../packages/core/src/messages.js";
 import { reportInputSchema } from "../../packages/contracts/src/community.js";
 import { communityRoutes } from "./community-routes.js";
 import { googleFinish, googleStart } from "./google.js";
+import { importSite } from "./site-import.js";
 
 const config = loadConfig();
 const production = config.mode === "production";
@@ -649,6 +650,18 @@ api.post("/api/posts/:id/reuse", (req, res) => {
     }),
   );
 });
+// Website import reads outside pages on a person's behalf, so it is throttled hard.
+const importLimit = rateLimit({ windowMs: 10 * 60_000, max: 20 });
+// Local trials and tests may point at sites on this machine; production never can.
+const importAllowHosts = production
+  ? []
+  : (process.env.FORMA_IMPORT_ALLOW_HOSTS ?? "")
+      .split(",")
+      .map((h) => h.trim())
+      .filter(Boolean);
+api.post("/api/imports", importLimit, async (req, res) =>
+  res.json(await importSite(service, actor(res), req.body, { allowHosts: importAllowHosts })),
+);
 api.post("/api/validate", (req, res) => res.json(service.validate(req.body)));
 api.post("/api/assets", (req, res) => res.json(service.upload(actor(res), req.body)));
 api.get("/api/assets/:id", (req, res) => {

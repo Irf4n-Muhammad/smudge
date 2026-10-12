@@ -153,6 +153,8 @@ Desktop account switching is a simulation feature, not public authentication.
   account deletion (ADR 0013).
 - Four seeded formats: photo, scrapbook, branching story/poll, collaborative notes.
 - Three additional full-width worlds with custom interactions, plus persisted day/night appearance.
+- Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
+  re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.
 - A separate-origin iframe runtime with CSP, a validated message bridge and server-side capabilities.
 - Viewer progress, one-vote-per-viewer polls, and contributor permissions.
@@ -230,6 +232,18 @@ shape, post columns and card style, accent colour and part order. Room and Comic
 photo, colour and their one big line (the room's pinned note, the comic's opening headline).
 While a change saves, the next version of the preview loads behind the current one and swaps in
 once it has drawn, so the preview no longer flashes.
+
+## Website import
+
+**Import a website** (sidebar, the feed composer, or the studio on a phone) turns a page you own
+into a Smudge post (ADR 0017). Paste a link and tick that it's your site or you have permission;
+Smudge reads the page once and keeps the words, photos (re-saved as your own, at most 12) and
+prices. Pick Article, Shop or Portfolio, fix the text, choose a cover, remove what you don't want
+and publish. The post opens in the in-app page sheet with "Imported from … · Visit original site"
+at the bottom. Nothing from the site runs: no scripts, trackers or forms. Pages that only appear
+with JavaScript come through thin. To try it offline, run `node tests/fixtures/sites/serve.mjs`
+and start the app with `FORMA_IMPORT_ALLOW_HOSTS=127.0.0.1:3010`, then import
+`http://127.0.0.1:3010/` (a bakery) or `http://127.0.0.1:3010/journal` (a travel story).
 
 ## Ink & Paper artwork (Kai's profile)
 

@@ -102,6 +102,25 @@ export const metadataSchema = z
     format: z.enum(["photo", "scrapbook", "story", "collaborative", "custom"]).default("custom"),
     contributors: z.array(z.string().max(40)).max(10).default([]),
     link: postLinkSchema.optional(),
+    /** Set by website import: the page this post was rebuilt from, shown as "Imported from". */
+    source: z
+      .object({
+        url: z
+          .string()
+          .trim()
+          .max(500)
+          .refine((value) => {
+            try {
+              const url = new URL(value);
+              return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password;
+            } catch {
+              return false;
+            }
+          }, "Use a web link"),
+        host: z.string().trim().min(1).max(120),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type Metadata = z.infer<typeof metadataSchema>;
