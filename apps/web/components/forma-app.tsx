@@ -46,6 +46,7 @@ import { Avatar, Dialog } from "./ui";
 import { PostCard } from "./post-card";
 import { Studio } from "./studio";
 import { SiteImport } from "./site-import";
+import { PostEditor } from "./post-editor";
 import type { Boot } from "./types";
 import { ThemeToggle } from "./theme-toggle";
 import { Cockpit } from "./cockpit";
@@ -74,6 +75,7 @@ export function FormaApp() {
     [profile, setProfile] = useState<string | null>(null),
     [momentOpen, setMomentOpen] = useState(false),
     [importOpen, setImportOpen] = useState(false),
+    [postEditor, setPostEditor] = useState<{ draftId?: string } | null>(null),
     [auth, setAuth] = useState<AuthState | null>(null),
     [authDialog, setAuthDialog] = useState<AuthMode | null>(null),
     [resetToken, setResetToken] = useState<string | null>(null),
@@ -177,6 +179,10 @@ export function FormaApp() {
   function create() {
     setActiveDraft(undefined);
     setStudio(true);
+  }
+  /** "Create a post" opens the easy post editor; the studio stays one tap away inside it. */
+  function createPost() {
+    setPostEditor({});
   }
   async function signedIn(fresh: boolean) {
     setStudio(false);
@@ -344,7 +350,7 @@ export function FormaApp() {
           className="primary create-button"
           aria-label="Create a post"
           title="Create a post"
-          onClick={create}
+          onClick={createPost}
         >
           <Plus size={19} />
           Create a post
@@ -606,7 +612,7 @@ export function FormaApp() {
                     <span className="composer-symbol">
                       <Feather size={22} />
                     </span>
-                    <button onClick={create}>
+                    <button onClick={createPost}>
                       <strong>What does your day look like?</strong>
                       <span>A photo, a story, a whole little world.</span>
                     </button>
@@ -621,7 +627,11 @@ export function FormaApp() {
                     >
                       <Globe size={15} /> Website
                     </button>
-                    <button className="composer-plus" aria-label="Create a post" onClick={create}>
+                    <button
+                      className="composer-plus"
+                      aria-label="Create a post"
+                      onClick={createPost}
+                    >
                       <Plus size={21} />
                     </button>
                   </section>
@@ -837,7 +847,7 @@ export function FormaApp() {
             <span className="badge nav-badge">{badges.notifications}</span>
           )}
         </button>
-        <button className="mobile-create" aria-label="Create a post" onClick={create}>
+        <button className="mobile-create" aria-label="Create a post" onClick={createPost}>
           <Plus size={23} />
         </button>
         <button
@@ -910,6 +920,27 @@ export function FormaApp() {
           notify={notify}
           onImport={() => {
             setStudio(false);
+            setImportOpen(true);
+          }}
+        />
+      )}
+      {postEditor && (
+        <PostEditor
+          draftId={postEditor.draftId}
+          onClose={() => setPostEditor(null)}
+          onPublished={async () => {
+            setPostEditor(null);
+            navigate("home");
+            await refresh();
+            notify("Published. Your post is in the feed.");
+          }}
+          onStudio={(id) => {
+            setPostEditor(null);
+            setActiveDraft(id);
+            setStudio(true);
+          }}
+          onImport={() => {
+            setPostEditor(null);
             setImportOpen(true);
           }}
         />

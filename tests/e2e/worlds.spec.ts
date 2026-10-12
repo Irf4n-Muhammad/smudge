@@ -79,6 +79,8 @@ test("mobile worlds and night studio remain navigable", async ({ page }) => {
     .getByRole("navigation", { name: "Mobile navigation" })
     .getByRole("button", { name: "Create a post" })
     .click();
+  // On a phone the studio is one tap inside the post editor.
+  await page.getByRole("button", { name: "Open the studio" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveCSS("background-color", "rgb(23, 18, 31)");

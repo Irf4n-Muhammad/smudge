@@ -153,6 +153,7 @@ Desktop account switching is a simulation feature, not public authentication.
   account deletion (ADR 0013).
 - Four seeded formats: photo, scrapbook, branching story/poll, collaborative notes.
 - Three additional full-width worlds with custom interactions, plus persisted day/night appearance.
+- Easy post editor (ADR 0018): five styles, tap to edit, photos, colours, fonts and motion.
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.
@@ -232,6 +233,16 @@ shape, post columns and card style, accent colour and part order. Room and Comic
 photo, colour and their one big line (the room's pinned note, the comic's opening headline).
 While a change saves, the next version of the preview loads behind the current one and swaps in
 once it has drawn, so the preview no longer flashes.
+
+## Easy post editor
+
+**Create a post** opens the post editor (ADR 0018). Pick a style (Poster, Magazine, Gallery,
+Scrapbook or Big note), then tap any part of the post to change it: the headline (`*stars*` make
+words italic), the small label, your words, the big quote and each photo with its caption. The
+bottom bar switches style, adds up to 12 photos, changes colours and font, turns motion on or off,
+and sets the button and feed caption. Publish puts it in the feed; it opens full size in the
+in-app page sheet. **Advanced editor** opens the same draft in the studio, which is still there as
+**My studio**.
 
 ## Website import
 

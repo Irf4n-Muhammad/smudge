@@ -30,7 +30,7 @@ test("uploaded photo and caption persist in Cutouts and Photo stack; reuse remap
   const expectedSrc =
     "data:image/jpeg;base64," + readFileSync(resolve("assets/demo/forest.jpg")).toString("base64");
   try {
-    await page.getByRole("button", { name: "Create a post", exact: true }).first().click();
+    await page.getByRole("button", { name: "My studio", exact: true }).first().click();
     const dialog = page.getByRole("dialog");
     const chooser = page.waitForEvent("filechooser");
     await dialog.getByRole("button", { name: "New photo post", exact: true }).click();

@@ -145,7 +145,7 @@ export function Runtime({
             { type: "forma:layout", nonce: ticket.nonce, autoHeight: true },
             "*",
           );
-        if (kind === "profile" && preview)
+        if (preview)
           frame.current?.contentWindow?.postMessage(
             { type: "forma:editing", nonce: ticket.nonce, on: editingNow.current },
             "*",
@@ -156,7 +156,6 @@ export function Runtime({
       if (event.data.type === "forma:edit") {
         // Only a draft preview may steer the editor, and only with a short field name.
         if (
-          kind === "profile" &&
           preview &&
           editingNow.current &&
           typeof event.data.field === "string" &&
@@ -239,7 +238,7 @@ export function Runtime({
       readyNow.current?.();
   }, [ready, error, measuredHeight, autoHeight, kind]);
   useEffect(() => {
-    if (ticket && kind === "profile" && preview)
+    if (ticket && preview)
       frame.current?.contentWindow?.postMessage(
         { type: "forma:editing", nonce: ticket.nonce, on: editing },
         "*",

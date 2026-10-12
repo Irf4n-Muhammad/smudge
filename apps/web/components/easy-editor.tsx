@@ -1211,7 +1211,7 @@ export function SmoothPreview({
   );
 }
 
-function ChipRow<T extends string>({
+export function ChipRow<T extends string>({
   label,
   value,
   options,
@@ -1236,7 +1236,7 @@ function ChipRow<T extends string>({
   );
 }
 
-function TextField({
+export function TextField({
   title,
   label,
   hint,

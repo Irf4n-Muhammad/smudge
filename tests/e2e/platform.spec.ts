@@ -83,7 +83,7 @@ test("feed formats, progress persistence, comments and bookmarks", async ({ page
 
 test("studio edits, uploads, previews and publishes an immutable revision", async ({ page }) => {
   await boot(page);
-  await page.getByRole("button", { name: "Create a post", exact: true }).first().click();
+  await page.getByRole("button", { name: "My studio", exact: true }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "New draft", exact: true }).click();
   const title = `A studio story ${Date.now()}`;

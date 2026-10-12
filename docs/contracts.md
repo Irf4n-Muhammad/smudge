@@ -411,3 +411,18 @@ person's own assets. Errors are `422` with codes `SITE_URL_INVALID`, `SITE_NEEDS
 
 `FORMA_IMPORT_ALLOW_HOSTS` (comma-separated `host:port`) lets a local trial read those hosts over
 plain `http:` despite the rules above. It is ignored in production.
+
+## Easy posts (additive)
+
+Posts made in the easy post editor keep their settings in `smudge/post.js`
+(`window.smudgePost = {…};`), validated by `postDesignSchema` in `packages/core/src/easy-post.ts`:
+`style` (`poster`, `magazine`, `gallery`, `scrapbook`, `note`), `palette`, `font`, `kicker` (≤40),
+`headline` (1–90, `*stars*` make italics), `text` (≤1500, blank lines split paragraphs), `quote`
+(≤200), `photos` (≤12 of `{ assetId, caption ≤120 }`) and `motion`. `buildPost` regenerates
+`index.html`, `post.css` and, with motion on, a fixed `motion.js`; every string is escaped and no
+other script is written. A package without a valid settings file is an ordinary post and opens in
+the studio. Title, cover and format follow the design; caption and button stay the editor's.
+
+Edit mode (see The Wall and easy editing) now also applies to post draft previews: the host may
+put a post draft preview in edit mode and accepts `forma:edit` only from such a frame. Easy posts
+tag `kicker`, `headline`, `text`, `quote`, `photos` and `photo-N`.
