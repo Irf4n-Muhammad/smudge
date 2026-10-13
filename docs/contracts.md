@@ -485,3 +485,31 @@ tag `kicker`, `headline`, `text`, `quote`, `photos` and `photo-N`.
   (and not yours), scored by `(1 + likes + 2 × comments)` fading with age over about a week.
   `GET /api/explore?q=…` (≤60 characters) returns visible posts whose title, caption, author name
   or handle contain every word (a leading `@` or `#` is ignored). Moments never appear in either.
+
+## Private accounts and group chats (additive)
+
+- **Private accounts.** `POST /api/account/privacy {private: boolean}` sets the flag on the
+  user record (`User.private`). A private account's posts, moments and comments on them are
+  visible only to the owner and accepted followers: the privacy filter sits in the same
+  `viewFilter` chain as blocks and moderation, so the feed, Explore, search, share links
+  (`/api/public/*`), profiles, mentions and notifications all follow it. The profile itself
+  (name, bio, profile page) stays visible. Going public accepts every waiting request.
+- **Follow requests.** `POST /api/users/:id/follow` on a private account the viewer doesn't follow
+  toggles a request and answers `{active: false, requested}`; the owner gets a `follow-request`
+  notification. `GET /api/follow-requests` lists `{user, createdAt}`;
+  `POST /api/follow-requests/:userId {accept}` accepts (a `follow-accepted` notification) or
+  declines; `DELETE /api/followers/:userId` removes a follower. Bootstrap has `requested`
+  (ids you asked), `PersonView` has `requested` and `private`, and `profile.social.read` returns
+  `requested`. Blocking or deleting an account clears requests both ways.
+- **Groups.** `POST /api/groups {name (1–60), members (2–31 ids)}` creates a group owned by the
+  caller; every member must be someone the caller could message one to one
+  (`MEMBER_NOT_ALLOWED`; `GROUP_TOO_SMALL`). `GET /api/groups` lists the caller's groups with
+  `last`, `unread` and `updatedAt`; `GET /api/groups/candidates` lists who can be added.
+  `GET /api/groups/:id` returns `{id, name, owner, members, messages}` and marks it read;
+  non-members get `NOT_FOUND`. `POST /api/groups/:id/messages {text}` shares the 30-per-minute
+  message limit. `POST /api/groups/:id/members {userId}` (any member, for people they could
+  message; at most 32 members, `GROUP_FULL`), `DELETE /api/groups/:id/members/:userId` (yourself,
+  or the owner removing others; ownership passes to the longest member and the last one out
+  deletes the group), `POST /api/groups/:id/name {name}` (owner only). Messages from people you
+  blocked or who blocked you are hidden from you. Group unread counts are part of the messages
+  badge. Deleting an account removes its group messages and seats.

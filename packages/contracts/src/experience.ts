@@ -152,6 +152,8 @@ export interface User {
   color: string;
   bio: string;
   avatarAssetId?: string;
+  /** Private accounts approve followers; only they see the posts. */
+  private?: boolean;
 }
 export interface PostView {
   id: string;

@@ -317,6 +317,8 @@ export class ProfileService {
         writable: !preview,
         ownProfile: actor.userId === item.ownerId,
         following: this.social.following(actor).includes(item.ownerId),
+        // A private owner's follow button reads "Requested" while the request waits.
+        requested: !!this.social.store.get("follow-request", `${actor.userId}:${item.ownerId}`),
         followers: this.social.store
           .all<{ target: string }>("follow")
           .filter((f) => f.target === item.ownerId).length,

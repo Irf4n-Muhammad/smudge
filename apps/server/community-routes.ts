@@ -3,12 +3,15 @@ import type { Actor } from "../../packages/core/src/index.js";
 import type { CommunityService } from "../../packages/core/src/community.js";
 import type { MessageService } from "../../packages/core/src/messages.js";
 import type { AccountService } from "../../packages/core/src/accounts.js";
+import type { PrivacyService } from "../../packages/core/src/privacy.js";
+import { z } from "zod";
 
 /** HTTP for blocks, notifications, people, messages, moderation and account deletion. */
 export function communityRoutes(
   api: Express,
   community: CommunityService,
   messages: MessageService,
+  privacy: PrivacyService,
   accounts: AccountService,
   onDeleted: (res: Response) => void,
   authLimit: RequestHandler,
@@ -40,6 +43,57 @@ export function communityRoutes(
   );
   api.post("/api/messages/:userId", (req, res) =>
     res.json(messages.send(actor(res), param(req.params.userId), req.body)),
+  );
+
+  api.get("/api/groups", (_req, res) => res.json(messages.groups(actor(res))));
+  api.get("/api/groups/candidates", (_req, res) => res.json(messages.groupCandidates(actor(res))));
+  api.post("/api/groups", (req, res) => res.json(messages.createGroup(actor(res), req.body)));
+  api.get("/api/groups/:id", (req, res) =>
+    res.json(messages.groupThread(actor(res), param(req.params.id))),
+  );
+  api.post("/api/groups/:id/messages", (req, res) =>
+    res.json(messages.sendToGroup(actor(res), param(req.params.id), req.body)),
+  );
+  api.post("/api/groups/:id/name", (req, res) =>
+    res.json(
+      messages.renameGroup(
+        actor(res),
+        param(req.params.id),
+        z.object({ name: z.string() }).strict().parse(req.body).name,
+      ),
+    ),
+  );
+  api.post("/api/groups/:id/members", (req, res) =>
+    res.json(
+      messages.addMember(
+        actor(res),
+        param(req.params.id),
+        z
+          .object({ userId: z.string().min(1).max(80) })
+          .strict()
+          .parse(req.body).userId,
+      ),
+    ),
+  );
+  api.delete("/api/groups/:id/members/:userId", (req, res) =>
+    res.json(messages.removeMember(actor(res), param(req.params.id), param(req.params.userId))),
+  );
+
+  api.post("/api/account/privacy", (req, res) =>
+    res.json(privacy.setPrivate(actor(res), req.body)),
+  );
+  api.get("/api/follow-requests", (_req, res) => res.json(privacy.requests(actor(res))));
+  api.post("/api/follow-requests/:userId", (req, res) =>
+    res.json(
+      privacy.answer(
+        actor(res),
+        param(req.params.userId),
+        z.object({ accept: z.boolean() }).strict().parse(req.body).accept,
+      ),
+    ),
+  );
+  api.delete("/api/followers/:userId", (req, res) =>
+    res.json(privacy.removeFollower(actor(res), param(req.params.userId))),
   );
 
   api.get("/api/moderation/reports", (_req, res) => res.json(community.reports(actor(res))));

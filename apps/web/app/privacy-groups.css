@@ -1,0 +1,226 @@
+/* Private accounts, follow requests and group chats. */
+.privacy-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+.privacy-switch input {
+  flex: none;
+  appearance: none;
+  position: relative;
+  width: 42px;
+  height: 24px;
+  margin: 2px 0 0;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.privacy-switch input::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  transition: transform 0.15s;
+}
+.privacy-switch input:checked {
+  background: var(--accent);
+}
+.privacy-switch input:checked::after {
+  transform: translateX(18px);
+}
+.privacy-switch input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.privacy-switch span {
+  display: grid;
+  gap: 2px;
+}
+.privacy-switch small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.private-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px auto;
+  width: min(720px, calc(100% - 24px));
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+.private-note span {
+  flex: 1;
+}
+
+.follow-requests {
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+.follow-requests h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+.follow-requests ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.follow-requests li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.follow-requests li > span:not(.avatar) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.follow-requests small {
+  color: var(--muted);
+}
+
+/* Groups ---------------------------------------------------------------------------------- */
+.identity-head .new-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.group-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--ink);
+}
+.group-thread > header strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group-members {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+.group-members ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.group-members li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.group-members li > span:not(.avatar) {
+  flex: 1;
+  min-width: 0;
+}
+.group-members small,
+.group-person small {
+  color: var(--muted);
+}
+.group-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.group-add select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+}
+.group-members .quiet-button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bubble-from {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.group-form {
+  display: grid;
+  gap: 14px;
+  padding: 20px 28px 28px;
+}
+.group-form > label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+.group-form input:not([type="checkbox"]) {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+}
+.group-form fieldset {
+  display: grid;
+  gap: 6px;
+  max-height: 45vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.group-form legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+.group-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.group-person:hover {
+  background: var(--paper);
+}
+.group-person input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}

@@ -86,7 +86,13 @@
     window.addEventListener("resize", fit);
     window.addEventListener("profile-social", ({ detail: s }) => {
       const b = $("profile-follow");
-      b.textContent = s.ownProfile ? "Your profile" : s.following ? "Following" : "Follow";
+      b.textContent = s.ownProfile
+        ? "Your profile"
+        : s.following
+          ? "Following"
+          : s.requested
+            ? "Requested"
+            : "Follow";
       b.disabled = !s.writable || s.ownProfile;
       b.setAttribute("aria-pressed", String(s.following));
       stats.followers = s.followers;

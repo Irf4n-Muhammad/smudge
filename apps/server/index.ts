@@ -37,6 +37,7 @@ import { deliveryFor, startMailWorker } from "./mail.js";
 import { rateLimit } from "./rate-limit.js";
 import { CommunityService } from "../../packages/core/src/community.js";
 import { MessageService } from "../../packages/core/src/messages.js";
+import { PrivacyService } from "../../packages/core/src/privacy.js";
 import { reportInputSchema } from "../../packages/contracts/src/community.js";
 import { communityRoutes } from "./community-routes.js";
 import { googleFinish, googleStart } from "./google.js";
@@ -108,7 +109,9 @@ accounts.loginGate = (userId) => {
   if (community.isSuspended(userId)) throw new AppError("ACCOUNT_SUSPENDED", 403);
 };
 accounts.erasers.push((userId) => community.erase(userId));
+const privacy = new PrivacyService(service, community, clock);
 const messages = new MessageService(service, community, clock);
+accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
 if (deliver) startMailWorker(store, deliver);
 const profiles = new ProfileService(service);
@@ -295,6 +298,7 @@ api.get("/api/bootstrap", (_req, res) =>
     actor: actor(res),
     users: service.users(),
     following: service.following(actor(res)),
+    requested: privacy.requested(actor(res)),
     assets: service.assets(actor(res)),
   }),
 );
@@ -381,7 +385,7 @@ api.get("/api/explore", (req, res) =>
   ),
 );
 identityRoutes(api, identity);
-communityRoutes(api, community, messages, accounts, clearSession, authLimit);
+communityRoutes(api, community, messages, privacy, accounts, clearSession, authLimit);
 // Google sign-in. The state and PKCE verifier live in a short-lived cookie scoped to the
 // callback path; SameSite=Lax because Google sends the browser back with a top-level GET.
 const googleCookie = { ...cookie, sameSite: "lax" as const, path: "/api/auth/google" };
@@ -444,7 +448,7 @@ api.get("/api/profile-spec", (_req, res) =>
     },
     sdk: {
       social:
-        "Optional profile v2 grants profile.social.read and profile.social.toggle enable forma.profile.social.read() and forma.profile.social.toggle({action:'follow'}) or {action:'like'|'save',postId}. Owner-bound targets only, no actor fields. Returns {writable,ownProfile,following,followers,posts:[{id,likes,liked,saved,comments}]}. Preview is read-only. All parts share grants; these are not proof of a human gesture.",
+        "Optional profile v2 grants profile.social.read and profile.social.toggle enable forma.profile.social.read() and forma.profile.social.toggle({action:'follow'}) or {action:'like'|'save',postId}. Owner-bound targets only, no actor fields. Returns {writable,ownProfile,following,requested,followers,posts:[{id,likes,liked,saved,comments}]}. Preview is read-only. All parts share grants; these are not proof of a human gesture.",
       cover:
         "Profile v2 optional grant profile.cover enables await forma.profile.cover(postId), returning {src:dataURL,alt} or null for an owner-bound published cover. Fetch lazily. No arbitrary asset IDs or draft media.",
       read: "await forma.profile.read() returns {owner:{id,name,handle,bio,initials,color},posts:[{id,title,caption,format,hasCover}]}; published posts of this profile owner only, no viewer identity or private state.",

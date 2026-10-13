@@ -14,6 +14,13 @@ export const suspendSchema = z
   .object({ suspended: z.boolean(), note: z.string().trim().max(300).optional() })
   .strict();
 export const peopleQuerySchema = z.string().trim().toLowerCase().min(1).max(60);
+export const privacyInputSchema = z.object({ private: z.boolean() }).strict();
+export const groupInputSchema = z
+  .object({
+    name: z.string().trim().min(1).max(60),
+    members: z.array(z.string().min(1).max(80)).min(2).max(31),
+  })
+  .strict();
 export const messageInputSchema = z
   .object({ text: z.string().trim().min(1, "MESSAGE_EMPTY").max(2000) })
   .strict();
@@ -33,6 +40,8 @@ export type NotificationType =
   | "reply"
   | "mention"
   | "partner-request"
+  | "follow-request"
+  | "follow-accepted"
   | "post-removed";
 
 export interface PersonView {
@@ -45,6 +54,9 @@ export interface PersonView {
   bio: string;
   followers: number;
   following: boolean;
+  /** You asked to follow this private account and are waiting. */
+  requested: boolean;
+  private: boolean;
   followsYou: boolean;
   mutuals?: number | undefined;
 }

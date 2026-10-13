@@ -855,7 +855,7 @@
 .conversation.active {
   border-color: var(--ink);
 }
-.conversation > span:not(.avatar):not(.badge) {
+.conversation > span:not(.avatar):not(.badge):not(.group-icon) {
   flex: 1;
   min-width: 0;
   display: grid;

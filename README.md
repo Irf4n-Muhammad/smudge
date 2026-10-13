@@ -159,6 +159,7 @@ Desktop account switching is a simulation feature, not public authentication.
   (ADR 0019).
 - Videos in easy posts (MP4/WebM/MOV up to 30 MB and 3 minutes, streamed by the runtime) and an
   Explore page with search across all posts (ADR 0020).
+- Private accounts with follow requests, and group chats of up to 32 people (ADR 0021).
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.
@@ -263,6 +264,14 @@ In the post editor, **Add photos or videos** takes videos too: the first frame b
 and cover, and it plays inside the post (silently behind the headline in the Poster style).
 **Explore** in the sidebar (the compass on phones) shows posts from people you don't follow yet,
 and its search box finds any post by title, caption, person or `#tag`.
+
+## Private accounts and groups
+
+In **Account settings**, turn on **Private account**: only followers you accept see your posts.
+Someone following you then sends a request, shown at the top of **Notifications** with Accept and
+Decline. In **Messages**, **New group** starts a chat with two or more people who follow you or
+have written to you; tap "… people" in a group to add someone, remove people (if you started it)
+or leave.
 
 ## Website import
 

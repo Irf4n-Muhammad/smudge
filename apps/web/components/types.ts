@@ -3,6 +3,8 @@ export type Boot = {
   actor: { userId: string };
   users: User[];
   following: string[];
+  /** Private accounts you asked to follow that haven't answered. */
+  requested: string[];
   assets: { id: string; name: string; mime: string }[];
 };
 export const labels: Record<string, string> = {

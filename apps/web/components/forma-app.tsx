@@ -573,6 +573,7 @@ export function FormaApp() {
               <AccountPanel
                 state={auth}
                 handle={me?.handle ?? ""}
+                isPrivate={!!me?.private}
                 notify={notify}
                 onSignedOut={signedOut}
                 onChanged={refresh}
@@ -605,6 +606,7 @@ export function FormaApp() {
               <MessagesPanel
                 key={`${boot.actor.userId}:${messageTo ?? ""}`}
                 initialUser={messageTo}
+                meId={boot.actor.userId}
                 notify={notify}
                 onRead={refreshBadges}
               />

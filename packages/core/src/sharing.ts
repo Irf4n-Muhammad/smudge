@@ -170,6 +170,7 @@ export class SharingService {
         writable: false,
         ownProfile: false,
         following: false,
+        requested: false,
         followers: this.store.all<{ target: string }>("follow").filter((f) => f.target === ownerId)
           .length,
         posts: posts.map((p) => ({

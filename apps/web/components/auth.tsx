@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { KeyRound, LogOut, MailCheck, ShieldCheck } from "lucide-react";
+import { KeyRound, Lock, LogOut, MailCheck, ShieldCheck } from "lucide-react";
+import { api } from "./runtime";
 import type { AuthState } from "../../../packages/contracts/src/accounts";
 import { Dialog } from "./ui";
 import { BlockedList, DeleteAccount } from "./community";
@@ -367,12 +368,14 @@ export function VerifyBanner({
 export function AccountPanel({
   state,
   handle,
+  isPrivate = false,
   notify,
   onSignedOut,
   onChanged,
 }: {
   state: AuthState;
   handle: string;
+  isPrivate?: boolean;
   notify: (message: string) => void;
   onSignedOut: () => Promise<void> | void;
   onChanged: () => Promise<void> | void;
@@ -401,6 +404,39 @@ export function AccountPanel({
         <span className="eyebrow">ACCOUNT</span>
         <h1 id="account-title">Your account</h1>
       </header>
+      <div className="identity-panel">
+        <h2>
+          <Lock size={18} /> Privacy
+        </h2>
+        <label className="privacy-switch">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={isPrivate}
+            onChange={async (e) => {
+              const on = e.target.checked;
+              try {
+                await api("/account/privacy", { private: on });
+                notify(
+                  on
+                    ? "Your account is private. New followers need your OK."
+                    : "Your account is public. Waiting requests were accepted.",
+                );
+                await onChanged();
+              } catch (err) {
+                notify((err as Error).message);
+              }
+            }}
+          />
+          <span>
+            <strong>Private account</strong>
+            <small>
+              Only followers you accept see your posts. Your profile page, name and bio stay
+              visible.
+            </small>
+          </span>
+        </label>
+      </div>
       <div className="identity-panel">
         <h2>
           <ShieldCheck size={18} /> Sign-in

@@ -23,7 +23,7 @@ import {
   applyProfileDesign,
   defaultProfileDesign,
 } from "../../../packages/core/src/profile-design";
-import { Home, Search, Bell, Plus, UserRound, BadgeCheck, Pencil } from "lucide-react";
+import { Home, Search, Bell, Plus, UserRound, BadgeCheck, Pencil, Lock } from "lucide-react";
 import type { Chapter } from "../../../packages/contracts/src/identity";
 import { ChapterList } from "./identity-hub";
 
@@ -242,7 +242,11 @@ export function ProfilePage({
               </button>
             ) : (
               <button disabled={busy} className="profile-primary" onClick={() => void follow()}>
-                {boot.following.includes(ownerId) ? "Unfollow" : "Follow"}
+                {boot.following.includes(ownerId)
+                  ? "Unfollow"
+                  : boot.requested.includes(ownerId)
+                    ? "Requested"
+                    : "Follow"}
               </button>
             )}
             {!mine && ownerId === "raka" && (
@@ -290,6 +294,19 @@ export function ProfilePage({
           </div>
         </details>
       </header>
+      {owner.private && !mine && !boot.following.includes(ownerId) && (
+        <div className="profile-message private-note" role="note">
+          <Lock size={15} />
+          <span>
+            {boot.requested.includes(ownerId)
+              ? `Your request is waiting for ${owner.name}.`
+              : `${owner.name}'s posts are private. Follow to ask to see them.`}
+          </span>
+          <button className="text-button" disabled={busy} onClick={() => void follow()}>
+            {boot.requested.includes(ownerId) ? "Cancel request" : "Follow"}
+          </button>
+        </div>
+      )}
       {error && (
         <p className="profile-message" role="status">
           {error}

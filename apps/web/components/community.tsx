@@ -11,9 +11,12 @@ import {
   ShieldCheck,
   UserCheck,
   UserPlus,
+  Users,
 } from "lucide-react";
 import type { User } from "../../../packages/contracts/src/experience";
 import type { PersonView } from "../../../packages/contracts/src/community";
+import { GroupThread, NewGroup } from "./group-chat";
+import type { GroupSummary } from "./group-chat";
 import { api } from "./runtime";
 import { Avatar, Dialog } from "./ui";
 
@@ -133,7 +136,9 @@ function PersonRow({
         <span>
           <strong>{person.name}</strong>
           <small>
-            @{person.handle} · {person.followers} follower{person.followers === 1 ? "" : "s"}
+            @{person.handle}
+            {person.private ? " · Private" : ""} · {person.followers} follower
+            {person.followers === 1 ? "" : "s"}
             {person.followsYou ? " · Follows you" : ""}
             {person.mutuals ? ` · ${person.mutuals} you know follow` : ""}
           </small>
@@ -141,8 +146,8 @@ function PersonRow({
       </button>
       <div className="person-actions">
         <button
-          className={person.following ? "quiet-button" : "primary small"}
-          aria-label={`${person.following ? "Unfollow" : "Follow"} ${person.name}`}
+          className={person.following || person.requested ? "quiet-button" : "primary small"}
+          aria-label={`${person.following ? "Unfollow" : person.requested ? "Cancel request to follow" : "Follow"} ${person.name}`}
           onClick={async () => {
             try {
               await api(`/users/${person.id}/follow`, {});
@@ -153,7 +158,7 @@ function PersonRow({
           }}
         >
           {person.following ? <UserCheck size={15} /> : <UserPlus size={15} />}
-          {person.following ? "Following" : "Follow"}
+          {person.following ? "Following" : person.requested ? "Requested" : "Follow"}
         </button>
         <button
           className="icon-button"
@@ -281,6 +286,10 @@ function describe(n: NotificationView) {
       return `mentioned you on ${n.post ? title : "a post"}.`;
     case "reaction":
       return `left a sticker on ${title}.`;
+    case "follow-request":
+      return "asked to follow you.";
+    case "follow-accepted":
+      return "accepted your follow request.";
     case "partner-request":
       return "wants to add you as their partner. Confirm it on Who you are.";
     case "post-removed":
@@ -299,19 +308,59 @@ export function NotificationsPanel({
   onRead: () => void;
 }) {
   const [items, setItems] = useState<NotificationView[] | null>(null);
+  const [requests, setRequests] = useState<{ user: Small; createdAt: string }[]>([]);
+  const loadRequests = useCallback(
+    async () => setRequests(await api<{ user: Small; createdAt: string }[]>("/follow-requests")),
+    [],
+  );
   useEffect(() => {
     void (async () => {
+      void loadRequests();
       setItems(await api<NotificationView[]>("/notifications"));
       await api("/notifications/read", {});
       onRead();
     })();
-  }, [onRead]);
+  }, [onRead, loadRequests]);
   return (
     <section className="community-panel" aria-labelledby="notifications-title">
       <header className="identity-head">
         <span className="eyebrow">ACTIVITY</span>
         <h1 id="notifications-title">Notifications</h1>
       </header>
+      {requests.length > 0 && (
+        <section className="follow-requests" aria-label="Follow requests">
+          <h2>Follow requests</h2>
+          <ul>
+            {requests.map((r) => (
+              <li key={r.user.id}>
+                <button
+                  className="avatar-button"
+                  aria-label={`Open ${r.user.name}`}
+                  onClick={() => onOpenUser(r.user.id)}
+                >
+                  <Avatar user={asUser(r.user)} small />
+                </button>
+                <span>
+                  <strong>{r.user.name}</strong> <small>@{r.user.handle}</small>
+                </span>
+                {[true, false].map((accept) => (
+                  <button
+                    key={String(accept)}
+                    className={accept ? "primary small" : "quiet-button"}
+                    aria-label={`${accept ? "Accept" : "Decline"} ${r.user.name}`}
+                    onClick={async () => {
+                      await api(`/follow-requests/${encodeURIComponent(r.user.id)}`, { accept });
+                      await loadRequests();
+                    }}
+                  >
+                    {accept ? "Accept" : "Decline"}
+                  </button>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {items && items.length === 0 && (
         <p className="fineprint">
           <Bell size={14} /> Nothing yet. Follows, likes, comments and stickers show up here.
@@ -365,19 +414,40 @@ interface Thread {
 }
 export function MessagesPanel({
   initialUser,
+  meId,
   notify,
   onRead,
 }: {
   initialUser: string | null;
+  meId: string;
   notify: (m: string) => void;
   onRead: () => void;
 }) {
   const [list, setList] = useState<Conversation[]>([]),
+    [groups, setGroups] = useState<GroupSummary[]>([]),
+    [group, setGroup] = useState<string | null>(null),
+    [creating, setCreating] = useState(false),
     [open, setOpen] = useState<string | null>(initialUser),
     [thread, setThread] = useState<Thread | null>(null),
     [text, setText] = useState("");
   const end = useRef<HTMLDivElement>(null);
-  const loadList = useCallback(async () => setList(await api<Conversation[]>("/messages")), []);
+  const loadList = useCallback(async () => {
+    const [people, rooms] = await Promise.all([
+      api<Conversation[]>("/messages"),
+      api<GroupSummary[]>("/groups"),
+    ]);
+    setList(people);
+    setGroups(rooms);
+  }, []);
+  const groupChanged = useCallback(() => {
+    void loadList();
+    onRead();
+  }, [loadList, onRead]);
+  const closeGroup = useCallback(() => setGroup(null), []);
+  const items = [
+    ...list.map((c) => ({ kind: "person" as const, at: c.last.createdAt, c })),
+    ...groups.map((g) => ({ kind: "group" as const, at: g.updatedAt, g })),
+  ].sort((a, b) => b.at.localeCompare(a.at));
   const loadThread = useCallback(async () => {
     if (!open) return setThread(null);
     try {
@@ -401,45 +471,104 @@ export function MessagesPanel({
   useEffect(() => end.current?.scrollIntoView({ block: "end" }), [thread?.messages.length]);
   return (
     <section
-      className={`community-panel messages ${open ? "has-thread" : ""}`}
+      className={`community-panel messages ${open || group ? "has-thread" : ""}`}
       aria-labelledby="messages-title"
     >
       <header className="identity-head">
         <span className="eyebrow">PRIVATE</span>
         <h1 id="messages-title">Messages</h1>
+        <button className="quiet-button new-group" onClick={() => setCreating(true)}>
+          <Users size={15} /> New group
+        </button>
       </header>
+      {creating && (
+        <NewGroup
+          notify={notify}
+          onClose={() => setCreating(false)}
+          onCreated={(id) => {
+            setCreating(false);
+            setOpen(null);
+            setGroup(id);
+            void loadList();
+          }}
+        />
+      )}
       <div className="messages-layout">
         <ul className="conversation-list" aria-label="Conversations">
-          {list.length === 0 && (
+          {items.length === 0 && (
             <li className="fineprint">
               No messages yet. Open Find people and tap the message icon next to someone who follows
               you.
             </li>
           )}
-          {list.map((c) => (
-            <li key={c.user.id}>
-              <button
-                className={open === c.user.id ? "conversation active" : "conversation"}
-                onClick={() => setOpen(c.user.id)}
-              >
-                <Avatar user={asUser(c.user)} small />
-                <span>
-                  <strong>{c.user.name}</strong>
-                  <small>
-                    {c.last.fromMe ? "You: " : ""}
-                    {c.last.text}
-                  </small>
-                </span>
-                {c.unread > 0 && (
-                  <span className="badge" aria-label={`${c.unread} unread`}>
-                    {c.unread}
+          {items.map((item) =>
+            item.kind === "group" ? (
+              <li key={`g:${item.g.id}`}>
+                <button
+                  className={group === item.g.id ? "conversation active" : "conversation"}
+                  onClick={() => {
+                    setOpen(null);
+                    setGroup(item.g.id);
+                  }}
+                >
+                  <span className="group-icon" aria-hidden="true">
+                    <Users size={16} />
                   </span>
-                )}
-              </button>
-            </li>
-          ))}
+                  <span>
+                    <strong>{item.g.name}</strong>
+                    <small>
+                      {item.g.last
+                        ? `${item.g.last.fromMe ? "You" : item.g.last.from}: ${item.g.last.text}`
+                        : `${item.g.members.length} people`}
+                    </small>
+                  </span>
+                  {item.g.unread > 0 && (
+                    <span className="badge" aria-label={`${item.g.unread} unread`}>
+                      {item.g.unread}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ) : (
+              (({ c }) => (
+                <li key={c.user.id}>
+                  <button
+                    className={open === c.user.id ? "conversation active" : "conversation"}
+                    onClick={() => {
+                      setGroup(null);
+                      setOpen(c.user.id);
+                    }}
+                  >
+                    <Avatar user={asUser(c.user)} small />
+                    <span>
+                      <strong>{c.user.name}</strong>
+                      <small>
+                        {c.last.fromMe ? "You: " : ""}
+                        {c.last.text}
+                      </small>
+                    </span>
+                    {c.unread > 0 && (
+                      <span className="badge" aria-label={`${c.unread} unread`}>
+                        {c.unread}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))(item)
+            ),
+          )}
         </ul>
-        {thread && (
+        {group && (
+          <GroupThread
+            key={group}
+            id={group}
+            meId={meId}
+            notify={notify}
+            onBack={closeGroup}
+            onChanged={groupChanged}
+          />
+        )}
+        {thread && !group && (
           <div className="thread" aria-label={`Conversation with ${thread.user.name}`}>
             <header>
               <button

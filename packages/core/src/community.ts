@@ -122,6 +122,8 @@ export class CommunityService {
       this.store.put("block", key, { userId: me, target: userId, at: this.now().toISOString() });
       this.store.remove("follow", `${me}:${userId}`);
       this.store.remove("follow", `${userId}:${me}`);
+      this.store.remove("follow-request", `${me}:${userId}`);
+      this.store.remove("follow-request", `${userId}:${me}`);
     });
     return { blocked };
   }
@@ -205,6 +207,8 @@ export class CommunityService {
       bio: user.bio,
       followers: follows.filter((f) => f.target === userId).length,
       following: follows.some((f) => f.userId === me && f.target === userId),
+      requested: !!this.store.get("follow-request", `${me}:${userId}`),
+      private: user.private === true,
       followsYou: follows.some((f) => f.userId === userId && f.target === me),
     };
   }
@@ -414,6 +418,8 @@ export class CommunityService {
     const user = s.get<User>("user", userId);
     for (const f of this.follows())
       if (f.userId === userId || f.target === userId) s.remove("follow", `${f.userId}:${f.target}`);
+    for (const key of s.ids("follow-request"))
+      if (key.split(":").includes(userId)) s.remove("follow-request", key);
     for (const kind of ["like", "save", "reaction"])
       for (const r of s.all<{ postId: string; userId: string }>(kind))
         if (r.userId === userId) s.remove(kind, `${r.postId}:${r.userId}`);

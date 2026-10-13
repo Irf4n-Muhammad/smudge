@@ -81,7 +81,11 @@ export type SocialEvent =
       targetId: string;
       postId: string;
     }
-  | { type: "partner-request"; actorId: string; targetId: string };
+  | {
+      type: "partner-request" | "follow-request" | "follow-accepted";
+      actorId: string;
+      targetId: string;
+    };
 
 export class SocialService {
   /** Called inside the transaction that records the action, so side effects commit with it. */
@@ -97,6 +101,8 @@ export class SocialService {
   > = {};
   /** Cleanup for records other layers keep per post; called inside the deletion transaction. */
   postRemovers: ((postId: string) => void)[] = [];
+  /** Installed by the privacy layer: following a private account sends a request instead. */
+  needsRequest: (actorId: string, targetId: string) => boolean = () => false;
   /** Refuses republishing over a post another layer owns the meaning of (moments); throws. */
   editGuard: (post: Publication) => void = () => {};
   constructor(public readonly store: Store) {}
@@ -370,6 +376,22 @@ export class SocialService {
     const key = `${actor.userId}:${userId}`;
     const exists = !!this.store.get("follow", key);
     if (!exists) this.relationGuard(actor.userId, userId);
+    if (!exists && this.needsRequest(actor.userId, userId)) {
+      // Asking again withdraws the request, like tapping "Requested".
+      const asked = !!this.store.get("follow-request", key);
+      this.store.transaction(() => {
+        if (asked) this.store.remove("follow-request", key);
+        else {
+          this.store.put("follow-request", key, {
+            userId: actor.userId,
+            target: userId,
+            createdAt: new Date().toISOString(),
+          });
+          this.emit({ type: "follow-request", actorId: actor.userId, targetId: userId });
+        }
+      });
+      return { active: false, requested: !asked };
+    }
     this.store.transaction(() => {
       if (exists) this.store.remove("follow", key);
       else {
