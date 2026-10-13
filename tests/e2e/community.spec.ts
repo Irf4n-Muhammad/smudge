@@ -100,12 +100,16 @@ test("find people, follow, notify, message, report, moderate, block and delete a
   expect(((await search.json()) as unknown[]).length).toBe(0);
 });
 
-test("mobile: the bottom bar reaches people, notifications and messages", async ({ page }) => {
+test("mobile: the bottom bar reaches explore, people, notifications and messages", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.locator(".post-card").first().waitFor();
   const nav = page.getByRole("navigation", { name: "Mobile navigation" });
-  await nav.getByRole("button", { name: "Find people" }).click();
+  await nav.getByRole("button", { name: "Explore" }).click();
+  await expect(page.getByRole("heading", { name: "Wander a little further." })).toBeVisible();
+  await page.getByRole("button", { name: "Looking for someone? Find people" }).click();
   await expect(page.getByRole("heading", { name: "Find people" })).toBeVisible();
   await nav.getByRole("button", { name: /^Notifications/ }).click();
   await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();

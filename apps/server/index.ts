@@ -42,6 +42,7 @@ import { communityRoutes } from "./community-routes.js";
 import { googleFinish, googleStart } from "./google.js";
 import { importSite } from "./site-import.js";
 import { SharingService } from "../../packages/core/src/sharing.js";
+import { MediaService, maxVideoBytes } from "../../packages/core/src/media.js";
 
 const config = loadConfig();
 const production = config.mode === "production";
@@ -117,6 +118,7 @@ if (config.demoContent) {
   seedSmudge(service);
 }
 const sharing = new SharingService(service, community, identity, profiles);
+const media = new MediaService(service, resolve(dataDir, "media"));
 const mods = new ModService(profiles);
 if (config.demoContent) {
   mods.seed(
@@ -369,6 +371,14 @@ api.post("/api/signup", (req, res) => {
 });
 api.get("/api/feed", (_req, res) =>
   res.json(identity.decorate(actor(res), service.feed(actor(res)))),
+);
+// Moments are for the people who care, so they are never pushed to strangers or search.
+api.get("/api/explore", (req, res) =>
+  res.json(
+    identity
+      .decorate(actor(res), service.explore(actor(res), req.query.q))
+      .filter((p) => !("moment" in p && p.moment)),
+  ),
 );
 identityRoutes(api, identity);
 communityRoutes(api, community, messages, accounts, clearSession, authLimit);
@@ -705,7 +715,9 @@ api.post("/api/posts/:id/reuse", (req, res) => {
       if (a.ownerId !== "shared" && a.ownerId !== actor(res).userId)
         replacements.set(
           id,
-          service.upload(actor(res), { name: a.name, mime: a.mime, base64: a.base64 }).id,
+          media.isVideo(a)
+            ? media.copyVideo(actor(res), a)
+            : service.upload(actor(res), { name: a.name, mime: a.mime, base64: a.base64 }).id,
         );
     }
     pkg.manifest.assets = pkg.manifest.assets.map((id) => replacements.get(id) ?? id);
@@ -740,8 +752,27 @@ api.post("/api/imports", importLimit, async (req, res) =>
 );
 api.post("/api/validate", (req, res) => res.json(service.validate(req.body)));
 api.post("/api/assets", (req, res) => res.json(service.upload(actor(res), req.body)));
+// Videos arrive as the raw file, not base64 JSON, and are kept as files (see MediaService).
+const videoLimit = rateLimit({ windowMs: 10 * 60_000, max: 20 });
+api.post(
+  "/api/videos",
+  videoLimit,
+  express.raw({ type: ["video/*"], limit: maxVideoBytes }),
+  (req, res) => {
+    if (!Buffer.isBuffer(req.body)) throw new AppError("INVALID_VIDEO");
+    res.json(
+      media.uploadVideo(actor(res), {
+        name: decodeURIComponent(String(req.headers["x-file-name"] ?? "video")),
+        mime: req.headers["content-type"],
+        bytes: req.body,
+      }),
+    );
+  },
+);
 api.get("/api/assets/:id", (req, res) => {
   const a = service.asset(actor(res), String(req.params.id));
+  // The data directory defaults to `.local`, which `send` would otherwise refuse as a dotfile.
+  if (media.isVideo(a)) return res.type(a.mime).sendFile(media.path(a.id), { dotfiles: "allow" });
   res.type(a.mime).send(Buffer.from(a.base64, "base64"));
 });
 api.get("/api/users/:id/avatar", (req, res) => {
@@ -886,6 +917,7 @@ api.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
 const runtimeHost = config.runtimeUrl.host;
 const runtimeCsp = runtimeCspFor(
   production ? [config.publicUrl.origin] : ["http://127.0.0.1:3000", "http://localhost:3000"],
+  config.runtimeUrl.origin,
 );
 const runtime = express();
 runtime.disable("x-powered-by");
@@ -908,7 +940,10 @@ runtime.get("/run/:id", (req, res) => {
     if ("assets" in item.package.manifest)
       for (const id of item.package.manifest.assets) {
         const asset = store.get<Asset>("asset", id);
-        if (asset) assets[id] = `data:${asset.mime};base64,${asset.base64}`;
+        if (asset)
+          assets[id] = media.isVideo(asset)
+            ? new URL(`/media/${String(req.params.id)}/${id}`, config.runtimeUrl).href
+            : `data:${asset.mime};base64,${asset.base64}`;
       }
     res
       .set({
@@ -930,6 +965,36 @@ runtime.get("/run/:id", (req, res) => {
           assets,
         ),
       );
+  } catch {
+    res.sendStatus(404);
+  }
+});
+/** A post's declared video, streamed (with range requests) to the frame its ticket opened. */
+runtime.get("/media/:ticket/:asset", (req, res) => {
+  if (req.headers.host !== runtimeHost && req.headers.host !== `127.0.0.1:${config.runtimePort}`)
+    return res.sendStatus(403);
+  const ticket = tickets.get(String(req.params.ticket));
+  if (!ticket || ticket.expires < Date.now()) return res.sendStatus(404);
+  try {
+    const item =
+      ticket.kind === "profile"
+        ? ticket.preview
+          ? profiles.draft(ticket.actor, ticket.target)
+          : profiles.publication(ticket.target)
+        : ticket.preview
+          ? service.draft(ticket.actor, ticket.target)
+          : service.post(ticket.target);
+    const id = String(req.params.asset);
+    const asset = store.get<Asset>("asset", id);
+    if (!("assets" in item.package.manifest) || !item.package.manifest.assets.includes(id))
+      return res.sendStatus(404);
+    if (!asset || !media.isVideo(asset)) return res.sendStatus(404);
+    res.set({
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "private, max-age=600",
+      "Cross-Origin-Resource-Policy": "cross-origin",
+    });
+    res.type(asset.mime).sendFile(media.path(id), { dotfiles: "allow" });
   } catch {
     res.sendStatus(404);
   }

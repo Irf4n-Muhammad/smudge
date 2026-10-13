@@ -70,7 +70,7 @@
   cursor: pointer;
 }
 .single-post-heading {
-  margin: 8px 0 16px;
+  margin-block: 8px 16px;
 }
 
 /* Share-link pages -------------------------------------------------------------------- */
@@ -259,4 +259,54 @@
 .share-missing {
   padding: 64px 16px;
   text-align: center;
+}
+
+/* Explore --------------------------------------------------------------------------------- */
+.explore-heading,
+.single-post-heading {
+  width: min(720px, 100%);
+  margin-inline: auto;
+}
+.explore-heading {
+  display: grid;
+  gap: 8px;
+  margin-block: 8px 20px;
+}
+@media (max-width: 700px) {
+  .explore-heading,
+  .single-post-heading {
+    padding-inline: 12px;
+  }
+}
+.explore-heading h1 {
+  margin: 0;
+}
+.explore-heading p {
+  margin: 0;
+  color: var(--muted);
+}
+.explore-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--muted);
+}
+.explore-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+.explore-heading .link-button {
+  justify-self: start;
+  font-size: 13px;
 }

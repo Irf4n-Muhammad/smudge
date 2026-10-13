@@ -62,7 +62,17 @@ export const postDesignSchema = z
     text: z.string().trim().max(1500),
     quote: z.string().trim().max(200),
     photos: z
-      .array(z.object({ assetId: z.string().uuid(), caption: z.string().trim().max(120) }).strict())
+      .array(
+        z
+          .object({
+            /** Always an image: the photo, or a video's poster frame (so covers stay photos). */
+            assetId: z.string().uuid(),
+            caption: z.string().trim().max(120),
+            /** Set for a video; it plays in place of the photo, which becomes its poster. */
+            videoAssetId: z.string().uuid().optional(),
+          })
+          .strict(),
+      )
       .max(12),
     motion: z.boolean(),
   })
@@ -225,7 +235,7 @@ function baseCss(design: PostDesign) {
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink)}
 body{font:18px/1.55 var(--body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-img{display:block;max-width:100%}
+img,video{display:block;max-width:100%}
 h1,h2,blockquote,figure,p{margin:0}
 h1{font-family:var(--head);font-weight:${design.font === "bold" ? 900 : 400};letter-spacing:${design.font === "bold" ? "-.045em" : "-.02em"};line-height:.92;overflow-wrap:anywhere}
 h1 em{font-style:italic;color:var(--accent)}
@@ -243,8 +253,13 @@ html[data-editing=on] .ch,html[data-editing=on] .rv{opacity:1!important;transfor
 `;
 }
 
-const figure = (p: PostDesign["photos"][number], i: number, cls = "") =>
-  `<figure class="${`rv ${cls}`.trim()}" data-edit="photo-${i}"><img src="asset:${p.assetId}" alt="${escape(p.caption || `Photo ${i + 1}`)}" loading="lazy">${p.caption ? `<figcaption>${escape(p.caption)}</figcaption>` : ""}</figure>`;
+/** `background` videos (the poster hero) loop silently behind the words; tap to pause. */
+const figure = (p: PostDesign["photos"][number], i: number, cls = "", background = false) =>
+  `<figure class="${`rv ${cls} ${p.videoAssetId ? "is-video" : ""}`.trim().replace(/\s+/g, " ")}" data-edit="photo-${i}">${
+    p.videoAssetId
+      ? `<video src="asset:${p.videoAssetId}" poster="asset:${p.assetId}" aria-label="${escape(p.caption || `Video ${i + 1}`)}" ${background ? "muted loop playsinline data-background" : "controls playsinline"} preload="metadata"></video>`
+      : `<img src="asset:${p.assetId}" alt="${escape(p.caption || `Photo ${i + 1}`)}" loading="lazy">`
+  }${p.caption ? `<figcaption>${escape(p.caption)}</figcaption>` : ""}</figure>`;
 
 function render(design: PostDesign): { html: string; css: string } {
   const { photos } = design;
@@ -267,8 +282,8 @@ function render(design: PostDesign): { html: string; css: string } {
 .hero.photo{color:#fff}.hero.plain{background:var(--accent);color:var(--bg)}
 .hero.plain h1 em{color:var(--ink)}
 .hero>figure{position:absolute;inset:0;z-index:-1;margin:0}
-.hero>figure img{width:100%;height:100%;object-fit:cover;animation:zoom 2.6s cubic-bezier(.2,.7,.2,1) both}
-.hero>figure::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 30%,rgba(0,0,0,.7))}
+.hero>figure :is(img,video){width:100%;height:100%;object-fit:cover;animation:zoom 2.6s cubic-bezier(.2,.7,.2,1) both}
+.hero>figure::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(transparent 30%,rgba(0,0,0,.7))}
 .hero>figure figcaption{display:none}
 .hero .kicker{justify-self:start;padding:8px 12px;background:var(--accent);color:var(--bg);transform:rotate(-3deg)}
 .hero.plain .kicker{background:var(--ink);color:var(--accent)}
@@ -279,9 +294,9 @@ function render(design: PostDesign): { html: string; css: string } {
 .body blockquote{font:400 clamp(34px,6.5vw,92px)/1 var(--head);letter-spacing:-.03em;color:var(--accent);max-width:14ch}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:4vw}
 .grid figure:nth-child(even){margin-top:14vh}
-.grid img{width:100%;aspect-ratio:4/5;object-fit:cover}
+.grid :is(img,video){width:100%;aspect-ratio:4/5;object-fit:cover}
 @keyframes zoom{from{transform:scale(1.18)}to{transform:scale(1.02)}}`;
-      html = `<section class="hero ${first ? "photo" : "plain"}">${first ? figure(first, 0) : ""}<span class="cue" aria-hidden="true">Scroll ↓</span>${kicker}${h1}</section><section class="body">${text}${quote}${rest.length ? `<div class="grid">${rest.map((p, i) => figure(p, i + 1)).join("")}</div>` : ""}</section>`;
+      html = `<section class="hero ${first ? "photo" : "plain"}">${first ? figure(first, 0, "", true) : ""}<span class="cue" aria-hidden="true">Scroll ↓</span>${kicker}${h1}</section><section class="body">${text}${quote}${rest.length ? `<div class="grid">${rest.map((p, i) => figure(p, i + 1)).join("")}</div>` : ""}</section>`;
       break;
     }
     case "magazine": {
@@ -292,7 +307,7 @@ function render(design: PostDesign): { html: string; css: string } {
 .mast{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:12px;border-bottom:2px solid var(--ink)}
 .mast small{font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase;opacity:.7}
 main h1{margin:5vh 0 4vh;font-size:clamp(44px,8.5vw,128px)}
-.cover img{width:100%;aspect-ratio:16/10;object-fit:cover}
+.cover :is(img,video){width:100%;aspect-ratio:16/10;object-fit:cover}
 .cover{margin-bottom:6vh}
 .text{font-size:19px;line-height:1.7}
 .text>p:first-child::first-letter{float:left;margin:.08em .1em 0 0;font:400 4.6em/.8 var(--head);color:var(--accent)}
@@ -302,7 +317,7 @@ main blockquote::before{content:"“";display:block;color:var(--accent);font-siz
 .more{display:grid;gap:8vh}
 .more figure{width:min(100%,720px)}
 .more figure:nth-child(even){margin-left:auto}
-.more img{width:100%;object-fit:cover}`;
+.more :is(img,video){width:100%;object-fit:cover}`;
       html = `<main><header class="mast">${kicker || "<span></span>"}<small>${escape(issue)}</small></header>${h1}${first ? figure(first, 0, "cover") : ""}${text}${quote}${rest.length ? `<div class="more">${rest.map((p, i) => figure(p, i + 1)).join("")}</div>` : ""}</main>`;
       break;
     }
@@ -314,7 +329,7 @@ header h1{font-size:clamp(30px,5.5vw,72px);max-width:16ch}
 .strip{display:flex;gap:16px;height:68vh;min-height:260px;padding:0 6vw;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 .strip::-webkit-scrollbar{display:none}
 .strip figure{position:relative;flex:0 0 auto;height:100%;scroll-snap-align:center}
-.strip img{height:100%;width:auto;max-width:82vw;object-fit:cover;border-radius:18px}
+.strip :is(img,video){height:100%;width:auto;max-width:82vw;object-fit:cover;border-radius:18px}
 .strip figcaption{position:absolute;left:12px;bottom:12px;margin:0;padding:6px 10px;border-radius:99px;background:var(--bg);color:var(--ink);opacity:1;font-weight:600}
 .nav{display:flex;gap:10px;padding:16px 6vw 0}
 .nav button{width:48px;height:48px;border:2px solid var(--ink);border-radius:50%;background:none;color:var(--ink);font-size:20px;cursor:pointer}
@@ -340,7 +355,7 @@ main h1 em{font-style:normal;color:inherit;background:linear-gradient(transparen
 .board{display:flex;flex-wrap:wrap;justify-content:center;gap:5vw 4vw}
 .board figure{position:relative;width:min(44%,320px);padding:12px 12px 46px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.14);transform:rotate(var(--r))}
 .board figure::before{content:"";position:absolute;top:-12px;left:50%;width:90px;height:26px;background:rgba(255,255,255,.55);border:1px solid rgba(0,0,0,.06);transform:translateX(-50%) rotate(-4deg)}
-.board img{width:100%;aspect-ratio:1;object-fit:cover}
+.board :is(img,video){width:100%;aspect-ratio:1;object-fit:cover}
 .board figcaption{position:absolute;left:12px;right:12px;bottom:10px;margin:0;font:20px/1.1 var(--head);color:#222;opacity:1;text-align:center}
 .moving .board figure.rv{transform:translateY(40px) rotate(0)}
 .moving .board figure.rv.in{transform:rotate(var(--r))}
@@ -368,7 +383,7 @@ main h1 em{font-style:normal;color:inherit;background:linear-gradient(transparen
 .rest .text{font-size:clamp(22px,3vw,34px);line-height:1.35;font-weight:500}
 .rest blockquote{padding-left:24px;border-left:8px solid var(--accent);font:400 clamp(28px,4vw,52px)/1.1 var(--head)}
 .rest .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.rest .grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px}`;
+.rest .grid :is(img,video){width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px}`;
       const lane = `<span>${band} ✺</span>`.repeat(6);
       html = `<section class="hero">${kicker}${h1}</section><div class="band" aria-hidden="true"><div>${lane}${lane}</div></div><section class="rest">${text}${quote}${photos.length ? `<div class="grid">${photos.map((p, i) => figure(p, i)).join("")}</div>` : ""}</section>`;
       break;
@@ -377,11 +392,19 @@ main h1 em{font-style:normal;color:inherit;background:linear-gradient(transparen
   return { html, css };
 }
 
+/** Background videos play muted unless the viewer asked for less motion; a tap pauses or plays. */
+const videoScript = `for(const v of document.querySelectorAll("video[data-background]")){v.muted=true;if(!matchMedia("(prefers-reduced-motion: reduce)").matches)v.play().catch(()=>{});v.closest("section,figure").addEventListener("click",()=>v.paused?v.play().catch(()=>{}):v.pause())}`;
+
 /** The post package and metadata for a design. Metadata the editor owns (caption, button) is kept. */
 export function buildPost(input: unknown) {
   const design = postDesignSchema.parse(input);
-  const assets = [...new Set(design.photos.map((p) => p.assetId))];
+  const assets = [
+    ...new Set(
+      design.photos.flatMap((p) => [p.assetId, ...(p.videoAssetId ? [p.videoAssetId] : [])]),
+    ),
+  ];
   const { html, css } = render(design);
+  const background = html.includes("data-background");
   const data = JSON.stringify(design).replace(/</g, "\\u003c");
   const pkg: Experience = {
     manifest: {
@@ -393,10 +416,11 @@ export function buildPost(input: unknown) {
       assets,
     },
     files: {
-      "index.html": `<link rel="stylesheet" href="post.css"><script src="smudge/post.js"></script>${html}${design.motion ? '<script src="motion.js"></script>' : ""}`,
+      "index.html": `<link rel="stylesheet" href="post.css"><script src="smudge/post.js"></script>${html}${design.motion ? '<script src="motion.js"></script>' : ""}${background ? '<script src="video.js"></script>' : ""}`,
       "post.css": css,
       [settingsFile]: `window.smudgePost = ${data};\n`,
       ...(design.motion ? { "motion.js": motionScript } : {}),
+      ...(background ? { "video.js": videoScript } : {}),
     },
   };
   return {

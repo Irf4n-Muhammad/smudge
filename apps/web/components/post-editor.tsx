@@ -38,6 +38,63 @@ import { api } from "./runtime";
 import { ChipRow, SmoothPreview, TextField } from "./easy-editor";
 
 type Sheet = "field" | "style" | "colors" | "font" | "button" | null;
+
+const videoTypes = ["video/mp4", "video/webm", "video/quicktime"];
+/**
+ * A JPEG of an early frame, used as the video's poster and the post's cover. Grabbing it also
+ * proves the browser can play the file before anything is uploaded.
+ */
+function posterFrame(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    let done = false;
+    const finish = (error?: string, value?: string) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+      if (error) reject(new Error(error));
+      else resolve(value!);
+    };
+    const timer = setTimeout(() => finish("This video can't play here. Try an MP4."), 15000);
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.onerror = () => finish("This video can't play here. Try an MP4.");
+    video.onloadedmetadata = () => {
+      if (video.duration > 180) return finish("Videos can be up to 3 minutes long.");
+      video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
+    };
+    video.onseeked = () => {
+      const scale = Math.min(1, 1280 / (video.videoWidth || 1280));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round((video.videoWidth || 1280) * scale);
+      canvas.height = Math.round((video.videoHeight || 720) * scale);
+      canvas.getContext("2d")!.drawImage(video, 0, 0, canvas.width, canvas.height);
+      finish(undefined, canvas.toDataURL("image/jpeg", 0.85).split(",")[1]!);
+    };
+    video.src = url;
+  });
+}
+async function uploadVideo(file: File) {
+  if (!videoTypes.includes(file.type) || file.size > 30_000_000)
+    throw new Error("Choose an MP4, MOV or WebM video under 30 MB.");
+  const poster = await posterFrame(file);
+  const response = await fetch("/api/videos", {
+    method: "POST",
+    headers: { "Content-Type": file.type, "X-File-Name": encodeURIComponent(file.name) },
+    body: file,
+  });
+  const video = await response.json();
+  if (!response.ok) throw new Error(video.error);
+  const image = await api<{ id: string }>("/assets", {
+    name: `${file.name.replace(/\.[^.]+$/, "")}.jpg`.slice(0, 120),
+    mime: "image/jpeg",
+    base64: poster,
+  });
+  return { assetId: image.id, caption: "", videoAssetId: video.id as string };
+}
 type Meta = { caption: string; linkLabel: string; linkUrl: string };
 
 const fieldTitles: Record<string, string> = {
@@ -230,8 +287,12 @@ export function PostEditor({
     try {
       const added: PostDesign["photos"] = [];
       for (const file of files.slice(0, room)) {
+        if (file.type.startsWith("video/")) {
+          added.push(await uploadVideo(file));
+          continue;
+        }
         if (file.size > 3_000_000 || !["image/png", "image/jpeg", "image/webp"].includes(file.type))
-          throw new Error("Choose PNG, JPEG or WebP photos under 3 MB.");
+          throw new Error("Choose PNG, JPEG or WebP photos under 3 MB, or a video.");
         const base64 = await new Promise<string>((resolve, reject) => {
           const r = new FileReader();
           r.onload = () => resolve(String(r.result).split(",")[1]!);
@@ -408,8 +469,8 @@ export function PostEditor({
       <input
         type="file"
         multiple
-        accept="image/png,image/jpeg,image/webp"
-        aria-label="Add photos"
+        accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime"
+        aria-label="Add photos or videos"
         disabled={busy || d.photos.length >= 12}
         onChange={(e) => {
           const files = [...(e.target.files ?? [])];
@@ -417,7 +478,7 @@ export function PostEditor({
           if (files.length) void upload(files);
         }}
       />
-      <ImagePlus size={16} /> {busy ? "Adding…" : "Add photos"}
+      <ImagePlus size={16} /> {busy ? "Adding…" : "Add photos or videos"}
     </label>
   );
   return (
@@ -742,9 +803,17 @@ function PhotoGrid({ design, onPick }: { design: PostDesign; onPick: (i: number)
     <ul className="post-photos">
       {design.photos.map((p, i) => (
         <li key={`${p.assetId}-${i}`}>
-          <button aria-label={`Edit photo ${i + 1}`} onClick={() => onPick(i)}>
+          <button
+            aria-label={`Edit ${p.videoAssetId ? "video" : "photo"} ${i + 1}`}
+            onClick={() => onPick(i)}
+          >
             <img src={`/api/assets/${p.assetId}`} alt="" />
             {i === 0 && <span>Cover</span>}
+            {p.videoAssetId && (
+              <b className="video-badge" aria-hidden="true">
+                ▶
+              </b>
+            )}
           </button>
         </li>
       ))}
@@ -755,6 +824,10 @@ function PhotoGrid({ design, onPick }: { design: PostDesign; onPick: (i: number)
 const friendlyErrors: Record<string, string> = {
   REVISION_CONFLICT: "This draft changed somewhere else. Close and open it again.",
   ASSET_NOT_ACCESSIBLE: "That photo can't be used. Try uploading it again.",
+  VIDEO_TOO_LARGE: "That video is over 30 MB. Try a shorter one.",
+  INVALID_VIDEO: "That file isn't a video we can use. Try an MP4.",
+  PAYLOAD_TOO_LARGE: "That video is over 30 MB. Try a shorter one.",
+  TOO_MANY_REQUESTS: "That's a lot of uploads. Wait a few minutes and try again.",
 };
 function friendly(e: unknown) {
   const message = String((e as Error).message ?? e);

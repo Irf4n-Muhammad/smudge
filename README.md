@@ -157,6 +157,8 @@ Desktop account switching is a simulation feature, not public authentication.
 - Edit and delete your posts, one-level comment replies, deleting comments, @mentions with
   notifications, and public share links for posts and profiles that open without an account
   (ADR 0019).
+- Videos in easy posts (MP4/WebM/MOV up to 30 MB and 3 minutes, streamed by the runtime) and an
+  Explore page with search across all posts (ADR 0020).
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.
@@ -167,7 +169,7 @@ Desktop account switching is a simulation feature, not public authentication.
 - Unit/integration tests, Playwright browser/MCP tests, and a cross-platform CI configuration.
 
 This is a **local demo**, not a public production service. Photo upload supports JPEG/PNG/WebP
-up to 3 MB; video upload/transcoding and audio controls are not implemented. External network,
+up to 3 MB; videos are not transcoded and cannot be uploaded from the studio or MCP. External network,
 arbitrary dependencies and user-authored server code are not enabled in posts. An iframe does not
 provide a hard CPU/memory quota. Real accounts, moderation and a deploy guide exist (ADR 0012, 0013); MCP
 OAuth scopes, data export and push notifications still require work. No host is chosen yet.
@@ -254,6 +256,13 @@ comments and show "Edited". Comments have **Reply** and, for your own comments o
 posts, **Delete**. Write `@handle` in a comment or caption to notify someone. **Copy link** on a
 post, or **Copy profile link** in a profile's ☰ menu, gives a `/p/…` or `/u/…` link anyone can
 open without signing up.
+
+## Videos and Explore
+
+In the post editor, **Add photos or videos** takes videos too: the first frame becomes its poster
+and cover, and it plays inside the post (silently behind the headline in the Poster style).
+**Explore** in the sidebar (the compass on phones) shows posts from people you don't follow yet,
+and its search box finds any post by title, caption, person or `#tag`.
 
 ## Website import
 

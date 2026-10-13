@@ -128,6 +128,8 @@ export class SocialService {
         !experience.manifest.assets.includes(coverAssetId))
     )
       throw new AppError("COVER_NOT_DECLARED");
+    if (coverAssetId && !this.store.get<Asset>("asset", coverAssetId)?.mime.startsWith("image/"))
+      throw new AppError("COVER_NOT_IMAGE");
     if (experience.manifest.schemaVersion !== 2) return;
     for (const id of experience.manifest.assets) {
       const asset = this.store.get<Asset>("asset", id);
@@ -308,6 +310,44 @@ export class SocialService {
         saved: !!this.store.get("save", `${p.id}:${actor.userId}`),
         comments: this.comments(p.id).length,
       }));
+  }
+  /**
+   * Without a query: posts from people you don't follow yet, liveliest first (likes and comments,
+   * fading over about a week). With one: every visible post whose title, caption or author
+   * matches all of its words.
+   */
+  explore(actor: Actor, query?: unknown) {
+    const me = this.actor(actor);
+    const words = z
+      .string()
+      .trim()
+      .toLowerCase()
+      .max(60)
+      .default("")
+      .parse(query ?? "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w.replace(/^[@#]/, ""));
+    const posts = this.feed(actor);
+    if (words.length)
+      return posts
+        .filter((p) => {
+          const text =
+            `${p.metadata.title} ${p.metadata.caption} ${p.author.name} ${p.author.handle}`.toLowerCase();
+          return words.every((w) => text.includes(w));
+        })
+        .slice(0, 60);
+    const following = new Set(this.following(actor));
+    const now = Date.now();
+    const score = (p: PostView) =>
+      (1 + p.likes + 2 * p.comments) /
+      Math.pow(1 + (now - Date.parse(p.createdAt)) / 86_400_000 / 7, 1.5);
+    return posts
+      .filter((p) => p.ownerId !== me && !following.has(p.ownerId))
+      .map((p) => ({ p, s: score(p) }))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 60)
+      .map(({ p }) => p);
   }
   toggle(actor: Actor, id: string, kind: "like" | "save") {
     const post = this.visiblePost(actor, id);

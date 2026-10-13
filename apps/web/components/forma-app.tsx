@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Home,
+  Compass,
   Users,
   Bookmark,
   UserRound,
@@ -81,6 +82,8 @@ export function FormaApp() {
     [editingPost, setEditingPost] = useState(false),
     /** A single post opened from a link or a notification. */
     [focusPost, setFocusPost] = useState<string | null>(null),
+    [exploreQuery, setExploreQuery] = useState(""),
+    [explored, setExplored] = useState<DecoratedPost[] | null>(null),
     [auth, setAuth] = useState<AuthState | null>(null),
     [authDialog, setAuthDialog] = useState<AuthMode | null>(null),
     [resetToken, setResetToken] = useState<string | null>(null),
@@ -160,6 +163,19 @@ export function FormaApp() {
       setStudio(true);
     }
   }, [refresh]);
+  const loadExplore = useCallback(async (q: string) => {
+    try {
+      setExplored(await api<DecoratedPost[]>(`/explore?q=${encodeURIComponent(q)}`));
+    } catch (e) {
+      setFailure((e as Error).message);
+    }
+  }, []);
+  // Searching waits for a pause in typing rather than asking on every key.
+  useEffect(() => {
+    if (view !== "explore") return;
+    const timer = setTimeout(() => void loadExplore(exploreQuery), exploreQuery ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [view, exploreQuery, loadExplore, boot?.actor.userId]);
   const signedInNow = !!auth?.signedIn;
   useEffect(() => {
     if (!signedInNow) return;
@@ -263,7 +279,7 @@ export function FormaApp() {
     );
   const me = boot?.users.find((u) => u.id === boot.actor.userId);
   const selectedUser = profile ? boot?.users.find((u) => u.id === profile) : me;
-  const visible = posts.filter(
+  const visible = (view === "explore" ? (explored ?? []) : posts).filter(
     (p) =>
       (view !== "following" || boot?.following.includes(p.ownerId)) &&
       (view !== "saved" || p.saved) &&
@@ -349,6 +365,7 @@ export function FormaApp() {
             ["who", BadgeCheck, "Who you are"],
             ["decor", Palette, "Decorations"],
             ["profile", UserRound, "My profile"],
+            ["explore", Compass, "Explore"],
             ["people", UserSearch, "Find people"],
             ["notifications", Bell, "Notifications"],
             ["messages", MessageCircle, "Messages"],
@@ -605,7 +622,27 @@ export function FormaApp() {
             ) : (
               <>
                 {view !== "profile" && <SeasonLayer />}
-                {view === "post" ? (
+                {view === "explore" ? (
+                  <section className="explore-heading">
+                    <span className="eyebrow">EXPLORE</span>
+                    <h1>Wander a little further.</h1>
+                    <p>Pages from people you don’t follow yet, and a search across every post.</p>
+                    <label className="explore-search">
+                      <Search size={17} />
+                      <input
+                        type="search"
+                        aria-label="Search all posts"
+                        placeholder="Search posts, people or #tags"
+                        value={exploreQuery}
+                        maxLength={60}
+                        onChange={(e) => setExploreQuery(e.target.value)}
+                      />
+                    </label>
+                    <button className="link-button" onClick={() => navigate("people")}>
+                      Looking for someone? Find people
+                    </button>
+                  </section>
+                ) : view === "post" ? (
                   <section className="single-post-heading">
                     <button className="quiet-button" onClick={() => navigate("home")}>
                       <ArrowLeft size={15} /> Back to your feed
@@ -681,7 +718,7 @@ export function FormaApp() {
                     </button>
                   </section>
                 )}
-                {view !== "post" && (
+                {view !== "post" && view !== "explore" && (
                   <div className="feed-toolbar">
                     <div className="feed-tabs" aria-label="Filter post formats">
                       {[
@@ -710,6 +747,12 @@ export function FormaApp() {
                     </button>
                   </div>
                 )}
+                {view === "explore" && explored === null && (
+                  <div className="empty-state">
+                    <span className="tiny-flower">✳</span>
+                    <h2>Looking around…</h2>
+                  </div>
+                )}
                 {loading && (
                   <div className="empty-state">
                     <span className="tiny-flower">✳</span>
@@ -725,36 +768,43 @@ export function FormaApp() {
                     </button>
                   </div>
                 )}
-                {!loading && !failure && visible.length === 0 && (
-                  <div className="empty-state">
-                    <Feather size={30} />
-                    <h2>
-                      {view === "post"
-                        ? "This post isn’t here anymore."
-                        : view === "saved"
-                          ? "Keep something you love."
-                          : "A little room for something new."}
-                    </h2>
-                    <p>
-                      {query
-                        ? "Try a different search."
-                        : view === "post"
-                          ? "It may have been deleted, or it isn’t shared with you."
-                          : view === "saved"
-                            ? "Tap the bookmark on a post to find it here."
-                            : view === "following"
-                              ? "Follow someone to bring their stories here."
-                              : "Your next story could start here."}
-                    </p>
-                    <button
-                      className="quiet-button"
-                      onClick={view === "profile" ? create : () => navigate("home")}
-                    >
-                      {view === "profile" ? "Make your first post" : "Explore the feed"}
-                      <ArrowUpRight size={15} />
-                    </button>
-                  </div>
-                )}
+                {!loading &&
+                  !failure &&
+                  visible.length === 0 &&
+                  (view !== "explore" || explored !== null) && (
+                    <div className="empty-state">
+                      <Feather size={30} />
+                      <h2>
+                        {view === "explore"
+                          ? exploreQuery
+                            ? "Nothing matches that yet."
+                            : "You’ve seen everyone already."
+                          : view === "post"
+                            ? "This post isn’t here anymore."
+                            : view === "saved"
+                              ? "Keep something you love."
+                              : "A little room for something new."}
+                      </h2>
+                      <p>
+                        {query
+                          ? "Try a different search."
+                          : view === "post"
+                            ? "It may have been deleted, or it isn’t shared with you."
+                            : view === "saved"
+                              ? "Tap the bookmark on a post to find it here."
+                              : view === "following"
+                                ? "Follow someone to bring their stories here."
+                                : "Your next story could start here."}
+                      </p>
+                      <button
+                        className="quiet-button"
+                        onClick={view === "profile" ? create : () => navigate("home")}
+                      >
+                        {view === "profile" ? "Make your first post" : "Explore the feed"}
+                        <ArrowUpRight size={15} />
+                      </button>
+                    </div>
+                  )}
                 <div className="post-list">
                   {boot &&
                     visible.map((post, index) => (
@@ -762,7 +812,10 @@ export function FormaApp() {
                         key={`${boot.actor.userId}:${post.id}`}
                         post={post}
                         boot={boot}
-                        onRefresh={refresh}
+                        onRefresh={async () => {
+                          await refresh();
+                          if (view === "explore") await loadExplore(exploreQuery);
+                        }}
                         notify={notify}
                         onFollow={() => void follow(post.ownerId)}
                         onProfile={() => openUser(post.ownerId)}
@@ -882,8 +935,8 @@ export function FormaApp() {
         <button aria-label="Your feed" onClick={() => navigate("home")}>
           <Home size={21} />
         </button>
-        <button aria-label="Find people" onClick={() => navigate("people")}>
-          <UserSearch size={21} />
+        <button aria-label="Explore" onClick={() => navigate("explore")}>
+          <Compass size={21} />
         </button>
         <button
           aria-label={
@@ -921,6 +974,7 @@ export function FormaApp() {
           <div className="more-menu">
             {(
               [
+                ["people", UserSearch, "Find people"],
                 ["following", Users, "Following"],
                 ["saved", Bookmark, "Saved"],
                 ["who", BadgeCheck, "Who you are"],

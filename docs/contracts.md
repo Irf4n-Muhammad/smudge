@@ -419,8 +419,8 @@ Posts made in the easy post editor keep their settings in `smudge/post.js`
 `style` (`poster`, `magazine`, `gallery`, `scrapbook`, `note`), `palette`, `font`, `kicker` (≤40),
 `headline` (1–90, `*stars*` make italics), `text` (≤1500, blank lines split paragraphs), `quote`
 (≤200), `photos` (≤12 of `{ assetId, caption ≤120 }`) and `motion`. `buildPost` regenerates
-`index.html`, `post.css` and, with motion on, a fixed `motion.js`; every string is escaped and no
-other script is written. A package without a valid settings file is an ordinary post and opens in
+`index.html`, `post.css` and, with motion on, a fixed `motion.js` (and `video.js`, see Videos
+and Explore); every string is escaped and no other script is written. A package without a valid settings file is an ordinary post and opens in
 the studio. Title, cover and format follow the design; caption and button stay the editor's.
 
 Edit mode (see The Wall and easy editing) now also applies to post draft previews: the host may
@@ -459,3 +459,29 @@ tag `kicker`, `headline`, `text`, `quote`, `photos` and `photo-N`.
   (nothing removable or reportable); anything else answers `SIGN_IN_REQUIRED`. A guest ticket is
   never accepted by `/api/capability`. Avatars of visible people are served without a session.
   Signed-in people opening a share link are sent to the post (`/?post=id`) or profile in the app.
+
+## Videos and Explore (additive)
+
+- **Video upload.** `POST /api/videos` takes the raw file as the body (`Content-Type`
+  `video/mp4`, `video/webm` or `video/quicktime`, optional URL-encoded `X-File-Name`), up to
+  30 MB, 20 uploads per 10 minutes per client. The first bytes must look like MP4/MOV (`ftyp`) or
+  WebM (EBML). It answers `{ id, name, mime }`; the id is an ordinary asset id (same ownership,
+  visibility and `manifest.assets` rules as photos). Errors: `INVALID_VIDEO`, `VIDEO_TOO_LARGE`,
+  `PAYLOAD_TOO_LARGE`. The bytes are stored as a file under `<data dir>/media/`, not in the
+  record store.
+- **Playback.** In a runtime document, `asset:ID` for a video becomes
+  `<runtime origin>/media/<ticket>/<ID>`, which streams with range requests while the ticket is
+  valid and only for assets the ticket's package declares. The runtime CSP adds the runtime
+  origin to `media-src`. `GET /api/assets/:id` streams videos too. Reusing a format copies videos
+  into the new owner's assets, as with photos.
+- **Covers are images.** A `coverAssetId` must be an image (`COVER_NOT_IMAGE`).
+- **Easy posts.** A photo entry may carry `videoAssetId`; its `assetId` is then the poster frame
+  (and can be the cover). The video plays with controls in place of the photo; in the Poster hero
+  it loops silently behind the words and a tap pauses it, via a fixed `video.js` that is only
+  added when such a video exists and does not autoplay for reduced-motion viewers. The editor
+  grabs the poster frame in the browser, which also refuses files the browser can't play, and
+  limits videos to 3 minutes.
+- **Explore.** `GET /api/explore` returns up to 60 decorated posts from people you don't follow
+  (and not yours), scored by `(1 + likes + 2 × comments)` fading with age over about a week.
+  `GET /api/explore?q=…` (≤60 characters) returns visible posts whose title, caption, author name
+  or handle contain every word (a leading `@` or `#` is ignored). Moments never appear in either.
