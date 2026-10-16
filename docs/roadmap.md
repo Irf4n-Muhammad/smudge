@@ -19,6 +19,8 @@
 - [x] Themes: one look worn on the profile and around every post in the feed (edges, frame,
       name face), in three kinds (event, members, market), with trip events opened by a proven
       trip (France first). See ADR 0022.
+- [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
+      wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 
 - [x] Local versioned mod library, source/asset sharing, complete or partial installs, part mixing,
       owned version updates, covers, private preview, undo, and matching MCP tools.

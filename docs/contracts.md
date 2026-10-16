@@ -227,6 +227,16 @@ layout hint, not a capability or access to host DOM. Content beyond 4000 still s
 Viewport-height-based creator layouts should leave this option off to avoid resize feedback.
 Legacy profiles and post runtimes ignore sizing messages.
 
+## Feed windows (additive, ADR 0023)
+
+In the feed every post shows a fixed 4:5 window. After ready, the host sends nonce-bound
+`forma:layout` with `clip: true`; the SDK then sets `overflow: hidden` on the document, so the
+frame never scrolls and a swipe or wheel over a post scrolls the feed. Content past the window is
+seen with **Enter world** (full screen, unclipped). Pages should still design for any height
+(`100vh` layouts fill the window); fixed-height pages show the runtime background below. Inner
+scroll containers a page creates itself are not prevented. Full-screen posts, profiles and
+previews are not clipped.
+
 ## Draft identity (additive; package versions unchanged)
 
 Profile drafts and publications may include `identity: {name,bio,avatarAssetId}`. Name is trimmed,

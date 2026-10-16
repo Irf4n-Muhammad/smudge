@@ -313,6 +313,7 @@ export function PostCard({
               version={post.revision}
               height={stage?.height ?? (post.metadata.format === "scrapbook" ? 510 : 460)}
               onSkip={onSkip}
+              clip
             />
           )}
         </DecorFrame>

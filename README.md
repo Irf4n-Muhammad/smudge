@@ -162,6 +162,8 @@ Desktop account switching is a simulation feature, not public authentication.
 - Videos in easy posts (MP4/WebM/MOV up to 30 MB and 3 minutes, streamed by the runtime) and an
   Explore page with search across all posts (ADR 0020).
 - Private accounts with follow requests, and group chats of up to 32 people (ADR 0021).
+- An Instagram-style feed (ADR 0023): one free-scrolling column, every post in the same 4:5
+  window, posts loaded ahead, and a swipe over a post always scrolls the feed.
 - Themes (ADR 0022): one look on the profile and around posts in the feed; event, members and
   market kinds; trip themes opened by a proven trip (France only so far). Market themes are free;
   buying and outside submissions are not built.

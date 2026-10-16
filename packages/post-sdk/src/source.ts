@@ -21,6 +21,11 @@ export function sdkSource(nonce: string) {
         style.textContent=event.data.reducedMotion?'*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}':'';
         window.dispatchEvent(new CustomEvent('forma:theme',{detail:{theme:event.data.theme}}));
       }
+      if(event.data.type==='forma:layout' && event.data.clip===true && !document.getElementById('forma-clip-policy')){
+        const style=document.createElement('style');style.id='forma-clip-policy';
+        style.textContent='html,body{overflow:hidden!important}';
+        document.head.append(style);
+      }
       if(event.data.type==='forma:layout' && event.data.autoHeight===true && !resizeObserver){
         const style=document.createElement('style');
         style.textContent='html,body{min-height:0}body{display:flow-root}';

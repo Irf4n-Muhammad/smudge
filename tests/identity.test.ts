@@ -8,6 +8,7 @@ import { SocialService } from "../packages/core/src/social.js";
 import { IdentityService } from "../packages/core/src/identity.js";
 import { countryAt, jpegGps } from "../packages/core/src/exif.js";
 import { renderMoment } from "../apps/server/moments.js";
+import { decorations } from "../packages/contracts/src/identity.js";
 
 const alice = { userId: "alice" },
   bob = { userId: "bob" },
@@ -404,4 +405,26 @@ test("open signup creates distinct handles", async () => {
   assert.equal(user.handle, "salsa.bila");
   assert.equal(user.initials, "SB");
   rejects(() => identity.signup({ name: "Other", handle: "salsa.bila" }), "HANDLE_TAKEN");
+});
+
+test("theme pieces stay in a band along the edge, so the post underneath stays readable", () => {
+  // Pieces may hang outside the post freely, but inside it they must live along an edge: at most
+  // this many pixels deep on at least one axis. Buttons sit above pieces (z-index), never under.
+  const band = 110;
+  for (const d of decorations)
+    for (const p of d.pieces) {
+      const fromTop = p.dy + p.height;
+      const fromBottom = -p.dy;
+      const fromLeft = p.dx + p.width;
+      const fromRight = -p.dx;
+      const depth = {
+        "top-left": Math.min(fromTop, fromLeft),
+        top: fromTop,
+        "top-right": Math.min(fromTop, fromRight),
+        right: fromRight,
+        "bottom-right": Math.min(fromBottom, fromRight),
+        "bottom-left": Math.min(fromBottom, fromLeft),
+      }[p.anchor];
+      assert.ok(depth <= band, `${d.id} ${p.anchor} reaches ${depth}px into the post`);
+    }
 });
