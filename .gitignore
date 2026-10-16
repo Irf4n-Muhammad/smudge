@@ -1,0 +1,9 @@
+# Generated or local-only; the same list .dockerignore and .prettierignore already exclude.
+node_modules
+dist
+.next
+.local
+test-results
+artifacts
+*.log
+.env
