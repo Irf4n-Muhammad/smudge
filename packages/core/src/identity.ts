@@ -484,6 +484,17 @@ export class IdentityService {
   }
 
   // Seasons and decorations ----------------------------------------------------------------
+  /**
+   * Approved community themes (ADR 0024), supplied by the theme studio. They join the shipped
+   * catalog; a theme that is later removed simply stops resolving, so nobody wears it any more.
+   */
+  communityThemes: () => Decoration[] = () => [];
+  private catalog() {
+    return [...decorations, ...this.communityThemes()];
+  }
+  private decorationById(id: string) {
+    return decorationById(id) ?? this.communityThemes().find((d) => d.id === id);
+  }
   private prefs(userId: string) {
     return this.store.get<Prefs>("prefs", userId) ?? {};
   }
@@ -523,20 +534,20 @@ export class IdentityService {
       const choice = prefs.seasons?.[season.key];
       if (!choice)
         return {
-          decoration: decorationById(season.defaultDecorationId)!,
+          decoration: this.decorationById(season.defaultDecorationId)!,
           source: "season-default" as const,
           since: null,
         };
-      if (choice.id && this.unlock(userId, decorationById(choice.id)).ok)
+      if (choice.id && this.unlock(userId, this.decorationById(choice.id)).ok)
         return {
-          decoration: decorationById(choice.id)!,
+          decoration: this.decorationById(choice.id)!,
           source: "season-choice" as const,
           since: choice.since,
         };
     }
-    if (prefs.base?.id && this.unlock(userId, decorationById(prefs.base.id)).ok)
+    if (prefs.base?.id && this.unlock(userId, this.decorationById(prefs.base.id)).ok)
       return {
-        decoration: decorationById(prefs.base.id)!,
+        decoration: this.decorationById(prefs.base.id)!,
         source: "base" as const,
         since: prefs.base.since,
       };
@@ -616,7 +627,7 @@ export class IdentityService {
         : { id: null, source: "none" },
       season: season ? { id: season.id, name: season.name, key: season.key } : null,
       country: this.prefs(userId).country ?? null,
-      items: decorations.map((d) => {
+      items: this.catalog().map((d) => {
         const lock = this.unlock(userId, d);
         const event = d.eventId ? themeEventById(d.eventId) : undefined;
         return {
@@ -641,7 +652,7 @@ export class IdentityService {
     const userId = this.social.actor(actor);
     const { decorationId, scope } = decorationChoiceSchema.parse(input);
     if (decorationId !== null) {
-      const decoration = decorationById(decorationId);
+      const decoration = this.decorationById(decorationId);
       const lock = this.unlock(userId, decoration);
       if (!lock.ok) throw new AppError("DECORATION_LOCKED", 403, { reason: lock.reason });
       if (scope === "base" && this.seasonal(decoration!))
@@ -682,7 +693,7 @@ export class IdentityService {
       all += weight;
     }
     const creatorPot = creatorPool.monthly * creatorPool.creatorShare;
-    const mine = decorations
+    const mine = this.catalog()
       .filter((d) => d.creatorId === userId)
       .map((d) => {
         const t = totals.get(d.id) ?? { adopters: 0, weight: 0 };

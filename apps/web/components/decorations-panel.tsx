@@ -5,6 +5,7 @@ import type { OverlayPiece, Sticker, ThemeFont } from "../../../packages/contrac
 import { api } from "./runtime";
 import { DecorFrame, StickerGlyph } from "./post-decor";
 import type { DecoratedPost } from "./post-decor";
+import { ThemeStudio } from "./theme-studio";
 
 type Item = {
   id: string;
@@ -174,6 +175,7 @@ export function DecorationsPanel({
       <button className="text-button" onClick={() => void choose(null, "base")}>
         Take off my everyday theme
       </button>
+      <ThemeStudio notify={notify} />
       {earnings && earnings.decorations.length > 0 && (
         <section className="creator-earnings" aria-label="Creator earnings">
           <span className="eyebrow">YOUR THEMES · SIMULATED</span>

@@ -126,3 +126,128 @@ html[data-theme="dark"] .post-card.themed.classic-post .moment-cover {
 .profile-theme-frame .decor-piece.decor-bottom-right {
   transform-origin: center top;
 }
+
+/* Community themes (ADR 0024): a designer's HTML and CSS, drawn as an image. */
+.decor-piece .theme-piece-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.theme-studio {
+  margin: 40px 16px 0;
+  display: grid;
+  gap: 10px;
+}
+.theme-studio h2,
+.theme-mine h3 {
+  margin: 0;
+}
+.theme-studio-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.theme-studio-form {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.theme-studio-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.theme-studio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.theme-studio-row label {
+  flex: 1 1 120px;
+}
+.theme-studio-row .theme-number {
+  flex: 0 1 72px;
+}
+.theme-studio-form textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+.theme-piece-editor {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px 12px;
+  min-width: 0;
+}
+.theme-studio-preview {
+  position: sticky;
+  top: 80px;
+  display: grid;
+  gap: 12px;
+  padding: 44px 34px 0;
+}
+.theme-studio-problem {
+  margin: 0;
+  font-size: 12px;
+  color: #b3261e;
+}
+.theme-mine ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.theme-mine li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.theme-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  color: var(--muted);
+}
+.theme-status-approved {
+  color: #1f7a4d;
+}
+.theme-status-rejected,
+.theme-status-removed {
+  color: #b3261e;
+}
+.theme-review-sample {
+  width: min(240px, 70%);
+  padding: 40px 30px 10px;
+}
+.theme-code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  max-height: 220px;
+  overflow: auto;
+  background: var(--soft, #0000000d);
+  padding: 8px;
+  border-radius: 8px;
+}
+.theme-review-note {
+  width: 100%;
+}
+@media (max-width: 700px) {
+  .theme-studio {
+    margin-inline: 8px;
+  }
+  .theme-studio-grid {
+    grid-template-columns: 1fr;
+  }
+  .theme-studio-preview {
+    position: static;
+    padding: 44px 40px 0;
+  }
+}

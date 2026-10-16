@@ -348,6 +348,29 @@ Feed `PostDecor.decoration` gains `font` and, for event themes, `event` (the eve
 `GET /api/users/:id/theme` returns `{ theme }` with the same shape, or `null`.
 `GET /api/decorations` items gain `font`, `event` and `seasonal`.
 
+## Community themes (additive, ADR 0024)
+
+`OverlayPiece` is now a union: catalog pieces carry `svg` (trusted markup), community pieces carry
+`html` and `css` instead and are only ever drawn as an image. Clients must not insert a piece's
+`html` as markup. Approved community themes appear in `GET /api/decorations` items, in
+`PostDecor.decoration` and in `GET /api/users/:id/theme` with the same fields as catalog themes;
+their ids start with `t-`.
+
+- `POST /api/themes/submissions` takes `themeSubmissionSchema` (`contracts/src/themes.ts`):
+  `{ name, accent, font, kind, eventId?, orgId?, pieces }`. Each piece is
+  `{ anchor, width, height, dx, dy, html, css }`, and must stay within the edge band. Unknown
+  keys, including any creator field, are rejected. Returns the submission with
+  `status: "pending"`. `THEME_QUEUE_FULL` (429) at 5 waiting submissions; rate limited per
+  address.
+- `GET /api/themes/submissions` lists the caller's own submissions, newest first, with `status`
+  (`pending | approved | rejected | removed`) and the reviewer's `note`.
+- `DELETE /api/themes/submissions/:id` removes the caller's own submission unless it is approved
+  (`THEME_IN_MARKET`, 409).
+- Moderators only (404 for everyone else): `GET /api/moderation/themes` lists waiting then
+  approved themes; `POST /api/moderation/themes/:id` takes `{ decision: "approve" | "reject" |
+"remove", note? }`. Approve and reject apply to waiting themes, remove to approved ones;
+  anything else is `THEME_ALREADY_REVIEWED` (409).
+
 ## Post buttons (additive)
 
 Post metadata accepts an optional `link: { label, url? }`. `label` is 1 to 32 characters and is the

@@ -31,6 +31,7 @@ import {
   Globe,
 } from "lucide-react";
 import { MessagesPanel, ModerationPanel, NotificationsPanel, PeoplePanel } from "./community";
+import { ThemeReviews } from "./theme-studio";
 import type { AuthState } from "../../../packages/contracts/src/accounts";
 import {
   AccountPanel,
@@ -646,7 +647,10 @@ export function FormaApp() {
                 onRead={refreshBadges}
               />
             ) : view === "moderation" && boot && auth?.moderator ? (
-              <ModerationPanel notify={notify} />
+              <>
+                <ModerationPanel notify={notify} />
+                <ThemeReviews notify={notify} />
+              </>
             ) : view === "who" && boot ? (
               <IdentityHub
                 key={boot.actor.userId}

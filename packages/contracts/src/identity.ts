@@ -296,7 +296,7 @@ export const stickerById = (id: string) => stickers.find((x) => x.id === id);
 export const defaultEmotes = ["heart", "spark"];
 
 export type Anchor = "top-left" | "top" | "top-right" | "right" | "bottom-right" | "bottom-left";
-export interface OverlayPiece {
+interface PieceBox {
   anchor: Anchor;
   /** CSS pixels. The piece's top-left sits at the anchor corner plus (dx, dy), so it may extend
    * outside the post. */
@@ -304,8 +304,12 @@ export interface OverlayPiece {
   height: number;
   dx: number;
   dy: number;
-  svg: string;
 }
+/**
+ * Catalog pieces carry trusted SVG markup. Community pieces carry a designer's own HTML and CSS,
+ * which the app only ever draws as an image (ADR 0024), never as markup in the page.
+ */
+export type OverlayPiece = PieceBox & ({ svg: string } | { html: string; css: string });
 /**
  * A theme is one look for a person: their profile and every post of theme in the feed wear it.
  * - event: the Smudge team decides which events exist (a season, a proven trip); anyone may

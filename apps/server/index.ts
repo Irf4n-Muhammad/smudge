@@ -31,6 +31,9 @@ import { seedIdentity } from "./seed-identity.js";
 import { seedSmudge } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
+import { themeRoutes } from "./theme-routes.js";
+import { ThemeStudio } from "../../packages/core/src/themes.js";
+import { seedThemes } from "./seed-themes.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
@@ -107,6 +110,9 @@ const isAdmin = (userId: string) => {
   return account.emailVerified && !!account.email && config.adminEmails.includes(account.email);
 };
 const community = new CommunityService(service, isAdmin, clock);
+const studio = new ThemeStudio(service, isAdmin, clock);
+identity.communityThemes = () => studio.approved();
+accounts.erasers.push((userId) => studio.erase(userId));
 accounts.loginGate = (userId) => {
   if (community.isSuspended(userId)) throw new AppError("ACCOUNT_SUSPENDED", 403);
 };
@@ -122,6 +128,7 @@ setInterval(() => digest.run(), 5 * 60_000).unref();
 const profiles = new ProfileService(service);
 if (config.demoContent) {
   seedIdentity(identity, service);
+  seedThemes(service, studio);
   seedProfiles(profiles);
   seedSmudge(service);
   seedPhotos(service);
@@ -391,6 +398,7 @@ api.get("/api/explore", (req, res) =>
   ),
 );
 identityRoutes(api, identity);
+themeRoutes(api, studio, rateLimit({ windowMs: 60 * 60_000, max: 20 }));
 communityRoutes(api, community, messages, privacy, accounts, clearSession, authLimit);
 // Google sign-in. The state and PKCE verifier live in a short-lived cookie scoped to the
 // callback path; SameSite=Lax because Google sends the browser back with a top-level GET.

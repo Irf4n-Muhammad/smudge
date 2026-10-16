@@ -166,7 +166,12 @@ Desktop account switching is a simulation feature, not public authentication.
   window, posts loaded ahead, and a swipe over a post always scrolls the feed.
 - Themes (ADR 0022): one look on the profile and around posts in the feed; event, members and
   market kinds; trip themes opened by a proven trip (France only so far). Market themes are free;
-  buying and outside submissions are not built.
+  buying is not built.
+- Open theme market (ADR 0024): anyone designs a theme in their own HTML and CSS under **Themes →
+  Make a theme**, with a live preview; moderators approve, reject or take down themes under
+  **Moderation → Themes to review**. Designs are drawn as images, so their code never runs in
+  the page. Seeded: Leo's approved **Neon open late** and Arif's **Coffee steam** waiting for
+  review.
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.

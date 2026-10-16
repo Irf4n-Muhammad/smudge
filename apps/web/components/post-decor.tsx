@@ -6,6 +6,7 @@ import type { PostView } from "../../../packages/contracts/src/experience";
 import type { OverlayPiece, PostDecor, Sticker } from "../../../packages/contracts/src/identity";
 import { api, Runtime } from "./runtime";
 import { PageSheet } from "./page-sheet";
+import { PieceArt } from "./theme-piece";
 
 export type DecoratedPost = PostView & Partial<PostDecor>;
 
@@ -39,16 +40,27 @@ export function DecorFrame({ post, children }: { post: DecoratedPost; children: 
   return (
     <div className={`decor-frame ${d ? "has-decor" : ""}`} style={themeStyle(d)}>
       {children}
-      {d?.pieces.map((p, i) => (
-        <span
-          key={i}
-          className={`decor-piece decor-${p.anchor}`}
-          style={place(p)}
-          aria-hidden="true"
-          // Pieces come from the trusted host catalog, never from post packages or users.
-          dangerouslySetInnerHTML={{ __html: p.svg }}
-        />
-      ))}
+      {d?.pieces.map((p, i) =>
+        "svg" in p ? (
+          <span
+            key={i}
+            className={`decor-piece decor-${p.anchor}`}
+            style={place(p)}
+            aria-hidden="true"
+            // Only catalog pieces carry svg: trusted host data, never from packages or users.
+            dangerouslySetInnerHTML={{ __html: p.svg }}
+          />
+        ) : (
+          <span
+            key={i}
+            className={`decor-piece decor-${p.anchor}`}
+            style={place(p)}
+            aria-hidden="true"
+          >
+            <PieceArt html={p.html} css={p.css} width={p.width} height={p.height} />
+          </span>
+        ),
+      )}
     </div>
   );
 }

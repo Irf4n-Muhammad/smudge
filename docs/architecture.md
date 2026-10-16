@@ -43,6 +43,11 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
 - `post-card.tsx`, `studio.tsx`, `ui.tsx`: social actions, authoring, shared dialog/avatar UI.
 - `runtime.tsx`: viewport lifecycle, frame identity validation, typed request forwarding.
 - `theme-toggle.tsx`, `app/worlds.css`: persisted/system appearance and full-width feed layout.
+- `theme-piece.tsx`, `theme-studio.tsx`: community theme pieces are a designer's HTML and CSS,
+  turned into an SVG `foreignObject` image and shown as `<img>`, never inserted as markup; the
+  browser's image isolation (no scripts, no outside loads, no input) is the boundary. The studio
+  and the moderators' review queue live here; rules and storage are in `packages/core/src/themes.ts`
+  (ADR 0024).
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same
   posts and social API, opens existing isolated Runtime instances, and scopes its CSS to the mode.
   The cockpit is trusted host code; no post receives access to navigation or host DOM. Its dark
