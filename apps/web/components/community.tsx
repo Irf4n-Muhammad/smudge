@@ -511,7 +511,10 @@ export function MessagesPanel({
     }, 5000);
     return () => clearInterval(timer);
   }, [loadList, loadThread]);
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [thread?.messages.length]);
+  useEffect(() => {
+    // Newer browsers return a Promise from scrollIntoView; an effect may only return a cleanup.
+    void end.current?.scrollIntoView({ block: "end" });
+  }, [thread?.messages.length]);
   return (
     <section
       className={`community-panel messages ${open || group ? "has-thread" : ""}`}
