@@ -34,6 +34,7 @@ import {
   MomentCover,
   MomentMark,
   ReactionBar,
+  themeStyle,
 } from "./post-decor";
 import type { DecoratedPost } from "./post-decor";
 import { glowFor } from "./gallery";
@@ -172,10 +173,11 @@ export function PostCard({
   }
   return (
     <article
-      className={`post-card ${stage ? "world-stage" : "classic-post"}`}
+      className={`post-card ${stage ? "world-stage" : "classic-post"} ${post.decoration ? "themed" : ""}`}
       style={
         {
           ...glowFor(post.id, stage),
+          ...themeStyle(post.decoration),
           ...(stage && {
             "--scene-bg": stage.background,
             "--scene-ink": stage.ink,

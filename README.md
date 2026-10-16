@@ -50,9 +50,11 @@ leave one preset sticker. As Alex, open **Who you are**, enter `alex@student.lem
 the code from the **local demo inbox** (no email leaves this app), verify, then **Share a moment →
 Graduation**. Locked templates show their rule: new job (work email `@kopinusantara.co`), birthday
 (only around the stored date), trip (a JPEG with GPS), together (partner confirms), club or event
-titles (invite code; Maya admins Teater Senja, Leo the film festival). **Decorations** lists free,
-members-only, sponsored and seasonal pieces that cling to post edges, with a simulated creator
-payout. **Create an account** at the bottom of the sidebar opens signup to anyone. Rules: ADR 0011;
+titles (invite code; Maya admins Teater Senja, Leo the film festival). **Themes** lists event,
+members and market themes, with a simulated creator payout. A theme is worn on your profile and
+around every post of yours in the feed (edges, frame ring, the face of your name). Inès wears
+**Paris**, opened by her proven trip to France; as Alex, prove a trip with a JPEG taken in France
+and **Paris** opens for you too (ADR 0022). **Create an account** at the bottom of the sidebar opens signup to anyone. Rules: ADR 0011;
 design brief: `docs/design-handoff.md`.
 
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
@@ -160,6 +162,9 @@ Desktop account switching is a simulation feature, not public authentication.
 - Videos in easy posts (MP4/WebM/MOV up to 30 MB and 3 minutes, streamed by the runtime) and an
   Explore page with search across all posts (ADR 0020).
 - Private accounts with follow requests, and group chats of up to 32 people (ADR 0021).
+- Themes (ADR 0022): one look on the profile and around posts in the feed; event, members and
+  market kinds; trip themes opened by a proven trip (France only so far). Market themes are free;
+  buying and outside submissions are not built.
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.

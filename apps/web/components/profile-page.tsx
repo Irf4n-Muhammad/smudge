@@ -26,6 +26,8 @@ import {
 import { Home, Search, Bell, Plus, UserRound, BadgeCheck, Pencil, Lock } from "lucide-react";
 import type { Chapter } from "../../../packages/contracts/src/identity";
 import { ChapterList } from "./identity-hub";
+import { DecorFrame, themeStyle } from "./post-decor";
+import type { DecoratedPost } from "./post-decor";
 
 type PublicProfile = ProfileState & { manifest: ProfilePackage["manifest"] | null };
 type History = { state: ProfileState; publications: ProfilePublication[] };
@@ -61,11 +63,25 @@ export function ProfilePage({
   const [discovery, setDiscovery] = useState<"credits" | "creator" | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]),
     [showChapters, setShowChapters] = useState(false);
+  const [theme, setTheme] = useState<DecoratedPost["decoration"] | null>(null);
   useEffect(() => {
     api<Chapter[]>(`/users/${encodeURIComponent(ownerId)}/chapters`).then(setChapters, () =>
       setChapters([]),
     );
   }, [ownerId]);
+  const loadTheme = useCallback(
+    () =>
+      api<{ theme: DecoratedPost["decoration"] | null }>(
+        `/users/${encodeURIComponent(ownerId)}/theme`,
+      ).then(
+        (r) => setTheme(r.theme),
+        () => setTheme(null),
+      ),
+    [ownerId],
+  );
+  useEffect(() => {
+    void loadTheme();
+  }, [loadTheme]);
   const refresh = useCallback(async () => {
     try {
       setProfile(await api(`/profiles/${encodeURIComponent(ownerId)}`));
@@ -159,6 +175,16 @@ export function ProfilePage({
             </button>
           )}
         </div>
+        {theme && (
+          <span
+            className="profile-theme-chip"
+            style={themeStyle(theme)}
+            title={`Theme ${theme.name} by @${theme.creator}`}
+          >
+            {theme.name}
+            {theme.event && <small>{theme.event}</small>}
+          </span>
+        )}
         {mine && !editing && (
           <button className="profile-edit" aria-label="Edit profile" onClick={() => setEasy(true)}>
             <Pencil size={16} /> Edit<span className="profile-edit-long"> profile</span>
@@ -324,76 +350,91 @@ export function ProfilePage({
             await Promise.all([refresh(), onRefresh()]);
           }}
         />
-      ) : profile?.publicationId && profile.manifest ? (
-        <section aria-label="Public profile world" className="profile-world">
-          <Runtime
-            key={`${ownerId}:${profile.publicationId}`}
-            kind="profile"
-            target={profile.publicationId}
-            height={profile.manifest.height}
-            autoHeight={profile.manifest.schemaVersion === 2 && profile.manifest.autoHeight}
-            mobileHeight={
-              profile.manifest.schemaVersion === 2 ? profile.manifest.mobileHeight : undefined
-            }
-            reducedMotion={motion}
-            onOpenPost={openPost}
-            onSocialChange={onRefresh}
-          />
-        </section>
       ) : profile ? (
-        <section className="profile-default">
-          <header className="profile-default-head">
-            <Avatar user={owner} />
-            <div>
-              <h1>{owner.name}</h1>
-              <span className="profile-default-handle">@{owner.handle}</span>
-              {owner.bio && <p>{owner.bio}</p>}
-              <span className="profile-default-count">
-                {posts.filter((p) => p.ownerId === ownerId).length} posts
-              </span>
-            </div>
-            {!mine && (
-              <button
-                disabled={busy}
-                className={boot.following.includes(ownerId) ? "quiet-button" : "primary"}
-                onClick={() => void follow()}
-              >
-                {boot.following.includes(ownerId)
-                  ? "Following"
-                  : boot.requested.includes(ownerId)
-                    ? "Requested"
-                    : "Follow"}
-              </button>
-            )}
-          </header>
-          {mine && (
-            <p className="profile-default-hint">
-              Make this page yours: a painted wall, a comic, a scrapbook.{" "}
-              <button className="text-button" onClick={() => setEasy(true)}>
-                Pick a style
-              </button>
-            </p>
-          )}
-          <div className="profile-default-grid">
-            {posts
-              .filter((p) => p.ownerId === ownerId)
-              .map((p) => (
-                <button key={p.id} onClick={() => setOpen(p)}>
-                  {p.metadata.coverAssetId ? (
-                    <img src={`/api/assets/${p.metadata.coverAssetId}`} alt="" loading="lazy" />
-                  ) : (
-                    <span className="profile-default-blank" aria-hidden="true">
-                      ✳
+        <div
+          className={`profile-theme-frame ${theme ? "has-decor" : ""}`}
+          style={themeStyle(theme ?? undefined)}
+        >
+          <DecorFrame post={{ decoration: theme ?? undefined } as DecoratedPost}>
+            {profile?.publicationId && profile.manifest ? (
+              <section aria-label="Public profile world" className="profile-world">
+                <Runtime
+                  key={`${ownerId}:${profile.publicationId}`}
+                  kind="profile"
+                  target={profile.publicationId}
+                  height={profile.manifest.height}
+                  autoHeight={profile.manifest.schemaVersion === 2 && profile.manifest.autoHeight}
+                  mobileHeight={
+                    profile.manifest.schemaVersion === 2 ? profile.manifest.mobileHeight : undefined
+                  }
+                  reducedMotion={motion}
+                  onOpenPost={openPost}
+                  onSocialChange={onRefresh}
+                />
+              </section>
+            ) : (
+              <section className="profile-default">
+                <header className="profile-default-head">
+                  <Avatar user={owner} />
+                  <div>
+                    <h1>{owner.name}</h1>
+                    <span className="profile-default-handle">@{owner.handle}</span>
+                    {owner.bio && <p>{owner.bio}</p>}
+                    <span className="profile-default-count">
+                      {posts.filter((p) => p.ownerId === ownerId).length} posts
                     </span>
+                  </div>
+                  {!mine && (
+                    <button
+                      disabled={busy}
+                      className={boot.following.includes(ownerId) ? "quiet-button" : "primary"}
+                      onClick={() => void follow()}
+                    >
+                      {boot.following.includes(ownerId)
+                        ? "Following"
+                        : boot.requested.includes(ownerId)
+                          ? "Requested"
+                          : "Follow"}
+                    </button>
                   )}
-                  <strong>{p.metadata.title}</strong>
-                </button>
-              ))}
-          </div>
-          {!posts.some((p) => p.ownerId === ownerId) && (
-            <p className="fineprint">{mine ? "Your posts will show up here." : "No posts yet."}</p>
-          )}
-        </section>
+                </header>
+                {mine && (
+                  <p className="profile-default-hint">
+                    Make this page yours: a painted wall, a comic, a scrapbook.{" "}
+                    <button className="text-button" onClick={() => setEasy(true)}>
+                      Pick a style
+                    </button>
+                  </p>
+                )}
+                <div className="profile-default-grid">
+                  {posts
+                    .filter((p) => p.ownerId === ownerId)
+                    .map((p) => (
+                      <button key={p.id} onClick={() => setOpen(p)}>
+                        {p.metadata.coverAssetId ? (
+                          <img
+                            src={`/api/assets/${p.metadata.coverAssetId}`}
+                            alt=""
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className="profile-default-blank" aria-hidden="true">
+                            ✳
+                          </span>
+                        )}
+                        <strong>{p.metadata.title}</strong>
+                      </button>
+                    ))}
+                </div>
+                {!posts.some((p) => p.ownerId === ownerId) && (
+                  <p className="fineprint">
+                    {mine ? "Your posts will show up here." : "No posts yet."}
+                  </p>
+                )}
+              </section>
+            )}
+          </DecorFrame>
+        </div>
       ) : (
         <p className="profile-message">Opening profile…</p>
       )}

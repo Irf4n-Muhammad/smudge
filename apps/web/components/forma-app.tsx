@@ -377,7 +377,7 @@ export function FormaApp() {
             ["following", Users, "Following"],
             ["saved", Bookmark, "Saved"],
             ["who", BadgeCheck, "Who you are"],
-            ["decor", Palette, "Decorations"],
+            ["decor", Palette, "Themes"],
             ["profile", UserRound, "My profile"],
             ["explore", Compass, "Explore"],
             ["people", UserSearch, "Find people"],
@@ -528,7 +528,7 @@ export function FormaApp() {
                   : view === "who"
                     ? "Who you are"
                     : view === "decor"
-                      ? "Decor"
+                      ? "Themes"
                       : view === "account"
                         ? "Account"
                         : view === "people"
@@ -1016,7 +1016,7 @@ export function FormaApp() {
                 ["following", Users, "Following"],
                 ["saved", Bookmark, "Saved"],
                 ["who", BadgeCheck, "Who you are"],
-                ["decor", Palette, "Decorations"],
+                ["decor", Palette, "Themes"],
                 ["account", Settings, "Account settings"],
                 ...(auth?.moderator ? [["moderation", ShieldCheck, "Moderation"]] : []),
               ] as [string, typeof Home, string][]

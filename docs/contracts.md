@@ -327,6 +327,17 @@ by the host (moment template, or the owner's current decoration plus defaults), 
 package, and visitors cannot submit text. Preview is read-only. Audience rules apply: a viewer who
 cannot see the post gets `NOT_FOUND`. See ADR 0011.
 
+## Themes (ADR 0022)
+
+Themes are host catalog data (`decorations`, `themeEvents` in `contracts/src/identity.ts`), never
+accepted from a client or package. `DecorationTier` is now `market | members | event` (was
+`free | members | seasonal | sponsored`); `sponsor` is an optional label, and an event theme names
+its event with `eventId` instead of `seasonId`. Every theme has a `font` from `themeFonts`. Stored
+choices are ids only, so no stored data changes; a choice is re-checked against its lock on read.
+Feed `PostDecor.decoration` gains `font` and, for event themes, `event` (the event's name).
+`GET /api/users/:id/theme` returns `{ theme }` with the same shape, or `null`.
+`GET /api/decorations` items gain `font`, `event` and `seasonal`.
+
 ## Post buttons (additive)
 
 Post metadata accepts an optional `link: { label, url? }`. `label` is 1 to 32 characters and is the

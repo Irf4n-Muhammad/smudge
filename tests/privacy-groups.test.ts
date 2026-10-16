@@ -36,7 +36,7 @@ async function setup() {
   };
   const inbox = (userId: string) =>
     community.notifications({ userId }).map((n) => `${n.type}:${n.actor?.id}`);
-  return { store, social, community, privacy, messages, sharing, publish, inbox };
+  return { store, social, identity, community, privacy, messages, sharing, publish, inbox };
 }
 const as = (userId: string) => ({ userId });
 const rejects = (fn: () => unknown, code: string) =>
@@ -171,4 +171,18 @@ test("deleting an account removes their group messages and seat", async () => {
     view.messages.map((m) => m.text),
     ["theirs"],
   );
+});
+
+test("a theme on the profile follows who may see the owner's posts", async () => {
+  const { social, identity, community, privacy } = await setup();
+  identity.chooseDecoration(as("ana"), { decorationId: "cat-peek", scope: "base" });
+  assert.equal(identity.themeFor(as("budi"), "ana")?.id, "cat-peek");
+  privacy.setPrivate(as("ana"), { private: true });
+  assert.equal(identity.themeFor(as("budi"), "ana"), null);
+  assert.equal(identity.themeFor(as("ana"), "ana")?.id, "cat-peek");
+  social.follow(as("budi"), "ana");
+  privacy.answer(as("ana"), "budi", true);
+  assert.equal(identity.themeFor(as("budi"), "ana")?.id, "cat-peek");
+  community.block(as("ana"), "budi");
+  assert.equal(identity.themeFor(as("budi"), "ana"), null);
 });

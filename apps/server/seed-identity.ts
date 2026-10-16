@@ -11,6 +11,10 @@ const media = {
 
 /** Synthetic chapters, decoration choices and one public graduation moment. Runs once. */
 export function seedIdentity(identity: IdentityService, social: SocialService) {
+  seedChapters(identity, social);
+  seedTripTheme(social);
+}
+function seedChapters(identity: IdentityService, social: SocialService) {
   const store = social.store;
   if (store.get("system", "seed-identity-v1")) return;
   const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
@@ -93,4 +97,34 @@ export function seedIdentity(identity: IdentityService, social: SocialService) {
   store.transaction(() =>
     store.put("system", "seed-identity-v1", { at: new Date().toISOString() }),
   );
+}
+
+/**
+ * Inès proved a trip to France and wears the Paris event theme (ADR 0022), so the demo shows a
+ * theme opened by proof. Runs once, and never replaces a theme she picked herself.
+ */
+function seedTripTheme(social: SocialService) {
+  const store = social.store;
+  if (store.get("system", "seed-trip-theme-v1") || !store.get("user", "ines")) return;
+  const prefs = store.get<{ base?: { id: string | null } }>("prefs", "ines") ?? {};
+  store.transaction(() => {
+    const trip: Chapter = {
+      id: randomUUID(),
+      ownerId: "ines",
+      kind: "travel",
+      label: "Been to France",
+      country: "FR",
+      from: new Date().getUTCFullYear(),
+      method: "photo-location",
+      audience: "public",
+      createdAt: new Date().toISOString(),
+    };
+    store.put("chapter", trip.id, trip);
+    if (!prefs.base || prefs.base.id === "vines")
+      store.put("prefs", "ines", {
+        ...prefs,
+        base: { id: "paris", since: new Date().toISOString() },
+      });
+    store.put("system", "seed-trip-theme-v1", { at: new Date().toISOString() });
+  });
 }

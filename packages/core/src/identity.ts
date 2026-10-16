@@ -23,6 +23,7 @@ import {
   seasons,
   signupSchema,
   stickerById,
+  themeEventById,
   travelProofSchema,
 } from "../../contracts/src/identity.js";
 import type {
@@ -556,17 +557,54 @@ export class IdentityService {
                 : `Members of ${org.name}. Ask them for an invite code.`,
           };
     }
-    if (decoration.tier === "seasonal") {
-      const active = this.activeSeason(userId);
-      if (active?.id !== decoration.seasonId) {
-        const season = seasons.find((s) => s.id === decoration.seasonId)!;
+    if (decoration.tier === "event") {
+      const event = themeEventById(decoration.eventId!)!;
+      if (event.kind === "season" && this.activeSeason(userId)?.id !== event.seasonId) {
+        const season = seasons.find((s) => s.id === event.seasonId)!;
         return {
           ok: false,
           reason: `Only during ${season.name} (${season.start} to ${season.end}).`,
         };
       }
+      // A trip theme stays yours while the travel chapter that proves it exists.
+      if (
+        event.kind === "trip" &&
+        !this.chapters(userId).some((c) => c.kind === "travel" && c.country === event.country)
+      )
+        return {
+          ok: false,
+          reason: `${event.name}. Prove it with a photo taken in ${countries[event.country]}.`,
+        };
     }
     return { ok: true };
+  }
+  /** Season themes come and go with their dates, so they can never be someone's everyday look. */
+  private seasonal(decoration: Decoration) {
+    return decoration.tier === "event" && themeEventById(decoration.eventId!)?.kind === "season";
+  }
+  private themeView(d: Decoration, users: User[]) {
+    const event = d.eventId ? themeEventById(d.eventId) : undefined;
+    return {
+      id: d.id,
+      name: d.name,
+      accent: d.accent,
+      font: d.font,
+      tier: d.tier,
+      ...(event ? { event: event.name } : {}),
+      ...(d.sponsor ? { sponsor: d.sponsor } : {}),
+      creator: users.find((u) => u.id === d.creatorId)?.handle ?? d.creatorId,
+      pieces: d.pieces,
+    };
+  }
+  /** The theme someone wears, for their profile page. Wearing it is the owner's own choice. */
+  themeFor(actor: Actor, ownerId: string) {
+    const viewer = this.social.actor(actor);
+    this.user(ownerId);
+    // A theme dresses posts and can reveal a trip, so it follows who may see those posts: blocks,
+    // hidden and private accounts all answer through the same view filter chain.
+    if (!this.social.viewFilter(viewer, { id: "", ownerId } as Publication)) return null;
+    const effective = this.effectiveDecoration(ownerId);
+    return effective ? this.themeView(effective.decoration, this.social.users()) : null;
   }
   decorations(actor: Actor) {
     const userId = this.social.actor(actor);
@@ -580,11 +618,15 @@ export class IdentityService {
       country: this.prefs(userId).country ?? null,
       items: decorations.map((d) => {
         const lock = this.unlock(userId, d);
+        const event = d.eventId ? themeEventById(d.eventId) : undefined;
         return {
           id: d.id,
           name: d.name,
           tier: d.tier,
           accent: d.accent,
+          font: d.font,
+          event: event?.name ?? null,
+          seasonal: this.seasonal(d),
           sponsor: d.sponsor,
           creator: this.store.get<User>("user", d.creatorId)?.handle ?? d.creatorId,
           emotes: d.emotes.map((id) => stickerById(id)!),
@@ -602,7 +644,7 @@ export class IdentityService {
       const decoration = decorationById(decorationId);
       const lock = this.unlock(userId, decoration);
       if (!lock.ok) throw new AppError("DECORATION_LOCKED", 403, { reason: lock.reason });
-      if (scope === "base" && decoration!.tier === "seasonal")
+      if (scope === "base" && this.seasonal(decoration!))
         throw new AppError("SEASONAL_NOT_PERMANENT");
     }
     const prefs = this.prefs(userId);
@@ -815,19 +857,7 @@ export class IdentityService {
       return {
         ...post,
         likes: hideCounts ? 0 : post.likes,
-        ...(d
-          ? {
-              decoration: {
-                id: d.id,
-                name: d.name,
-                accent: d.accent,
-                tier: d.tier,
-                ...(d.sponsor ? { sponsor: d.sponsor } : {}),
-                creator: users.find((u) => u.id === d.creatorId)?.handle ?? d.creatorId,
-                pieces: d.pieces,
-              },
-            }
-          : {}),
+        ...(d ? { decoration: this.themeView(d, users) } : {}),
         ...(moment ? { moment: this.momentView(moment) } : {}),
         reactions: {
           options: this.reactionOptions(this.social.post(post.id)),

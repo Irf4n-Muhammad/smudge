@@ -474,8 +474,18 @@ function TripProof({
                 mime: "image/jpeg",
                 base64,
               });
+              type Themes = { items: { name: string; unlocked: boolean }[] };
+              const open = (s: Themes) => s.items.filter((d) => d.unlocked).map((d) => d.name);
+              const before = open(await api<Themes>("/decorations"));
               const chapter = await api<Chapter>("/identity/travel", { assetId: asset.id });
-              notify(`Added “${chapter.label}”.`);
+              // A proven trip can open event themes; say which, so people know to go wear one.
+              const opened = open(await api<Themes>("/decorations")).filter(
+                (n) => !before.includes(n),
+              );
+              notify(
+                `Added “${chapter.label}”.` +
+                  (opened.length ? ` New themes to wear in Themes: ${opened.join(", ")}.` : ""),
+              );
               await onDone();
             } catch (err) {
               notify((err as Error).message);

@@ -1,0 +1,128 @@
+/*
+ * Themes (ADR 0022): one look for a person, worn on their profile and around every post of
+ * theirs in the feed. The post content stays untouched and readable; a theme only dresses the
+ * frame around it: edge pieces, an accent ring and glow, and the face of the owner's name.
+ */
+:root {
+  --theme-ui: var(--ui);
+  --theme-serif: "Instrument Serif", Georgia, serif;
+  --theme-hand: var(--hand);
+  --theme-display: "Bricolage Grotesque", var(--ui);
+  --theme-spray: var(--wordmark);
+}
+
+.post-card.themed.classic-post .runtime,
+.post-card.themed.classic-post .moment-cover {
+  box-shadow:
+    0 0 0 3px var(--decor-accent),
+    0 30px 80px -20px color-mix(in srgb, var(--decor-accent) 45%, transparent);
+}
+html[data-theme="dark"] .post-card.themed.classic-post .runtime,
+html[data-theme="dark"] .post-card.themed.classic-post .moment-cover {
+  box-shadow:
+    0 0 0 3px var(--decor-accent),
+    0 30px 90px -18px color-mix(in srgb, var(--decor-accent) 55%, transparent);
+}
+.post-card.themed .author strong {
+  font-family: var(--decor-font);
+  font-size: 1.12em;
+  font-weight: 400;
+}
+.post-card.themed .author strong small {
+  font-family: var(--ui);
+  font-size: 0.8em;
+}
+.post-card.themed .author .avatar {
+  box-shadow: 0 0 0 2px var(--decor-accent);
+}
+.post-card.themed .decor-credit strong {
+  font-family: var(--decor-font);
+  font-weight: 400;
+  font-size: 1.15em;
+}
+
+/* The theme picker: grouped by what opens a theme. */
+.theme-group {
+  margin-top: 26px;
+}
+.theme-group h2 {
+  margin: 0;
+  font: 700 18px var(--ui);
+}
+.theme-group > .fineprint {
+  margin: 4px 0 12px;
+}
+.decoration-sample {
+  display: grid;
+  place-items: center;
+}
+.theme-font-sample {
+  color: #fff;
+  font-size: 22px;
+  text-shadow: 0 1px 2px #0006;
+}
+.theme-font-ui {
+  font-family: var(--theme-ui);
+}
+.theme-font-serif {
+  font-family: var(--theme-serif);
+}
+.theme-font-hand {
+  font-family: var(--theme-hand);
+}
+.theme-font-display {
+  font-family: var(--theme-display);
+}
+.theme-font-spray {
+  font-family: var(--theme-spray);
+}
+
+/* Profile: the owner's theme frames their world and names itself in the header. */
+.profile-theme-frame {
+  position: relative;
+  /* Pieces may hang past the world's edge, never past the page (no sideways scroll on phones). */
+  overflow-x: clip;
+  overflow-clip-margin: 0;
+}
+.profile-theme-frame.has-decor .decor-frame > .profile-world,
+.profile-theme-frame.has-decor .decor-frame > .profile-default {
+  box-shadow: 0 0 0 3px var(--decor-accent);
+  border-radius: 18px;
+}
+.profile-theme-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--decor-accent);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--decor-accent) 14%, transparent);
+  font-family: var(--decor-font);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.profile-theme-chip small {
+  font-family: var(--ui);
+  font-size: 11px;
+  color: var(--muted);
+}
+/*
+ * On a profile the pieces hang in a band above the world instead of over the header controls,
+ * a little smaller than on a post, growing from the edge they cling to.
+ */
+.profile-theme-frame.has-decor {
+  padding-top: 64px;
+}
+.profile-illustrated .profile-theme-frame .decor-frame {
+  max-width: 1024px;
+  margin-inline: auto;
+}
+.profile-theme-frame .decor-piece {
+  transform: scale(0.7);
+  transform-origin: center bottom;
+}
+.profile-theme-frame .decor-piece.decor-bottom-left,
+.profile-theme-frame .decor-piece.decor-bottom-right {
+  transform-origin: center top;
+}

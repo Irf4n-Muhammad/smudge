@@ -318,6 +318,73 @@ test("seasons apply a default, allow a manual choice per season, and members the
   );
 });
 
+test("a proven trip opens its event themes, which the profile and feed both wear", async () => {
+  const { identity, social } = await setup("2026-03-10T10:00:00Z");
+  const paris = () => identity.decorations(alice).items.find((d) => d.id === "paris")!;
+  assert.equal(paris().unlocked, false);
+  assert.equal(paris().event, "Trip to France");
+  rejects(
+    () => identity.chooseDecoration(alice, { decorationId: "paris", scope: "base" }),
+    "DECORATION_LOCKED",
+  );
+  const tokyo = social.upload(alice, {
+    name: "tokyo.jpg",
+    mime: "image/jpeg",
+    base64: jpegAt(35.68, 139.69).toString("base64"),
+  });
+  identity.travelProof(alice, { assetId: tokyo.id });
+  assert.equal(paris().unlocked, false, "another country does not open it");
+  const photo = social.upload(alice, {
+    name: "paris.jpg",
+    mime: "image/jpeg",
+    base64: jpegAt(48.86, 2.35).toString("base64"),
+  });
+  const chapter = identity.travelProof(alice, { assetId: photo.id });
+  assert.equal(paris().unlocked, true);
+  // Unlike a season, a trip theme can be someone's everyday look.
+  identity.chooseDecoration(alice, { decorationId: "paris", scope: "base" });
+  assert.deepEqual(
+    { ...identity.themeFor(bob, "alice"), pieces: undefined },
+    {
+      id: "paris",
+      name: "Paris",
+      accent: "#1f3a5f",
+      font: "serif",
+      tier: "event",
+      event: "Trip to France",
+      creator: "ines",
+      pieces: undefined,
+    },
+  );
+  const post = social.publish(
+    alice,
+    social.createDraft(alice, {
+      package: {
+        manifest: {
+          schemaVersion: 1,
+          runtimeVersion: "web-v1",
+          name: "x",
+          entrypoint: "index.html",
+          capabilities: [],
+        },
+        files: { "index.html": "<p>x</p>" },
+      },
+      metadata: { title: "x" },
+    }).id,
+    1,
+  );
+  const view = identity.decorate(bob, social.feed(bob)).find((p) => p.id === post.id)!;
+  assert.equal(view.decoration?.id, "paris");
+  assert.equal(view.decoration?.font, "serif");
+  // Removing the proof takes the theme off; the stored choice cannot outlive it.
+  identity.removeChapter(alice, chapter.id);
+  assert.equal(identity.themeFor(bob, "alice"), null);
+  assert.equal(
+    identity.decorate(bob, social.feed(bob)).find((p) => p.id === post.id)!.decoration,
+    undefined,
+  );
+});
+
 test("creator estimate weighs new adopters above old ones and defaults at half", async () => {
   const { identity, clock } = await setup("2026-03-10T10:00:00Z");
   identity.chooseDecoration(alice, { decorationId: "cat-peek", scope: "base" });

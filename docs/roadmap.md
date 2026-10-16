@@ -16,6 +16,9 @@
       GPS), proof-locked moment pages with circle/public audience, preset one-per-person reactions,
       edge decorations with members-only, sponsored and seasonal tiers, local seasons by country,
       simulated decaying creator pool, open signup and full-screen posts. See ADR 0011.
+- [x] Themes: one look worn on the profile and around every post in the feed (edges, frame,
+      name face), in three kinds (event, members, market), with trip events opened by a proven
+      trip (France first). See ADR 0022.
 
 - [x] Local versioned mod library, source/asset sharing, complete or partial installs, part mixing,
       owned version updates, covers, private preview, undo, and matching MCP tools.
@@ -56,7 +59,8 @@ the application does not include or automatically connect a hosted model.
   Single instance on one SQLite file. Not yet deployed anywhere; the owner chooses the host.
 
 - Identity: email is a local outbox, organisations/admins are a static catalog, photo location is
-  evidence not proof, no lunar-calendar seasons, user-made decorations and real payouts are not built.
+  evidence not proof, no lunar-calendar seasons, user-made themes, buying market themes, theme curation and real
+  payouts are not built. Only France has a trip theme event.
 
 - Profiles use bounded iframe heights, with optional content sizing up to 4000px and internal
   scrolling for larger documents. Visual controls currently support the Raka shell and compatible

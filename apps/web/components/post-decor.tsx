@@ -20,6 +20,16 @@ const place = (p: OverlayPiece): CSSProperties => {
   return style;
 };
 
+/** CSS variables a theme sets on whatever it dresses: a post card, a profile, a sample. */
+export function themeStyle(theme: DecoratedPost["decoration"]): CSSProperties | undefined {
+  return theme
+    ? ({
+        "--decor-accent": theme.accent,
+        "--decor-font": `var(--theme-${theme.font})`,
+      } as CSSProperties)
+    : undefined;
+}
+
 /**
  * Transparent decoration that clings to the post edges. The post itself keeps its standard
  * shape; pieces sit outside or over the border and never take clicks.
@@ -27,10 +37,7 @@ const place = (p: OverlayPiece): CSSProperties => {
 export function DecorFrame({ post, children }: { post: DecoratedPost; children: ReactNode }) {
   const d = post.decoration;
   return (
-    <div
-      className={`decor-frame ${d ? "has-decor" : ""}`}
-      style={d ? ({ "--decor-accent": d.accent } as CSSProperties) : undefined}
-    >
+    <div className={`decor-frame ${d ? "has-decor" : ""}`} style={themeStyle(d)}>
       {children}
       {d?.pieces.map((p, i) => (
         <span
@@ -51,8 +58,8 @@ export function DecorCredit({ post }: { post: DecoratedPost }) {
   if (!d) return null;
   return (
     <p className="decor-credit">
-      {d.tier === "seasonal" ? "Season decoration" : "Decoration"} <strong>{d.name}</strong> by @
-      {d.creator}
+      Theme <strong>{d.name}</strong>
+      {d.event ? ` · ${d.event}` : d.tier === "members" ? " · Members" : ""} · by @{d.creator}
       {d.sponsor ? ` · with ${d.sponsor}` : ""}
     </p>
   );

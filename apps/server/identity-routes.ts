@@ -51,6 +51,9 @@ export function identityRoutes(api: Express, identity: IdentityService) {
   api.post("/api/identity/country", (req, res) =>
     res.json(identity.setCountry(actor(res), req.body)),
   );
+  api.get("/api/users/:id/theme", (req, res) =>
+    res.json({ theme: identity.themeFor(actor(res), id(req.params.id)) }),
+  );
   api.get("/api/decorations", (_req, res) => res.json(identity.decorations(actor(res))));
   api.post("/api/decorations/choose", (req, res) =>
     res.json(identity.chooseDecoration(actor(res), req.body)),

@@ -306,17 +306,39 @@ export interface OverlayPiece {
   dy: number;
   svg: string;
 }
-export type DecorationTier = "free" | "members" | "seasonal" | "sponsored";
+/**
+ * A theme is one look for a person: their profile and every post of theme in the feed wear it.
+ * - event: the Smudge team decides which events exist (a season, a proven trip); anyone may
+ *   design for one, and the design is labelled with its event and only opens with it.
+ * - members: proven membership in an organisation opens it.
+ * - market: anyone can wear it, with no event or membership behind it.
+ * A sponsor is an optional label on any kind.
+ */
+export type DecorationTier = "market" | "members" | "event";
+/** Faces the web app already loads; a theme picks one for the frame around each post. */
+export const themeFonts = ["ui", "serif", "hand", "display", "spray"] as const;
+export type ThemeFont = (typeof themeFonts)[number];
+export type ThemeEvent =
+  | { id: string; name: string; kind: "season"; seasonId: string }
+  | { id: string; name: string; kind: "trip"; country: CountryCode };
+export const themeEvents: ThemeEvent[] = [
+  { id: "halloween", name: "Halloween", kind: "season", seasonId: "halloween" },
+  { id: "id-independence", name: "Hari Kemerdekaan", kind: "season", seasonId: "id-independence" },
+  { id: "new-year", name: "New Year", kind: "season", seasonId: "new-year" },
+  { id: "trip-france", name: "Trip to France", kind: "trip", country: "FR" },
+];
+export const themeEventById = (id: string) => themeEvents.find((e) => e.id === id);
 export interface Decoration {
   id: string;
   name: string;
   creatorId: string;
   tier: DecorationTier;
   accent: string;
+  font: ThemeFont;
   /** Members tier: verified membership in this org unlocks it. */
   orgId?: string;
-  /** Seasonal tier: only usable while this season is active for the user. */
-  seasonId?: string;
+  /** Event tier: the event that opens it. */
+  eventId?: string;
   sponsor?: string;
   emotes: string[];
   pieces: OverlayPiece[];
@@ -338,8 +360,9 @@ export const decorations: Decoration[] = [
     id: "cat-peek",
     name: "Cat peek",
     creatorId: "maya",
-    tier: "free",
+    tier: "market",
     accent: "#e8913f",
+    font: "hand",
     emotes: ["paw", "fish"],
     pieces: [
       {
@@ -370,8 +393,9 @@ export const decorations: Decoration[] = [
     id: "vines",
     name: "Vines",
     creatorId: "ines",
-    tier: "free",
+    tier: "market",
     accent: "#3f8f4e",
+    font: "serif",
     emotes: ["leaf", "flower"],
     pieces: [
       {
@@ -397,9 +421,10 @@ export const decorations: Decoration[] = [
     id: "stage-lights",
     name: "Stage lights",
     creatorId: "leo",
-    tier: "sponsored",
+    tier: "market",
     sponsor: "Senja Kolektif",
     accent: "#d0458f",
+    font: "display",
     emotes: ["star", "note"],
     pieces: [
       {
@@ -433,6 +458,7 @@ export const decorations: Decoration[] = [
     tier: "members",
     orgId: "lembayung",
     accent: "#3b1c4a",
+    font: "serif",
     emotes: ["cap", "spark"],
     pieces: [
       {
@@ -452,6 +478,7 @@ export const decorations: Decoration[] = [
     tier: "members",
     orgId: "teater-senja",
     accent: "#b8323a",
+    font: "serif",
     emotes: ["mask", "star"],
     pieces: [
       {
@@ -482,9 +509,10 @@ export const decorations: Decoration[] = [
     id: "pumpkin-night",
     name: "Pumpkin night",
     creatorId: "maya",
-    tier: "seasonal",
-    seasonId: "halloween",
+    tier: "event",
+    eventId: "halloween",
     accent: "#e8742a",
+    font: "spray",
     emotes: ["pumpkin", "ghost"],
     pieces: [
       {
@@ -504,9 +532,10 @@ export const decorations: Decoration[] = [
     id: "bats",
     name: "Bats",
     creatorId: "leo",
-    tier: "seasonal",
-    seasonId: "halloween",
+    tier: "event",
+    eventId: "halloween",
     accent: "#241a2e",
+    font: "spray",
     emotes: ["ghost", "pumpkin"],
     pieces: [
       {
@@ -523,9 +552,10 @@ export const decorations: Decoration[] = [
     id: "merah-putih",
     name: "Merah putih",
     creatorId: "ines",
-    tier: "seasonal",
-    seasonId: "id-independence",
+    tier: "event",
+    eventId: "id-independence",
     accent: "#d7262e",
+    font: "display",
     emotes: ["flag-id", "spark"],
     pieces: [
       {
@@ -542,9 +572,10 @@ export const decorations: Decoration[] = [
     id: "fireworks",
     name: "Fireworks",
     creatorId: "leo",
-    tier: "seasonal",
-    seasonId: "new-year",
+    tier: "event",
+    eventId: "new-year",
     accent: "#f2b632",
+    font: "display",
     emotes: ["firework", "spark"],
     pieces: [
       {
@@ -562,6 +593,71 @@ export const decorations: Decoration[] = [
         dx: -30,
         dy: -18,
         svg: stickers.find((x) => x.id === "firework")!.svg!,
+      },
+    ],
+  },
+  {
+    id: "paris",
+    name: "Paris",
+    creatorId: "ines",
+    tier: "event",
+    eventId: "trip-france",
+    accent: "#1f3a5f",
+    font: "serif",
+    emotes: ["jealous", "take-me"],
+    pieces: [
+      {
+        anchor: "top-left",
+        width: 170,
+        height: 92,
+        dx: 6,
+        dy: -50,
+        svg: s(pennants(["#1f3a5f", "#ffffff", "#d7262e"]), "0 0 170 92"),
+      },
+      {
+        anchor: "top-right",
+        width: 56,
+        height: 120,
+        dx: -230,
+        dy: -108,
+        svg: s(
+          '<g fill="#1f3a5f"><path d="M34 0h2l1 14h-4z"/><path d="M32 14h6l3 40h-12z"/><rect x="26" y="52" width="18" height="4" rx="1"/><path d="M29 56h12l5 34h-22z"/><rect x="20" y="88" width="30" height="5" rx="1"/><path d="M22 93h26l14 57h-12q-15-26-30 0h-12z"/></g>',
+          "0 0 70 150",
+        ),
+      },
+    ],
+  },
+  {
+    id: "bonjour-postcard",
+    name: "Bonjour postcard",
+    creatorId: "maya",
+    tier: "event",
+    eventId: "trip-france",
+    accent: "#c8553d",
+    font: "hand",
+    emotes: ["take-me", "heart"],
+    pieces: [
+      {
+        anchor: "top-right",
+        width: 60,
+        height: 72,
+        dx: -222,
+        dy: -50,
+        svg: s(
+          '<g transform="rotate(6 30 36)"><rect x="3" y="3" width="54" height="66" fill="#fffaf0" stroke="#c8553d" stroke-width="3" stroke-dasharray="4 3"/><rect x="10" y="10" width="40" height="40" fill="#c8553d"/><path d="M14 44l10-14 8 9 6-6 8 11z" fill="#fffaf0"/><text x="30" y="62" font-size="8" text-anchor="middle" fill="#c8553d" font-family="Georgia">FRANCE</text></g>',
+          "0 0 60 72",
+        ),
+      },
+      {
+        anchor: "bottom-left",
+        width: 112,
+        height: 68,
+        dx: -10,
+        dy: -22,
+        svg: s(
+          '<g fill="none" stroke="#3b3b3b" stroke-width="2" opacity=".65"><circle cx="34" cy="34" r="26"/><path d="M60 22q8-6 16 0t16 0t16 0M60 34q8-6 16 0t16 0t16 0M60 46q8-6 16 0t16 0t16 0"/></g><text x="34" y="38" font-size="10" text-anchor="middle" fill="#3b3b3b" opacity=".7" font-family="Georgia">PARIS</text>',
+          "0 0 112 68",
+        ),
       },
     ],
   },
@@ -723,6 +819,9 @@ export interface PostDecor {
     accent: string;
     creator: string;
     tier: DecorationTier;
+    font: ThemeFont;
+    /** Event themes say which event opened them, e.g. "Trip to France". */
+    event?: string;
     sponsor?: string;
     pieces: OverlayPiece[];
   };
