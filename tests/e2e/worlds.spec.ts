@@ -83,7 +83,8 @@ test("mobile worlds and night studio remain navigable", async ({ page }) => {
   await page.getByRole("button", { name: "Open the studio" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await expect(dialog).toHaveCSS("background-color", "rgb(23, 18, 31)");
+  // The night paper of the gallery look (#09090c).
+  await expect(dialog).toHaveCSS("background-color", "rgb(9, 9, 12)");
   await page.screenshot({ path: "artifacts/studio-mobile-night.png", animations: "disabled" });
   await dialog.getByRole("button", { name: "Close dialog" }).click();
   await page.evaluate(() => window.scrollTo(0, 0));

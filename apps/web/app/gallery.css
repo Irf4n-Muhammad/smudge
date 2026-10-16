@@ -1,0 +1,449 @@
+/* Gallery of worlds: posts are windows into someone's world. A dark room lit by whatever is in
+   view, big windows paced with pairs, and a floating dock. Loaded last, so taking this file out
+   of layout.tsx puts the previous look back. */
+
+:root {
+  --paper: #f1f0ee;
+  --white: #ffffff;
+  --ink: #0e0e11;
+  --muted: #6e6c75;
+  --line: #e2e1e5;
+  --accent-light: #ffe4ea;
+  --glass: rgb(255 255 255 / 72%);
+  --glass-line: rgb(0 0 0 / 8%);
+  --ambient: #ff3d6e;
+}
+html[data-theme="dark"] {
+  --paper: #09090c;
+  --white: #141419;
+  --ink: #f4f3f1;
+  --muted: #8d8b94;
+  --line: rgb(255 255 255 / 9%);
+  --accent: #ff3d6e;
+  --accent-light: rgb(255 61 110 / 16%);
+  --glass: rgb(28 28 34 / 72%);
+  --glass-line: rgb(255 255 255 / 10%);
+}
+html[data-season="halloween"][data-theme="dark"] {
+  --accent-light: rgb(255 122 26 / 16%);
+}
+body {
+  background: var(--paper);
+}
+
+/* The room's light. */
+.ambient-light {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ambient-light::before {
+  content: "";
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  top: 10%;
+  height: 70%;
+  border-radius: 50%;
+  background-color: var(--ambient);
+  filter: blur(140px);
+  opacity: 0.12;
+  transition: background-color 0.9s ease;
+}
+html[data-theme="dark"] .ambient-light::before {
+  opacity: 0.22;
+}
+.app-shell {
+  isolation: isolate;
+}
+.ambient-light {
+  z-index: -1;
+}
+
+/* Shell: the rail floats as glass, the top bar fades into the room. */
+.sidebar {
+  top: 16px;
+  bottom: 16px;
+  left: 14px;
+  height: auto;
+  width: 64px;
+  padding: 18px 7px 14px;
+  border: 0;
+  border-radius: 32px;
+  background: var(--glass);
+  backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow:
+    inset 0 0 0 1px var(--glass-line),
+    0 20px 50px rgb(0 0 0 / 18%);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.sidebar > * {
+  flex-shrink: 0;
+}
+.sidebar .moment-button {
+  width: 46px;
+  height: 46px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  color: var(--ink);
+}
+.sidebar .brand-mark {
+  font-size: 34px;
+}
+.main-nav {
+  margin-top: 20px;
+  gap: 2px;
+}
+.nav-item {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+.nav-item.active {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.nav-item:hover {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.nav-dot {
+  display: none;
+}
+.create-button {
+  width: 46px;
+  height: 46px;
+  margin-top: 14px;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.create-button:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.workspace {
+  margin-left: 92px;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(var(--paper) 55%, transparent);
+  border-bottom: 0;
+}
+
+/* Feed heading: no slogan, just the season chip beside the tabs, which sit as a quiet pill. */
+.app-shell[data-view="home"] .feed-heading {
+  height: 0;
+  padding: 0;
+}
+.app-shell[data-view="home"] .feed-heading > div {
+  display: none;
+}
+.feed-toolbar {
+  padding: 8px 48px 26px;
+}
+.feed-tabs {
+  gap: 4px;
+  padding: 4px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.feed-tabs button {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 99px;
+}
+.feed-tabs .selected {
+  background: color-mix(in srgb, var(--ink) 13%, transparent);
+  color: var(--ink);
+}
+.feed-tabs .selected svg {
+  display: none;
+}
+
+/* The rhythm: one big window, then a pair, again and again. */
+.post-list {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 64px 28px;
+  width: min(1120px, calc(100% - 96px));
+  margin: 0 auto;
+  padding-bottom: 40px;
+  /* Glows and decorations may spill a little past the column, never past the page. */
+  overflow-x: clip;
+  overflow-clip-margin: 48px;
+}
+.post-list > .post-card {
+  min-width: 0;
+}
+.post-list > .post-card:nth-child(3n + 1),
+.post-list > .world-stage,
+.post-list > .post-card:only-child {
+  grid-column: 1 / -1;
+}
+.post-list > .post-card:nth-child(3n) {
+  margin-top: 70px;
+}
+.post-list > .world-stage {
+  margin-top: 0;
+  border-radius: 30px;
+  overflow: hidden;
+}
+.world-stage:before {
+  display: none;
+}
+
+/* A post as a world: the window first, who made it underneath. */
+.classic-post {
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  margin: 0;
+  border: 0;
+}
+.classic-post .world-window {
+  order: 0;
+}
+.classic-post .post-link {
+  order: 1;
+}
+.classic-post .post-header {
+  order: 2;
+  padding: 16px 6px 0;
+}
+.classic-post .post-body {
+  order: 3;
+  padding: 4px 6px 0;
+}
+.world-window {
+  position: relative;
+}
+.classic-post .runtime {
+  border-radius: 30px;
+  overflow: hidden;
+  background: var(--white);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 30px 80px -20px color-mix(in srgb, var(--glow) 45%, transparent);
+}
+html[data-theme="dark"] .classic-post .runtime {
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 30px 90px -18px color-mix(in srgb, var(--glow-night) 55%, transparent);
+}
+.classic-post .moment-cover {
+  border-radius: 30px;
+  overflow: hidden;
+}
+.world-kind {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 99px;
+  background: rgb(0 0 0 / 45%);
+  backdrop-filter: blur(14px);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.world-kind i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3dff9a;
+  box-shadow: 0 0 10px #3dff9a;
+}
+.world-enter {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 6px 0 18px;
+  border: 0;
+  border-radius: 99px;
+  background: rgb(20 20 24 / 55%);
+  backdrop-filter: blur(20px);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 20%);
+  color: #fff;
+  font: 600 14px var(--ui);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.world-enter:hover {
+  transform: scale(1.04);
+}
+.world-enter em {
+  font-style: normal;
+}
+.world-enter span {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  display: grid;
+  place-items: center;
+}
+.post-list > .post-card:not(:nth-child(3n + 1)) .world-enter {
+  width: 44px;
+  padding: 0;
+  justify-content: center;
+}
+.post-list > .post-card:not(:nth-child(3n + 1)) .world-enter em {
+  display: none;
+}
+/* Under the window only what you act on; the kind already sits on the window. */
+.classic-post .format-tag {
+  display: none;
+}
+.classic-post .post-bottom {
+  justify-content: flex-end;
+  margin-top: 0;
+}
+.classic-post .post-caption {
+  margin-top: 6px;
+}
+.classic-post .reaction-bar {
+  margin-top: 6px;
+}
+
+/* Entering a world: the page grows into the whole screen. */
+@media (min-width: 701px) {
+  .page-sheet {
+    top: 20px;
+    bottom: 20px;
+    width: min(1240px, calc(100% - 40px));
+    animation: world-open 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+@keyframes world-open {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+    border-radius: 40px;
+  }
+}
+
+/* Phone: one world per screen, swipe to the next. */
+@media (max-width: 700px) {
+  .workspace {
+    margin-left: 0;
+  }
+  html:has(.app-shell[data-view="home"]),
+  html:has(.app-shell[data-view="following"]) {
+    scroll-snap-type: y mandatory;
+  }
+  .app-shell[data-view="home"] .topbar,
+  .app-shell[data-view="following"] .topbar {
+    scroll-snap-align: start;
+  }
+  .feed-toolbar {
+    padding: 6px 12px 10px;
+  }
+  .feed-tabs button {
+    white-space: nowrap;
+  }
+  .feed-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  /* The top bar stays at the top of the feed; each world then fills the screen on its own. */
+  .topbar {
+    position: relative;
+    background: transparent;
+  }
+  .post-list {
+    display: block;
+    width: auto;
+    padding-bottom: 0;
+    overflow-clip-margin: 0;
+  }
+  .post-list > .post-card {
+    margin: 0;
+    min-height: 100svh;
+    padding: 14px 10px 96px;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  .post-list > .post-card:nth-child(3n) {
+    margin-top: 0;
+  }
+  .post-list > .world-stage {
+    border-radius: 0;
+    padding: 0;
+  }
+  .classic-post .runtime {
+    margin: 0;
+    border-radius: 26px;
+  }
+  .classic-post .post-header {
+    padding: 12px 6px 0;
+  }
+  .post-list > .post-card .world-enter,
+  .post-list > .post-card:not(:nth-child(3n + 1)) .world-enter {
+    width: auto;
+    padding: 0 6px 0 16px;
+  }
+  .post-list > .post-card .world-enter em,
+  .post-list > .post-card:not(:nth-child(3n + 1)) .world-enter em {
+    display: inline;
+  }
+  .feed-end {
+    min-height: 50svh;
+    scroll-snap-align: end;
+  }
+
+  /* The bottom bar becomes a floating dock. */
+  .mobile-nav {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+    height: 64px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 99px;
+    background: var(--glass);
+    backdrop-filter: blur(24px) saturate(1.4);
+    box-shadow:
+      inset 0 0 0 1px var(--glass-line),
+      0 20px 50px rgb(0 0 0 / 35%);
+  }
+  .mobile-nav .mobile-create {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+/* With the slogan gone, the season chip sits at the end of the tabs row. */
+.app-shell[data-view="home"] .season-chip {
+  top: 10px;
+  right: 96px;
+  z-index: 2;
+}
+@media (max-width: 700px) {
+  .app-shell[data-view="home"] .feed-heading {
+    height: auto;
+    padding: 2px 14px 6px;
+  }
+  .app-shell[data-view="home"] .season-chip {
+    position: static;
+  }
+}

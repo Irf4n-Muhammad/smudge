@@ -59,6 +59,7 @@ import { MomentComposer } from "./moment-composer";
 import { DecorationsPanel } from "./decorations-panel";
 import type { DecoratedPost } from "./post-decor";
 import { SeasonChip, SeasonLayer } from "./season";
+import { AmbientLight } from "./gallery";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
   const [cockpit, setCockpit] = useState(false);
@@ -351,7 +352,8 @@ export function FormaApp() {
       <Cockpit posts={posts} boot={boot} onRefresh={refresh} onExit={() => changeMode(false)} />
     );
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-view={view}>
+      <AmbientLight watch={`${view}:${filter}:${visible.map((p) => p.id).join(",")}`} />
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Smudge home">
           <span className="brand-mark">s</span>smudge<span className="brand-dot">.</span>

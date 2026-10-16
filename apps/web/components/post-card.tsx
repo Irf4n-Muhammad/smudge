@@ -10,6 +10,7 @@ import {
   Layers,
   Bookmark,
   ArrowDown,
+  ArrowUpRight,
   Ban,
   Link2,
   Pencil,
@@ -35,6 +36,7 @@ import {
   ReactionBar,
 } from "./post-decor";
 import type { DecoratedPost } from "./post-decor";
+import { glowFor } from "./gallery";
 export function PostCard({
   post,
   boot,
@@ -164,14 +166,15 @@ export function PostCard({
     <article
       className={`post-card ${stage ? "world-stage" : "classic-post"}`}
       style={
-        stage
-          ? ({
-              "--scene-bg": stage.background,
-              "--scene-ink": stage.ink,
-              "--scene-night": stage.nightBackground,
-              "--scene-night-ink": stage.nightInk,
-            } as CSSProperties)
-          : undefined
+        {
+          ...glowFor(post.id, stage),
+          ...(stage && {
+            "--scene-bg": stage.background,
+            "--scene-ink": stage.ink,
+            "--scene-night": stage.nightBackground,
+            "--scene-night-ink": stage.nightInk,
+          }),
+        } as CSSProperties
       }
       tabIndex={-1}
       aria-label={`${post.metadata.title} by ${post.author.name}`}
@@ -289,18 +292,38 @@ export function PostCard({
           </div>
         </div>
       </header>
-      <DecorFrame post={post}>
-        {moment ? (
-          <MomentCover post={post} onOpen={() => setFull(true)} />
-        ) : (
-          <Runtime
-            target={post.id}
-            version={post.revision}
-            height={stage?.height ?? (post.metadata.format === "scrapbook" ? 510 : 460)}
-            onSkip={onSkip}
-          />
+      <div className="world-window">
+        <DecorFrame post={post}>
+          {moment ? (
+            <MomentCover post={post} onOpen={() => setFull(true)} />
+          ) : (
+            <Runtime
+              target={post.id}
+              version={post.revision}
+              height={stage?.height ?? (post.metadata.format === "scrapbook" ? 510 : 460)}
+              onSkip={onSkip}
+            />
+          )}
+        </DecorFrame>
+        {!moment && !stage && (
+          <>
+            <span className="world-kind" aria-hidden="true">
+              <i />
+              {labels[post.metadata.format]}
+            </span>
+            <button
+              className="world-enter"
+              aria-label={`Enter world: ${post.metadata.title}`}
+              onClick={() => setFull(true)}
+            >
+              <em>Enter world</em>
+              <span>
+                <ArrowUpRight size={16} />
+              </span>
+            </button>
+          </>
         )}
-      </DecorFrame>
+      </div>
       <PostLink post={post} notify={notify} onOpenSelf={() => setFull(true)} />
       {full && <FullScreenPost post={post} notify={notify} onClose={() => setFull(false)} />}
       <div className="post-body">

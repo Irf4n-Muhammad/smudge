@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { resolve } from "node:path";
@@ -7,6 +7,12 @@ import { resolve } from "node:path";
 async function boot(page: Page) {
   await page.goto("/");
   await expect(page.locator(".post-card").first()).toBeVisible();
+}
+// A post restores its saved state through capability calls after it opens. A click before those
+// answer can be undone by the restore, and with several posts loading at once they answer later.
+async function settled(page: Page, article: Locator) {
+  await expect(article.locator(".runtime")).toHaveAttribute("data-ready", "true");
+  await page.waitForLoadState("networkidle");
 }
 async function post(page: Page, path: string, body: unknown) {
   return page.evaluate(
@@ -77,6 +83,7 @@ test("feed formats, progress persistence, comments and bookmarks", async ({ page
   await page
     .getByRole("article", { name: "Take the scenic route by Leo Park" })
     .scrollIntoViewIfNeeded();
+  await settled(page, page.getByRole("article", { name: "Take the scenic route by Leo Park" }));
   await story.getByRole("button", { name: "Into the woods ↗" }).click();
   await expect(story.getByRole("heading", { name: "A little further in." })).toBeVisible();
 });
@@ -101,6 +108,7 @@ test("studio edits, uploads, previews and publishes an immutable revision", asyn
   await expect(dialog).not.toBeVisible();
   const published = page.getByRole("article", { name: `${title} by Alex Morgan` });
   await expect(published).toBeVisible();
+  await settled(page, published);
   await published
     .frameLocator("iframe")
     .getByRole("button", { name: "Open a little surprise ↗" })
@@ -220,6 +228,7 @@ test("sandbox blocks host access and network; undeclared and cross-account opera
   const shared = page
     .getByRole("article", { name: "The weekend, together by Maya Chen" })
     .frameLocator("iframe");
+  await settled(page, page.getByRole("article", { name: "The weekend, together by Maya Chen" }));
   await shared.getByRole("textbox", { name: "Your memory" }).fill("Not invited");
   await shared.getByRole("button", { name: "Add your memory +" }).click();
   await expect(shared.getByText("This notebook is open to Alex and Maya only.")).toBeVisible();
