@@ -201,7 +201,8 @@ Browser sessions reset when the server restarts, but content remains. The defaul
 
 Stop the development servers before running E2E tests: they use the same ports and start their own
 instance. Tests never overwrite `.local/forma.sqlite`. Failure traces go in `test-results/`;
-desktop/mobile screenshots go in `artifacts/`. CI is configured but has not been run on GitHub here.
+desktop/mobile screenshots go in `artifacts/`. GitHub Actions (`.github/workflows/ci.yml`) runs
+`npm run check`, the web build and the E2E suite on every pull request and push to `main`.
 
 ## Find the right place
 
