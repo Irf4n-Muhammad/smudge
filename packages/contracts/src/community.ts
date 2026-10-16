@@ -58,5 +58,7 @@ export interface PersonView {
   requested: boolean;
   private: boolean;
   followsYou: boolean;
+  /** They follow you or wrote to you first, so a message from you can reach them. */
+  canMessage: boolean;
   mutuals?: number | undefined;
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import type { User } from "../../../packages/contracts/src/experience";
@@ -95,5 +95,52 @@ export function Dialog({
         {children}
       </div>
     </div>
+  );
+}
+
+interface Ask {
+  title: string;
+  body: string;
+  action: string;
+  resolve: (ok: boolean) => void;
+}
+let showAsk: ((ask: Ask) => void) | null = null;
+
+/** A Smudge-styled "are you sure?", in place of the browser's own confirm box. */
+export function askConfirm(title: string, body: string, action: string) {
+  return new Promise<boolean>((resolve) => {
+    if (!showAsk) return resolve(window.confirm(body));
+    showAsk({ title, body, action, resolve });
+  });
+}
+
+/** Mounted once by the app; shows whatever askConfirm asked. */
+export function ConfirmHost() {
+  const [ask, setAsk] = useState<Ask | null>(null);
+  useEffect(() => {
+    showAsk = setAsk;
+    return () => {
+      showAsk = null;
+    };
+  }, []);
+  if (!ask) return null;
+  const done = (ok: boolean) => {
+    setAsk(null);
+    ask.resolve(ok);
+  };
+  return (
+    <Dialog title={ask.title} onClose={() => done(false)}>
+      <div className="confirm-ask">
+        <p>{ask.body}</p>
+        <div className="confirm-actions">
+          <button className="quiet-button" onClick={() => done(false)}>
+            Cancel
+          </button>
+          <button className="primary danger-fill" onClick={() => done(true)}>
+            {ask.action}
+          </button>
+        </div>
+      </div>
+    </Dialog>
   );
 }

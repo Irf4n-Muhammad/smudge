@@ -134,6 +134,18 @@ export function startPostDesign(style: PostStyle, from?: Partial<PostDesign>): P
   });
 }
 
+/** Example words nobody changed come out before publishing, so they never pass for the author's. */
+export function withoutStarterWords(design: PostDesign): PostDesign {
+  const untouched = (key: "kicker" | "text" | "quote") =>
+    Object.values(starters).some((w) => w[key] && w[key] === design[key]);
+  return {
+    ...design,
+    ...(untouched("kicker") ? { kicker: "" } : {}),
+    ...(untouched("text") ? { text: "" } : {}),
+    ...(untouched("quote") ? { quote: "" } : {}),
+  };
+}
+
 /** Switching style keeps the words and photos and takes that style's colours and font. */
 export function restylePost(design: PostDesign, style: PostStyle): PostDesign {
   return { ...design, style, ...styleDefaults[style] };

@@ -124,33 +124,52 @@ export function MomentComposer({
       setBusy(false);
     }
   }
+  const open = templates.filter((t) => t.unlocked),
+    locked = templates.filter((t) => !t.unlocked);
+  const Tile = ({ t }: { t: Template }) => (
+    <button
+      className={`template-tile ${t.unlocked ? "" : "locked"}`}
+      aria-label={`${t.name}${t.unlocked ? "" : ", locked"}`}
+      onClick={() => {
+        if (!t.unlocked) return notify(t.rule);
+        setKind(t.kind);
+        setChapterId(t.chapters[0]?.id ?? "");
+      }}
+    >
+      <strong>
+        {!t.unlocked && <Lock size={13} />} {t.name}
+      </strong>
+      <small>{t.unlocked ? (t.chapters[0]?.label ?? "Ready") : t.rule}</small>
+    </button>
+  );
   return (
     <Dialog title={template ? template.name : "Share a moment"} onClose={onClose} wide>
       {!template ? (
-        <div className="template-grid">
-          {templates.map((t) => (
-            <button
-              key={t.kind}
-              className={`template-tile ${t.unlocked ? "" : "locked"}`}
-              aria-label={`${t.name}${t.unlocked ? "" : ", locked"}`}
-              onClick={() => {
-                if (!t.unlocked) return notify(t.rule);
-                setKind(t.kind);
-                setChapterId(t.chapters[0]?.id ?? "");
-              }}
-            >
-              <strong>
-                {!t.unlocked && <Lock size={13} />} {t.name}
-              </strong>
-              <small>{t.unlocked ? (t.chapters[0]?.label ?? "Ready") : t.rule}</small>
-            </button>
-          ))}
-          <p className="fineprint template-note">
-            Locked templates open with proof.{" "}
-            <button className="text-button" onClick={onProve}>
-              Add a chapter
-            </button>
-          </p>
+        <div className="template-picker">
+          {open.length > 0 && (
+            <div className="template-grid">
+              {open.map((t) => (
+                <Tile key={t.kind} t={t} />
+              ))}
+            </div>
+          )}
+          {/* What needs proof first is folded away, so the ones you can use come first. */}
+          {locked.length > 0 && (
+            <details className="template-locked" open={open.length === 0}>
+              <summary>{locked.length} more unlock with proof</summary>
+              <div className="template-grid">
+                {locked.map((t) => (
+                  <Tile key={t.kind} t={t} />
+                ))}
+              </div>
+              <p className="fineprint template-note">
+                Locked templates open with proof.{" "}
+                <button className="text-button" onClick={onProve}>
+                  Add a chapter
+                </button>
+              </p>
+            </details>
+          )}
         </div>
       ) : (
         <form className="moment-form" onSubmit={publish}>

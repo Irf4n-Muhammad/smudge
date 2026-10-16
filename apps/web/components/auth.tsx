@@ -1,11 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { KeyRound, Lock, LogOut, MailCheck, ShieldCheck } from "lucide-react";
 import { api } from "./runtime";
 import type { AuthState } from "../../../packages/contracts/src/accounts";
 import { Dialog } from "./ui";
 import { BlockedList, DeleteAccount } from "./community";
+import { EmailPrefsPanel, ProfileBasics } from "./welcome";
+import type { User } from "../../../packages/contracts/src/experience";
 
 const messages: Record<string, string> = {
   LOGIN_INCORRECT: "That email or password is not right.",
@@ -108,9 +110,11 @@ export function AuthForms({
   const { error, busy, submit } = useSubmit(async () => {
     if (mode === "signup") {
       await authApi("/auth/signup", { name, handle, email, password });
+      rememberAccount();
       await onSignedIn(true);
     } else if (mode === "login") {
       await authApi("/auth/login", { login: email, password });
+      rememberAccount();
       await onSignedIn(false);
     } else {
       await authApi("/auth/forgot", { email });
@@ -242,7 +246,30 @@ export function AuthForms({
   );
 }
 
-/** Production landing for signed-out visitors. */
+// This browser has signed in before, so the landing opens on Log in instead of Sign up.
+const KNOWN = "smudge-has-account";
+function rememberAccount() {
+  try {
+    localStorage.setItem(KNOWN, "1");
+  } catch {
+    // Storage can be blocked; the landing then simply opens on Sign up.
+  }
+}
+function knownBrowser() {
+  try {
+    return localStorage.getItem(KNOWN) === "1";
+  } catch {
+    return false;
+  }
+}
+
+interface Showcase {
+  id: string;
+  title: string;
+  author: { id: string; name: string; handle: string };
+}
+
+/** Production landing for signed-out visitors: real posts first, then the way in. */
 export function AuthScreen({
   onSignedIn,
   children,
@@ -252,20 +279,46 @@ export function AuthScreen({
   children?: ReactNode;
   google?: boolean;
 }) {
+  const [posts, setPosts] = useState<Showcase[]>([]),
+    [initial, setInitial] = useState<AuthMode | null>(null);
+  useEffect(() => {
+    setInitial(knownBrowser() ? "login" : "signup");
+    api<Showcase[]>("/public/showcase")
+      .then(setPosts)
+      .catch(() => setPosts([]));
+  }, []);
   return (
     <main className="auth-screen">
       <section className="auth-pitch">
         <a className="brand" href="/" aria-label="Smudge home">
           <span className="brand-mark">s</span>smudge<span className="brand-dot">.</span>
         </a>
-        <h1>Who you are, proven.</h1>
+        <h1>
+          Posts that look like <em>you.</em>
+        </h1>
         <p>
-          Share posts in any shape, show the chapters of your life that are really yours, and
-          celebrate the big moments with the people who matter.
+          Photos, stories and big moments, each in a shape you pick. Made with the people you
+          actually know.
         </p>
+        {posts.length > 0 && (
+          <ul className="auth-showcase" aria-label="Recent posts on Smudge">
+            {posts.slice(0, 6).map((p) => (
+              <li key={p.id}>
+                <a href={`/p/${p.id}`}>
+                  <img src={`/api/public/posts/${p.id}/cover`} alt="" loading="lazy" />
+                  <span>
+                    <strong>{p.title}</strong>
+                    <small>@{p.author.handle}</small>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
       <section className="auth-card" aria-label="Account">
-        {children ?? <AuthForms onSignedIn={onSignedIn} google={google} />}
+        {children ??
+          (initial && <AuthForms initial={initial} onSignedIn={onSignedIn} google={google} />)}
       </section>
     </main>
   );
@@ -367,6 +420,7 @@ export function VerifyBanner({
 
 export function AccountPanel({
   state,
+  me,
   handle,
   isPrivate = false,
   notify,
@@ -374,6 +428,7 @@ export function AccountPanel({
   onChanged,
 }: {
   state: AuthState;
+  me?: User | undefined;
   handle: string;
   isPrivate?: boolean;
   notify: (message: string) => void;
@@ -404,6 +459,7 @@ export function AccountPanel({
         <span className="eyebrow">ACCOUNT</span>
         <h1 id="account-title">Your account</h1>
       </header>
+      {me && <ProfileBasics key={me.id} me={me} notify={notify} onChanged={onChanged} />}
       <div className="identity-panel">
         <h2>
           <Lock size={18} /> Privacy
@@ -437,6 +493,7 @@ export function AccountPanel({
           </span>
         </label>
       </div>
+      {account?.email && <EmailPrefsPanel notify={notify} />}
       <div className="identity-panel">
         <h2>
           <ShieldCheck size={18} /> Sign-in

@@ -62,14 +62,14 @@ test("a post is made by picking a style and tapping its parts, then published", 
   await expect(frame.locator("h1")).toContainText("Summer by the water");
   await expect(frame.locator("figcaption").first()).toHaveText("First swim <b>of the year</b>");
 
-  await editor.getByRole("button", { name: "Button", exact: true }).click();
+  await editor.getByRole("button", { name: "Caption", exact: true }).click();
   await editor
-    .getByRole("region", { name: "Button & caption" })
+    .getByRole("region", { name: "Caption & button" })
     .getByRole("textbox")
     .first()
     .fill("Lake days.");
   await editor
-    .getByRole("region", { name: "Button & caption" })
+    .getByRole("region", { name: "Caption & button" })
     .getByRole("textbox")
     .nth(1)
     .fill("Read the story");

@@ -335,7 +335,7 @@ export class AccountService {
       {
         userId: user.id,
         to: email,
-        subject: "Confirm your email for Forma",
+        subject: "Confirm your email for Smudge",
         body: `Hi ${user.name},\n\nConfirm this address to finish setting up @${user.handle}:\n${this.links.verify(token)}\n\nThe link expires in 24 hours. If you did not sign up, ignore this email.`,
       },
       this.now(),
@@ -395,7 +395,7 @@ export class AccountService {
         {
           userId,
           to: email,
-          subject: "Reset your Forma password",
+          subject: "Reset your Smudge password",
           body: `Hi ${user.name},\n\nSomeone asked to reset the password for @${user.handle}. If it was you, choose a new one here:\n${this.links.reset(token)}\n\nThe link works once and expires in 1 hour. If it was not you, you can ignore this email; your password has not changed.`,
         },
         this.now(),

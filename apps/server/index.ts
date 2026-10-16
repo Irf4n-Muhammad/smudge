@@ -29,11 +29,13 @@ import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
 import { seedIdentity } from "./seed-identity.js";
 import { seedSmudge } from "./seed-smudge.js";
+import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
 import { deliveryFor, startMailWorker } from "./mail.js";
+import { ActivityDigest } from "../../packages/core/src/digest.js";
 import { rateLimit } from "./rate-limit.js";
 import { CommunityService } from "../../packages/core/src/community.js";
 import { MessageService } from "../../packages/core/src/messages.js";
@@ -114,11 +116,15 @@ const messages = new MessageService(service, community, clock);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
 if (deliver) startMailWorker(store, deliver);
+const digest = new ActivityDigest(service, community, config.publicUrl.href, clock);
+// Activity emails go out with the other mail, a few minutes after things happen.
+setInterval(() => digest.run(), 5 * 60_000).unref();
 const profiles = new ProfileService(service);
 if (config.demoContent) {
   seedIdentity(identity, service);
   seedProfiles(profiles);
   seedSmudge(service);
+  seedPhotos(service);
 }
 const sharing = new SharingService(service, community, identity, profiles);
 const media = new MediaService(service, resolve(dataDir, "media"));
@@ -461,6 +467,9 @@ api.get("/api/profile-spec", (_req, res) =>
     templates: Object.keys(profileTemplates),
   }),
 );
+api.get("/api/me/email-prefs", (_req, res) => res.json(digest.prefs(actor(res))));
+api.post("/api/me/email-prefs", (req, res) => res.json(digest.setPrefs(actor(res), req.body)));
+api.post("/api/me/identity", (req, res) => res.json(profiles.updateIdentity(actor(res), req.body)));
 api.get("/api/profile-templates", (_req, res) => res.json(profileTemplates));
 api.get("/api/profiles/:ownerId", (req, res) => {
   community.assertVisibleUser(actor(res), String(req.params.ownerId));
@@ -649,6 +658,7 @@ api.post("/api/posts/:id/edit", (req, res) => {
 });
 // Share links: read-only views anyone can open without an account.
 const guestLimit = rateLimit({ windowMs: 60_000, max: 120 });
+api.get("/api/public/showcase", guestLimit, (_req, res) => res.json(sharing.showcase()));
 api.get("/api/public/posts/:id", guestLimit, (req, res) =>
   res.json(sharing.post(String(req.params.id))),
 );

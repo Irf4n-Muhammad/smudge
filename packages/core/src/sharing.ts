@@ -62,6 +62,26 @@ export class SharingService {
       comments,
     };
   }
+  /** A few recent public posts with a photo, so a visitor sees what Smudge is before joining. */
+  showcase(limit = 8) {
+    const users = new Map(this.social.users().map((u) => [u.id, u]));
+    return this.store
+      .all<Publication>("post")
+      .filter(
+        (p) =>
+          !!p.metadata.coverAssetId &&
+          !this.identity.isMoment(p.id) &&
+          !this.community.hidden(p.ownerId) &&
+          this.social.viewFilter(GUEST, p),
+      )
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit)
+      .map((p) => ({
+        id: p.id,
+        title: p.metadata.title,
+        author: publicUser(users.get(p.ownerId))!,
+      }));
+  }
   /** The cover image of a publicly visible post, for link previews and profile grids. */
   cover(id: string) {
     const post = this.postRecord(id);

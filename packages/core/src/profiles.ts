@@ -45,6 +45,13 @@ export class ProfileService {
     else delete next.avatarAssetId;
     this.social.store.put("user", ownerId, next);
   }
+  /** Name, bio and photo changed outside the profile designer, from onboarding or settings. */
+  updateIdentity(actor: Actor, input: unknown) {
+    const ownerId = this.social.actor(actor);
+    const identity = this.identity(actor, input);
+    this.social.store.transaction(() => this.applyIdentity(ownerId, identity));
+    return identity;
+  }
   publicAvatar(ownerId: string) {
     const owner = this.social.users().find((u) => u.id === ownerId);
     if (!owner?.avatarAssetId) throw new AppError("NOT_FOUND", 404);

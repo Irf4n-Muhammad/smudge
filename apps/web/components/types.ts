@@ -11,6 +11,6 @@ export const labels: Record<string, string> = {
   scrapbook: "Scrapbook",
   story: "Choose your story",
   collaborative: "Made together",
-  photo: "A moment",
+  photo: "Photo gallery",
   custom: "Something different",
 };

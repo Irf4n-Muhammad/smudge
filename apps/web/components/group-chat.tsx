@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, LogOut, Send, UserPlus, Users, X } from "lucide-react";
 import { api } from "./runtime";
-import { Avatar, Dialog } from "./ui";
+import { Avatar, Dialog, askConfirm } from "./ui";
 
 export interface Person {
   id: string;
@@ -150,7 +150,15 @@ export function GroupThread({
   }, [members]);
   if (!thread) return null;
   const remove = async (userId: string, self: boolean) => {
-    if (self && !window.confirm(`Leave “${thread.name}”?`)) return;
+    if (
+      self &&
+      !(await askConfirm(
+        `Leave “${thread.name}”?`,
+        "You stop getting its messages. Someone in the group can add you back.",
+        "Leave group",
+      ))
+    )
+      return;
     try {
       await api(
         `/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,

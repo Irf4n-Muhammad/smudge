@@ -6,6 +6,7 @@ import type { Chapter, CountryCode } from "../../../packages/contracts/src/ident
 import { countries } from "../../../packages/contracts/src/identity";
 import { api } from "./runtime";
 import type { Boot } from "./types";
+import { askConfirm } from "./ui";
 
 type Me = {
   chapters: Chapter[];
@@ -77,7 +78,11 @@ export function ChapterList({
                 onClick={async () => {
                   if (
                     c.kind === "together" &&
-                    !window.confirm("This ends the chapter for both of you.")
+                    !(await askConfirm(
+                      `End “${c.label}”?`,
+                      "This ends the chapter for both of you.",
+                      "End chapter",
+                    ))
                   )
                     return;
                   try {
@@ -103,10 +108,13 @@ export function IdentityHub({
   boot,
   notify,
   onMoment,
+  demo = false,
 }: {
   boot: Boot;
   notify: (s: string) => void;
   onMoment: () => void;
+  /** The local playground, where the made-up organisations below can be tried. */
+  demo?: boolean;
 }) {
   const [me, setMe] = useState<Me | null>(null),
     [tab, setTab] = useState("email"),
@@ -191,7 +199,7 @@ export function IdentityHub({
         })}
       </nav>
       <div className="identity-panel">
-        {tab === "email" && <EmailProof me={me} onDone={load} notify={notify} />}
+        {tab === "email" && <EmailProof me={me} demo={demo} onDone={load} notify={notify} />}
         {tab === "invite" && <InviteRedeem onDone={load} notify={notify} />}
         {tab === "partner" && <PartnerRequest boot={boot} onDone={load} notify={notify} />}
         {tab === "trip" && <TripProof onDone={load} notify={notify} />}
@@ -206,10 +214,12 @@ export function IdentityHub({
 
 function EmailProof({
   me,
+  demo,
   onDone,
   notify,
 }: {
   me: Me;
+  demo: boolean;
   onDone: () => Promise<void>;
   notify: (s: string) => void;
 }) {
@@ -264,14 +274,16 @@ function EmailProof({
               type="email"
               required
               value={email}
-              placeholder="you@student.lembayung.edu"
+              placeholder={demo ? "you@student.lembayung.edu" : "you@campus.edu"}
               onChange={(e) => setEmail(e.target.value)}
             />
           </label>
           <button className="primary">Send code</button>
           <p className="fineprint">
-            Demo organisations: @student.lembayung.edu, @lembayung.edu, @kopinusantara.co. We keep
-            only a fingerprint of the address so it cannot prove a second account.
+            {demo
+              ? "Demo organisations: @student.lembayung.edu, @lembayung.edu, @kopinusantara.co. "
+              : "Works for organisations that have joined Smudge. "}
+            We keep only a fingerprint of the address so it cannot prove a second account.
           </p>
         </form>
       ) : (

@@ -17,7 +17,8 @@ export default defineConfig({
   webServer: [
     {
       command: "node scripts/dev.mjs",
-      url: "http://127.0.0.1:3000",
+      // Through the web app to the API, so tests start only once the demo content is seeded.
+      url: "http://127.0.0.1:3000/api/auth/state",
       timeout: 180000,
       reuseExistingServer: false,
       env: {

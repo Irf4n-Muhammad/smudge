@@ -47,6 +47,7 @@ test("feed formats, progress persistence, comments and bookmarks", async ({ page
   const frame = card.frameLocator("iframe");
   const note = frame.getByRole("button", { name: /little note|Fold the note/ });
   await expect(note).toBeVisible();
+  await settled(page, card);
   if ((await note.getAttribute("aria-expanded")) === "true") await note.click();
   await note.click();
   await expect(note).toHaveAttribute("aria-expanded", "true");

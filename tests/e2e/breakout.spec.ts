@@ -61,6 +61,6 @@ test("mobile breakout remains a vertical scroll feed", async ({ page }) => {
   await expect(page.getByRole("dialog").locator(".runtime")).toHaveAttribute("data-ready", "true");
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page.getByRole("button", { name: "Back to your feed" }).click();
-  await expect(page.getByRole("button", { name: "Break the frame" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ways to browse" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

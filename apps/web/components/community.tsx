@@ -9,6 +9,7 @@ import {
   Search,
   Send,
   ShieldCheck,
+  MoreHorizontal,
   UserCheck,
   UserPlus,
   Users,
@@ -100,14 +101,18 @@ export function ReportDialog({
   );
 }
 
-export async function toggleBlock(user: Small, notify: (m: string) => void) {
+export async function toggleBlock(
+  user: Small,
+  notify: (m: string, undo?: () => void) => void,
+  onUndone?: () => void,
+) {
   try {
     const { blocked } = await api<{ blocked: boolean }>(`/users/${user.id}/block`, {});
-    notify(
-      blocked
-        ? `Blocked @${user.handle}. You will not see each other.`
-        : `Unblocked @${user.handle}.`,
-    );
+    if (blocked)
+      notify(`Blocked @${user.handle}. You will not see each other.`, () => {
+        void toggleBlock(user, notify).then(() => onUndone?.());
+      });
+    else notify(`Unblocked @${user.handle}.`);
     return blocked;
   } catch (e) {
     notify(friendly(e));
@@ -129,6 +134,7 @@ function PersonRow({
   onMessage: (id: string) => void;
   onOpen: (id: string) => void;
 }) {
+  const [menu, setMenu] = useState(false);
   return (
     <li className="member">
       <button className="person-main" onClick={() => onOpen(person.id)}>
@@ -160,24 +166,41 @@ function PersonRow({
           {person.following ? <UserCheck size={15} /> : <UserPlus size={15} />}
           {person.following ? "Following" : person.requested ? "Requested" : "Follow"}
         </button>
-        <button
-          className="icon-button"
-          aria-label={`Message ${person.name}`}
-          title="Message"
-          onClick={() => onMessage(person.id)}
-        >
-          <MessageCircle size={17} />
-        </button>
-        <button
-          className="icon-button"
-          aria-label={`Block ${person.name}`}
-          title="Block"
-          onClick={async () => {
-            if ((await toggleBlock(person, notify)) !== null) onChanged();
-          }}
-        >
-          <Ban size={16} />
-        </button>
+        {person.canMessage && (
+          <button
+            className="icon-button"
+            aria-label={`Message ${person.name}`}
+            title="Message"
+            onClick={() => onMessage(person.id)}
+          >
+            <MessageCircle size={17} />
+          </button>
+        )}
+        <div className="post-menu-wrap">
+          <button
+            className="icon-button"
+            aria-label={`More for ${person.name}`}
+            aria-expanded={menu}
+            onClick={() => setMenu((v) => !v)}
+          >
+            <MoreHorizontal size={18} />
+          </button>
+          {menu && (
+            <div className="post-menu">
+              <button
+                className="danger"
+                aria-label={`Block ${person.name}`}
+                onClick={async () => {
+                  setMenu(false);
+                  if ((await toggleBlock(person, notify, onChanged)) !== null) onChanged();
+                }}
+              >
+                <Ban size={14} />
+                Block
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </li>
   );
@@ -270,6 +293,8 @@ interface NotificationView {
   createdAt: string;
   actor: Small | null;
   post: { id: string; title: string } | null;
+  text?: string;
+  youFollow: boolean;
 }
 function describe(n: NotificationView) {
   const title = n.post ? `“${n.post.title}”` : "your post";
@@ -391,7 +416,25 @@ export function NotificationsPanel({
                   </button>
                 </>
               )}
+              {n.text && <q className="notification-quote">{n.text}</q>}
             </p>
+            {n.type === "follow" && n.actor && !n.youFollow && (
+              <button
+                className="primary small"
+                aria-label={`Follow ${n.actor.name} back`}
+                onClick={async () => {
+                  await api(`/users/${n.actor!.id}/follow`, {});
+                  setItems(
+                    (list) =>
+                      list?.map((x) =>
+                        x.actor?.id === n.actor!.id ? { ...x, youFollow: true } : x,
+                      ) ?? null,
+                  );
+                }}
+              >
+                Follow back
+              </button>
+            )}
             <time dateTime={n.createdAt}>{ago(n.createdAt)}</time>
           </li>
         ))}

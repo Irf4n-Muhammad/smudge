@@ -19,7 +19,11 @@ async function signUp(page: Page, prefix: string) {
   await dialog.getByLabel("Email", { exact: true }).fill(`${handle}@mail.example`);
   await dialog.getByLabel("Password").fill("a long enough phrase");
   await dialog.getByRole("button", { name: "Create account", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Your chapters" })).toBeVisible();
+  // New accounts land on the feed with a short welcome: a photo and a few people to follow.
+  await page
+    .getByRole("dialog", { name: /^Welcome/ })
+    .getByRole("button", { name: "Skip for now" })
+    .click();
   return { handle, name };
 }
 async function viewAs(page: Page, option: string | { label: string }) {
@@ -125,8 +129,11 @@ test("a group chat: create, talk, see unread, manage members and leave", async (
   await page.getByRole("button", { name: "3 people" }).click();
   const members = page.getByRole("region", { name: "Group members" });
   await expect(members.getByRole("button", { name: /^Remove / })).toHaveCount(0);
-  page.once("dialog", (d) => void d.accept());
   await members.getByRole("button", { name: "Leave group" }).click();
+  await page
+    .getByRole("dialog", { name: /^Leave/ })
+    .getByRole("button", { name: "Leave group" })
+    .click();
   await expect(page.getByRole("button", { name: /Sketch club/ })).toHaveCount(0);
 
   await viewAs(page, { label: name });

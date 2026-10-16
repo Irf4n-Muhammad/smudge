@@ -22,6 +22,7 @@ import {
 import type { DraftView } from "../../../packages/contracts/src/experience";
 import {
   buildPost,
+  withoutStarterWords,
   postFonts,
   postPalettes,
   postStyleInfo,
@@ -257,6 +258,8 @@ export function PostEditor({
           metadata: { ...built.metadata, caption: "", contributors: [] },
         }),
       );
+      // Photos make a post, so a new one starts there.
+      pick("photos");
     } catch (e) {
       setMessage(friendly(e));
     } finally {
@@ -268,6 +271,15 @@ export function PostEditor({
     setBusy(true);
     setMessage("");
     try {
+      const current = latest.current.design;
+      // Only a new post: an author may have kept those words on purpose in an earlier version.
+      if (current && !editing) {
+        const cleaned = withoutStarterWords(current);
+        if (JSON.stringify(cleaned) !== JSON.stringify(current)) {
+          setDesign(cleaned);
+          latest.current = { ...latest.current, design: cleaned };
+        }
+      }
       await save();
       const d = draftRef.current!;
       await api(`/drafts/${d.id}/publish`, { revision: d.revision });
@@ -463,7 +475,7 @@ export function PostEditor({
           ? "Colors"
           : sheet === "font"
             ? "Font"
-            : "Button & caption";
+            : "Caption & button";
   const addPhotos = (
     <label className="easy-upload">
       <input
@@ -763,7 +775,7 @@ export function PostEditor({
           onClick={() => setSheet(sheet === "button" ? null : "button")}
         >
           <Link2 />
-          <span>Button</span>
+          <span>Caption</span>
         </button>
         <button
           aria-pressed={previewing}

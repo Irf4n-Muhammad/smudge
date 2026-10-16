@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Home,
   Compass,
@@ -44,7 +44,7 @@ import {
 import type { AuthMode } from "./auth";
 import type { DraftView, PostView } from "../../../packages/contracts/src/experience";
 import { api } from "./runtime";
-import { Avatar, Dialog } from "./ui";
+import { Avatar, ConfirmHost, Dialog } from "./ui";
 import { PostCard } from "./post-card";
 import { Studio } from "./studio";
 import { SiteImport } from "./site-import";
@@ -60,6 +60,7 @@ import { DecorationsPanel } from "./decorations-panel";
 import type { DecoratedPost } from "./post-decor";
 import { SeasonChip, SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
+import { Welcome } from "./welcome";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
   const [cockpit, setCockpit] = useState(false);
@@ -90,8 +91,16 @@ export function FormaApp() {
     [resetToken, setResetToken] = useState<string | null>(null),
     [badges, setBadges] = useState({ notifications: 0, messages: 0 }),
     [messageTo, setMessageTo] = useState<string | null>(null),
-    [more, setMore] = useState(false);
-  const notify = useCallback((message: string) => setToast(message), []);
+    [more, setMore] = useState(false),
+    [modes, setModes] = useState(false),
+    /** Just signed up: a photo and a few people before the first feed. */
+    [welcome, setWelcome] = useState(false);
+  /** A toast can carry one way back, like Undo after blocking someone. */
+  const undo = useRef<(() => void) | null>(null);
+  const notify = useCallback((message: string, onUndo?: () => void) => {
+    undo.current = onUndo ?? null;
+    setToast(message);
+  }, []);
   const refreshBadges = useCallback(async () => {
     try {
       setBadges(await api<{ notifications: number; messages: number }>("/badges"));
@@ -185,6 +194,9 @@ export function FormaApp() {
     return () => clearInterval(timer);
   }, [signedInNow, refreshBadges, boot?.actor.userId]);
   async function switchUser(userId: string) {
+    // An open chat polls on its own; left open, its next poll would run as the new account and
+    // mark that account's messages read before they ever saw them.
+    if (view === "messages") navigate("home");
     try {
       await api("/session", { userId });
       setStudio(false);
@@ -242,10 +254,10 @@ export function FormaApp() {
     setProfile(null);
     window.history.replaceState(null, "", "/");
     await refresh();
-    navigate(fresh ? "who" : "home");
+    navigate("home");
     // Close the dialog only once the landing view is set, so nothing tapped meanwhile is undone.
     setAuthDialog(null);
-    if (fresh) notify("Welcome. Check your email to confirm it, then add your first chapter.");
+    if (fresh) setWelcome(true);
   }
   async function signedOut() {
     setStudio(false);
@@ -525,19 +537,39 @@ export function FormaApp() {
             </strong>
           </div>
           <div className="topbar-right">
-            <button
-              className="enter-cockpit"
-              onClick={() => {
-                setBreakout(true);
-                window.history.replaceState(null, "", "/?mode=breakout");
-                window.scrollTo(0, 0);
-              }}
-            >
-              Break the frame
-            </button>
-            <button className="enter-cockpit" onClick={() => changeMode(true)}>
-              ✧ Enter hyperspace
-            </button>
+            <div className="post-menu-wrap modes-wrap">
+              <button
+                className="enter-cockpit"
+                aria-expanded={modes}
+                onClick={() => setModes((v) => !v)}
+              >
+                ✧ Ways to browse
+              </button>
+              {modes && (
+                <div className="post-menu modes-menu">
+                  <button
+                    onClick={() => {
+                      setModes(false);
+                      setBreakout(true);
+                      window.history.replaceState(null, "", "/?mode=breakout");
+                      window.scrollTo(0, 0);
+                    }}
+                  >
+                    <strong>Break the frame</strong>
+                    <small>Posts float free on one long page</small>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setModes(false);
+                      changeMode(true);
+                    }}
+                  >
+                    <strong>Enter hyperspace</strong>
+                    <small>Fly through posts in orbit</small>
+                  </button>
+                </div>
+              )}
+            </div>
             <ThemeToggle />
             <label className="search">
               <Search size={16} />
@@ -574,6 +606,7 @@ export function FormaApp() {
             {view === "account" && auth ? (
               <AccountPanel
                 state={auth}
+                me={me}
                 handle={me?.handle ?? ""}
                 isPrivate={!!me?.private}
                 notify={notify}
@@ -619,6 +652,7 @@ export function FormaApp() {
                 key={boot.actor.userId}
                 boot={boot}
                 notify={notify}
+                demo={!production}
                 onMoment={() => setMomentOpen(true)}
               />
             ) : view === "decor" && boot ? (
@@ -966,8 +1000,8 @@ export function FormaApp() {
           <MessageCircle size={21} />
           {badges.messages > 0 && <span className="badge nav-badge">{badges.messages}</span>}
         </button>
-        <button aria-label="My profile" onClick={() => navigate("profile")}>
-          <UserRound size={21} />
+        <button aria-label="Find people" onClick={() => navigate("people")}>
+          <UserSearch size={21} />
         </button>
         <button aria-label="More" onClick={() => setMore(true)}>
           <Menu size={21} />
@@ -978,7 +1012,7 @@ export function FormaApp() {
           <div className="more-menu">
             {(
               [
-                ["people", UserSearch, "Find people"],
+                ["profile", UserRound, "My profile"],
                 ["following", Users, "Following"],
                 ["saved", Bookmark, "Saved"],
                 ["who", BadgeCheck, "Who you are"],
@@ -1005,11 +1039,25 @@ export function FormaApp() {
         <div className="toast" role="status">
           <span>✳</span>
           {toast}
+          {undo.current && (
+            <button
+              className="toast-undo"
+              onClick={() => {
+                const back = undo.current;
+                undo.current = null;
+                setToast("");
+                back?.();
+              }}
+            >
+              Undo
+            </button>
+          )}
           <button aria-label="Dismiss notification" onClick={() => setToast("")}>
             <X size={14} />
           </button>
         </div>
       )}
+      <ConfirmHost />
       {studio && boot && (
         <Studio
           boot={boot}
@@ -1092,6 +1140,16 @@ export function FormaApp() {
             navigate("home");
             await refresh();
             notify("Moment published. Visitors can leave one sticker each.");
+          }}
+        />
+      )}
+      {welcome && me && (
+        <Welcome
+          me={me}
+          onDone={async () => {
+            setWelcome(false);
+            await refresh();
+            notify("Welcome to Smudge. We sent you an email to confirm your address.");
           }}
         />
       )}

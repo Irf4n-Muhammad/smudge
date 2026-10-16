@@ -20,7 +20,11 @@ test("find people, follow, notify, message, report, moderate, block and delete a
   await dialog.getByLabel("Email", { exact: true }).fill(`${handle}@mail.example`);
   await dialog.getByLabel("Password").fill("a long enough phrase");
   await dialog.getByRole("button", { name: "Create account", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Your chapters" })).toBeVisible();
+  // New accounts land on the feed with a short welcome: a photo and a few people to follow.
+  await page
+    .getByRole("dialog", { name: /^Welcome/ })
+    .getByRole("button", { name: "Skip for now" })
+    .click();
 
   // Search ranks the handle match first; following is one tap.
   await page.getByRole("button", { name: "Find people", exact: true }).click();
@@ -78,9 +82,11 @@ test("find people, follow, notify, message, report, moderate, block and delete a
 
   await page.getByRole("button", { name: "Find people", exact: true }).click();
   await page.getByLabel("Search people").fill("alex");
+  // Block sits behind the row's ⋯ menu, so it is never one stray tap away.
+  await page.getByRole("button", { name: "More for Alex Morgan" }).click();
   await page.getByRole("button", { name: "Block Alex Morgan" }).click();
   await toast(page, "Blocked @alex");
-  await expect(page.getByRole("button", { name: "Block Alex Morgan" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "More for Alex Morgan" })).toHaveCount(0);
   await page.getByRole("button", { name: "Account settings" }).click();
   await expect(
     page.locator(".identity-panel").filter({ hasText: "Blocked accounts" }),

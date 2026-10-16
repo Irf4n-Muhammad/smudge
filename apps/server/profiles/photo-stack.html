@@ -101,6 +101,8 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    /* A dragged photo would take the swipe away from the stack. */
+    -webkit-user-drag: none;
   }
   .stack-picture svg {
     width: 100%;
@@ -246,6 +248,7 @@
               const img = document.createElement("img");
               img.src = cover.src;
               img.alt = cover.alt;
+              img.draggable = false;
               card.querySelector(".stack-picture").replaceChildren(img);
             })
             .catch((e) => {

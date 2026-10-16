@@ -94,10 +94,13 @@ test("owners edit and delete posts; people reply, mention and delete comments; l
   await card.getByLabel("Write a reply").fill("and see you next week");
   await card.getByRole("button", { name: "Post", exact: true }).click();
   await expect(card.locator(".comment.reply")).toContainText("see you next week");
-  page.once("dialog", (d) => void d.accept());
   await card
     .locator(".comment.reply")
     .getByRole("button", { name: /^Delete comment/ })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Delete this comment?" })
+    .getByRole("button", { name: "Delete comment" })
     .click();
   await expect(card.locator(".comment.reply")).toHaveCount(0);
   await expect(card.locator(".comment")).toHaveCount(1);
@@ -122,9 +125,12 @@ test("owners edit and delete posts; people reply, mention and delete comments; l
 
   // Delete: gone from the feed and from the share link.
   await signIn(page);
-  page.once("dialog", (d) => void d.accept());
   await card.getByRole("button", { name: "Options for Sunday market" }).click();
   await card.getByRole("button", { name: "Delete post" }).click();
+  await page
+    .getByRole("dialog", { name: "Delete this post?" })
+    .getByRole("button", { name: "Delete post" })
+    .click();
   await expect(card).toHaveCount(0);
   await guest.goto(`/p/${post.id}`);
   await expect(guest.getByRole("heading", { name: "This post isn’t available." })).toBeVisible();

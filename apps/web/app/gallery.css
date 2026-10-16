@@ -395,14 +395,18 @@ html[data-theme="dark"] .classic-post .runtime {
   .classic-post .post-header {
     padding: 12px 6px 0;
   }
+  /* A round button on a phone, so it does not cover the post's headline. */
   .post-list > .post-card .world-enter,
   .post-list > .post-card:not(:nth-child(3n + 1)) .world-enter {
+    top: 12px;
+    right: 12px;
     width: auto;
-    padding: 0 6px 0 16px;
+    height: 40px;
+    padding: 3px;
   }
   .post-list > .post-card .world-enter em,
   .post-list > .post-card:not(:nth-child(3n + 1)) .world-enter em {
-    display: inline;
+    display: none;
   }
   .feed-end {
     min-height: 50svh;
@@ -445,5 +449,452 @@ html[data-theme="dark"] .classic-post .runtime {
   }
   .app-shell[data-view="home"] .season-chip {
     position: static;
+  }
+}
+
+/* Landing: real posts first, then the way in. */
+.auth-screen {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+  align-items: center;
+}
+.auth-pitch h1 {
+  margin: 22px 0 12px;
+  font:
+    700 clamp(40px, 6vw, 72px) / 0.95 var(--ui),
+    sans-serif;
+  letter-spacing: -0.04em;
+}
+.auth-pitch h1 em {
+  font-family: var(--hand);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--accent);
+}
+.auth-showcase {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.auth-showcase a {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 20px;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 45%);
+}
+.auth-showcase li:nth-child(2) a,
+.auth-showcase li:nth-child(5) a {
+  transform: translateY(18px);
+}
+.auth-showcase img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s;
+}
+.auth-showcase a:hover img {
+  transform: scale(1.04);
+}
+.auth-showcase span {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  gap: 2px;
+  padding: 28px 12px 12px;
+  background: linear-gradient(transparent, rgb(0 0 0 / 70%));
+}
+.auth-showcase strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+.auth-showcase small {
+  font-size: 11px;
+  opacity: 0.8;
+}
+.auth-card {
+  border: 0;
+  border-radius: 28px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 30px 80px -30px rgb(0 0 0 / 35%);
+}
+@media (max-width: 760px) {
+  .auth-showcase {
+    display: flex;
+    gap: 10px;
+    margin: 20px -16px 0;
+    padding: 0 16px 20px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .auth-showcase li {
+    flex: 0 0 42%;
+    scroll-snap-align: start;
+  }
+  .auth-showcase li:nth-child(n) a {
+    transform: none;
+  }
+}
+
+/* First minute: a face and a few people. */
+.welcome {
+  display: grid;
+  gap: 22px;
+}
+.welcome h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.welcome .fineprint {
+  margin: 2px 0 10px;
+}
+.welcome-face {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+}
+.welcome-face .avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 20px;
+}
+.welcome-face .quiet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.welcome-face input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.welcome-face:focus-within .quiet-button {
+  outline: 2px solid var(--accent);
+}
+.welcome-people {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.welcome-people li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.welcome-people li > span {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.welcome-people small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.welcome-people button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A profile before it has a design: a face, a line about them and their posts as pictures. */
+.profile-default {
+  max-width: 980px;
+  padding: 48px 24px 80px;
+}
+.profile-default-head {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.profile-default-head .avatar {
+  flex: 0 0 auto;
+  width: 112px;
+  height: 112px;
+  font-size: 34px;
+  box-shadow:
+    0 0 0 4px var(--paper),
+    0 0 0 6px var(--accent);
+}
+.profile-default-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.profile-default-head h1 {
+  margin: 0;
+  font:
+    700 clamp(30px, 5vw, 46px) / 1 var(--ui),
+    sans-serif;
+  letter-spacing: -0.03em;
+}
+.profile-default-handle,
+.profile-default-count {
+  color: var(--muted);
+  font-size: 14px;
+}
+.profile-default-head p {
+  margin: 8px 0;
+}
+.profile-default-head > button {
+  align-self: center;
+  padding: 0 22px;
+  height: 42px;
+  border-radius: 99px;
+}
+.profile-default .profile-default-hint {
+  max-width: none;
+  margin: 28px 0 0;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.profile-default .profile-default-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 28px;
+}
+.profile-default .profile-default-grid button {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 18px;
+  background: var(--white);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.profile-default-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-default-blank {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  margin: 0;
+  font-size: 40px;
+  color: var(--accent);
+}
+.profile-default .profile-default-grid strong {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 26px 12px 10px;
+  background: linear-gradient(transparent, rgb(0 0 0 / 65%));
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.2;
+}
+@media (max-width: 700px) {
+  .profile-default {
+    padding: 24px 14px 100px;
+  }
+  .profile-default-head {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .profile-default-head .avatar {
+    width: 84px;
+    height: 84px;
+  }
+  .profile-default .profile-default-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+}
+
+/* Notifications: what a comment said, and a one-tap follow back. */
+.notification-quote {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notification-quote::before,
+.notification-quote::after {
+  content: none;
+}
+.notification > .primary.small {
+  flex-shrink: 0;
+}
+
+/* Phone chat: an open conversation takes the whole screen, like every messaging app. */
+@media (max-width: 700px) {
+  .messages.has-thread .thread {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    border: 0;
+    border-radius: 0;
+  }
+  .messages.has-thread .thread > header {
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+  .messages.has-thread .thread-messages {
+    max-height: none;
+  }
+  .messages.has-thread .thread-composer {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  .app-shell:has(.messages.has-thread) .mobile-nav {
+    display: none;
+  }
+}
+
+/* One menu for the two playful ways to browse, instead of two loud buttons. */
+.modes-menu {
+  top: calc(100% + 6px);
+  min-width: 240px;
+  background: var(--white, #fff);
+  border-radius: 14px;
+}
+.modes-menu button {
+  display: grid;
+  gap: 2px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.modes-menu small {
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 620px) {
+  .topbar .modes-wrap {
+    order: 5;
+  }
+  .modes-menu {
+    left: 0;
+    right: auto;
+  }
+}
+
+/* Decorations sit around posts and controls, never on top of something you can tap. */
+.world-window .world-enter {
+  z-index: 6;
+}
+@media (max-width: 620px) {
+  /* On a phone the bats landed on the feed tabs; the web in the corner is enough. */
+  .season-layer .bat {
+    display: none !important;
+  }
+}
+
+/* "Are you sure?" in Smudge's own look, and Undo right in the toast. */
+.confirm-ask {
+  display: grid;
+  gap: 18px;
+}
+.confirm-ask p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.confirm-actions .danger-fill {
+  background: #d93a3a;
+  border-color: #d93a3a;
+  color: #fff;
+}
+.toast .toast-undo {
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: rgb(255 255 255 / 16%);
+  font: 600 12px var(--ui, inherit);
+}
+
+/* Share a moment: ready templates first, the locked ones folded below. */
+.template-picker {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.template-locked summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 6px 0;
+}
+.template-locked[open] summary {
+  margin-bottom: 10px;
+}
+
+/* Settings: the same page margins as the other panels, and forms sized to what they hold. */
+.account-panel {
+  padding: 32px 48px 48px;
+  max-width: 760px;
+  min-width: 0;
+}
+.account-panel .identity-panel > .primary,
+.account-panel form > .primary {
+  justify-self: start;
+  width: auto;
+  padding-inline: 22px;
+}
+.account-panel .welcome-face {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+}
+.account-panel .welcome-face .quiet-button {
+  width: auto;
+}
+@media (max-width: 700px) {
+  .account-panel {
+    padding: 20px 16px 110px;
+  }
+}
+
+/* Phone chat over everything: no app top bar or banner above the conversation. */
+@media (max-width: 700px) {
+  .app-shell:has(.messages.has-thread) .topbar,
+  .app-shell:has(.messages.has-thread) .verify-banner {
+    display: none;
+  }
+}
+
+/* Dialog content that has no padding of its own. */
+.modal > .template-picker,
+.modal > .confirm-ask {
+  padding: 20px 28px 26px;
+}
+
+/* Phone: the confirm-your-email reminder stays one short strip, so the first post fits. */
+@media (max-width: 700px) {
+  .verify-banner {
+    flex-wrap: nowrap;
+    margin: 0 12px 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .verify-banner > svg {
+    display: none;
+  }
+  .verify-banner > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .verify-banner .text-button {
+    flex-shrink: 0;
   }
 }

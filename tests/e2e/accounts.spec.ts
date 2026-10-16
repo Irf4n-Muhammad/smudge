@@ -18,10 +18,16 @@ test("sign up with email and password, confirm the email, log out and back in, c
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("Password").fill("a long enough phrase");
   await dialog.getByRole("button", { name: "Create account", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Your chapters" })).toBeVisible();
+  // New accounts land on the feed with a short welcome: a photo and a few people to follow.
+  await page
+    .getByRole("dialog", { name: /^Welcome/ })
+    .getByRole("button", { name: "Skip for now" })
+    .click();
 
   const banner = page.locator(".verify-banner");
   await expect(banner).toContainText(email);
+  // The demo's stand-in mailbox lives on the Who you are page.
+  await page.getByRole("button", { name: "Who you are", exact: true }).click();
   const inbox = page.getByLabel("Local demo inbox");
   await expect(inbox).toContainText("Confirm this address");
   const token = (await inbox.innerText()).match(/verify=([A-Za-z0-9_-]{43})/)![1]!;

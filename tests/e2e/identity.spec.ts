@@ -27,10 +27,18 @@ test("signup, prove a campus email, publish a locked moment and receive one pres
   await page.getByLabel("Email", { exact: true }).fill(`${handle}@mail.example`);
   await page.getByLabel("Password").fill("a long enough phrase");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
+  // New accounts land on the feed with a short welcome: a photo and a few people to follow.
+  await page
+    .getByRole("dialog", { name: /^Welcome/ })
+    .getByRole("button", { name: "Skip for now" })
+    .click();
+  await page.getByRole("button", { name: "Who you are", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your chapters" })).toBeVisible();
 
   await page.getByRole("button", { name: "Share a moment" }).first().click();
   const dialog = page.getByRole("dialog");
+  // Templates that need proof are folded under the ones ready to use.
+  await dialog.getByText(/more unlock with proof/).click();
   await expect(dialog.getByRole("button", { name: "Graduation, locked" })).toBeVisible();
   await dialog.getByRole("button", { name: "Close dialog" }).click();
 

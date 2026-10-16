@@ -163,10 +163,23 @@ export class CommunityService {
   notifications(actor: Actor) {
     const me = this.social.actor(actor);
     const users = new Map(this.social.users().map((u) => [u.id, u]));
+    const follows = this.follows();
+    const comments = this.store.all<{
+      postId: string;
+      userId: string;
+      text: string;
+      createdAt: string;
+    }>("comment");
     return this.mine(me)
       .slice(0, 50)
       .map((n) => {
         const post = n.postId ? this.store.get<Publication>("post", n.postId) : undefined;
+        // The words of a comment or reply, so it can be read without opening the post.
+        const said = ["comment", "reply"].includes(n.type)
+          ? comments
+              .filter((c) => c.postId === n.postId && c.userId === n.actorId)
+              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.text
+          : undefined;
         return {
           id: n.id,
           type: n.type,
@@ -174,6 +187,8 @@ export class CommunityService {
           createdAt: n.createdAt,
           actor: n.actorId ? publicUser(users.get(n.actorId)) : null,
           post: post ? { id: post.id, title: post.metadata.title } : null,
+          ...(said ? { text: said.length > 140 ? `${said.slice(0, 139)}…` : said } : {}),
+          youFollow: !!n.actorId && follows.some((f) => f.userId === me && f.target === n.actorId),
         };
       });
   }
@@ -210,6 +225,12 @@ export class CommunityService {
       requested: !!this.store.get("follow-request", `${me}:${userId}`),
       private: user.private === true,
       followsYou: follows.some((f) => f.userId === userId && f.target === me),
+      // The same rule MessageService.canMessage applies when a message is sent.
+      canMessage:
+        follows.some((f) => f.userId === userId && f.target === me) ||
+        this.store
+          .all<{ from: string; to: string }>("message")
+          .some((m) => m.from === userId && m.to === me),
     };
   }
   private candidates(me: string) {

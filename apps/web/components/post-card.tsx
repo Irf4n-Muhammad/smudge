@@ -22,7 +22,7 @@ import type { CommentItem } from "./comments";
 import { MentionText } from "./mention-text";
 import { ReportDialog, toggleBlock } from "./community";
 import { api, Runtime } from "./runtime";
-import { Avatar } from "./ui";
+import { Avatar, askConfirm } from "./ui";
 import { PostLink } from "./post-link";
 import { labels } from "./types";
 import type { Boot } from "./types";
@@ -124,7 +124,14 @@ export function PostCard({
     }
   }
   async function remove() {
-    if (!window.confirm(`Delete “${post.metadata.title}”? Likes and comments go with it.`)) return;
+    if (
+      !(await askConfirm(
+        "Delete this post?",
+        `“${post.metadata.title}” goes away for good, with its likes and comments.`,
+        "Delete post",
+      ))
+    )
+      return;
     try {
       await api(`/posts/${post.id}`, undefined, "DELETE");
       notify("Post deleted. Its draft is still in your studio.");
@@ -134,7 +141,8 @@ export function PostCard({
     }
   }
   async function removeComment(c: CommentItem) {
-    if (!window.confirm("Delete this comment?")) return;
+    if (!(await askConfirm("Delete this comment?", "Replies to it go too.", "Delete comment")))
+      return;
     try {
       await api(`/comments/${c.id}`, undefined, "DELETE");
       await loadComments();
@@ -280,7 +288,8 @@ export function PostCard({
                   <button
                     onClick={async () => {
                       setMenu(false);
-                      if ((await toggleBlock(post.author, notify)) !== null) await onRefresh();
+                      if ((await toggleBlock(post.author, notify, () => void onRefresh())) !== null)
+                        await onRefresh();
                     }}
                   >
                     <Ban size={14} />
@@ -307,10 +316,6 @@ export function PostCard({
         </DecorFrame>
         {!moment && !stage && (
           <>
-            <span className="world-kind" aria-hidden="true">
-              <i />
-              {labels[post.metadata.format]}
-            </span>
             <button
               className="world-enter"
               aria-label={`Enter world: ${post.metadata.title}`}

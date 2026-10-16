@@ -276,6 +276,7 @@ export function ProfilePage({
               </button>
             )}
             <button
+              hidden={mine}
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -341,27 +342,57 @@ export function ProfilePage({
         </section>
       ) : profile ? (
         <section className="profile-default">
-          <Avatar user={owner} />
-          <h1>{owner.name}</h1>
-          <p>{owner.bio}</p>
+          <header className="profile-default-head">
+            <Avatar user={owner} />
+            <div>
+              <h1>{owner.name}</h1>
+              <span className="profile-default-handle">@{owner.handle}</span>
+              {owner.bio && <p>{owner.bio}</p>}
+              <span className="profile-default-count">
+                {posts.filter((p) => p.ownerId === ownerId).length} posts
+              </span>
+            </div>
+            {!mine && (
+              <button
+                disabled={busy}
+                className={boot.following.includes(ownerId) ? "quiet-button" : "primary"}
+                onClick={() => void follow()}
+              >
+                {boot.following.includes(ownerId)
+                  ? "Following"
+                  : boot.requested.includes(ownerId)
+                    ? "Requested"
+                    : "Follow"}
+              </button>
+            )}
+          </header>
           {mine && (
-            <p>
-              Your profile can be a painted wall, a comic, or something entirely yours.{" "}
-              <button className="profile-edit" onClick={() => setEasy(true)}>
-                <Pencil size={16} /> Edit profile
+            <p className="profile-default-hint">
+              Make this page yours: a painted wall, a comic, a scrapbook.{" "}
+              <button className="text-button" onClick={() => setEasy(true)}>
+                Pick a style
               </button>
             </p>
           )}
-          <div>
+          <div className="profile-default-grid">
             {posts
               .filter((p) => p.ownerId === ownerId)
               .map((p) => (
                 <button key={p.id} onClick={() => setOpen(p)}>
+                  {p.metadata.coverAssetId ? (
+                    <img src={`/api/assets/${p.metadata.coverAssetId}`} alt="" loading="lazy" />
+                  ) : (
+                    <span className="profile-default-blank" aria-hidden="true">
+                      ✳
+                    </span>
+                  )}
                   <strong>{p.metadata.title}</strong>
-                  <span>{p.metadata.caption}</span>
                 </button>
               ))}
           </div>
+          {!posts.some((p) => p.ownerId === ownerId) && (
+            <p className="fineprint">{mine ? "Your posts will show up here." : "No posts yet."}</p>
+          )}
         </section>
       ) : (
         <p className="profile-message">Opening profile…</p>
