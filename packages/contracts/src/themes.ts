@@ -133,6 +133,38 @@ export const themeSubmissionSchema = z
   });
 export type ThemeSubmissionInput = z.infer<typeof themeSubmissionSchema>;
 
+/**
+ * Personal edits (ADR 0025): whoever wears a theme may move its pieces and change the text the
+ * designer marked with `data-text="name"`. The theme itself never changes for anyone else.
+ */
+export function textSlots(html: string): string[] {
+  const names = [...html.matchAll(/data-text\s*=\s*["']([a-z][a-z0-9-]{0,23})["']/gi)].map((m) =>
+    m[1]!.toLowerCase(),
+  );
+  return [...new Set(names)];
+}
+export const themeTextMax = 40;
+export const themeEditSchema = z
+  .object({
+    decorationId: z.string().max(40),
+    /** One position per piece of the theme, in the theme's own order. */
+    pieces: z.array(z.object({ dx: offset, dy: offset }).strict()).max(themeLimits.pieces),
+    /** "<piece index>.<slot name>" to the wearer's text. */
+    texts: z
+      .record(
+        z.string().regex(/^[0-5]\.[a-z][a-z0-9-]{0,23}$/),
+        z
+          .string()
+          .trim()
+          .min(1)
+          .max(themeTextMax)
+          .refine((t) => !/[\u0000-\u001f\u007f]/.test(t), "No control characters"),
+      )
+      .refine((t) => Object.keys(t).length <= 24, "Too many texts"),
+  })
+  .strict();
+export type ThemeEditInput = z.infer<typeof themeEditSchema>;
+
 export const themeReviewSchema = z
   .object({
     decision: z.enum(["approve", "reject", "remove"]),

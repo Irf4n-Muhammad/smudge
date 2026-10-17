@@ -21,6 +21,8 @@
       trip (France first). See ADR 0022.
 - [x] Open theme market: anyone submits a theme made of their own HTML and CSS, moderators review
       it, and approved themes join the market; pieces are drawn as images. See ADR 0024.
+- [x] Wear and edit themes: a gallery with a preview of yourself, and a personal version where
+      you drag pieces and rewrite designer-marked text. See ADR 0025.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 
@@ -65,7 +67,7 @@ the application does not include or automatically connect a hosted model.
 - Identity: email is a local outbox, organisations/admins are a static catalog, photo location is
   evidence not proof, no lunar-calendar seasons, buying market themes and real payouts are not
   built. Community themes cannot use web fonts, outside images or interaction, and approval is
-  one moderator's call with no appeal. Only France has a trip theme event.
+  one moderator's call with no appeal. Personal edits cover position and text only, not colours. Only France has a trip theme event.
 
 - Profiles use bounded iframe heights, with optional content sizing up to 4000px and internal
   scrolling for larger documents. Visual controls currently support the Raka shell and compatible

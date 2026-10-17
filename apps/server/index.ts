@@ -128,10 +128,11 @@ setInterval(() => digest.run(), 5 * 60_000).unref();
 const profiles = new ProfileService(service);
 if (config.demoContent) {
   seedIdentity(identity, service);
-  seedThemes(service, studio);
   seedProfiles(profiles);
   seedSmudge(service);
   seedPhotos(service);
+  // After the photo seed, which adds Arif.
+  seedThemes(service, studio);
 }
 const sharing = new SharingService(service, community, identity, profiles);
 const media = new MediaService(service, resolve(dataDir, "media"));

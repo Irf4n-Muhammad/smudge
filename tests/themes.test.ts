@@ -132,3 +132,57 @@ test("a community event theme opens only with its event's proof, like catalog on
     "DECORATION_LOCKED",
   );
 });
+
+test("a wearer makes a theme their own without changing it for anyone else", async () => {
+  const { identity, studio } = await setup();
+  const sent = studio.submit(
+    maya,
+    theme({ pieces: [piece({ html: '<div class="b" data-text="sign">hi</div>' })] }),
+  );
+  studio.review(admin, sent.id, { decision: "approve" });
+  for (const who of [leo, admin])
+    identity.chooseDecoration(who, { decorationId: sent.id, scope: "base" });
+  const edit = {
+    decorationId: sent.id,
+    pieces: [{ dx: -200, dy: -40 }],
+    texts: { "0.sign": "Leo's" },
+  };
+  identity.editDecoration(leo, edit);
+  const mine = identity.themeFor(maya, "leo")!.pieces[0]!;
+  assert.equal(mine.dx, -200);
+  assert.deepEqual("texts" in mine && mine.texts, { sign: "Leo's" });
+  // Another wearer of the same theme, and the market, still see the designer's original.
+  const other = identity.themeFor(maya, "mod")!.pieces[0]!;
+  assert.equal(other.dx, -130);
+  assert.ok(!("texts" in other));
+  assert.equal(identity.decorations(admin).items.find((d) => d.id === sent.id)!.edit, null);
+
+  // Pieces stay near an edge, and only the designer's marked text can change.
+  const invalid = (patch: Record<string, unknown>) =>
+    rejects(() => identity.editDecoration(leo, { ...edit, ...patch }), "THEME_EDIT_INVALID");
+  invalid({ pieces: [{ dx: -200, dy: 120 }] });
+  invalid({ pieces: [] });
+  invalid({ texts: { "0.title": "nope" } });
+  assert.throws(() =>
+    identity.editDecoration(leo, { ...edit, texts: { "0.sign": "x".repeat(41) } }),
+  );
+  assert.throws(() => identity.editDecoration(leo, { ...edit, userId: "maya" }));
+
+  identity.resetDecorationEdit(leo, sent.id);
+  assert.equal(identity.themeFor(maya, "leo")!.pieces[0]!.dx, -130);
+});
+
+test("a theme cannot be edited before it can be worn", async () => {
+  const { identity, studio } = await setup();
+  const trip = studio.submit(maya, theme({ kind: "event", eventId: "trip-france" }));
+  studio.review(admin, trip.id, { decision: "approve" });
+  rejects(
+    () =>
+      identity.editDecoration(leo, {
+        decorationId: trip.id,
+        pieces: [{ dx: -130, dy: -30 }],
+        texts: {},
+      }),
+    "DECORATION_LOCKED",
+  );
+});

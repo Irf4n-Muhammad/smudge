@@ -78,7 +78,12 @@ test("a proven trip opens the Paris theme, worn on the profile and around posts 
   await page.getByRole("button", { name: "Themes", exact: true }).click();
   const paris = page.getByRole("article", { name: "Theme Paris" });
   await expect(paris).toContainText("Trip to France");
-  await expect(paris).toContainText("Prove it with a photo taken in France");
+  await expect(paris).toContainText("Locked");
+  await paris.getByRole("button", { name: "Preview Paris" }).click();
+  await expect(page.getByRole("dialog", { name: "Paris" })).toContainText(
+    "Prove it with a photo taken in France",
+  );
+  await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "Who you are", exact: true }).click();
   await page.getByRole("button", { name: "Trip photo" }).click();
@@ -93,7 +98,10 @@ test("a proven trip opens the Paris theme, worn on the profile and around posts 
 
   await page.getByRole("button", { name: "Themes", exact: true }).click();
   // During a season the choice is for this season; otherwise it is the everyday look.
-  await paris.getByRole("button", { name: /^Wear/ }).click();
+  await paris.getByRole("button", { name: "Preview Paris" }).click();
+  await page.getByRole("dialog", { name: "Paris" }).getByRole("button", { name: /^Wear/ }).click();
+  await expect(page.getByRole("dialog", { name: "Paris" })).toContainText("You are wearing it");
+  await page.keyboard.press("Escape");
   await expect(paris).toContainText("Wearing it");
 
   const draft = (

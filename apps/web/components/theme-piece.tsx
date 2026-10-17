@@ -10,8 +10,34 @@ const XHTML = "http://www.w3.org/1999/xhtml";
  * The markup is parsed in an inert document (no scripts, no loading) only to turn it into the
  * well-formed XHTML an SVG image requires.
  */
-export function pieceImage(html: string, css: string, width: number, height: number) {
+export function pieceImage(
+  html: string,
+  css: string,
+  width: number,
+  height: number,
+  texts: Record<string, string> = {},
+) {
   const doc = new DOMParser().parseFromString(`<!doctype html><body>${html}`, "text/html");
+  // The wearer's words replace a slot's text as plain text, never as markup (ADR 0025).
+  for (const el of Array.from(doc.querySelectorAll("[data-text]"))) {
+    const name = (el.getAttribute("data-text") ?? "").toLowerCase();
+    if (!Object.hasOwn(texts, name)) continue;
+    // The piece has a fixed size, so longer words shrink to roughly the space the designer's had.
+    const before = Math.max(1, (el.textContent ?? "").trim().length);
+    const text = texts[name]!;
+    if (text.length <= before) {
+      el.textContent = text;
+      continue;
+    }
+    // A span scales relative to the slot's own size, whatever font size the designer gave it.
+    const fit = doc.createElement("span");
+    fit.setAttribute(
+      "style",
+      `font-size:${Math.max(0.45, before / text.length).toFixed(2)}em;white-space:nowrap`,
+    );
+    fit.textContent = text;
+    el.replaceChildren(fit);
+  }
   const xml = new XMLSerializer();
   const style = doc.createElement("style");
   style.textContent = css;
@@ -32,17 +58,27 @@ export function PieceArt({
   css,
   width,
   height,
+  texts,
 }: {
   html: string;
   css: string;
   width: number;
   height: number;
+  texts?: Record<string, string> | undefined;
 }) {
   const [src, setSrc] = useState<string | null>(null);
+  const words = JSON.stringify(texts ?? {});
   useEffect(() => {
-    setSrc(pieceImage(html, css, width, height));
-  }, [html, css, width, height]);
+    setSrc(pieceImage(html, css, width, height, JSON.parse(words)));
+  }, [html, css, width, height, words]);
   return src ? (
-    <img className="theme-piece-art" src={src} alt="" width={width} height={height} />
+    <img
+      className="theme-piece-art"
+      src={src}
+      alt=""
+      width={width}
+      height={height}
+      draggable={false}
+    />
   ) : null;
 }

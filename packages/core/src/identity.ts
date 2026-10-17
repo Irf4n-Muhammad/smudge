@@ -34,9 +34,11 @@ import type {
   MomentInput,
   MomentKind,
   Org,
+  OverlayPiece,
   PostDecor,
   Season,
 } from "../../contracts/src/identity.js";
+import { pieceDepth, textSlots, themeBand, themeEditSchema } from "../../contracts/src/themes.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
 import type { Asset, Publication, SocialService } from "./social.js";
@@ -78,10 +80,17 @@ interface Choice {
   id: string | null;
   since: string;
 }
+/** A wearer's own version of a theme: where its pieces sit and the words in its text slots. */
+interface ThemeEdit {
+  pieces: { dx: number; dy: number }[];
+  texts: Record<string, string>;
+}
 interface Prefs {
   country?: CountryCode;
   base?: Choice;
   seasons?: Record<string, Choice>;
+  /** By theme id, so switching away and back keeps someone's edits. */
+  edits?: Record<string, ThemeEdit>;
 }
 export interface Moment {
   postId: string;
@@ -593,7 +602,27 @@ export class IdentityService {
   private seasonal(decoration: Decoration) {
     return decoration.tier === "event" && themeEventById(decoration.eventId!)?.kind === "season";
   }
-  private themeView(d: Decoration, users: User[]) {
+  /**
+   * The theme as its wearer edited it. Edits are re-checked on read, like the lock: a piece moved
+   * out of the edge band, or text for a slot the design no longer has, is simply ignored.
+   */
+  private edited(d: Decoration, ownerId: string | undefined): OverlayPiece[] {
+    const edit = ownerId ? this.prefs(ownerId).edits?.[d.id] : undefined;
+    if (!edit) return d.pieces;
+    return d.pieces.map((p, i) => {
+      const moved = edit.pieces.length === d.pieces.length ? { ...p, ...edit.pieces[i]! } : p;
+      const piece = pieceDepth(moved) <= themeBand ? moved : p;
+      if (!("html" in piece)) return piece;
+      const slots = textSlots(piece.html);
+      const texts = Object.fromEntries(
+        Object.entries(edit.texts)
+          .filter(([key]) => key.startsWith(`${i}.`) && slots.includes(key.slice(2)))
+          .map(([key, text]) => [key.slice(2), text]),
+      );
+      return Object.keys(texts).length ? { ...piece, texts } : piece;
+    });
+  }
+  private themeView(d: Decoration, users: User[], ownerId?: string) {
     const event = d.eventId ? themeEventById(d.eventId) : undefined;
     return {
       id: d.id,
@@ -604,7 +633,7 @@ export class IdentityService {
       ...(event ? { event: event.name } : {}),
       ...(d.sponsor ? { sponsor: d.sponsor } : {}),
       creator: users.find((u) => u.id === d.creatorId)?.handle ?? d.creatorId,
-      pieces: d.pieces,
+      pieces: this.edited(d, ownerId),
     };
   }
   /** The theme someone wears, for their profile page. Wearing it is the owner's own choice. */
@@ -615,7 +644,7 @@ export class IdentityService {
     // hidden and private accounts all answer through the same view filter chain.
     if (!this.social.viewFilter(viewer, { id: "", ownerId } as Publication)) return null;
     const effective = this.effectiveDecoration(ownerId);
-    return effective ? this.themeView(effective.decoration, this.social.users()) : null;
+    return effective ? this.themeView(effective.decoration, this.social.users(), ownerId) : null;
   }
   decorations(actor: Actor) {
     const userId = this.social.actor(actor);
@@ -642,11 +671,49 @@ export class IdentityService {
           creator: this.store.get<User>("user", d.creatorId)?.handle ?? d.creatorId,
           emotes: d.emotes.map((id) => stickerById(id)!),
           pieces: d.pieces,
+          /** The caller's own edit of this theme, if they made one. */
+          edit: this.prefs(userId).edits?.[d.id] ?? null,
           unlocked: lock.ok,
           reason: lock.reason ?? null,
         };
       }),
     };
+  }
+  /** Saves the caller's own version of a theme they may wear. The theme stays as it is for others. */
+  editDecoration(actor: Actor, input: unknown) {
+    const userId = this.social.actor(actor);
+    const { decorationId, pieces, texts } = themeEditSchema.parse(input);
+    const decoration = this.decorationById(decorationId);
+    const lock = this.unlock(userId, decoration);
+    if (!lock.ok) throw new AppError("DECORATION_LOCKED", 403, { reason: lock.reason });
+    const d = decoration!;
+    if (pieces.length !== d.pieces.length)
+      throw new AppError("THEME_EDIT_INVALID", 400, { reason: "One position per piece." });
+    pieces.forEach((at, i) => {
+      if (pieceDepth({ ...d.pieces[i]!, ...at }) > themeBand)
+        throw new AppError("THEME_EDIT_INVALID", 400, {
+          reason: `Piece ${i + 1} would cover the post. Keep it near an edge.`,
+        });
+    });
+    for (const key of Object.keys(texts)) {
+      const piece = d.pieces[Number(key[0])];
+      if (!piece || !("html" in piece) || !textSlots(piece.html).includes(key.slice(2)))
+        throw new AppError("THEME_EDIT_INVALID", 400, { reason: "That text cannot be changed." });
+    }
+    const prefs = this.prefs(userId);
+    const next = { ...prefs, edits: { ...prefs.edits, [d.id]: { pieces, texts } } };
+    this.store.transaction(() => this.store.put("prefs", userId, next));
+    return this.decorations(actor);
+  }
+  /** Back to the designer's original. */
+  resetDecorationEdit(actor: Actor, decorationId: string) {
+    const userId = this.social.actor(actor);
+    const prefs = this.prefs(userId);
+    if (prefs.edits?.[decorationId]) {
+      const { [decorationId]: _gone, ...edits } = prefs.edits;
+      this.store.transaction(() => this.store.put("prefs", userId, { ...prefs, edits }));
+    }
+    return this.decorations(actor);
   }
   chooseDecoration(actor: Actor, input: unknown) {
     const userId = this.social.actor(actor);
@@ -868,7 +935,7 @@ export class IdentityService {
       return {
         ...post,
         likes: hideCounts ? 0 : post.likes,
-        ...(d ? { decoration: this.themeView(d, users) } : {}),
+        ...(d ? { decoration: this.themeView(d, users, post.ownerId) } : {}),
         ...(moment ? { moment: this.momentView(moment) } : {}),
         reactions: {
           options: this.reactionOptions(this.social.post(post.id)),

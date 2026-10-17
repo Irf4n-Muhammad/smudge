@@ -10,7 +10,8 @@ import { PieceArt } from "./theme-piece";
 
 export type DecoratedPost = PostView & Partial<PostDecor>;
 
-const place = (p: OverlayPiece): CSSProperties => {
+/** Where a piece sits relative to its anchor corner of the frame. */
+export const place = (p: OverlayPiece): CSSProperties => {
   const style: CSSProperties = { width: p.width, height: p.height };
   if (p.anchor.startsWith("top")) style.top = p.dy;
   if (p.anchor.startsWith("bottom")) style.bottom = -p.dy - p.height;
@@ -57,7 +58,7 @@ export function DecorFrame({ post, children }: { post: DecoratedPost; children: 
             style={place(p)}
             aria-hidden="true"
           >
-            <PieceArt html={p.html} css={p.css} width={p.width} height={p.height} />
+            <PieceArt html={p.html} css={p.css} width={p.width} height={p.height} texts={p.texts} />
           </span>
         ),
       )}

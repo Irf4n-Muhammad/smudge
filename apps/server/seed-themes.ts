@@ -8,6 +8,38 @@ import type { ThemeStudio } from "../../packages/core/src/themes.js";
  * seed has no moderator.
  */
 export function seedThemes(social: SocialService, studio: ThemeStudio) {
+  seedMarketThemes(social, studio);
+  markNeonSign(social);
+}
+/** v2 (ADR 0025): the neon sign's words became a slot wearers may rewrite. */
+function markNeonSign(social: SocialService) {
+  const store = social.store;
+  const marker = "seed-neon-sign-slot-v2";
+  if (store.get("system", marker)) return;
+  store.transaction(() => {
+    for (const t of store.all<{
+      id: string;
+      creatorId: string;
+      name: string;
+      pieces: { html: string }[];
+    }>("theme-submission"))
+      if (
+        t.creatorId === "leo" &&
+        t.name === "Neon open late" &&
+        !t.pieces[0]?.html.includes("data-text")
+      )
+        store.put("theme-submission", t.id, {
+          ...t,
+          pieces: t.pieces.map((p, i) =>
+            i === 0
+              ? { ...p, html: p.html.replace('class="neon"', 'class="neon" data-text="sign"') }
+              : p,
+          ),
+        });
+    store.put("system", marker, { at: new Date().toISOString() });
+  });
+}
+function seedMarketThemes(social: SocialService, studio: ThemeStudio) {
   const store = social.store;
   const marker = "seed-community-themes-v1";
   if (store.get("system", marker) || !store.get("user", "leo") || !store.get("user", "arif"))
@@ -26,7 +58,7 @@ export function seedThemes(social: SocialService, studio: ThemeStudio) {
           height: 64,
           dx: -18,
           dy: -30,
-          html: '<div class="neon">open late</div>',
+          html: '<div class="neon" data-text="sign">open late</div>',
           css:
             ".neon{display:inline-block;margin:8px;padding:8px 14px;border:3px solid #ff4fd8;" +
             "border-radius:14px;background:#1b0b24;color:#fff;font:italic 800 24px/1 system-ui,sans-serif;" +

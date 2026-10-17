@@ -371,6 +371,23 @@ their ids start with `t-`.
 "remove", note? }`. Approve and reject apply to waiting themes, remove to approved ones;
   anything else is `THEME_ALREADY_REVIEWED` (409).
 
+## Personal theme edits (additive, ADR 0025)
+
+A community piece's HTML may mark editable text with `data-text="name"` (`[a-z][a-z0-9-]{0,23}`).
+Community pieces in responses may carry `texts: { [name]: string }`; clients replace the text of
+the matching elements with it as plain text, never as markup. `GET /api/decorations` items gain
+`edit: { pieces: { dx, dy }[], texts } | null`, the caller's saved version.
+
+- `POST /api/decorations/edit` takes `themeEditSchema`: `{ decorationId, pieces, texts }`. `pieces`
+  has one `{ dx, dy }` per piece of the theme; every one must stay in the edge band. `texts` keys
+  are `"<piece index>.<slot>"`, values 1 to 40 characters without control characters, and each
+  must name a slot of that piece. `DECORATION_LOCKED` (403) for a theme the caller cannot wear,
+  `THEME_EDIT_INVALID` (400) otherwise. Returns the same state as `GET /api/decorations`.
+- `DELETE /api/decorations/edit/:id` drops the caller's version.
+
+Edits apply only to their owner's profile, posts and theme lookups, and are re-checked against
+the theme on every read: a theme whose pieces changed shows its original instead.
+
 ## Post buttons (additive)
 
 Post metadata accepts an optional `link: { label, url? }`. `label` is 1 to 32 characters and is the

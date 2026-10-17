@@ -660,7 +660,12 @@ export function FormaApp() {
                 onMoment={() => setMomentOpen(true)}
               />
             ) : view === "decor" && boot ? (
-              <DecorationsPanel key={boot.actor.userId} notify={notify} onChanged={refresh} />
+              <DecorationsPanel
+                key={boot.actor.userId}
+                me={me}
+                notify={notify}
+                onChanged={refresh}
+              />
             ) : (
               <>
                 {view !== "profile" && <SeasonLayer />}

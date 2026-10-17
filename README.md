@@ -168,10 +168,14 @@ Desktop account switching is a simulation feature, not public authentication.
   market kinds; trip themes opened by a proven trip (France only so far). Market themes are free;
   buying is not built.
 - Open theme market (ADR 0024): anyone designs a theme in their own HTML and CSS under **Themes →
-  Make a theme**, with a live preview; moderators approve, reject or take down themes under
+  Send your own theme**, with a live preview; moderators approve, reject or take down themes under
   **Moderation → Themes to review**. Designs are drawn as images, so their code never runs in
   the page. Seeded: Leo's approved **Neon open late** and Arif's **Coffee steam** waiting for
   review.
+- Wear and edit themes (ADR 0025): **Themes** is a gallery; tap a theme to see yourself in it and
+  **Wear** it, then **Edit** to drag its pieces (mouse, finger or arrow keys, always near the
+  edges) and rewrite the text its designer marked. Only you get your version. Designing from code
+  is under **Send your own theme**.
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.

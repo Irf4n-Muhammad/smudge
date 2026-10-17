@@ -48,6 +48,9 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   browser's image isolation (no scripts, no outside loads, no input) is the boundary. The studio
   and the moderators' review queue live here; rules and storage are in `packages/core/src/themes.ts`
   (ADR 0024).
+- `decorations-panel.tsx`, `theme-editor.tsx`: the Themes gallery, the preview of yourself in a
+  theme, and the personal editor (drag pieces within the edge band, rewrite `data-text` slots).
+  The edit is stored and re-checked against the theme in `packages/core/src/identity.ts` (ADR 0025).
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same
   posts and social API, opens existing isolated Runtime instances, and scopes its CSS to the mode.
   The cockpit is trusted host code; no post receives access to navigation or host DOM. Its dark

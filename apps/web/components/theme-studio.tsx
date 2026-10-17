@@ -48,7 +48,7 @@ const starter: ThemePieceInput = {
   height: 70,
   dx: -150,
   dy: -34,
-  html: '<div class="tag">hello!</div>',
+  html: '<div class="tag" data-text="label">hello!</div>',
   css:
     ".tag{display:inline-block;margin:10px;padding:12px 18px;border-radius:999px;" +
     "background:#ff5a36;color:#fff;font:700 22px/1 system-ui,sans-serif;" +
@@ -138,6 +138,10 @@ export function ThemeStudio({
         {themeLimits.maxSize}px and near an edge, so posts stay readable. They are shown as
         pictures: animations work, but scripts, links, outside images and web fonts do not. Smudge
         reviews every theme before it reaches the market.
+      </p>
+      <p className="fineprint">
+        People who wear your theme can drag its pieces and change any text you mark with{" "}
+        <code>data-text=&quot;name&quot;</code>, like the starter piece below does.
       </p>
       <div className="theme-studio-grid">
         <div className="theme-studio-form">

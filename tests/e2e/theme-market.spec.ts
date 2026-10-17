@@ -8,6 +8,9 @@ test("a designer sends an HTML/CSS theme, a moderator approves it, and it is wor
   const name = "Hello tag " + Date.now().toString(36).slice(-4);
 
   await page.getByRole("button", { name: "Themes", exact: true }).click();
+  // Designing is a separate page; people who only pick a theme never see code.
+  await expect(page.getByRole("region", { name: "Make a theme" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Send your own theme" }).click();
   const studio = page.getByRole("region", { name: "Make a theme" });
   await studio.getByLabel("Name").fill(name);
   // Code that cannot work in a theme is refused before it is sent.
@@ -36,7 +39,9 @@ test("a designer sends an HTML/CSS theme, a moderator approves it, and it is wor
 
   await page.getByRole("button", { name: "Themes", exact: true }).click();
   const card = page.getByRole("article", { name: `Theme ${name}` });
-  await card.getByRole("button", { name: /^Wear/ }).click();
+  await card.getByRole("button", { name: `Preview ${name}` }).click();
+  await page.getByRole("dialog", { name }).getByRole("button", { name: /^Wear/ }).click();
+  await page.keyboard.press("Escape");
   await expect(card).toContainText("Wearing it");
 
   await page.goto("/");

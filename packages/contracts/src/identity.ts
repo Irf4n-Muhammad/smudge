@@ -309,7 +309,16 @@ interface PieceBox {
  * Catalog pieces carry trusted SVG markup. Community pieces carry a designer's own HTML and CSS,
  * which the app only ever draws as an image (ADR 0024), never as markup in the page.
  */
-export type OverlayPiece = PieceBox & ({ svg: string } | { html: string; css: string });
+export type OverlayPiece = PieceBox &
+  (
+    | { svg: string }
+    | {
+        html: string;
+        css: string;
+        /** The wearer's own words for the designer's `data-text` slots (ADR 0025). */
+        texts?: Record<string, string>;
+      }
+  );
 /**
  * A theme is one look for a person: their profile and every post of theme in the feed wear it.
  * - event: the Smudge team decides which events exist (a season, a proven trip); anyone may
