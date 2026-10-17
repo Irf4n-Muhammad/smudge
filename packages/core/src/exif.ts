@@ -1,5 +1,5 @@
-import { countryBoxes } from "../../contracts/src/identity.js";
-import type { CountryCode } from "../../contracts/src/identity.js";
+import { countryBoxes, places } from "../../contracts/src/identity.js";
+import type { CountryCode, PlaceId } from "../../contracts/src/identity.js";
 
 /** Reads the GPS position from a JPEG's EXIF block. Returns null when absent or malformed. */
 export function jpegGps(bytes: Buffer): { lat: number; lon: number } | null {
@@ -62,5 +62,13 @@ export function countryAt(lat: number, lon: number): CountryCode | null {
   const match = (Object.entries(countryBoxes) as [CountryCode, number[]][])
     .sort((a, b) => area(a[1]) - area(b[1]))
     .find(([, [s, w, n, e]]) => lat >= s! && lat <= n! && lon >= w! && lon <= e!);
+  return match ? match[0] : null;
+}
+
+/** The provable place (such as Bali) at a position, if any. Coarse boxes, like countries. */
+export function placeAt(lat: number, lon: number): PlaceId | null {
+  const match = (Object.entries(places) as [PlaceId, (typeof places)[PlaceId]][]).find(([, p]) =>
+    p.boxes.some(([s, w, n, e]) => lat >= s! && lat <= n! && lon >= w! && lon <= e!),
+  );
   return match ? match[0] : null;
 }

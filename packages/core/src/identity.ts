@@ -4,6 +4,7 @@ import {
   birthdaySchema,
   chapterAudienceSchema,
   countries,
+  places,
   countryChoiceSchema,
   decorationById,
   decorationChoiceSchema,
@@ -42,7 +43,7 @@ import { pieceDepth, textSlots, themeBand, themeEditSchema } from "../../contrac
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
 import type { Asset, Publication, SocialService } from "./social.js";
-import { countryAt, jpegGps } from "./exif.js";
+import { countryAt, jpegGps, placeAt } from "./exif.js";
 import { queueMail } from "./mail.js";
 import type { OutboxMessage } from "./mail.js";
 import { reservedHandles } from "../../contracts/src/accounts.js";
@@ -437,16 +438,20 @@ export class IdentityService {
     if (!gps) throw new AppError("PHOTO_HAS_NO_LOCATION");
     const country = countryAt(gps.lat, gps.lon);
     if (!country) throw new AppError("COUNTRY_NOT_SUPPORTED");
+    // A place counts only inside the country the photo was placed in, so the two never disagree.
+    const found = placeAt(gps.lat, gps.lon);
+    const place = found && places[found].country === country ? found : undefined;
     const existing = this.chapters(userId).find(
-      (c) => c.kind === "travel" && c.country === country,
+      (c) => c.kind === "travel" && c.country === country && c.place === place,
     );
     if (existing) return existing;
     return this.store.transaction(() =>
       this.addChapter({
         ownerId: userId,
         kind: "travel",
-        label: `Been to ${countries[country]}`,
+        label: `Been to ${place ? places[place].name : countries[country]}`,
         country,
+        ...(place ? { place } : {}),
         from: this.now().getUTCFullYear(),
         method: "photo-location",
         audience: parsed.audience,
@@ -587,13 +592,21 @@ export class IdentityService {
         };
       }
       // A trip theme stays yours while the travel chapter that proves it exists.
+      // A place's chapter also proves its country; a country's chapter does not prove a place.
       if (
         event.kind === "trip" &&
-        !this.chapters(userId).some((c) => c.kind === "travel" && c.country === event.country)
+        !this.chapters(userId).some(
+          (c) =>
+            c.kind === "travel" &&
+            c.country === event.country &&
+            (!event.place || c.place === event.place),
+        )
       )
         return {
           ok: false,
-          reason: `${event.name}. Prove it with a photo taken in ${countries[event.country]}.`,
+          reason: `${event.name}. Prove it with a photo taken in ${
+            event.place ? places[event.place].name : countries[event.country]
+          }.`,
         };
     }
     return { ok: true };

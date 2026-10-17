@@ -165,7 +165,8 @@ Desktop account switching is a simulation feature, not public authentication.
 - An Instagram-style feed (ADR 0023): one free-scrolling column, every post in the same 4:5
   window, posts loaded ahead, and a swipe over a post always scrolls the feed.
 - Themes (ADR 0022): one look on the profile and around posts in the feed; event, members and
-  market kinds; trip themes opened by a proven trip (France only so far). Market themes are free;
+  market kinds; trip themes opened by a proven trip: France, Japan, South Korea, Thailand, and
+  Bali as a place inside Indonesia (ADR 0026). Market themes are free;
   buying is not built.
 - Open theme market (ADR 0024): anyone designs a theme in their own HTML and CSS under **Themes →
   Send your own theme**, with a live preview; moderators approve, reject or take down themes under

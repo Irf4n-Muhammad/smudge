@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { Store } from "../packages/core/src/database.js";
 import { SocialService } from "../packages/core/src/social.js";
 import { IdentityService } from "../packages/core/src/identity.js";
-import { countryAt, jpegGps } from "../packages/core/src/exif.js";
+import { countryAt, jpegGps, placeAt } from "../packages/core/src/exif.js";
 import { renderMoment } from "../apps/server/moments.js";
 import { decorations } from "../packages/contracts/src/identity.js";
 import { pieceDepth, themeBand } from "../packages/contracts/src/themes.js";
@@ -416,4 +416,38 @@ test("theme pieces stay in a band along the edge, so the post underneath stays r
         pieceDepth(p) <= themeBand,
         `${d.id} ${p.anchor} reaches ${pieceDepth(p)}px into the post`,
       );
+});
+
+test("a trip to a place opens its own theme, while the country alone does not", async () => {
+  const { identity, social } = await setup("2026-03-10T10:00:00Z");
+  assert.equal(placeAt(-8.65, 115.22), "bali", "Denpasar");
+  assert.equal(placeAt(-8.17, 114.45), "bali", "Gilimanuk, on the west tip");
+  assert.equal(placeAt(-8.58, 116.12), null, "Lombok is not Bali");
+  assert.equal(placeAt(-8.22, 114.36), null, "Banyuwangi, across the strait");
+  const item = (id: string) => identity.decorations(alice).items.find((d) => d.id === id)!;
+  const prove = (name: string, lat: number, lon: number) =>
+    identity.travelProof(alice, {
+      assetId: social.upload(alice, {
+        name,
+        mime: "image/jpeg",
+        base64: jpegAt(lat, lon).toString("base64"),
+      }).id,
+    });
+  assert.equal(
+    item("bali-frangipani").reason,
+    "Trip to Bali. Prove it with a photo taken in Bali.",
+  );
+  const jakarta = prove("jakarta.jpg", -6.2, 106.8);
+  assert.equal(jakarta.label, "Been to Indonesia");
+  assert.equal(item("bali-frangipani").unlocked, false, "Indonesia is not Bali");
+  const bali = prove("ubud.jpg", -8.51, 115.26);
+  assert.equal(bali.label, "Been to Bali");
+  assert.equal(bali.country, "ID");
+  assert.notEqual(bali.id, jakarta.id);
+  assert.equal(prove("kuta.jpg", -8.72, 115.17).id, bali.id, "one chapter per place");
+  assert.equal(item("bali-frangipani").unlocked, true);
+  assert.equal(item("sakura-gate").unlocked, false);
+  prove("kyoto.jpg", 35.01, 135.77);
+  assert.equal(item("sakura-gate").unlocked, true);
+  assert.equal(item("sakura-gate").event, "Trip to Japan");
 });

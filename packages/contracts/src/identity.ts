@@ -47,6 +47,27 @@ export const countryBoxes: Record<CountryCode, [number, number, number, number]>
   CA: [41.7, -141.0, 83.2, -52.6],
 };
 
+/**
+ * Places inside a country that a trip can prove on their own, because for most of our users the
+ * country is home and the trip is to a place in it. Each is a few coarse [south, west, north, east]
+ * boxes with the same caveats as `countryBoxes`; Bali's west box also catches the very tip of
+ * eastern Java.
+ */
+export const places = {
+  bali: {
+    name: "Bali",
+    country: "ID",
+    boxes: [
+      [-8.85, 114.6, -8.05, 115.72],
+      [-8.35, 114.42, -8.05, 114.6],
+    ],
+  },
+} as const satisfies Record<
+  string,
+  { name: string; country: CountryCode; boxes: readonly (readonly number[])[] }
+>;
+export type PlaceId = keyof typeof places;
+
 export type OrgKind = "campus" | "workplace" | "club" | "event";
 export interface Org {
   id: string;
@@ -95,6 +116,8 @@ export interface Chapter {
   label: string;
   orgId?: string;
   country?: CountryCode;
+  /** A travel chapter for a place inside `country`, such as Bali. It also proves the country. */
+  place?: PlaceId;
   partnerId?: string;
   link?: string;
   from?: number | undefined;
@@ -333,12 +356,16 @@ export const themeFonts = ["ui", "serif", "hand", "display", "spray"] as const;
 export type ThemeFont = (typeof themeFonts)[number];
 export type ThemeEvent =
   | { id: string; name: string; kind: "season"; seasonId: string }
-  | { id: string; name: string; kind: "trip"; country: CountryCode };
+  | { id: string; name: string; kind: "trip"; country: CountryCode; place?: PlaceId };
 export const themeEvents: ThemeEvent[] = [
   { id: "halloween", name: "Halloween", kind: "season", seasonId: "halloween" },
   { id: "id-independence", name: "Hari Kemerdekaan", kind: "season", seasonId: "id-independence" },
   { id: "new-year", name: "New Year", kind: "season", seasonId: "new-year" },
   { id: "trip-france", name: "Trip to France", kind: "trip", country: "FR" },
+  { id: "trip-japan", name: "Trip to Japan", kind: "trip", country: "JP" },
+  { id: "trip-korea", name: "Trip to South Korea", kind: "trip", country: "KR" },
+  { id: "trip-thailand", name: "Trip to Thailand", kind: "trip", country: "TH" },
+  { id: "trip-bali", name: "Trip to Bali", kind: "trip", country: "ID", place: "bali" },
 ];
 export const themeEventById = (id: string) => themeEvents.find((e) => e.id === id);
 export interface Decoration {
@@ -368,6 +395,21 @@ const pennants = (colors: string[]) =>
     .join("");
 const bat = (x: number, y: number, k: number) =>
   `<path transform="translate(${x} ${y}) scale(${k})" d="M0 0q-6-8-16-6 5 3 4 8-5-3-10 0 6 2 8 8 6-6 14-4 8-2 14 4 2-6 8-8-5-3-10 0-1-5 4-8-10-2-16 6Z" fill="#241a2e"/>`;
+const blossom = (x: number, y: number, k = 1) =>
+  `<g transform="translate(${x} ${y}) scale(${k})">` +
+  [0, 72, 144, 216, 288]
+    .map((a) => `<ellipse cy="-4.5" rx="3" ry="4.5" fill="#f8bbd0" transform="rotate(${a})"/>`)
+    .join("") +
+  `<circle r="1.6" fill="#d6457a"/></g>`;
+const frangipani = (x: number, y: number, k = 1) =>
+  `<g transform="translate(${x} ${y}) scale(${k})">` +
+  [0, 72, 144, 216, 288]
+    .map(
+      (a) =>
+        `<ellipse cy="-10" rx="6.5" ry="10" fill="#fffdf5" stroke="#f1d29a" transform="rotate(${a})"/>`,
+    )
+    .join("") +
+  `<circle r="5" fill="#ffc93c"/></g>`;
 export const decorations: Decoration[] = [
   {
     id: "cat-peek",
@@ -671,6 +713,172 @@ export const decorations: Decoration[] = [
           '<g fill="none" stroke="#3b3b3b" stroke-width="2" opacity=".65"><circle cx="34" cy="34" r="26"/><path d="M60 22q8-6 16 0t16 0t16 0M60 34q8-6 16 0t16 0t16 0M60 46q8-6 16 0t16 0t16 0"/></g><text x="34" y="38" font-size="10" text-anchor="middle" fill="#3b3b3b" opacity=".7" font-family="Georgia">PARIS</text>',
           "0 0 112 68",
         ),
+      },
+    ],
+  },
+  {
+    id: "sakura-gate",
+    name: "Sakura gate",
+    creatorId: "maya",
+    tier: "event",
+    eventId: "trip-japan",
+    accent: "#d6457a",
+    font: "serif",
+    emotes: ["jealous", "take-me"],
+    pieces: [
+      {
+        anchor: "top-left",
+        width: 96,
+        height: 66,
+        dx: -16,
+        dy: -58,
+        svg: s(
+          '<g fill="#c62828"><path d="M2 8Q60 -2 118 8L116 17Q60 8 4 17Z"/><rect x="16" y="25" width="88" height="7"/><rect x="28" y="16" width="9" height="64"/><rect x="83" y="16" width="9" height="64"/><rect x="56" y="16" width="8" height="10"/></g>',
+          "0 0 120 82",
+        ),
+      },
+      {
+        anchor: "top-right",
+        width: 150,
+        height: 60,
+        dx: -150,
+        dy: -28,
+        svg: s(
+          '<path d="M150 6Q104 8 74 26T6 42" fill="none" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/><path d="M96 14q-6 10-20 14" fill="none" stroke="#5d4037" stroke-width="2"/>' +
+            [
+              [140, 8, 1.2],
+              [118, 10, 1],
+              [96, 18, 1.3],
+              [76, 28, 1],
+              [54, 34, 1.2],
+              [30, 40, 1],
+              [12, 44, 1.1],
+              [84, 40, 0.9],
+            ]
+              .map(([x, y, k]) => blossom(x!, y!, k))
+              .join(""),
+          "0 0 150 60",
+        ),
+      },
+      {
+        anchor: "bottom-right",
+        width: 80,
+        height: 44,
+        dx: -84,
+        dy: -26,
+        svg: s(
+          [
+            [12, 30, 20],
+            [34, 14, -30],
+            [52, 32, 60],
+            [70, 18, 10],
+          ]
+            .map(
+              ([x, y, r]) =>
+                `<ellipse cx="${x}" cy="${y}" rx="4" ry="6" fill="#f8bbd0" transform="rotate(${r} ${x} ${y})"/>`,
+            )
+            .join(""),
+          "0 0 80 44",
+        ),
+      },
+    ],
+  },
+  {
+    id: "seoul-night",
+    name: "Seoul night",
+    creatorId: "leo",
+    tier: "event",
+    eventId: "trip-korea",
+    accent: "#2b59c3",
+    font: "display",
+    emotes: ["jealous", "take-me"],
+    pieces: [
+      {
+        anchor: "top-left",
+        width: 44,
+        height: 110,
+        dx: -14,
+        dy: -100,
+        svg: s(
+          '<rect x="21" y="0" width="2" height="26" fill="#22325a"/><ellipse cx="22" cy="32" rx="10" ry="6" fill="#22325a"/><rect x="16" y="36" width="12" height="5" fill="#22325a"/><path d="M19 41h6l3 69h-12z" fill="#22325a"/><circle cx="18" cy="32" r="1.3" fill="#ffd54f"/><circle cx="22" cy="32" r="1.3" fill="#ffd54f"/><circle cx="26" cy="32" r="1.3" fill="#ffd54f"/><circle cx="22" cy="2" r="2" fill="#e53935"/>',
+          "0 0 44 110",
+        ),
+      },
+      {
+        anchor: "top-right",
+        width: 160,
+        height: 40,
+        dx: -170,
+        dy: -32,
+        svg: s(
+          '<path d="M0 28Q24 6 80 8Q136 6 160 28L148 28Q134 16 80 18Q26 16 12 28Z" fill="#2b2b2b"/><path d="M14 30h132v6H14z" fill="#b23a48"/>' +
+            [30, 50, 70, 90, 110, 130]
+              .map((x) => `<path d="M${x} 12v14" stroke="#555" stroke-width="2"/>`)
+              .join(""),
+          "0 0 160 40",
+        ),
+      },
+    ],
+  },
+  {
+    id: "tuk-tuk",
+    name: "Tuk-tuk",
+    creatorId: "maya",
+    tier: "event",
+    eventId: "trip-thailand",
+    accent: "#e07a1f",
+    font: "hand",
+    emotes: ["take-me", "heart"],
+    pieces: [
+      {
+        anchor: "top-right",
+        width: 170,
+        height: 92,
+        dx: -176,
+        dy: -50,
+        svg: s(pennants(["#a51931", "#f4f5f8", "#2d2a4a"]), "0 0 170 92"),
+      },
+      {
+        anchor: "bottom-right",
+        width: 110,
+        height: 64,
+        dx: -92,
+        dy: -12,
+        svg: s(
+          '<rect x="20" y="4" width="80" height="9" rx="3" fill="#1e6f5c"/><rect x="24" y="13" width="3" height="24" fill="#444"/><path d="M92 13l16 24H92z" fill="#f6c26b"/><path d="M14 36H100Q112 36 114 50V56H8V44Q8 36 14 36Z" fill="#e07a1f"/><circle cx="28" cy="58" r="9" fill="#222"/><circle cx="28" cy="58" r="3" fill="#ccc"/><circle cx="98" cy="58" r="9" fill="#222"/><circle cx="98" cy="58" r="3" fill="#ccc"/>',
+          "0 0 120 70",
+        ),
+      },
+    ],
+  },
+  {
+    id: "bali-frangipani",
+    name: "Bali frangipani",
+    creatorId: "leo",
+    tier: "event",
+    eventId: "trip-bali",
+    accent: "#0f8b8d",
+    font: "hand",
+    emotes: ["jealous", "take-me", "flower"],
+    pieces: [
+      {
+        anchor: "top-left",
+        width: 90,
+        height: 80,
+        dx: -18,
+        dy: -72,
+        svg: s(
+          '<g fill="#8a5a44"><path d="M4 90V54h5V42h6V30h6V18h6V6h8l9-4v88z"/><path d="M96 90V54h-5V42h-6V30h-6V18h-6V6h-8l-9-4v88z"/></g><g fill="#5e3b2c"><rect x="4" y="60" width="40" height="3"/><rect x="56" y="60" width="40" height="3"/><rect x="15" y="36" width="29" height="3"/><rect x="56" y="36" width="29" height="3"/></g>',
+          "0 0 100 90",
+        ),
+      },
+      {
+        anchor: "top-right",
+        width: 70,
+        height: 56,
+        dx: -52,
+        dy: -28,
+        svg: s(frangipani(22, 24) + frangipani(52, 34, 0.75), "0 0 70 56"),
       },
     ],
   },

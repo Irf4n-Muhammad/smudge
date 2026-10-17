@@ -371,6 +371,15 @@ their ids start with `t-`.
 "remove", note? }`. Approve and reject apply to waiting themes, remove to approved ones;
   anything else is `THEME_ALREADY_REVIEWED` (409).
 
+## Trip places (additive, ADR 0026)
+
+Travel chapters may carry `place` (a `PlaceId` from `places` in `contracts/src/identity.ts`, so
+far only `bali`) next to `country`. `POST /api/identity/travel` adds a separate chapter, labelled
+with the place's name, when the photo's position is inside a place of the photo's country. Trip
+entries in `themeEvents` may name a `place`; such an event opens only with a chapter for that
+place, while a country event opens with any chapter in that country, place or not. New event ids:
+`trip-japan`, `trip-korea`, `trip-thailand` and `trip-bali`.
+
 ## Personal theme edits (additive, ADR 0025)
 
 A community piece's HTML may mark editable text with `data-text="name"` (`[a-z][a-z0-9-]{0,23}`).
