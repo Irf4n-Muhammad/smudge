@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 
 async function api(page: Page, path: string, body?: unknown) {
   return page.evaluate(
@@ -32,10 +33,10 @@ test("signup, prove a campus email, publish a locked moment and receive one pres
     .getByRole("dialog", { name: /^Welcome/ })
     .getByRole("button", { name: "Skip for now" })
     .click();
-  await page.getByRole("button", { name: "Who you are", exact: true }).click();
+  await openMore(page, "Who you are");
   await expect(page.getByRole("heading", { name: "Your chapters" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Share a moment" }).first().click();
+  await openMore(page, "Share a moment");
   const dialog = page.getByRole("dialog");
   // Templates that need proof are folded under the ones ready to use.
   await dialog.getByText(/more unlock with proof/).click();
@@ -52,7 +53,7 @@ test("signup, prove a campus email, publish a locked moment and receive one pres
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page.locator(".chapter")).toContainText("Graduate, Lembayung University");
 
-  await page.getByRole("button", { name: "Share a moment" }).first().click();
+  await openMore(page, "Share a moment");
   await dialog.getByRole("button", { name: "Graduation", exact: true }).click();
   const title = "Done at last " + handle;
   await dialog.getByLabel("Title", { exact: true }).fill(title);

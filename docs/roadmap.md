@@ -36,6 +36,9 @@
       inside the side. See ADR 0030.
 - [x] Gift themes: a market theme sent to someone with a note, worn from "Gifts for you".
       No payment yet. See ADR 0031.
+- [x] Navigation in Instagram's shape: four tabs plus Messages and Notifications, one feed with
+      a For you / Following picker, Search with Posts and People, More behind the profile ☰.
+      The fifth tab is empty on purpose. See ADR 0032.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

@@ -28,13 +28,13 @@ password accounts, real email through Resend, and one Docker container that serv
 separate post-runtime hostname: `npm run build && npm start` with the settings in `.env.example`.
 Step-by-step guide: [docs/deploy.md](docs/deploy.md). Decision record: ADR 0012.
 
-In the playground, **Create an account** and **Log in** at the bottom of the sidebar use the same
-real account system; confirmation and reset emails appear in the local demo inbox on **Who you
-are**. The gear icon in the top bar opens **Account** (email status, change password, log out,
-blocked accounts, delete account).
+In the playground, **Create an account** and **Log in** (behind **More** in the sidebar, or the
+profile's ☰ on a phone) use the same real account system; confirmation and reset emails appear
+in the local demo inbox on **Who you are**. **Account settings** in the same menu covers email
+status, change password, log out, blocked accounts and delete account.
 
-**Community basics** (ADR 0013). **Find people** searches by name or @handle and suggests friends
-of friends. **Notifications** shows follows, likes, comments and stickers, with a red badge for
+**Community basics** (ADR 0013). **Search → People** searches by name or @handle and suggests
+friends of friends. **Notifications** shows follows, likes, comments and stickers, with a red badge for
 unread ones. **Messages** works between people when one follows the other. A post's **⋯** menu has
 **Report post** (with a reason) and **Block**. Alex is a moderator in the playground, so
 **Moderation** lists open reports with Remove post, Dismiss and Suspend account. On phones these
@@ -111,7 +111,8 @@ decoration does not block clicks. Likes/saves and **Open story** use existing pu
 These three compositions are host-authored visual prototypes; MCP-authored extension layers
 are not yet supported. The normal feed and its isolated programmable posts remain available.
 
-Click **Enter hyperspace** (or open `/?mode=cockpit`) for the spatial navigation experiment.
+Choose **Enter hyperspace** from the feed picker at the top of Home (or open `/?mode=cockpit`)
+for the spatial navigation experiment.
 Drag the planet to rotate the post orbit, use arrow keys while the orbit is focused, or select
 a small planet. **Enter this world** opens the real isolated post; the transmission panel reads
 and writes its actual comments. Likes and saves use the same feed data. **Back to feed** exits.
@@ -123,17 +124,23 @@ a star in Leo's constellation, or open Inès's envelope. Use the moon/sun contro
 to switch day/night; your choice survives reload and applies to the studio and new worlds.
 
 1. Open the note in Maya's scrapbook; reload and see that your place was saved.
-2. Filter **Stories** and choose a path. Your vote and reading progress persist.
-3. Filter **Together** and add a memory as Alex. Switch **Preview as** to Inès and try again:
-   Inès can read but is not an invited contributor.
+2. Scroll to Leo's story and choose a path. Your vote and reading progress persist.
+3. Scroll to Maya's shared weekend and add a memory as Alex. Switch **Preview as** to Inès and
+   try again: Inès can read but is not an invited contributor.
 4. Like, comment, bookmark, follow, search, or open a profile. Counts reflect local data.
-5. Open **My studio**: make a draft, edit its title/caption or source, upload a photo, save and
+5. Open **My studio** (behind **More**): make a draft, edit its title/caption or source, upload a photo, save and
    preview, then publish. **Use format** on an existing post creates a separate editable draft.
 6. Connect a local AI client with [the MCP setup](docs/mcp.md). It can author an interaction that
    is not in the seed catalog. It does not need a model hosted by Smudge.
 
-On narrow screens, bottom navigation opens the feed, following, studio, saved posts and profile.
-Desktop account switching is a simulation feature, not public authentication.
+**Navigation** (ADR 0032) has the shape people know from Instagram: **Home**, **Search**,
+**Create** and **Profile** are the tabs (a bottom bar on phones, the left rail on wider screens);
+**Messages** and **Notifications** join the rail and sit in a phone's top corner. The feed picker
+at the top of Home switches **For you** and **Following** and holds the two ways to browse.
+Everything else (Saved, Themes, Who you are, Share card, My studio, Account settings,
+Moderation) is behind **More** in the rail and the ☰ on your own profile. Posts of every
+format share one feed; there is no format filter. Desktop account switching is a simulation
+feature, not public authentication.
 
 ## What is implemented
 
@@ -196,6 +203,9 @@ Desktop account switching is a simulation feature, not public authentication.
 - Gift themes (ADR 0031): **Give as a gift** on a market theme sends it to someone with a note;
   it waits under **Gifts for you** in their Themes. Earned themes cannot be given. Nothing is
   charged in this prototype.
+- Navigation (ADR 0032): Home, Search, Create and Profile tabs, Messages and Notifications in
+  the rail or the phone's top corner, one feed with a For you / Following picker, and everything
+  else behind More and the profile's ☰.
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.
@@ -299,8 +309,8 @@ open without signing up.
 
 In the post editor, **Add photos or videos** takes videos too: the first frame becomes its poster
 and cover, and it plays inside the post (silently behind the headline in the Poster style).
-**Explore** in the sidebar (the compass on phones) shows posts from people you don't follow yet,
-and its search box finds any post by title, caption, person or `#tag`.
+**Search** (the magnifier tab) shows posts from people you don't follow yet, and its search box
+finds any post by title, caption, person or `#tag`; its **People** tab is Find people.
 
 ## Private accounts and groups
 

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 
 test("a designer sends an HTML/CSS theme, a moderator approves it, and it is worn in the feed", async ({
   page,
@@ -7,7 +8,7 @@ test("a designer sends an HTML/CSS theme, a moderator approves it, and it is wor
   await page.locator(".post-card").first().waitFor();
   const name = "Hello tag " + Date.now().toString(36).slice(-4);
 
-  await page.getByRole("button", { name: "Themes", exact: true }).click();
+  await openMore(page, "Themes");
   // Designing is a separate page; people who only pick a theme never see code.
   await expect(page.getByRole("region", { name: "Make a theme" })).toHaveCount(0);
   await page.getByRole("button", { name: "Send your own theme" }).click();
@@ -30,14 +31,14 @@ test("a designer sends an HTML/CSS theme, a moderator approves it, and it is wor
   // Not in the market until someone approves it.
   await expect(page.getByRole("article", { name: `Theme ${name}` })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Moderation", exact: true }).click();
+  await openMore(page, "Moderation");
   const review = page.getByRole("listitem", { name: `Review ${name}` });
   await review.getByText("Code").click();
   await expect(review.locator(".theme-code")).toContainText("hello!");
   await review.getByRole("button", { name: "Approve" }).click();
   await expect(page.locator(".toast")).toContainText("Approved");
 
-  await page.getByRole("button", { name: "Themes", exact: true }).click();
+  await openMore(page, "Themes");
   const card = page.getByRole("article", { name: `Theme ${name}` });
   await card.getByRole("button", { name: `Preview ${name}` }).click();
   await page.getByRole("dialog", { name }).getByRole("button", { name: /^Wear/ }).click();

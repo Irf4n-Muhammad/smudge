@@ -28,11 +28,11 @@ test("switching sides changes the feed and where a new post goes; a private side
   const dialog = page.getByRole("dialog", { name: "Your sides" });
   await expect(dialog.getByText("Film Festival crew")).toHaveCount(0);
   await dialog.getByRole("button", { name: "Close dialog" }).click();
-  await page.getByRole("button", { name: "Explore", exact: true }).first().click();
+  await page.getByRole("button", { name: "Search", exact: true }).first().click();
   await page.getByLabel("Search all posts").fill("jury notes");
   await expect(page.getByText("Looking around…")).toHaveCount(0);
   await expect(page.getByRole("article", { name: /^Jury notes/ })).toHaveCount(0);
-  await page.getByRole("button", { name: "Your feed", exact: true }).first().click();
+  await page.getByRole("button", { name: "Home", exact: true }).first().click();
 
   // A post made inside Runners carries the side, and is not in Everyday until shared.
   await page

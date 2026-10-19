@@ -14,6 +14,7 @@ import "./privacy-groups.css";
 import "./gallery.css";
 import "./themes.css";
 import "./sides.css";
+import "./nav.css";
 import { seasonScript } from "../components/season-script";
 
 export const metadata: Metadata = {

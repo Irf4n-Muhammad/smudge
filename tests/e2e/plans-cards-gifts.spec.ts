@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 
 // Every test here ends back in Everyday: the demo account is shared with the specs that follow.
 test.afterEach(async ({ page }) => {
@@ -91,7 +92,7 @@ test("a market theme arrives as a gift with a note and can be worn; proof themes
 }) => {
   await page.goto("/");
   await page.locator(".post-card").first().waitFor();
-  await page.getByRole("button", { name: "Themes", exact: true }).click();
+  await openMore(page, "Themes");
   const gifts = page.getByRole("region", { name: "Gifts for you" });
   await expect(gifts).toContainText("Maya Chen gave you Cat peek");
   await expect(gifts).toContainText("finally finishing the 21K");

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openMore } from "./nav";
 
 async function signIn(page: Page) {
   await page.goto("/");
@@ -19,7 +20,7 @@ test("a website is imported, tidied and published as a page that opens in the ap
   page,
 }) => {
   await signIn(page);
-  await page.getByRole("button", { name: "Import a website" }).filter({ visible: true }).click();
+  await openMore(page, "Import a website");
   const start = page.getByRole("dialog", { name: "Import a website" });
 
   // The permission box has to be ticked before anything is read.
@@ -66,7 +67,7 @@ test("a website is imported, tidied and published as a page that opens in the ap
 
 test("addresses inside the server's network are refused", async ({ page }) => {
   await signIn(page);
-  await page.getByRole("button", { name: "Import a website" }).filter({ visible: true }).click();
+  await openMore(page, "Import a website");
   const start = page.getByRole("dialog", { name: "Import a website" });
   await start.getByLabel("Website link").fill("https://127.0.0.1:3001/api/health");
   await start.getByText("This is my site, or I have permission to copy it.").click();

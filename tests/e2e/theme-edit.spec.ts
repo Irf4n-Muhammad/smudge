@@ -1,11 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 
 test("wear someone's theme, drag a piece and rewrite its text, and the feed wears your version", async ({
   page,
 }) => {
   await page.goto("/");
   await page.locator(".post-card").first().waitFor();
-  await page.getByRole("button", { name: "Themes", exact: true }).click();
+  await openMore(page, "Themes");
   const card = page.getByRole("article", { name: "Theme Neon open late" });
   await card.getByRole("button", { name: "Preview Neon open late" }).click();
   const preview = page.getByRole("dialog", { name: "Neon open late" });

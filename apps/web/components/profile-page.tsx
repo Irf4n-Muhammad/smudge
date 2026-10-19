@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import type { PostView, User } from "../../../packages/contracts/src/experience";
 import type {
   ProfileDraft,
@@ -23,7 +24,17 @@ import {
   applyProfileDesign,
   defaultProfileDesign,
 } from "../../../packages/core/src/profile-design";
-import { Home, Search, Bell, Plus, UserRound, BadgeCheck, Pencil, Lock } from "lucide-react";
+import {
+  Home,
+  Search,
+  Bell,
+  MessageCircle,
+  Plus,
+  UserRound,
+  BadgeCheck,
+  Pencil,
+  Lock,
+} from "lucide-react";
 import type { Chapter } from "../../../packages/contracts/src/identity";
 import { ChapterList } from "./identity-hub";
 import { DecorFrame, themeStyle } from "./post-decor";
@@ -39,20 +50,33 @@ export function ProfilePage({
   onRefresh,
   onNavigate,
   onUseDraft,
+  more,
 }: {
   ownerId: string;
   boot: Boot;
   posts: PostView[];
   onBack: () => void;
   onRefresh: () => Promise<void>;
-  onNavigate: (destination: "home" | "following" | "create" | "saved" | "profile") => void;
+  onNavigate: (
+    destination:
+      | "home"
+      | "following"
+      | "create"
+      | "saved"
+      | "profile"
+      | "explore"
+      | "messages"
+      | "notifications",
+  ) => void;
   onUseDraft: (id: string) => void;
+  /** The app's More menu (Saved, Themes, settings…), shown behind ☰ on your own profile. */
+  more?: ReactNode;
 }) {
   const owner = boot.users.find((u) => u.id === ownerId),
     mine = ownerId === boot.actor.userId;
   const [profile, setProfile] = useState<PublicProfile | null>(null),
     [error, setError] = useState("");
-  const [panel, setPanel] = useState<"search" | "activity" | null>(null);
+  const [panel, setPanel] = useState<"search" | null>(null);
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState(false),
     [open, setOpen] = useState<PostView | null>(null),
@@ -148,7 +172,7 @@ export function ProfilePage({
   );
   return (
     <main
-      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${profile?.manifest?.schemaVersion === 2 && !editing ? "has-side-nav" : ""}`}
+      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${!editing ? "has-side-nav" : ""}`}
     >
       <header className="profile-controls">
         <button className="profile-back" aria-label="Back to feed" onClick={onBack}>
@@ -199,7 +223,7 @@ export function ProfilePage({
             <Search />
           </button>
         ) : (
-          <ThemeToggle />
+          !mine && <ThemeToggle />
         )}
         <details
           className="profile-options"
@@ -207,7 +231,7 @@ export function ProfilePage({
         >
           <summary aria-label="Profile options">☰</summary>
           <div className="profile-control-actions">
-            {profile?.manifest?.schemaVersion === 2 && <ThemeToggle />}
+            {profile?.manifest?.schemaVersion === 2 && !mine && <ThemeToggle />}
             <button
               aria-pressed={motion}
               onClick={() => {
@@ -222,7 +246,8 @@ export function ProfilePage({
               hidden={editing}
               onClick={async (e) => {
                 if (profile?.manifest?.schemaVersion === 2)
-                  e.currentTarget.closest("details")?.removeAttribute("open");
+                  if (profile?.manifest?.schemaVersion === 2)
+                    e.currentTarget.closest("details")?.removeAttribute("open");
                 const url = `${window.location.origin}/u/${encodeURIComponent(owner.handle)}`;
                 try {
                   await navigator.clipboard.writeText(url);
@@ -239,7 +264,8 @@ export function ProfilePage({
               onClick={(e) => {
                 setDiscovery("credits");
                 if (profile?.manifest?.schemaVersion === 2)
-                  e.currentTarget.closest("details")?.removeAttribute("open");
+                  if (profile?.manifest?.schemaVersion === 2)
+                    e.currentTarget.closest("details")?.removeAttribute("open");
               }}
             >
               Made with
@@ -249,7 +275,8 @@ export function ProfilePage({
                 onClick={(e) => {
                   setDiscovery("creator");
                   if (profile?.manifest?.schemaVersion === 2)
-                    e.currentTarget.closest("details")?.removeAttribute("open");
+                    if (profile?.manifest?.schemaVersion === 2)
+                      e.currentTarget.closest("details")?.removeAttribute("open");
                 }}
               >
                 Creator's mods
@@ -261,7 +288,8 @@ export function ProfilePage({
                 onClick={(e) => {
                   setEditing((v) => !v);
                   if (profile?.manifest?.schemaVersion === 2)
-                    e.currentTarget.closest("details")?.removeAttribute("open");
+                    if (profile?.manifest?.schemaVersion === 2)
+                      e.currentTarget.closest("details")?.removeAttribute("open");
                 }}
               >
                 {editing ? "View published profile" : "Customize profile"}
@@ -318,8 +346,16 @@ export function ProfilePage({
             >
               Report profile
             </button>
+            {mine && profile?.manifest?.schemaVersion === 2 && more}
           </div>
         </details>
+        {mine && more && profile?.manifest?.schemaVersion !== 2 && (
+          // Plain profiles keep their actions in the header; More is the ☰ beside them.
+          <details className="profile-more">
+            <summary aria-label="More options">☰</summary>
+            <div className="profile-more-menu">{more}</div>
+          </details>
+        )}
       </header>
       {owner.private && !mine && !boot.following.includes(ownerId) && (
         <div className="profile-message private-note" role="note">
@@ -463,8 +499,8 @@ export function ProfilePage({
           }}
         />
       )}
-      {profile?.manifest?.schemaVersion === 2 && !editing && (
-        // A bottom bar on phones; on wider screens CSS turns it into the left sidebar.
+      {!editing && (
+        // The same tabs as the feed: a bottom bar on phones, the left sidebar on wider screens.
         <nav className="profile-bottom-nav" aria-label="Profile navigation">
           <a className="profile-nav-brand" href="/" aria-label="Smudge home">
             smudge
@@ -473,17 +509,21 @@ export function ProfilePage({
             <Home />
             <span>Home</span>
           </button>
-          <button onClick={() => setPanel("search")}>
+          <button onClick={() => onNavigate("explore")}>
             <Search />
             <span>Search</span>
+          </button>
+          <button className="wide-only" onClick={() => onNavigate("messages")}>
+            <MessageCircle />
+            <span>Messages</span>
+          </button>
+          <button className="wide-only" onClick={() => onNavigate("notifications")}>
+            <Bell />
+            <span>Notifications</span>
           </button>
           <button className="nav-create" onClick={() => onNavigate("create")}>
             <Plus />
             <span>Create</span>
-          </button>
-          <button onClick={() => setPanel("activity")}>
-            <Bell />
-            <span>Activity</span>
           </button>
           <button
             className={ownerId === boot.actor.userId ? "active" : undefined}
@@ -496,30 +536,19 @@ export function ProfilePage({
         </nav>
       )}
       {panel && (
-        <Dialog
-          title={panel === "search" ? "Search posts" : "Your activity"}
-          onClose={() => setPanel(null)}
-        >
+        <Dialog title="Search posts" onClose={() => setPanel(null)}>
           <div className="profile-discovery">
-            {panel === "search" ? (
-              <input
-                aria-label="Search published posts"
-                placeholder="Search titles, captions or people"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            ) : (
-              <p>Your likes, saved posts, and engagement on your own posts in this local demo.</p>
-            )}
+            <input
+              aria-label="Search published posts"
+              placeholder="Search titles, captions or people"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
             {posts
               .filter((p) =>
-                panel === "search"
-                  ? `${p.metadata.title} ${p.metadata.caption} ${p.author.name}`
-                      .toLowerCase()
-                      .includes(query.toLowerCase())
-                  : p.liked ||
-                    p.saved ||
-                    (p.ownerId === boot.actor.userId && (p.likes > 0 || p.comments > 0)),
+                `${p.metadata.title} ${p.metadata.caption} ${p.author.name}`
+                  .toLowerCase()
+                  .includes(query.toLowerCase()),
               )
               .map((p) => (
                 <button
@@ -536,13 +565,6 @@ export function ProfilePage({
                   </span>
                 </button>
               ))}
-            {panel === "activity" &&
-              !posts.some(
-                (p) =>
-                  p.liked ||
-                  p.saved ||
-                  (p.ownerId === boot.actor.userId && (p.likes > 0 || p.comments > 0)),
-              ) && <p>No activity yet. Like or save a post to keep it here.</p>}
           </div>
         </Dialog>
       )}

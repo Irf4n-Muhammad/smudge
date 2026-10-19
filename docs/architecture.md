@@ -39,7 +39,10 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   is bounded to 22px and disabled for reduced motion. No package permissions or runtime boundary
   changes are involved; this does not yet expose arbitrary creator HTML outside its iframe.
 
-- `apps/web/components/forma-app.tsx`: navigation, feed state, demo account switching.
+- `apps/web/components/forma-app.tsx`: navigation, feed state, demo account switching. The
+  tabs (Home, Search, Messages, Notifications, Create, Profile) and the feed picker live here;
+  `app-nav.tsx` is the More menu the rail and the profile's ☰ share; `app/nav.css` is the shape
+  (ADR 0032).
 - `post-card.tsx`, `studio.tsx`, `ui.tsx`: social actions, authoring, shared dialog/avatar UI.
 - `runtime.tsx`: viewport lifecycle, frame identity validation, typed request forwarding.
 - `theme-toggle.tsx`, `app/worlds.css`: persisted/system appearance and full-width feed layout.

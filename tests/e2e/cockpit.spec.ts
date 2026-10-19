@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 
 test("cockpit orbit selects real posts, opens isolated worlds and persists social actions", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.getByRole("button", { name: "Ways to browse" }).click();
-  await page.getByRole("button", { name: "Enter hyperspace" }).click();
+  await pickFeed(page, "Enter hyperspace");
   await expect(page).toHaveURL(/mode=cockpit/);
   const dial = page.getByRole("slider", { name: "Rotate post orbit" });
   await expect(dial).toBeVisible();
@@ -73,6 +73,6 @@ test("mobile cockpit keeps navigation and transmission controls reachable", asyn
     animations: "disabled",
   });
   await page.getByRole("button", { name: "Back to feed" }).click();
-  await expect(page.getByRole("button", { name: "Ways to browse" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "For you", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 
 test("sign up with email and password, confirm the email, log out and back in, change password", async ({
   page,
@@ -27,7 +28,7 @@ test("sign up with email and password, confirm the email, log out and back in, c
   const banner = page.locator(".verify-banner");
   await expect(banner).toContainText(email);
   // The demo's stand-in mailbox lives on the Who you are page.
-  await page.getByRole("button", { name: "Who you are", exact: true }).click();
+  await openMore(page, "Who you are");
   const inbox = page.getByLabel("Local demo inbox");
   await expect(inbox).toContainText("Confirm this address");
   const token = (await inbox.innerText()).match(/verify=([A-Za-z0-9_-]{43})/)![1]!;
@@ -36,7 +37,7 @@ test("sign up with email and password, confirm the email, log out and back in, c
   await expect(page.locator(".verify-banner")).toHaveCount(0);
   await expect(page).toHaveURL(/\/$/);
 
-  await page.getByRole("button", { name: "Account settings" }).click();
+  await openMore(page, "Account settings");
   await expect(page.getByRole("heading", { name: "Your account" })).toBeVisible();
   await expect(page.locator(".account-panel")).toContainText(email);
   await expect(page.locator(".account-panel")).toContainText("Confirmed");
@@ -56,6 +57,6 @@ test("sign up with email and password, confirm the email, log out and back in, c
   await dialog.getByLabel("Password").fill("an even longer phrase");
   await dialog.getByRole("button", { name: "Log in", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await page.getByRole("button", { name: "Account settings" }).click();
+  await openMore(page, "Account settings");
   await expect(page.locator(".account-panel")).toContainText(email);
 });

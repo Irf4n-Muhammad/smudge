@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 import type { Page } from "@playwright/test";
 
 const toast = (page: Page, text: string) =>
@@ -27,14 +28,14 @@ test("find people, follow, notify, message, report, moderate, block and delete a
     .click();
 
   // Search ranks the handle match first; following is one tap.
-  await page.getByRole("button", { name: "Find people", exact: true }).click();
+  await openPeople(page);
   await expect(page.getByRole("heading", { name: "Find people" })).toBeVisible();
   await page.getByLabel("Search people").fill("alex");
   await page.getByRole("button", { name: "Follow Alex Morgan" }).click();
   await expect(page.getByRole("button", { name: "Unfollow Alex Morgan" })).toBeVisible();
 
   // Report a post with a reason.
-  await page.getByRole("button", { name: "Your feed" }).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
   const options = page
     .locator(".post-card")
     .first()
@@ -55,7 +56,7 @@ test("find people, follow, notify, message, report, moderate, block and delete a
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Notifications", exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Find people", exact: true }).click();
+  await openPeople(page);
   await page.getByLabel("Search people").fill(handle);
   await page.getByRole("button", { name: `Message ${name}` }).click();
   await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
@@ -63,7 +64,7 @@ test("find people, follow, notify, message, report, moderate, block and delete a
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.locator(".bubble.mine").filter({ hasText: "Welcome to Forma!" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Moderation", exact: true }).click();
+  await openMore(page, "Moderation");
   const report = page.locator(".report-item").filter({ hasText: title });
   await expect(report).toContainText("other ×1");
   await report.getByRole("button", { name: "Dismiss" }).click();
@@ -80,14 +81,14 @@ test("find people, follow, notify, message, report, moderate, block and delete a
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.locator(".bubble.mine").filter({ hasText: "Thanks!" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Find people", exact: true }).click();
+  await openPeople(page);
   await page.getByLabel("Search people").fill("alex");
   // Block sits behind the row's ⋯ menu, so it is never one stray tap away.
   await page.getByRole("button", { name: "More for Alex Morgan" }).click();
   await page.getByRole("button", { name: "Block Alex Morgan" }).click();
   await toast(page, "Blocked @alex");
   await expect(page.getByRole("button", { name: "More for Alex Morgan" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Account settings" }).click();
+  await openMore(page, "Account settings");
   await expect(
     page.locator(".identity-panel").filter({ hasText: "Blocked accounts" }),
   ).toContainText("Alex Morgan");
@@ -106,23 +107,30 @@ test("find people, follow, notify, message, report, moderate, block and delete a
   expect(((await search.json()) as unknown[]).length).toBe(0);
 });
 
-test("mobile: the bottom bar reaches explore, people, notifications and messages", async ({
+test("mobile: the tabs reach search, people, notifications, messages and the profile menu", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.locator(".post-card").first().waitFor();
   const nav = page.getByRole("navigation", { name: "Mobile navigation" });
-  await nav.getByRole("button", { name: "Explore" }).click();
-  await expect(page.getByRole("heading", { name: "Wander a little further." })).toBeVisible();
-  await page.getByRole("button", { name: "Looking for someone? Find people" }).click();
+  await nav.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByRole("searchbox", { name: "Search all posts" })).toBeVisible();
+  await page.getByRole("button", { name: "People", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Find people" })).toBeVisible();
-  await nav.getByRole("button", { name: /^Notifications/ }).click();
+  // The bell and DM sit in the top corner, like Instagram's.
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: /^Notifications/ })
+    .click();
   await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();
-  await nav.getByRole("button", { name: /^Messages/ }).click();
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: /^Messages/ })
+    .click();
   await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
-  await nav.getByRole("button", { name: "More" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Moderation" }).click();
+  // Everything else is behind the profile's ☰.
+  await openMore(page, "Moderation");
   await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(390);

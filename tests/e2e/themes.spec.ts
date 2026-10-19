@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 
 /** Minimal JPEG whose EXIF GPS block points at the given coordinates (big-endian TIFF). */
 function jpegAt(lat: number, lon: number) {
@@ -75,7 +76,7 @@ test("a proven trip opens the Paris theme, worn on the profile and around posts 
     .getByRole("button", { name: "Skip for now" })
     .click();
 
-  await page.getByRole("button", { name: "Themes", exact: true }).click();
+  await openMore(page, "Themes");
   const paris = page.getByRole("article", { name: "Theme Paris" });
   await expect(paris).toContainText("Trip to France");
   await expect(paris).toContainText("Locked");
@@ -85,7 +86,7 @@ test("a proven trip opens the Paris theme, worn on the profile and around posts 
   );
   await page.keyboard.press("Escape");
 
-  await page.getByRole("button", { name: "Who you are", exact: true }).click();
+  await openMore(page, "Who you are");
   await page.getByRole("button", { name: "Trip photo" }).click();
   await page.getByLabel("A photo you took there (JPEG with location)").setInputFiles({
     name: "eiffel.jpg",
@@ -96,7 +97,7 @@ test("a proven trip opens the Paris theme, worn on the profile and around posts 
   await expect(toast).toContainText("Been to France");
   await expect(toast).toContainText("New themes to wear in Themes: Paris, Bonjour postcard");
 
-  await page.getByRole("button", { name: "Themes", exact: true }).click();
+  await openMore(page, "Themes");
   // During a season the choice is for this season; otherwise it is the everyday look.
   await paris.getByRole("button", { name: "Preview Paris" }).click();
   await page.getByRole("dialog", { name: "Paris" }).getByRole("button", { name: /^Wear/ }).click();
