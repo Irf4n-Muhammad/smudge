@@ -30,6 +30,14 @@ test("switching sides changes the feed and where a new post goes; a private side
     home.getByRole("list", { name: "People in Runners" }).getByRole("button"),
   ).toHaveCount(4);
   await expect(home.getByRole("button", { name: /^Track night/ })).toContainText("2 in");
+  // Who comes most often, across the side's past weeks (ADR 0034).
+  const regulars = home.getByRole("list", { name: "Regulars in Runners" }).getByRole("button");
+  await expect(regulars).toHaveCount(4);
+  await expect(regulars.first()).toContainText("Maya");
+  await expect(regulars.first()).toContainText("3 times");
+  await expect(regulars.last()).toContainText("Alex Morgan");
+  // Specs that ran before may have put Alex into more plans; how often he came is stable.
+  await expect(regulars.last()).toContainText("once");
   // Opening a side from the Sides tab lands on that home.
   await bar.getByRole("button", { name: "Everyday" }).click();
   await expect(page.getByRole("region", { name: "Runners home" })).toHaveCount(0);

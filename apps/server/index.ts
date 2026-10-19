@@ -39,7 +39,7 @@ import { PlansService } from "../../packages/core/src/plans.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
 import { sideRoutes } from "./side-routes.js";
-import { seedGamers, seedGift, seedPlan, seedSides, seedStamps } from "./seed-sides.js";
+import { seedGamers, seedGift, seedPlan, seedSides, seedStamps, seedWeekly } from "./seed-sides.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
@@ -131,6 +131,7 @@ plans.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId
 // A side's home lists its members and plans by the same audience rules.
 sidesService.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
 sidesService.planLister = (who, sideId) => plans.inSide(who, sideId);
+sidesService.regularLister = (who, sideId) => plans.regulars(who, sideId);
 // An organisation's invite or email opens that organisation's side along with the chapter.
 identity.chapterListeners.push((c) => sidesService.joinByChapter(c));
 const messages = new MessageService(service, community, clock);
@@ -150,6 +151,7 @@ if (config.demoContent) {
   seedThemes(service, studio);
   seedSides(service, sidesService);
   seedStamps(service);
+  seedWeekly(service);
   seedPlan(service);
   seedGamers(service, sidesService);
   seedGift(service);

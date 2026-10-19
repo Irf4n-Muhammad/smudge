@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { User } from "../../contracts/src/experience.js";
-import type { SidePlan } from "../../contracts/src/sides.js";
+import type { SidePlan, SideRegular } from "../../contracts/src/sides.js";
 import { EVERYDAY } from "../../contracts/src/sides.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
@@ -124,15 +124,7 @@ export class PlansService {
   inSide(actor: Actor, sideId: string, limit = 3): SidePlan[] {
     const viewerId = this.social.actor(actor);
     const users = new Map(this.social.users().map((u) => [u.id, u]));
-    return this.store
-      .all<Publication>("post")
-      .reverse()
-      .filter(
-        (p) =>
-          (p.metadata.side ?? EVERYDAY) === sideId &&
-          (p.package.manifest.capabilities as string[]).includes("plan.join") &&
-          this.social.viewFilter(viewerId, p),
-      )
+    return this.plansIn(viewerId, sideId)
       .slice(0, limit)
       .map((p) => {
         const v = this.view(actor, p.id);
@@ -148,6 +140,56 @@ export class PlansService {
           came: v.came,
         };
       });
+  }
+  /** The side's plan posts the viewer may open, newest first. */
+  private plansIn(viewerId: string, sideId: string) {
+    return this.store
+      .all<Publication>("post")
+      .reverse()
+      .filter(
+        (p) =>
+          (p.metadata.side ?? EVERYDAY) === sideId &&
+          (p.package.manifest.capabilities as string[]).includes("plan.join") &&
+          this.social.viewFilter(viewerId, p),
+      );
+  }
+  /**
+   * Who comes most often (ADR 0034): across the side's plans the viewer may open, each person's
+   * plans and the ones they said they were there for. Most `came` first, then most plans, then
+   * by name; only people who came at least once; at most `limit`, minus people the viewer cannot
+   * see. The counts are per person, never who was at which plan: that stays on each post.
+   */
+  regulars(actor: Actor, sideId: string, limit = 5): SideRegular[] {
+    const viewerId = this.social.actor(actor);
+    const plans = new Set(this.plansIn(viewerId, sideId).map((p) => p.id));
+    const tally = new Map<string, { plans: number; came: number }>();
+    for (const r of this.store.all<Rsvp>("rsvp")) {
+      if (!plans.has(r.postId)) continue;
+      const t = tally.get(r.userId) ?? { plans: 0, came: 0 };
+      t.plans += 1;
+      if (r.came) t.came += 1;
+      tally.set(r.userId, t);
+    }
+    const users = new Map(this.social.users().map((u) => [u.id, u]));
+    return [...tally]
+      .filter(
+        ([userId, t]) => t.came > 0 && users.has(userId) && this.peopleFilter(viewerId, userId),
+      )
+      .map(([userId, t]) => ({ user: users.get(userId)!, ...t }))
+      .sort(
+        (a, b) => b.came - a.came || b.plans - a.plans || a.user.name.localeCompare(b.user.name),
+      )
+      .slice(0, limit)
+      .map(({ user: { id, name, handle, initials, color, avatarAssetId }, plans, came }) => ({
+        id,
+        name,
+        handle,
+        initials,
+        color,
+        ...(avatarAssetId ? { avatarAssetId } : {}),
+        plans,
+        came,
+      }));
   }
   /** Who is in, for the feed card and tests; the same audience rule as the page's own read. */
   of(actor: Actor, postId: string) {

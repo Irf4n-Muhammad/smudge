@@ -9,6 +9,7 @@ import {
   Link2,
   Plus,
   Share2,
+  Trophy,
 } from "lucide-react";
 import type {
   Side,
@@ -99,7 +100,7 @@ export function SideHome({
     };
   }, [sideId, version]);
   if (!home || home.side.id === EVERYDAY) return null;
-  const { side, members, plans } = home;
+  const { side, members, plans, regulars } = home;
   const more = members.count - members.people.length;
   const since = home.since ? new Date(home.since) : null;
   async function leave() {
@@ -197,6 +198,28 @@ export function SideHome({
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+        {regulars.length > 0 && (
+          <div className="side-home-regulars">
+            <h3>
+              <Trophy size={14} /> Most often there
+            </h3>
+            <ol aria-label={`Regulars in ${side.name}`}>
+              {regulars.map((r, i) => (
+                <li key={r.id}>
+                  <button className="side-home-regular" onClick={() => onOpenUser(r.id)}>
+                    <span className="side-home-rank">{i + 1}</span>
+                    <Avatar user={{ bio: "", ...r } as User} small />
+                    <strong>{r.name}</strong>
+                    <span className="side-home-came">
+                      {r.came === 1 ? "once" : `${r.came} times`}
+                      {r.plans > r.came && ` · in ${r.plans}`}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
           </div>
         )}
       </div>

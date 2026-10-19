@@ -13,6 +13,7 @@ import type {
   SideHome,
   SideId,
   SidePlan,
+  SideRegular,
   SidesView,
 } from "../../contracts/src/sides.js";
 import { collectionById } from "../../contracts/src/identity.js";
@@ -42,6 +43,8 @@ export class SidesService {
   peopleFilter: (viewerId: string, userId: string) => boolean = () => true;
   /** Installed by the plans layer: the side's plans the viewer may open. */
   planLister: (actor: Actor, sideId: SideId) => SidePlan[] = () => [];
+  /** Installed by the plans layer: who comes most often to the side's plans (ADR 0034). */
+  regularLister: (actor: Actor, sideId: SideId) => SideRegular[] = () => [];
   constructor(
     private readonly social: SocialService,
     private readonly now: () => Date = () => new Date(),
@@ -159,6 +162,7 @@ export class SidesService {
       members: { count: joined.length, people },
       plans: this.planLister(actor, side.id),
       posts,
+      regulars: this.regularLister(actor, side.id),
     };
   }
   /** Membership granted by the system (seeds, an organisation's chapter); never an HTTP path. */

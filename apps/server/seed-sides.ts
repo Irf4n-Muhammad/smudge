@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { SocialService } from "../../packages/core/src/social.js";
+import type { Publication, SocialService } from "../../packages/core/src/social.js";
 import type { Chapter } from "../../packages/contracts/src/identity.js";
 import type { SidesService } from "../../packages/core/src/sides.js";
 import type { Experience, Metadata } from "../../packages/contracts/src/experience.js";
@@ -163,6 +163,99 @@ export function seedSides(service: SocialService, sides: SidesService) {
  * A demo plan (ADR 0029): Ines's track night is a post people join, with two already in, so the
  * first tap on "I'm in" shows a name joining a list rather than starting one. Runs once.
  */
+/**
+ * The Runners' weeks (ADR 0034): three past plans, Tempo Tuesday twice and a Sunday long run,
+ * with who was in and who came, so the side's home can say who comes most often. Seeded before
+ * the track night, which stays the newest plan. Runs once.
+ */
+export function seedWeekly(service: SocialService) {
+  const store = service.store;
+  if (store.get("system", "seed-weekly-v1")) return;
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+  const weeks: {
+    owner: string;
+    days: number;
+    kicker: string;
+    headline: string;
+    text: string;
+    caption: string;
+    /** Who was in, and whether they said they were there. */
+    people: [string, boolean][];
+  }[] = [
+    {
+      owner: "maya",
+      days: 13,
+      kicker: "Tuesday 18:30 · GBK loop",
+      headline: "Tempo Tuesday, *6 × 1K*",
+      text: "Six kilometre repeats at 10K pace, two minutes easy between. Warm up from the south gate at 18:15.",
+      caption: "Tempo night. 6 × 1K, then es teh.",
+      people: [
+        ["maya", true],
+        ["leo", true],
+        ["ines", true],
+        ["you", true],
+      ],
+    },
+    {
+      owner: "ines",
+      days: 9,
+      kicker: "Sunday 05:30 · Sudirman",
+      headline: "Sunday 18K, *easy pace*",
+      text: "Conversational the whole way. Water at the 9K turn, breakfast at the usual warung after.",
+      caption: "18K easy, breakfast after. Who's in?",
+      people: [
+        ["maya", true],
+        ["leo", true],
+        ["ines", false],
+        ["you", false],
+      ],
+    },
+    {
+      owner: "maya",
+      days: 6,
+      kicker: "Tuesday 18:30 · GBK loop",
+      headline: "Tempo Tuesday, *hills*",
+      text: "Eight times the bridge ramp, hard up, jog down. Short, nasty, done by 19:30.",
+      caption: "Hills this week. Eight ramps.",
+      people: [
+        ["maya", true],
+        ["ines", true],
+        ["leo", false],
+      ],
+    },
+  ];
+  for (const w of weeks) {
+    if (!store.get("user", w.owner)) continue;
+    const built = buildPost(
+      startPostDesign("plan", {
+        kicker: w.kicker,
+        headline: w.headline,
+        text: w.text,
+        palette: "night",
+      }),
+    );
+    const actor = { userId: w.owner };
+    const draft = service.createDraft(actor, {
+      package: built.package,
+      metadata: { ...built.metadata, caption: w.caption, contributors: [], side: "runners" },
+    });
+    const post = service.publish(actor, draft.id, draft.revision);
+    store.transaction(() => {
+      // Backdated so the card and the home read as past weeks, not as today.
+      const stored = store.get<Publication>("post", post.id);
+      if (stored) store.put("post", post.id, { ...stored, createdAt: daysAgo(w.days + 2) });
+      for (const [userId, came] of w.people)
+        if (store.get("user", userId))
+          store.put("rsvp", `${post.id}:${userId}`, {
+            postId: post.id,
+            userId,
+            at: daysAgo(w.days + 1),
+            ...(came ? { came: daysAgo(w.days) } : {}),
+          });
+    });
+  }
+  store.transaction(() => store.put("system", "seed-weekly-v1", { complete: true }));
+}
 export function seedPlan(service: SocialService) {
   const store = service.store;
   if (store.get("system", "seed-plan-v1") || !store.get("user", "ines")) return;
