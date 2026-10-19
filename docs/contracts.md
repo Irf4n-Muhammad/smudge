@@ -422,6 +422,20 @@ everyday|house|org, entry: open|invite, private, orgId?, accent, prompt}`. Every
 - Membership from an organisation's chapter (`invites/redeem`, `email/confirm`) is granted by
   the server in the same transaction; no request body names a side to join that way.
 
+## Stamps and collections (additive, ADR 0028)
+
+- **Catalog.** `collections` in `contracts/src/identity.ts`: `{id, name, orgId, side?, stamps:
+{id, name}[]}`. `chapterKinds` gains `stamp`; a stamp chapter carries `collection` and `stamp`.
+- `POST /api/identity/invites` accepts `kind: "stamp"` with `stamp: {collection, stamp}`
+  (required for that kind, refused on others); the collection must belong to `orgId`
+  (`STAMP_UNKNOWN` 400). `invites/redeem` refuses a stamp already held (`STAMP_ALREADY_HELD` 409) and otherwise adds the chapter and the organisation's side.
+- `GET /api/identity/me` gains `collections` (as below, for yourself) and `issuable` (the
+  collections your organisations issue stamps for). `GET /api/users/:id/collections` answers
+  `[{id, name, org, side, held, total, stamps: [{id, name, held, label?, at?}]}]`, counting
+  only the stamps the viewer may see (audience as for chapters).
+- `ThemeEvent` gains kinds `stamp {collection, stamp}` and `collection {collection}`; the
+  lock reason names the race or the count still missing.
+
 ## Post buttons (additive)
 
 Post metadata accepts an optional `link: { label, url? }`. `label` is 1 to 32 characters and is the

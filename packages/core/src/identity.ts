@@ -3,6 +3,8 @@ import type { User, PostView, Experience } from "../../contracts/src/experience.
 import {
   birthdaySchema,
   chapterAudienceSchema,
+  collectionById,
+  collections,
   countries,
   places,
   countryChoiceSchema,
@@ -61,8 +63,11 @@ interface EmailChallenge {
 interface Invite {
   code: string;
   orgId: string;
-  kind: "member" | "title";
+  kind: "member" | "title" | "stamp";
   label: string;
+  /** Stamp invites: the stamp this code hands out. */
+  collection?: string | undefined;
+  stamp?: string | undefined;
   from?: number | undefined;
   to?: number | "now" | undefined;
   uses: number;
@@ -339,6 +344,16 @@ export class IdentityService {
     const parsed = inviteCreateSchema.parse(input);
     if (!this.adminOrgs(userId).some((o) => o.id === parsed.orgId))
       throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    // A stamp can only be issued by the organiser of its collection.
+    if (parsed.stamp) {
+      const collection = collectionById(parsed.stamp.collection);
+      if (
+        !collection ||
+        collection.orgId !== parsed.orgId ||
+        !collection.stamps.some((st) => st.id === parsed.stamp!.stamp)
+      )
+        throw new AppError("STAMP_UNKNOWN", 400);
+    }
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     const code = Array.from(randomBytes(10), (b) => alphabet[b % alphabet.length]).join("");
     const invite: Invite = {
@@ -346,6 +361,7 @@ export class IdentityService {
       orgId: parsed.orgId,
       kind: parsed.kind,
       label: parsed.label,
+      ...(parsed.stamp ? { collection: parsed.stamp.collection, stamp: parsed.stamp.stamp } : {}),
       ...parsed.period,
       uses: parsed.uses,
       used: 0,
@@ -368,6 +384,14 @@ export class IdentityService {
     if (this.store.get("invite-use", `${invite.code}:${userId}`))
       throw new AppError("INVITE_ALREADY_USED", 409);
     if (invite.used >= invite.uses) throw new AppError("INVITE_EXHAUSTED", 410);
+    // One stamp per person: a second code for the same race adds nothing to the collection.
+    if (
+      invite.kind === "stamp" &&
+      this.chapters(userId).some(
+        (c) => c.kind === "stamp" && c.collection === invite.collection && c.stamp === invite.stamp,
+      )
+    )
+      throw new AppError("STAMP_ALREADY_HELD", 409);
     return this.store.transaction(() => {
       this.store.put("invite", invite.code, { ...invite, used: invite.used + 1 });
       this.store.put("invite-use", `${invite.code}:${userId}`, { userId });
@@ -376,6 +400,9 @@ export class IdentityService {
         kind: invite.kind,
         label: invite.label,
         orgId: invite.orgId,
+        ...(invite.kind === "stamp"
+          ? { collection: invite.collection!, stamp: invite.stamp! }
+          : {}),
         ...(invite.from === undefined ? {} : { from: invite.from }),
         ...(invite.to === undefined ? {} : { to: invite.to }),
         method: "invite",
@@ -496,6 +523,9 @@ export class IdentityService {
       incoming: requests.filter((r) => r.to === userId),
       outgoing: requests.filter((r) => r.from === userId),
       adminOrgs: this.adminOrgs(userId).map(({ admins, ...o }) => o),
+      collections: this.collectionsFor(actor, userId),
+      /** Collections the organisations you manage issue stamps for, for the invite form. */
+      issuable: collections.filter((c) => this.adminOrgs(userId).some((o) => o.id === c.orgId)),
       outbox: this.outbox(actor),
     };
   }
@@ -611,8 +641,61 @@ export class IdentityService {
             event.place ? places[event.place].name : countries[event.country]
           }.`,
         };
+      if (event.kind === "stamp" || event.kind === "collection") {
+        const collection = collectionById(event.collection)!;
+        const held = this.stampsHeld(userId, collection.id);
+        if (event.kind === "stamp" && !held.has(event.stamp)) {
+          const stamp = collection.stamps.find((st) => st.id === event.stamp)!;
+          return {
+            ok: false,
+            reason: `Finishers of ${stamp.name}. Enter the stamp code from ${orgById(collection.orgId)!.name}.`,
+          };
+        }
+        if (event.kind === "collection" && held.size < collection.stamps.length)
+          return {
+            ok: false,
+            reason: `All ${collection.stamps.length} stamps of ${collection.name}; you have ${held.size}.`,
+          };
+      }
     }
     return { ok: true };
+  }
+  private stampsHeld(userId: string, collectionId: string) {
+    return new Set(
+      this.chapters(userId)
+        .filter((c) => c.kind === "stamp" && c.collection === collectionId)
+        .map((c) => c.stamp!),
+    );
+  }
+  /**
+   * Collections (ADR 0028) as the viewer may see them: every collection the owner holds at least
+   * one visible stamp in, with the missing stamps shown as gaps.
+   */
+  collectionsFor(actor: Actor, ownerId: string) {
+    const visible = this.chaptersFor(actor, ownerId).filter((c) => c.kind === "stamp");
+    return collections
+      .map((collection) => {
+        const mine = visible.filter((c) => c.collection === collection.id);
+        if (mine.length === 0) return null;
+        return {
+          id: collection.id,
+          name: collection.name,
+          org: orgById(collection.orgId)!.name,
+          side: collection.side ?? null,
+          held: mine.length,
+          total: collection.stamps.length,
+          stamps: collection.stamps.map((st) => {
+            const chapter = mine.find((c) => c.stamp === st.id);
+            return {
+              id: st.id,
+              name: st.name,
+              held: !!chapter,
+              ...(chapter ? { label: chapter.label, at: chapter.createdAt } : {}),
+            };
+          }),
+        };
+      })
+      .filter((c) => c !== null);
   }
   /** Season themes come and go with their dates, so they can never be someone's everyday look. */
   private seasonal(decoration: Decoration) {

@@ -28,6 +28,8 @@
 - [x] Sides: one account, many worlds (Everyday, Runners, a private festival crew side), each
       its own feed and composer, a post in one side with an explicit share to Everyday, private
       sides invisible from outside, entry by tap or by an organisation's invite. See ADR 0027.
+- [x] Stamps and collections: organiser-issued stamp codes, a collection with visible gaps,
+      and themes that open with one stamp or the full set. See ADR 0028.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

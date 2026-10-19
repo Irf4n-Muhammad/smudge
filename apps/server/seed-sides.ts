@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import type { SocialService } from "../../packages/core/src/social.js";
+import type { Chapter } from "../../packages/contracts/src/identity.js";
 import type { SidesService } from "../../packages/core/src/sides.js";
 import type { Experience, Metadata } from "../../packages/contracts/src/experience.js";
 
@@ -96,4 +98,52 @@ export function seedSides(service: SocialService, sides: SidesService) {
     service.publish(actor, draft.id, draft.revision);
   }
   store.transaction(() => store.put("system", "seed-sides-v1", { complete: true }));
+}
+
+/**
+ * Demo stamps (ADR 0028): Maya already holds the Borobudur stamp, and the organiser (Leo) has a
+ * ready code, BORO2026OK, so a visitor can collect their first stamp without switching accounts.
+ */
+export function seedStamps(service: SocialService) {
+  const store = service.store;
+  if (store.get("system", "seed-stamps-v1")) return;
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+  store.transaction(() => {
+    if (store.get("user", "maya")) {
+      const chapter: Chapter = {
+        id: randomUUID(),
+        ownerId: "maya",
+        kind: "stamp",
+        label: "Finisher, Borobudur Marathon 2026",
+        orgId: "marathon-series",
+        collection: "marathon-id-2026",
+        stamp: "borobudur",
+        from: 2026,
+        method: "invite",
+        audience: "public",
+        createdAt: daysAgo(3),
+      };
+      store.put("chapter", chapter.id, chapter);
+      store.put("side-member", "runners:maya", {
+        sideId: "runners",
+        userId: "maya",
+        since: daysAgo(3),
+      });
+    }
+    if (store.get("user", "leo") && !store.get("invite", "BORO2026OK"))
+      store.put("invite", "BORO2026OK", {
+        code: "BORO2026OK",
+        orgId: "marathon-series",
+        kind: "stamp",
+        label: "Finisher, Borobudur Marathon 2026",
+        collection: "marathon-id-2026",
+        stamp: "borobudur",
+        from: 2026,
+        uses: 500,
+        used: 0,
+        createdBy: "leo",
+        createdAt: daysAgo(3),
+      });
+    store.put("system", "seed-stamps-v1", { complete: true });
+  });
 }

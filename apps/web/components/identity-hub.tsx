@@ -1,8 +1,19 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { BadgeCheck, Eye, EyeOff, Mail, Ticket, Heart, Plane, Cake, Trash2 } from "lucide-react";
-import type { Chapter, CountryCode } from "../../../packages/contracts/src/identity";
+import {
+  BadgeCheck,
+  Eye,
+  EyeOff,
+  Mail,
+  Ticket,
+  Heart,
+  Plane,
+  Cake,
+  Trash2,
+  Stamp,
+} from "lucide-react";
+import type { Chapter, Collection, CountryCode } from "../../../packages/contracts/src/identity";
 import { countries } from "../../../packages/contracts/src/identity";
 import { api } from "./runtime";
 import type { Boot } from "./types";
@@ -15,9 +26,74 @@ type Me = {
   incoming: { id: string; from: string; label: string }[];
   outgoing: { id: string; to: string; label: string }[];
   adminOrgs: { id: string; name: string; kind: string }[];
+  collections: CollectionView[];
+  issuable: Collection[];
   outbox: { id: string; to: string; subject: string; body: string; createdAt: string }[];
 };
-type Invite = { code: string; orgId: string; label: string; uses: number; used: number };
+/** A collection as `GET /api/users/:id/collections` answers it (ADR 0028). */
+export type CollectionView = {
+  id: string;
+  name: string;
+  org: string;
+  side: string | null;
+  held: number;
+  total: number;
+  stamps: { id: string; name: string; held: boolean; label?: string; at?: string }[];
+};
+type Invite = {
+  code: string;
+  orgId: string;
+  kind: "member" | "title" | "stamp";
+  label: string;
+  uses: number;
+  used: number;
+};
+
+/** Stamps held and the gaps still to fill, one row per collection. */
+export function CollectionList({
+  collections,
+  mine,
+}: {
+  collections: CollectionView[];
+  mine: boolean;
+}) {
+  if (collections.length === 0) return null;
+  return (
+    <section className="collections" aria-label="Collections">
+      {collections.map((c) => (
+        <article key={c.id} className="collection" aria-label={c.name}>
+          <header>
+            <Stamp size={16} aria-hidden="true" />
+            <span>
+              <strong>{c.name}</strong>
+              <small>
+                {c.held} of {c.total} stamps · issued by {c.org}
+              </small>
+            </span>
+          </header>
+          <ul className="stamps">
+            {c.stamps.map((st) => (
+              <li
+                key={st.id}
+                className={st.held ? "stamp held" : "stamp"}
+                title={st.held ? st.label : `${st.name}: not yet`}
+                aria-label={`${st.name}: ${st.held ? "held" : "not yet"}`}
+              >
+                <span>{st.name.replace(/ Marathon$/, "")}</span>
+              </li>
+            ))}
+          </ul>
+          {mine && c.held < c.total && (
+            <p className="fineprint">
+              {c.total - c.held} to go. Each race hands finishers a stamp code; enter it under{" "}
+              <strong>Invite code</strong>.
+            </p>
+          )}
+        </article>
+      ))}
+    </section>
+  );
+}
 
 const methodLabel: Record<Chapter["method"], string> = {
   email: "Verified by email",
@@ -147,6 +223,7 @@ export function IdentityHub({
         </button>
       </header>
       <ChapterList chapters={me.chapters} editable onChange={load} notify={notify} />
+      <CollectionList collections={me.collections} mine />
       {me.incoming.map((r) => (
         <div className="identity-request" key={r.id}>
           <Heart size={16} /> {name(r.from)} says you are <strong>{r.label.toLowerCase()}</strong>.
@@ -206,7 +283,13 @@ export function IdentityHub({
         {tab === "more" && <BirthdayCountry me={me} onDone={load} notify={notify} />}
       </div>
       {me.adminOrgs.length > 0 && (
-        <InviteAdmin orgs={me.adminOrgs} invites={invites} onDone={load} notify={notify} />
+        <InviteAdmin
+          orgs={me.adminOrgs}
+          issuable={me.issuable}
+          invites={invites}
+          onDone={load}
+          notify={notify}
+        />
       )}
     </section>
   );
@@ -587,19 +670,31 @@ function BirthdayCountry({
 
 function InviteAdmin({
   orgs,
+  issuable,
   invites,
   onDone,
   notify,
 }: {
   orgs: Me["adminOrgs"];
+  issuable: Collection[];
   invites: Invite[];
   onDone: () => Promise<void>;
   notify: (s: string) => void;
 }) {
   const [orgId, setOrgId] = useState(orgs[0]!.id),
-    [kind, setKind] = useState<"member" | "title">("member"),
+    [kind, setKind] = useState<Invite["kind"]>("member"),
     [label, setLabel] = useState(""),
-    [uses, setUses] = useState(10);
+    [uses, setUses] = useState(10),
+    [stampKey, setStampKey] = useState("");
+  const stampOptions = issuable
+    .filter((c) => c.orgId === orgId)
+    .flatMap((c) =>
+      c.stamps.map((st) => ({ key: `${c.id}:${st.id}`, name: `${st.name} (${c.name})` })),
+    );
+  const stamp = (() => {
+    const [collection, id] = (stampKey || stampOptions[0]?.key || "").split(":");
+    return collection && id ? { collection, stamp: id } : undefined;
+  })();
   return (
     <section className="invite-admin">
       <span className="eyebrow">YOU MANAGE {orgs.map((o) => o.name.toUpperCase()).join(", ")}</span>
@@ -608,7 +703,13 @@ function InviteAdmin({
         onSubmit={async (e) => {
           e.preventDefault();
           try {
-            await api("/identity/invites", { orgId, kind, label, uses });
+            await api("/identity/invites", {
+              orgId,
+              kind,
+              label,
+              uses,
+              ...(kind === "stamp" ? { stamp } : {}),
+            });
             setLabel("");
             await onDone();
           } catch (err) {
@@ -629,12 +730,28 @@ function InviteAdmin({
           </label>
           <label>
             Kind
-            <select value={kind} onChange={(e) => setKind(e.target.value as "member" | "title")}>
+            <select value={kind} onChange={(e) => setKind(e.target.value as Invite["kind"])}>
               <option value="member">Membership</option>
               <option value="title">Title or award</option>
+              {stampOptions.length > 0 && <option value="stamp">Stamp (finisher)</option>}
             </select>
           </label>
         </div>
+        {kind === "stamp" && (
+          <label>
+            Which stamp
+            <select
+              value={stampKey || stampOptions[0]?.key}
+              onChange={(e) => setStampKey(e.target.value)}
+            >
+              {stampOptions.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           Chapter text
           <input

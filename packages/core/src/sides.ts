@@ -8,6 +8,7 @@ import {
   sides,
 } from "../../contracts/src/sides.js";
 import type { FeedLayout, Side, SideId, SidesView } from "../../contracts/src/sides.js";
+import { collectionById } from "../../contracts/src/identity.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
 import type { Publication, SocialService } from "./social.js";
@@ -135,6 +136,12 @@ export class SidesService {
   /** An organisation's side opens with its chapter (invite or email); called inside that transaction. */
   joinByOrg(userId: string, orgId: string) {
     for (const side of sides) if (side.orgId === orgId) this.grant(userId, side.id);
+  }
+  /** A new chapter opens its organisation's side and, for a stamp, its collection's side. */
+  joinByChapter(chapter: { ownerId: string; orgId?: string; collection?: string }) {
+    if (chapter.orgId) this.joinByOrg(chapter.ownerId, chapter.orgId);
+    const side = chapter.collection ? collectionById(chapter.collection)?.side : undefined;
+    if (side) this.grant(chapter.ownerId, side);
   }
   setActive(actor: Actor, input: unknown) {
     const userId = this.social.actor(actor);

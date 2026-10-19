@@ -11,6 +11,9 @@ export function identityRoutes(api: Express, identity: IdentityService) {
   api.get("/api/users/:id/chapters", (req, res) =>
     res.json(identity.chaptersFor(actor(res), id(req.params.id))),
   );
+  api.get("/api/users/:id/collections", (req, res) =>
+    res.json(identity.collectionsFor(actor(res), id(req.params.id))),
+  );
   api.post("/api/chapters/:id/audience", (req, res) =>
     res.json(identity.setChapterAudience(actor(res), id(req.params.id), req.body)),
   );

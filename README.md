@@ -182,6 +182,10 @@ Desktop account switching is a simulation feature, not public authentication.
   (its feed, its composer, its colour), a post lives in the side it was written in, and its
   writer can also share it to Everyday. Private sides are unseen from outside and open with the
   organisation's invite under **Who you are**. Per-side themes are not built.
+- Stamps and collections (ADR 0028): an organiser issues stamp codes for each race of a series
+  under **Who you are**; a finisher's code adds the stamp to their collection, with the missing
+  races shown as gaps, joins the series' side, and opens the race theme (**Finisher medal**; all
+  five open **Series finisher**). Try the demo code `BORO2026OK` under **Invite code**.
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.

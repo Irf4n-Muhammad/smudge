@@ -36,7 +36,7 @@ import { ThemeStudio } from "../../packages/core/src/themes.js";
 import { seedThemes } from "./seed-themes.js";
 import { SidesService } from "../../packages/core/src/sides.js";
 import { sideRoutes } from "./side-routes.js";
-import { seedSides } from "./seed-sides.js";
+import { seedSides, seedStamps } from "./seed-sides.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
@@ -123,9 +123,7 @@ accounts.erasers.push((userId) => community.erase(userId));
 const privacy = new PrivacyService(service, community, clock);
 const sidesService = new SidesService(service, clock);
 // An organisation's invite or email opens that organisation's side along with the chapter.
-identity.chapterListeners.push((c) => {
-  if (c.orgId) sidesService.joinByOrg(c.ownerId, c.orgId);
-});
+identity.chapterListeners.push((c) => sidesService.joinByChapter(c));
 const messages = new MessageService(service, community, clock);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
@@ -142,6 +140,7 @@ if (config.demoContent) {
   // After the photo seed, which adds Arif.
   seedThemes(service, studio);
   seedSides(service, sidesService);
+  seedStamps(service);
 }
 const sharing = new SharingService(service, community, identity, profiles);
 const media = new MediaService(service, resolve(dataDir, "media"));

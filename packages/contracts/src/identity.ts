@@ -101,10 +101,25 @@ export const orgs: Org[] = [
     domains: [],
     admins: ["leo"],
   },
+  {
+    id: "marathon-series",
+    name: "Indonesian Marathon Series",
+    kind: "event",
+    domains: [],
+    admins: ["leo"],
+  },
 ];
 export const orgById = (id: string) => orgs.find((o) => o.id === id);
 
-export const chapterKinds = ["education", "work", "member", "title", "travel", "together"] as const;
+export const chapterKinds = [
+  "education",
+  "work",
+  "member",
+  "title",
+  "travel",
+  "together",
+  "stamp",
+] as const;
 export type ChapterKind = (typeof chapterKinds)[number];
 export const audienceSchema = z.enum(["circle", "public"]);
 export type Audience = z.infer<typeof audienceSchema>;
@@ -120,6 +135,9 @@ export interface Chapter {
   place?: PlaceId;
   partnerId?: string;
   link?: string;
+  /** A stamp chapter (ADR 0028): one stamp of a collection, issued by the organiser's code. */
+  collection?: string;
+  stamp?: string;
   from?: number | undefined;
   to?: number | "now" | undefined;
   method: "email" | "invite" | "partner" | "photo-location";
@@ -146,12 +164,47 @@ export const emailConfirmSchema = z
 export const inviteCreateSchema = z
   .object({
     orgId: z.string().max(40),
-    kind: z.enum(["member", "title"]),
+    kind: z.enum(["member", "title", "stamp"]),
     label: z.string().trim().min(2).max(80),
     period: periodSchema.default({}),
     uses: z.number().int().min(1).max(500).default(1),
+    /** Stamp invites name the stamp; the collection must belong to `orgId` (checked in core). */
+    stamp: z
+      .object({ collection: z.string().max(40), stamp: z.string().max(40) })
+      .strict()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .refine((v) => (v.kind === "stamp") === !!v.stamp, "A stamp invite names its stamp");
+
+/**
+ * Collections (ADR 0028): a series of stamps an organiser issues, one per event, each a code the
+ * finisher enters. A stamp is a chapter; the full set opens the series theme. Trusted host data.
+ */
+export interface Collection {
+  id: string;
+  name: string;
+  orgId: string;
+  /** The side its members gather in, when the series has one. */
+  side?: string;
+  stamps: { id: string; name: string }[];
+}
+export const collections: Collection[] = [
+  {
+    id: "marathon-id-2026",
+    name: "Indonesian Marathon Series 2026",
+    orgId: "marathon-series",
+    side: "runners",
+    stamps: [
+      { id: "borobudur", name: "Borobudur Marathon" },
+      { id: "jakarta", name: "Jakarta Marathon" },
+      { id: "bali", name: "Bali Marathon" },
+      { id: "mandalika", name: "Mandalika Marathon" },
+      { id: "bandung", name: "Bandung Marathon" },
+    ],
+  },
+];
+export const collectionById = (id: string) => collections.find((c) => c.id === id);
 export const inviteRedeemSchema = z
   .object({
     code: z
@@ -356,7 +409,11 @@ export const themeFonts = ["ui", "serif", "hand", "display", "spray"] as const;
 export type ThemeFont = (typeof themeFonts)[number];
 export type ThemeEvent =
   | { id: string; name: string; kind: "season"; seasonId: string }
-  | { id: string; name: string; kind: "trip"; country: CountryCode; place?: PlaceId };
+  | { id: string; name: string; kind: "trip"; country: CountryCode; place?: PlaceId }
+  /** One stamp of a collection opens it (ADR 0028). */
+  | { id: string; name: string; kind: "stamp"; collection: string; stamp: string }
+  /** Every stamp of the collection opens it. */
+  | { id: string; name: string; kind: "collection"; collection: string };
 export const themeEvents: ThemeEvent[] = [
   { id: "halloween", name: "Halloween", kind: "season", seasonId: "halloween" },
   { id: "id-independence", name: "Hari Kemerdekaan", kind: "season", seasonId: "id-independence" },
@@ -366,6 +423,19 @@ export const themeEvents: ThemeEvent[] = [
   { id: "trip-korea", name: "Trip to South Korea", kind: "trip", country: "KR" },
   { id: "trip-thailand", name: "Trip to Thailand", kind: "trip", country: "TH" },
   { id: "trip-bali", name: "Trip to Bali", kind: "trip", country: "ID", place: "bali" },
+  {
+    id: "stamp-borobudur-2026",
+    name: "Borobudur Marathon 2026 finisher",
+    kind: "stamp",
+    collection: "marathon-id-2026",
+    stamp: "borobudur",
+  },
+  {
+    id: "series-marathon-2026",
+    name: "Indonesian Marathon Series 2026, all five",
+    kind: "collection",
+    collection: "marathon-id-2026",
+  },
 ];
 export const themeEventById = (id: string) => themeEvents.find((e) => e.id === id);
 export interface Decoration {
@@ -879,6 +949,69 @@ export const decorations: Decoration[] = [
         dx: -52,
         dy: -28,
         svg: s(frangipani(22, 24) + frangipani(52, 34, 0.75), "0 0 70 56"),
+      },
+    ],
+  },
+  {
+    id: "finisher-medal",
+    name: "Finisher medal",
+    creatorId: "leo",
+    tier: "event",
+    eventId: "stamp-borobudur-2026",
+    accent: "#8d5a2b",
+    font: "display",
+    emotes: ["congrats", "proud"],
+    pieces: [
+      {
+        anchor: "top-right",
+        width: 72,
+        height: 104,
+        dx: -84,
+        dy: -34,
+        svg: s(
+          '<path d="M30 0L46 60H26Z" fill="#c62828"/><path d="M42 0L26 60h20Z" fill="#1b5e9e"/><circle cx="36" cy="76" r="26" fill="#d9a441" stroke="#8d5a2b" stroke-width="4"/><circle cx="36" cy="76" r="17" fill="none" stroke="#8d5a2b" stroke-width="2"/><text x="36" y="81" text-anchor="middle" font-family="Impact,sans-serif" font-size="14" fill="#5a3717">42K</text>',
+          "0 0 72 104",
+        ),
+      },
+      {
+        anchor: "bottom-left",
+        width: 130,
+        height: 34,
+        dx: 10,
+        dy: -12,
+        svg: s(
+          '<rect x="0" y="4" width="130" height="26" rx="6" fill="#1b1b1f"/><text x="65" y="23" text-anchor="middle" font-family="Impact,sans-serif" font-size="15" letter-spacing="2" fill="#f6d365">BOROBUDUR 2026</text>',
+          "0 0 130 34",
+        ),
+      },
+    ],
+  },
+  {
+    id: "series-finisher",
+    name: "Series finisher",
+    creatorId: "leo",
+    tier: "event",
+    eventId: "series-marathon-2026",
+    accent: "#b8860b",
+    font: "display",
+    emotes: ["congrats", "firework"],
+    pieces: [
+      {
+        anchor: "top",
+        width: 220,
+        height: 60,
+        dx: -110,
+        dy: -30,
+        svg: s(
+          '<path d="M0 30Q110 70 220 30" fill="none" stroke="#b8860b" stroke-width="3"/>' +
+            [20, 65, 110, 155, 200]
+              .map(
+                (x, i) =>
+                  `<circle cx="${x}" cy="${[33, 44, 48, 44, 33][i]}" r="13" fill="#d9a441" stroke="#8d5a2b" stroke-width="3"/>`,
+              )
+              .join(""),
+          "0 0 220 60",
+        ),
       },
     ],
   },

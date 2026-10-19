@@ -23,9 +23,7 @@ async function setup() {
   const social = new SocialService(store);
   const identity = new IdentityService(social, renderMoment);
   const sides = new SidesService(social);
-  identity.chapterListeners.push((c) => {
-    if (c.orgId) sides.joinByOrg(c.ownerId, c.orgId);
-  });
+  identity.chapterListeners.push((c) => sides.joinByChapter(c));
   const post = (actor: { userId: string }, title: string, side?: string) => {
     const draft = social.createDraft(actor, {
       package: simplePost(),
