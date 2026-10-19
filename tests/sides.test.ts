@@ -212,6 +212,14 @@ test("a side's home counts everyone, shows the people the viewer may see, and ke
       : [];
   assert.equal(sides.home(alice, "runners").plans[0]?.title, "Track night");
   assert.deepEqual(sides.home(bob, "runners").plans, []);
+  // So do the regulars (ADR 0034); without the plans layer the list is empty, never missing.
+  assert.deepEqual(sides.home(alice, "runners").regulars, []);
+  sides.regularLister = (actor, sideId) =>
+    sideId === "runners" && actor.userId === "alice"
+      ? [{ id: "bob", name: "Bob", handle: "bob", initials: "B", color: "", plans: 3, came: 2 }]
+      : [];
+  assert.equal(sides.home(alice, "runners").regulars[0]?.came, 2);
+  assert.deepEqual(sides.home(bob, "runners").regulars, []);
   // Everyday's home is everyone; a private side and an unknown side both do not exist from outside.
   assert.equal(sides.home(leo, "everyday").members.count, social.users().length);
   rejects(() => sides.home(alice, "film-fest"), "NOT_FOUND");

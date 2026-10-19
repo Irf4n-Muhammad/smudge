@@ -171,3 +171,47 @@ test("a side lists its plans for the side's home, newest first, only those the v
   assert.deepEqual(plans.inSide(alice, "runners"), []);
   assert.equal(plans.inSide(bob, "runners").length, 1);
 });
+
+test("a side's regulars: who came most often across its plans, as the viewer may see them", async () => {
+  const { social, plans } = await setup();
+  const plan = (headline: string) => {
+    const built = buildPost(startPostDesign("plan", { headline }));
+    const draft = social.createDraft(bob, {
+      package: built.package,
+      metadata: { ...built.metadata, caption: "", contributors: [], side: "runners" },
+    });
+    return social.publish(bob, draft.id, draft.revision);
+  };
+  const tempo = plan("Tempo Tuesday");
+  const long = plan("Sunday long run");
+  const hills = plan("Hills");
+  // Cara came three times; Alice was in three plans but came once; Bob was in one and never came.
+  for (const p of [tempo, long, hills]) {
+    plans.join(cara, p.id, { came: true });
+    plans.join(alice, p.id, { going: true });
+  }
+  plans.join(alice, long.id, { came: true });
+  plans.join(bob, tempo.id, { going: true });
+  assert.deepEqual(
+    plans.regulars(alice, "runners").map((r) => [r.name, r.plans, r.came]),
+    [
+      ["Cara", 3, 3],
+      ["Alice", 3, 1],
+    ],
+  );
+  // The practice plan in Everyday counts for Everyday only; a side with no plans has no regulars.
+  assert.deepEqual(plans.regulars(alice, "everyday"), []);
+  assert.deepEqual(plans.regulars(alice, "gamers"), []);
+  // A plan the viewer may not open is not counted; a person the viewer may not see is not listed.
+  social.viewFilter = (viewerId, p) => !(viewerId === "alice" && p.id === long.id);
+  assert.deepEqual(
+    plans.regulars(alice, "runners").map((r) => [r.name, r.came]),
+    [["Cara", 2]],
+  );
+  plans.peopleFilter = (viewerId, userId) => !(viewerId === "bob" && userId === "cara");
+  assert.deepEqual(
+    plans.regulars(bob, "runners").map((r) => r.name),
+    ["Alice"],
+  );
+  assert.equal(plans.regulars(bob, "runners", 0).length, 0);
+});

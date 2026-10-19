@@ -94,6 +94,19 @@ export interface SidePlan {
  * A side's home (ADR 0033): what a member, or someone deciding to join, sees first. People are
  * the ones the viewer may see; counts cover everyone. Private sides answer only to members.
  */
+/** One of the people who come most often to a side's plans (ADR 0034). */
+export interface SideRegular {
+  id: string;
+  name: string;
+  handle: string;
+  initials: string;
+  color: string;
+  avatarAssetId?: string;
+  /** The side's plans this person was in. */
+  plans: number;
+  /** How many of them they said they were there for. */
+  came: number;
+}
 export interface SideHome {
   side: Side;
   member: boolean;
@@ -115,6 +128,11 @@ export interface SideHome {
   plans: SidePlan[];
   /** Posts in the side the viewer may open. */
   posts: number;
+  /**
+   * Who was there most often, across the side's plans the viewer may open: most `came` first,
+   * at most five, only people who came at least once, minus people the viewer cannot see.
+   */
+  regulars: SideRegular[];
 }
 
 /** What the app needs to draw the side switcher and composer. Private sides appear only in `mine`. */

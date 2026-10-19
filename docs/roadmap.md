@@ -41,8 +41,9 @@
       The fifth tab is Sides. See ADR 0032.
 - [x] A side's home: inside a side, the feed opens with the side's colour, name, members, post
       count and plans, so a community reads as a place. Gamers is the second seeded community,
-      with a squad-up plan, a clip and a bracket. Next: attendance per side, a join link that
-      opens the home without an account. See ADR 0033.
+      with a squad-up plan, a clip and a bracket. The home also ranks who comes most often
+      across the side's plans, from the Runners' seeded weeks (ADR 0034). Next: the same recap
+      on a profile, a join link that opens the home without an account. See ADR 0033.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 
