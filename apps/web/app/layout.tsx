@@ -13,6 +13,7 @@ import "./social-basics.css";
 import "./privacy-groups.css";
 import "./gallery.css";
 import "./themes.css";
+import "./sides.css";
 import { seasonScript } from "../components/season-script";
 
 export const metadata: Metadata = {

@@ -177,6 +177,11 @@ Desktop account switching is a simulation feature, not public authentication.
   **Wear** it, then **Edit** to drag its pieces (mouse, finger or arrow keys, always near the
   edges) and rewrite the text its designer marked. Only you get your version. Designing from code
   is under **Send your own theme**.
+- Sides (ADR 0027): one account, many sides. **Everyday**, the open **Runners** side and a
+  private **Film Festival crew** side; the row above the feed switches the whole app to a side
+  (its feed, its composer, its colour), a post lives in the side it was written in, and its
+  writer can also share it to Everyday. Private sides are unseen from outside and open with the
+  organisation's invite under **Who you are**. Per-side themes are not built.
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.

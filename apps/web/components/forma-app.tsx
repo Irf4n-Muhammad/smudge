@@ -62,6 +62,9 @@ import type { DecoratedPost } from "./post-decor";
 import { SeasonChip, SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
 import { Welcome } from "./welcome";
+import { SidesBar, SidesDialog } from "./sides";
+import type { SidesView } from "../../../packages/contracts/src/sides";
+import { EVERYDAY } from "../../../packages/contracts/src/sides";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
   const [cockpit, setCockpit] = useState(false);
@@ -94,6 +97,7 @@ export function FormaApp() {
     [messageTo, setMessageTo] = useState<string | null>(null),
     [more, setMore] = useState(false),
     [modes, setModes] = useState(false),
+    [sidesOpen, setSidesOpen] = useState(false),
     /** Just signed up: a photo and a few people before the first feed. */
     [welcome, setWelcome] = useState(false);
   /** A toast can carry one way back, like Undo after blocking someone. */
@@ -216,6 +220,17 @@ export function FormaApp() {
       notify((e as Error).message);
     }
   }
+  /** One tap moves the whole app into that side: its feed, its composer, its colour. */
+  async function switchSide(side: string) {
+    if (side === boot?.sides.active) return;
+    try {
+      await api<SidesView>("/sides/active", { side });
+      await refresh();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }
   function create() {
     setEditingPost(false);
     setActiveDraft(undefined);
@@ -292,6 +307,8 @@ export function FormaApp() {
       </>
     );
   const me = boot?.users.find((u) => u.id === boot.actor.userId);
+  const activeSide = boot?.sides.mine.find((s) => s.id === boot.sides.active);
+  const inSide = !!activeSide && activeSide.id !== EVERYDAY;
   const selectedUser = profile ? boot?.users.find((u) => u.id === profile) : me;
   const visible = (view === "explore" ? (explored ?? []) : posts).filter(
     (p) =>
@@ -365,7 +382,12 @@ export function FormaApp() {
       <Cockpit posts={posts} boot={boot} onRefresh={refresh} onExit={() => changeMode(false)} />
     );
   return (
-    <div className="app-shell" data-view={view}>
+    <div
+      className="app-shell"
+      data-view={view}
+      data-side={activeSide?.id}
+      style={{ "--side-accent": activeSide?.accent } as React.CSSProperties}
+    >
       <AmbientLight watch={`${view}:${filter}:${visible.map((p) => p.id).join(",")}`} />
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Smudge home">
@@ -520,7 +542,7 @@ export function FormaApp() {
             smudge
           </a>
           <div className="breadcrumb">
-            Your space <span>/</span>{" "}
+            {inSide ? activeSide.name : "Your space"} <span>/</span>{" "}
             <strong>
               {view === "home"
                 ? "The feed"
@@ -736,26 +758,43 @@ export function FormaApp() {
                     </div>
                   </section>
                 )}
+                {boot && ["home", "following", "saved", "explore"].includes(view) && (
+                  <SidesBar
+                    sides={boot.sides}
+                    onSwitch={(side) => void switchSide(side)}
+                    onManage={() => setSidesOpen(true)}
+                  />
+                )}
                 {view === "home" && (
                   <section className="composer">
                     <span className="composer-symbol">
                       <Feather size={22} />
                     </span>
                     <button onClick={createPost}>
-                      <strong>What does your day look like?</strong>
-                      <span>A photo, a story, a whole little world.</span>
+                      <strong>{activeSide?.prompt ?? "What does your day look like?"}</strong>
+                      <span>
+                        {inSide
+                          ? activeSide.private
+                            ? `Only people in ${activeSide.name} see it.`
+                            : `Posts to ${activeSide.name}. Share it to Everyday later if you like.`
+                          : "A photo, a story, a whole little world."}
+                      </span>
                     </button>
-                    <button className="quiet-button" onClick={() => setMomentOpen(true)}>
-                      <Gift size={15} /> Moment
-                    </button>
-                    <button
-                      className="quiet-button composer-import"
-                      aria-label="Import a website"
-                      title="Import a website"
-                      onClick={() => setImportOpen(true)}
-                    >
-                      <Globe size={15} /> Website
-                    </button>
+                    {!inSide && (
+                      <button className="quiet-button" onClick={() => setMomentOpen(true)}>
+                        <Gift size={15} /> Moment
+                      </button>
+                    )}
+                    {!inSide && (
+                      <button
+                        className="quiet-button composer-import"
+                        aria-label="Import a website"
+                        title="Import a website"
+                        onClick={() => setImportOpen(true)}
+                      >
+                        <Globe size={15} /> Website
+                      </button>
+                    )}
                     <button
                       className="composer-plus"
                       aria-label="Create a post"
@@ -1099,6 +1138,7 @@ export function FormaApp() {
         <PostEditor
           draftId={postEditor.draftId}
           editing={editingPost}
+          side={inSide ? { id: activeSide.id, name: activeSide.name } : undefined}
           onClose={() => {
             setPostEditor(null);
             setEditingPost(false);
@@ -1134,6 +1174,16 @@ export function FormaApp() {
             await refresh();
             notify("Published. Your imported page opens right in the feed.");
           }}
+        />
+      )}
+      {sidesOpen && boot && (
+        <SidesDialog
+          sides={boot.sides}
+          notify={notify}
+          onChange={async () => {
+            await refresh();
+          }}
+          onClose={() => setSidesOpen(false)}
         />
       )}
       {momentOpen && (

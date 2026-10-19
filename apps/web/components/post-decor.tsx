@@ -2,13 +2,14 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { BadgeCheck, Maximize2 } from "lucide-react";
+import type { SideTag } from "./types";
 import type { PostView } from "../../../packages/contracts/src/experience";
 import type { OverlayPiece, PostDecor, Sticker } from "../../../packages/contracts/src/identity";
 import { api, Runtime } from "./runtime";
 import { PageSheet } from "./page-sheet";
 import { PieceArt } from "./theme-piece";
 
-export type DecoratedPost = PostView & Partial<PostDecor>;
+export type DecoratedPost = PostView & Partial<PostDecor> & SideTag;
 
 /** Where a piece sits relative to its anchor corner of the frame. */
 export const place = (p: OverlayPiece): CSSProperties => {

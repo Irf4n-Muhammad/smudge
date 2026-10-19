@@ -34,6 +34,9 @@ import { identityRoutes } from "./identity-routes.js";
 import { themeRoutes } from "./theme-routes.js";
 import { ThemeStudio } from "../../packages/core/src/themes.js";
 import { seedThemes } from "./seed-themes.js";
+import { SidesService } from "../../packages/core/src/sides.js";
+import { sideRoutes } from "./side-routes.js";
+import { seedSides } from "./seed-sides.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
@@ -118,6 +121,11 @@ accounts.loginGate = (userId) => {
 };
 accounts.erasers.push((userId) => community.erase(userId));
 const privacy = new PrivacyService(service, community, clock);
+const sidesService = new SidesService(service, clock);
+// An organisation's invite or email opens that organisation's side along with the chapter.
+identity.chapterListeners.push((c) => {
+  if (c.orgId) sidesService.joinByOrg(c.ownerId, c.orgId);
+});
 const messages = new MessageService(service, community, clock);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
@@ -133,6 +141,7 @@ if (config.demoContent) {
   seedPhotos(service);
   // After the photo seed, which adds Arif.
   seedThemes(service, studio);
+  seedSides(service, sidesService);
 }
 const sharing = new SharingService(service, community, identity, profiles);
 const media = new MediaService(service, resolve(dataDir, "media"));
@@ -314,6 +323,7 @@ api.get("/api/bootstrap", (_req, res) =>
     following: service.following(actor(res)),
     requested: privacy.requested(actor(res)),
     assets: service.assets(actor(res)),
+    sides: sidesService.me(actor(res)),
   }),
 );
 const authLimit = rateLimit({ windowMs: 15 * 60_000, max: 30 });
@@ -388,16 +398,22 @@ api.post("/api/signup", (req, res) => {
   res.json(user);
 });
 api.get("/api/feed", (_req, res) =>
-  res.json(identity.decorate(actor(res), service.feed(actor(res)))),
+  res.json(
+    identity
+      .decorate(actor(res), service.feed(actor(res)))
+      .map((p) => ({ ...p, ...sidesService.tag(p) })),
+  ),
 );
 // Moments are for the people who care, so they are never pushed to strangers or search.
 api.get("/api/explore", (req, res) =>
   res.json(
     identity
       .decorate(actor(res), service.explore(actor(res), req.query.q))
-      .filter((p) => !("moment" in p && p.moment)),
+      .filter((p) => !("moment" in p && p.moment))
+      .map((p) => ({ ...p, ...sidesService.tag(p) })),
   ),
 );
+sideRoutes(api, sidesService);
 identityRoutes(api, identity);
 themeRoutes(api, studio, rateLimit({ windowMs: 60 * 60_000, max: 20 }));
 communityRoutes(api, community, messages, privacy, accounts, clearSession, authLimit);
@@ -749,11 +765,12 @@ api.post("/api/posts/:id/reuse", (req, res) => {
       for (const [before, after] of replacements)
         pkg.files[path] = pkg.files[path]!.replaceAll(`asset:${before}`, `asset:${after}`);
   }
+  const { side: _side, ...copied } = post.metadata;
   res.json(
     service.createDraft(actor(res), {
       package: pkg,
       metadata: {
-        ...post.metadata,
+        ...copied,
         coverAssetId,
         title: `${post.metadata.title} — remix`.slice(0, 100),
         contributors: [],

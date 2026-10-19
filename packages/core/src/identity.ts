@@ -215,9 +215,12 @@ export class IdentityService {
     const circle = this.inCircle(viewer, ownerId);
     return this.chapters(ownerId).filter((c) => c.audience === "public" || circle);
   }
+  /** Told about every new chapter inside its transaction (sides: an organisation's side opens). */
+  chapterListeners: ((chapter: Chapter) => void)[] = [];
   private addChapter(chapter: Omit<Chapter, "id" | "createdAt">) {
     const value: Chapter = { ...chapter, id: randomUUID(), createdAt: this.now().toISOString() };
     this.store.put("chapter", value.id, value);
+    for (const listener of this.chapterListeners) listener(value);
     return value;
   }
   setChapterAudience(actor: Actor, id: string, input: unknown) {

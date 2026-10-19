@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { postPackageSchema } from "./index.js";
+import { sideIdSchema } from "./sides.js";
 
 export const capabilities = [
   "viewer.progress.read",
@@ -102,6 +103,8 @@ export const metadataSchema = z
     format: z.enum(["photo", "scrapbook", "story", "collaborative", "custom"]).default("custom"),
     contributors: z.array(z.string().max(40)).max(10).default([]),
     link: postLinkSchema.optional(),
+    /** The side this post lives in (ADR 0027); absent means Everyday. Membership is checked on publish. */
+    side: sideIdSchema.optional(),
     /** Set by website import: the page this post was rebuilt from, shown as "Imported from". */
     source: z
       .object({

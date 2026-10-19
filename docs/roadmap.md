@@ -25,6 +25,9 @@
       it, and approved themes join the market; pieces are drawn as images. See ADR 0024.
 - [x] Wear and edit themes: a gallery with a preview of yourself, and a personal version where
       you drag pieces and rewrite designer-marked text. See ADR 0025.
+- [x] Sides: one account, many worlds (Everyday, Runners, a private festival crew side), each
+      its own feed and composer, a post in one side with an explicit share to Everyday, private
+      sides invisible from outside, entry by tap or by an organisation's invite. See ADR 0027.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

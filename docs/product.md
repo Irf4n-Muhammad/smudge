@@ -10,6 +10,10 @@ and interact. Public profiles are now the primary creative surface: their owner 
 that every visitor can experience. The scrolling feed remains the discovery surface, with custom
 post behavior and visual language. Private customization of the whole app is a later layer.
 
+One account holds several sides of a person (ADR 0027): each side is its own world with its own
+feed and composer, and a post lives in one of them. This is the base for collections, organiser
+stamps and friends made through shared moments, not a second account in disguise.
+
 AI is external: compatible clients can use an MCP server to author and revise experiences.
 We are not training a model or assuming an embedded prompt box. A published experience should
 work for viewers without their own AI connection or inference call.

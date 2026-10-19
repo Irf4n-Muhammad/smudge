@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent, CSSProperties } from "react";
 import {
   MoreHorizontal,
+  Share2,
   Copy,
   Flag,
   Heart,
@@ -200,6 +201,14 @@ export function PostCard({
             </strong>
             <span>
               {moment ? moment.name : labels[post.metadata.format]}
+              {post.side && (
+                <span
+                  className={post.shared ? "side-tag shared" : "side-tag"}
+                  style={{ "--side-accent": post.side.accent } as CSSProperties}
+                >
+                  {post.side.name}
+                </span>
+              )}
               <span className="meta-dot">·</span>
               {new Date(post.createdAt).toLocaleDateString("en-US", {
                 month: "short",
@@ -240,6 +249,27 @@ export function PostCard({
                   >
                     <Pencil size={14} />
                     Edit post
+                  </button>
+                )}
+                {mine && post.side && (
+                  <button
+                    onClick={async () => {
+                      setMenu(false);
+                      try {
+                        await api(`/posts/${post.id}/share`, { everyday: !post.shared });
+                        await onRefresh();
+                        notify(
+                          post.shared
+                            ? `Back to ${post.side!.name} only.`
+                            : "Now also in Everyday, for everyone who follows you.",
+                        );
+                      } catch (e) {
+                        notify((e as Error).message);
+                      }
+                    }}
+                  >
+                    <Share2 size={14} />
+                    {post.shared ? `Only in ${post.side.name}` : "Also show in Everyday"}
                   </button>
                 )}
                 {!moment && (

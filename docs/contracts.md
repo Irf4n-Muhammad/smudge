@@ -397,6 +397,31 @@ the matching elements with it as plain text, never as markup. `GET /api/decorati
 Edits apply only to their owner's profile, posts and theme lookups, and are re-checked against
 the theme on every read: a theme whose pieces changed shows its original instead.
 
+## Sides (additive, ADR 0027)
+
+- **Catalog.** `sides` in `packages/contracts/src/sides.ts`: `{id, name, tagline, kind:
+everyday|house|org, entry: open|invite, private, orgId?, accent, prompt}`. Everyday is the side
+  everyone has.
+- **Post metadata.** `metadata.side?: SideId` (`/^[a-z0-9-]{2,32}$/`); absent means Everyday.
+  Set when the draft is created; publishing refuses `SIDE_UNKNOWN` (400) or `SIDE_NOT_JOINED`
+  (403). A remix (`POST /api/posts/:id/reuse`) drops the side.
+- **Bootstrap** carries `sides: {active, layout: separate|mixed, mine: Side[], open: Side[]}`
+  (also `GET /api/sides`). Private sides appear only in `mine`.
+- `POST /api/sides/active {side}` switches (members only, else `NOT_FOUND`);
+  `POST /api/sides/layout {layout}`; `POST /api/sides/:id/join` (open public sides only;
+  `SIDE_INVITE_ONLY` 403, private or unknown → `NOT_FOUND`); `POST /api/sides/:id/leave`
+  (`SIDE_REQUIRED` 400 for Everyday). Each answers the sides view.
+- `POST /api/posts/:id/share {everyday: boolean}` by the owner; `SIDE_ALREADY_EVERYDAY` 400 for
+  a post that is in Everyday already.
+- **Feed and explore** (`GET /api/feed`, `/api/explore`, and MCP `list_feed`) list the active
+  side's posts, or every side you are in when the layout is mixed, plus posts shared to Everyday
+  when Everyday is active. Each post may carry `side: {id, name, accent}` and `shared`.
+- **Visibility.** A private side's posts are visible only to members (or when shared to
+  Everyday), through the same `viewFilter` as blocks and private accounts: links, search,
+  comments and profiles follow it. A public side's post opens by its link for anyone.
+- Membership from an organisation's chapter (`invites/redeem`, `email/confirm`) is granted by
+  the server in the same transaction; no request body names a side to join that way.
+
 ## Post buttons (additive)
 
 Post metadata accepts an optional `link: { label, url? }`. `label` is 1 to 32 characters and is the

@@ -51,6 +51,9 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
 - `decorations-panel.tsx`, `theme-editor.tsx`: the Themes gallery, the preview of yourself in a
   theme, and the personal editor (drag pieces within the edge band, rewrite `data-text` slots).
   The edit is stored and re-checked against the theme in `packages/core/src/identity.ts` (ADR 0025).
+- `sides.tsx`, `app/sides.css`: the side switcher and the join/leave dialog (ADR 0027). Rules in
+  `packages/core/src/sides.ts`: membership records, the active side, `viewFilter` for private
+  sides, `feedFilter` for listing, and the publish guard; HTTP in `apps/server/side-routes.ts`.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same
   posts and social API, opens existing isolated Runtime instances, and scopes its CSS to the mode.
   The cockpit is trusted host code; no post receives access to navigation or host DOM. Its dark

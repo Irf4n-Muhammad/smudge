@@ -105,6 +105,13 @@ export class SocialService {
   needsRequest: (actorId: string, targetId: string) => boolean = () => false;
   /** Refuses republishing over a post another layer owns the meaning of (moments); throws. */
   editGuard: (post: Publication) => void = () => {};
+  /** Checks a draft may be published by this actor (sides: membership of the post's side); throws. */
+  publishGuard: (actorId: string, draft: DraftView) => void = () => {};
+  /**
+   * Which visible posts belong in this viewer's feed right now (sides: the active side). Unlike
+   * viewFilter it does not hide a post: a post outside the feed still opens by its link.
+   */
+  feedFilter: (viewerId: string, post: Publication) => boolean = () => true;
   constructor(public readonly store: Store) {}
   emit(event: SocialEvent) {
     if (event.actorId === event.targetId) return;
@@ -187,6 +194,7 @@ export class SocialService {
     if (draft.revision !== revision) throw new AppError("REVISION_CONFLICT", 409);
     this.checkAssets(actor, draft.package, draft.metadata.coverAssetId);
     experienceSchema.parse(draft.package);
+    this.publishGuard(actor.userId, draft);
     const published = this.store.all<Publication>("post").filter((p) => p.sourceDraftId === id);
     const existing = published.find((p) => p.revision === revision);
     if (existing) return existing;
@@ -300,7 +308,7 @@ export class SocialService {
     return this.store
       .all<Publication>("post")
       .reverse()
-      .filter((p) => this.viewFilter(actor.userId, p))
+      .filter((p) => this.viewFilter(actor.userId, p) && this.feedFilter(actor.userId, p))
       .map((p) => ({
         id: p.id,
         ownerId: p.ownerId,
