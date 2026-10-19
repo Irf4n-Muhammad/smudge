@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { ThemeToggle } from "./theme-toggle";
+import { SeasonChip } from "./season";
 import type { User } from "../../../packages/contracts/src/experience";
 
 /**
@@ -71,6 +72,7 @@ export function MoreMenu({
       ))}
       <div className="more-menu-row">
         <ThemeToggle />
+        <SeasonChip />
       </div>
       {demo && (
         <label className="more-menu-row more-switch">

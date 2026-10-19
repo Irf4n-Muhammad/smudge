@@ -195,7 +195,8 @@ feature, not public authentication.
   five open **Series finisher**). Try the demo code `BORO2026OK` under **Invite code**.
 - Plans (ADR 0029): a post people join. The **Plan** style in **Create a post** puts when, where
   and the call up top and a box with **I'm in**, the count and the names below; the page uses
-  `plan.read` / `plan.join`, which only ever add or remove the person who tapped. Try the track
+  `plan.read` / `plan.join`, which only ever add or remove the person who tapped. Once you are
+  in, **I was there** keeps who actually came, the record a group chat never has. Try the track
   night in **Runners**. Challenges and live race posts are not built.
 - Share cards (ADR 0030): **Card** on a side in **Your sides** draws a picture of you in that
   side (your theme, your stamps) to save, share from the phone's share sheet, or copy as a link;

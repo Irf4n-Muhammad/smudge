@@ -30,3 +30,11 @@ side already holds the people; the post should hold the list.
 - A plan has no date logic: it does not close, remind, or expire. That stays with the writer.
 - Challenges (a shared counter) and live race-day posts were discussed as the next two shapes
   of the same idea and are not built.
+
+## Amendment (2026-10-19): who actually came
+
+A chat can collect "I'm in" too. What it never keeps is who turned up. Once a person is in, the
+plan box also offers **I was there**; `plan.join {came}` marks it on the same record, the count
+reads "3 in · 2 came", and the faces of those who came are ringed. Only the person who tapped
+can say it of themselves, the organiser cannot mark others, and there is still no date logic:
+the button is there from the start, because the writer owns the timing.

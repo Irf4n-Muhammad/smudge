@@ -418,6 +418,11 @@ main h1 em{font-style:normal;color:inherit;background:linear-gradient(transparen
 .plan .join{justify-self:start;border:0;border-radius:999px;padding:14px 26px;background:var(--accent);color:var(--bg);font:900 17px var(--head);cursor:pointer;transition:transform .15s}
 .plan .join:active{transform:scale(.97)}.plan .join.on{background:var(--ink);color:var(--bg)}
 .plan .join[disabled]{opacity:.6;cursor:default}
+.plan .buttons{display:flex;flex-wrap:wrap;gap:8px}
+.plan .came{border:2px solid var(--accent);border-radius:999px;padding:12px 20px;background:transparent;color:var(--accent);font:800 15px var(--head);cursor:pointer}
+.plan .came.on{background:var(--accent);color:var(--bg)}.plan .came[hidden]{display:none}
+.plan .came-count{margin-left:10px;opacity:.75;font-weight:600}
+.plan .face.there{box-shadow:0 0 0 2px var(--accent)}
 .plan .going{font:700 14px var(--body)}.plan .going b{font:900 26px/1 var(--head);margin-right:6px}
 .plan .faces{display:flex;flex-wrap:wrap;gap:6px;min-height:34px}
 .plan .face{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#1b1b1f;font:700 12px var(--body);border:2px solid var(--bg)}
@@ -425,7 +430,7 @@ main h1 em{font-style:normal;color:inherit;background:linear-gradient(transparen
 .rest{display:grid;gap:18px;padding:2vw 5vw 10vh;max-width:720px}
 .rest .text{font-size:clamp(17px,2.2vw,21px);opacity:.92}
 .rest figure :is(img,video){width:100%;border-radius:18px}`;
-      html = `<section class="hero">${kicker}${h1}</section><section class="plan rv" data-plan aria-label="Who's in"><button class="join" type="button" data-plan-join>I'm in</button><p class="going"><b data-plan-count>0</b><span data-plan-label>people in</span></p><div class="faces" data-plan-faces></div><p class="names" data-plan-names>Tap the button and your name shows up here.</p></section><section class="rest">${text}${quote}${photos.map((p, i) => figure(p, i)).join("")}</section>`;
+      html = `<section class="hero">${kicker}${h1}</section><section class="plan rv" data-plan aria-label="Who's in"><div class="buttons"><button class="join" type="button" data-plan-join>I'm in</button><button class="came" type="button" data-plan-came hidden>I was there</button></div><p class="going"><b data-plan-count>0</b><span data-plan-label>people in</span><span class="came-count" data-plan-came-label></span></p><div class="faces" data-plan-faces></div><p class="names" data-plan-names>Tap the button and your name shows up here.</p></section><section class="rest">${text}${quote}${photos.map((p, i) => figure(p, i)).join("")}</section>`;
       break;
     }
   }
@@ -441,17 +446,24 @@ const planScript = `(() => {
   if (!box) return;
   const btn = box.querySelector("[data-plan-join]"), count = box.querySelector("[data-plan-count]"),
     label = box.querySelector("[data-plan-label]"), faces = box.querySelector("[data-plan-faces]"),
-    names = box.querySelector("[data-plan-names]");
-  let going = false, busy = false;
+    names = box.querySelector("[data-plan-names]"), cameBtn = box.querySelector("[data-plan-came]"),
+    cameLabel = box.querySelector("[data-plan-came-label]");
+  let going = false, came = false, busy = false;
   const show = (v) => {
-    going = !!v.going;
+    going = !!v.going; came = !!v.came;
     count.textContent = String(v.count);
     label.textContent = v.count === 1 ? "person in" : "people in";
     btn.textContent = going ? "I'm out" : "I'm in";
     btn.classList.toggle("on", going);
+    // Once you are in, the plan can also keep who actually came: the record a chat never keeps.
+    cameBtn.hidden = !going;
+    cameBtn.textContent = came ? "I was there ✓" : "I was there";
+    cameBtn.classList.toggle("on", came);
+    cameLabel.textContent = v.cameCount ? "· " + v.cameCount + " came" : "";
     faces.replaceChildren(...v.people.slice(0, 12).map((p) => {
       const s = document.createElement("span");
-      s.className = "face"; s.style.background = p.color; s.title = p.name; s.textContent = p.initials;
+      s.className = p.came ? "face there" : "face"; s.style.background = p.color;
+      s.title = p.came ? p.name + " · was there" : p.name; s.textContent = p.initials;
       return s;
     }));
     const list = v.people.map((p) => p.name);
@@ -465,11 +477,13 @@ const planScript = `(() => {
   };
   if (!window.forma || !window.forma.plan) { btn.disabled = true; names.textContent = "Open this in Smudge to join."; return; }
   window.forma.plan.read().then(show).catch(fail);
-  btn.addEventListener("click", () => {
+  const act = (call) => {
     if (busy || document.documentElement.dataset.editing === "on") return;
-    busy = true; btn.disabled = true;
-    window.forma.plan.join(!going).then(show).catch(fail).finally(() => { busy = false; btn.disabled = false; });
-  });
+    busy = true; btn.disabled = true; cameBtn.disabled = true;
+    call().then(show).catch(fail).finally(() => { busy = false; btn.disabled = false; cameBtn.disabled = false; });
+  };
+  btn.addEventListener("click", () => act(() => window.forma.plan.join(!going)));
+  cameBtn.addEventListener("click", () => act(() => window.forma.plan.came(!came)));
 })();
 `;
 

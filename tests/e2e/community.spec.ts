@@ -27,12 +27,14 @@ test("find people, follow, notify, message, report, moderate, block and delete a
     .getByRole("button", { name: "Skip for now" })
     .click();
 
-  // Search ranks the handle match first; following is one tap.
+  // Search ranks the handle match first; following is one tap. A new account also sees Alex
+  // under "Suggested for you", so every lookup is scoped to the search results.
+  const results = page.getByRole("heading", { name: "Results" }).locator("..");
   await openPeople(page);
   await expect(page.getByRole("heading", { name: "Find people" })).toBeVisible();
   await page.getByLabel("Search people").fill("alex");
-  await page.getByRole("button", { name: "Follow Alex Morgan" }).click();
-  await expect(page.getByRole("button", { name: "Unfollow Alex Morgan" })).toBeVisible();
+  await results.getByRole("button", { name: "Follow Alex Morgan" }).click();
+  await expect(results.getByRole("button", { name: "Unfollow Alex Morgan" })).toBeVisible();
 
   // Report a post with a reason.
   await page.getByRole("button", { name: "Home", exact: true }).click();
@@ -58,7 +60,7 @@ test("find people, follow, notify, message, report, moderate, block and delete a
 
   await openPeople(page);
   await page.getByLabel("Search people").fill(handle);
-  await page.getByRole("button", { name: `Message ${name}` }).click();
+  await results.getByRole("button", { name: `Message ${name}` }).click();
   await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
   await page.getByLabel("Write a message").fill("Welcome to Forma!");
   await page.getByRole("button", { name: "Send message" }).click();
@@ -84,7 +86,7 @@ test("find people, follow, notify, message, report, moderate, block and delete a
   await openPeople(page);
   await page.getByLabel("Search people").fill("alex");
   // Block sits behind the row's ⋯ menu, so it is never one stray tap away.
-  await page.getByRole("button", { name: "More for Alex Morgan" }).click();
+  await results.getByRole("button", { name: "More for Alex Morgan" }).click();
   await page.getByRole("button", { name: "Block Alex Morgan" }).click();
   await toast(page, "Blocked @alex");
   await expect(page.getByRole("button", { name: "More for Alex Morgan" })).toHaveCount(0);

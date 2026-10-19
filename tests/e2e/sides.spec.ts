@@ -25,9 +25,9 @@ test("switching sides changes the feed and where a new post goes; a private side
 
   // Leo's private festival side is not offered, and its post is not found by search.
   await bar.getByRole("button", { name: "Join or leave sides" }).click();
-  const dialog = page.getByRole("dialog", { name: "Your sides" });
-  await expect(dialog.getByText("Film Festival crew")).toHaveCount(0);
-  await dialog.getByRole("button", { name: "Close dialog" }).click();
+  const sidesPage = page.getByRole("region", { name: "Your sides" });
+  await expect(sidesPage.getByRole("heading", { name: "Your sides" })).toBeVisible();
+  await expect(sidesPage.getByText("Film Festival crew")).toHaveCount(0);
   await page.getByRole("button", { name: "Search", exact: true }).first().click();
   await page.getByLabel("Search all posts").fill("jury notes");
   await expect(page.getByText("Looking around…")).toHaveCount(0);

@@ -37,7 +37,13 @@ async function setup() {
 }
 const rejects = (fn: () => unknown, code: string) =>
   assert.throws(fn, (e: { code?: string }) => e.code === code);
-type View = { count: number; going: boolean; people: { name: string }[] };
+type View = {
+  count: number;
+  cameCount: number;
+  going: boolean;
+  came: boolean;
+  people: { name: string; came: boolean }[];
+};
 
 test("a plan post declares its permissions and is a valid v2 package", async () => {
   const { post } = await setup();
@@ -55,7 +61,7 @@ test("people join and leave with one tap each, and everyone sees the same list",
   const { social, plans, post } = await setup();
   const read = (actor: { userId: string }) =>
     social.capability(actor, post.id, "plan.read", undefined) as View;
-  assert.deepEqual(read(bob), { count: 0, going: false, people: [] });
+  assert.deepEqual(read(bob), { count: 0, cameCount: 0, going: false, came: false, people: [] });
   const joined = social.capability(bob, post.id, "plan.join", { going: true }) as View;
   assert.equal(joined.going, true);
   assert.equal(joined.count, 1);
@@ -94,7 +100,9 @@ test("the permission is the post's to declare; previews are read-only; deletion 
   // The owner's own preview answers an empty practice list and refuses to record anything.
   assert.deepEqual(social.capability(alice, draft.id, "plan.read", undefined, true), {
     count: 0,
+    cameCount: 0,
     going: false,
+    came: false,
     people: [],
   });
   rejects(
@@ -105,4 +113,35 @@ test("the permission is the post's to declare; previews are read-only; deletion 
   assert.equal(plans.of(bob, post.id).count, 1);
   social.deletePost(alice, post.id);
   assert.equal(store.ids("rsvp").length, 0);
+});
+
+test("who actually came is kept next to who was in, and leaving drops both", async () => {
+  const { social, post } = await setup();
+  const call = (actor: { userId: string }, payload: unknown) =>
+    social.capability(actor, post.id, "plan.join", payload) as View;
+  social.capability(bob, post.id, "plan.join", { going: true });
+  social.capability(cara, post.id, "plan.join", { going: true });
+  // Saying you were there implies you were in; saying it twice is still one person.
+  const there = call(cara, { came: true });
+  assert.deepEqual(
+    { count: there.count, cameCount: there.cameCount, going: there.going, came: there.came },
+    { count: 2, cameCount: 1, going: true, came: true },
+  );
+  call(cara, { came: true });
+  assert.equal(call(alice, { came: true }).cameCount, 2);
+  assert.equal(call(alice, { came: true }).count, 3);
+  const seen = social.capability(bob, post.id, "plan.read", undefined) as View;
+  assert.deepEqual(
+    seen.people.map((p) => [p.name, p.came]),
+    [
+      ["Alice", true],
+      ["Cara", true],
+      ["Bob", false],
+    ],
+  );
+  // Taking it back keeps the place; leaving drops the record entirely.
+  assert.equal(call(cara, { came: false }).cameCount, 1);
+  assert.equal(call(cara, { going: false }).count, 2);
+  assert.throws(() => call(bob, {}));
+  assert.throws(() => call(bob, { came: "yes" }));
 });

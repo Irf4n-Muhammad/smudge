@@ -24,6 +24,7 @@ import {
   Globe,
   UserPlus,
   LogIn,
+  Shapes,
 } from "lucide-react";
 import { MoreMenu } from "./app-nav";
 import type { MoreKey } from "./app-nav";
@@ -55,10 +56,10 @@ import { IdentityHub } from "./identity-hub";
 import { MomentComposer } from "./moment-composer";
 import { DecorationsPanel } from "./decorations-panel";
 import type { DecoratedPost } from "./post-decor";
-import { SeasonChip, SeasonLayer } from "./season";
+import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
 import { Welcome } from "./welcome";
-import { SidesBar, SidesDialog } from "./sides";
+import { SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
 export function FormaApp() {
@@ -92,7 +93,6 @@ export function FormaApp() {
     [messageTo, setMessageTo] = useState<string | null>(null),
     [more, setMore] = useState(false),
     [feedMenu, setFeedMenu] = useState(false),
-    [sidesOpen, setSidesOpen] = useState(false),
     /** Just signed up: a photo and a few people before the first feed. */
     [welcome, setWelcome] = useState(false);
   /** A toast can carry one way back, like Undo after blocking someone. */
@@ -364,6 +364,7 @@ export function FormaApp() {
   const mainTabs: [string, typeof Home, string][] = [
     ["home", Home, "Home"],
     ["explore", Search, "Search"],
+    ["sides", Shapes, "Sides"],
     ["messages", MessageCircle, "Messages"],
     ["notifications", Bell, "Notifications"],
     ["create", Plus, "Create"],
@@ -392,10 +393,8 @@ export function FormaApp() {
       : null;
   function pickMore(key: MoreKey) {
     setMore(false);
-    if (key === "card") {
-      navigate("home");
-      setSidesOpen(true);
-    } else if (key === "studio") void create();
+    if (key === "card") navigate("sides");
+    else if (key === "studio") void create();
     else if (key === "moment") setMomentOpen(true);
     else if (key === "import") setImportOpen(true);
     else if (key === "signup" || key === "login") setAuthDialog(key);
@@ -648,9 +647,11 @@ export function FormaApp() {
                       ? "Account settings"
                       : view === "people" || view === "explore"
                         ? "Search"
-                        : view === "post"
-                          ? "Post"
-                          : view[0]?.toUpperCase() + view.slice(1)}
+                        : view === "sides"
+                          ? "Sides"
+                          : view === "post"
+                            ? "Post"
+                            : view[0]?.toUpperCase() + view.slice(1)}
             </strong>
           )}
           <div className="topbar-right">
@@ -754,6 +755,14 @@ export function FormaApp() {
                 <ModerationPanel notify={notify} />
                 <ThemeReviews notify={notify} />
               </>
+            ) : view === "sides" && boot ? (
+              <SidesPage
+                sides={boot.sides}
+                notify={notify}
+                onChange={async () => {
+                  await refresh();
+                }}
+              />
             ) : view === "who" && boot ? (
               <IdentityHub
                 key={boot.actor.userId}
@@ -809,7 +818,6 @@ export function FormaApp() {
                   </section>
                 ) : (
                   <section className="feed-heading">
-                    <SeasonChip />
                     <div>
                       <div className="eyebrow">
                         <span className="tiny-dot" /> DIFFERENT MINDS. DIFFERENT WORLDS.
@@ -839,7 +847,7 @@ export function FormaApp() {
                   <SidesBar
                     sides={boot.sides}
                     onSwitch={(side) => void switchSide(side)}
-                    onManage={() => setSidesOpen(true)}
+                    onManage={() => navigate("sides")}
                   />
                 )}
                 {view === "home" && (
@@ -1065,8 +1073,8 @@ export function FormaApp() {
         </div>
       </div>
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        {mainTabs
-          .filter(([key]) => key !== "messages" && key !== "notifications")
+        {["home", "explore", "create", "sides", "profile"]
+          .map((k) => mainTabs.find(([key]) => key === k)!)
           .map(([key, Icon, label]) => {
             const I = Icon as typeof Home;
             return (
@@ -1173,16 +1181,6 @@ export function FormaApp() {
             await refresh();
             notify("Published. Your imported page opens right in the feed.");
           }}
-        />
-      )}
-      {sidesOpen && boot && (
-        <SidesDialog
-          sides={boot.sides}
-          notify={notify}
-          onChange={async () => {
-            await refresh();
-          }}
-          onClose={() => setSidesOpen(false)}
         />
       )}
       {momentOpen && (

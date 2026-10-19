@@ -29,28 +29,33 @@ export function SidesBar({
           style={{ "--side-accent": s.accent } as React.CSSProperties}
           onClick={() => onSwitch(s.id)}
         >
-          <span className="side-dot" />
-          {s.name}
-          {s.private && <span className="side-lock" title="Members only" />}
+          <span className="side-face" aria-hidden="true">
+            {s.name[0]}
+          </span>
+          <span className="side-name">
+            {s.name}
+            {s.private && <span className="side-lock" title="Members only" />}
+          </span>
         </button>
       ))}
       <button className="side-chip side-more" onClick={onManage} aria-label="Join or leave sides">
-        <Plus size={14} /> Sides
+        <span className="side-face" aria-hidden="true">
+          <Plus size={18} />
+        </span>
+        <span className="side-name">Sides</span>
       </button>
     </nav>
   );
 }
 
-/** Join an open side, leave one, or lay your sides out together. */
-export function SidesDialog({
+/** The Sides tab: join an open side, leave one, draw a card, or lay your sides out together. */
+export function SidesPage({
   sides,
   onChange,
-  onClose,
   notify,
 }: {
   sides: SidesView;
   onChange: (next: SidesView) => Promise<void>;
-  onClose: () => void;
   notify: (message: string) => void;
 }) {
   const [busy, setBusy] = useState("");
@@ -83,9 +88,10 @@ export function SidesDialog({
       {action}
     </div>
   );
-  if (card) return <ShareCardDialog side={card} notify={notify} onClose={() => setCard(null)} />;
   return (
-    <Dialog title="Your sides" onClose={onClose}>
+    <section className="sides-page" aria-label="Your sides">
+      {card && <ShareCardDialog side={card} notify={notify} onClose={() => setCard(null)} />}
+      <h1>Your sides</h1>
       <p className="fineprint sides-intro">
         One account, many sides. Each side has its own feed and its own posts. What you post in a
         side stays there unless you share it to Everyday.
@@ -172,7 +178,7 @@ export function SidesDialog({
           <small>One feed with everything you're in. Off, each side is its own feed.</small>
         </span>
       </label>
-    </Dialog>
+    </section>
   );
 }
 

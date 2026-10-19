@@ -32,8 +32,15 @@ test("a plan post is joined with one tap inside the post, and a new one is made 
   }).toPass({ timeout: 20000 });
   await expect(inside.locator("[data-plan-names]")).toContainText("Alex Morgan");
   await expect(inside.locator("[data-plan-names]")).toContainText("you're in");
+  // Being in unlocks "I was there": who actually came is kept apart from who said they'd come.
+  await inside.getByRole("button", { name: "I was there", exact: true }).click();
+  await expect(inside.locator("[data-plan-came-label]")).toHaveText("· 1 came");
+  await expect(inside.getByRole("button", { name: "I was there ✓" })).toBeVisible();
+  await expect(inside.locator(".face.there")).toHaveCount(1);
   await inside.getByRole("button", { name: "I'm out" }).click();
   await expect(inside.locator("[data-plan-count]")).toHaveText("2");
+  await expect(inside.locator("[data-plan-came-label]")).toHaveText("");
+  await expect(inside.getByRole("button", { name: /I was there/ })).toBeHidden();
 
   // A new plan from the editor: the style declares the permission, so the button works at once.
   await page

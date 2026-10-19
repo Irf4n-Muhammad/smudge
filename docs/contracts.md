@@ -441,13 +441,15 @@ everyday|house|org, entry: open|invite, private, orgId?, accent, prompt}`. Every
 ## Plans (additive, ADR 0029)
 
 - `plan.read` / `plan.join` raise the v2 capability limit from 8 to 10. `plan.read` answers
-  `{count, going, people: [{id, name, handle, initials, color}]}` (at most 40 names, newest
-  first, only people the viewer may see); `plan.join {going: boolean}` records or removes the
-  current viewer and answers the same shape. Preview answers an empty list and refuses
-  `plan.join` (`PREVIEW_READ_ONLY` 403). Deleting the post removes its records.
+  `{count, cameCount, going, came, people: [{id, name, handle, initials, color, came}]}` (at
+  most 40 names, newest first, only people the viewer may see); `plan.join {going?: boolean,
+came?: boolean}` (at least one) records or removes the current viewer (`going`) and marks
+  whether they were there (`came`, which implies being in; `going: false` drops both) and
+  answers the same shape. Preview answers an empty list and refuses `plan.join`
+  (`PREVIEW_READ_ONLY` 403). Deleting the post removes its records.
 - The easy editor's `plan` style (`postDesignSchema.style`) is the only generated package that
   declares them; `buildPost` writes a fixed `plan.js` for it. The SDK exposes
-  `forma.plan.read()` and `forma.plan.join(going)`.
+  `forma.plan.read()`, `forma.plan.join(going)` and `forma.plan.came(came)`.
 
 ## Share cards (additive, ADR 0030)
 

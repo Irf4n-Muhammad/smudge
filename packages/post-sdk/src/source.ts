@@ -62,7 +62,7 @@ export function sdkSource(nonce: string) {
       contributions:{list:()=>request('contributions.read'),add:value=>request('contributions.create',value)},
       poll:{read:()=>request('polls.read'),vote:option=>request('polls.vote',{option})},
       reactions:{read:()=>request('reactions.read'),place:sticker=>request('reactions.place',{sticker})},
-      plan:{read:()=>request('plan.read'),join:going=>request('plan.join',{going:going!==false})}
+      plan:{read:()=>request('plan.read'),join:going=>request('plan.join',{going:going!==false}),came:came=>request('plan.join',{came:came!==false})}
     }),writable:false});
     // While the owner edits a draft, a tap picks what to change instead of using the page.
     window.addEventListener('click',event=>{
