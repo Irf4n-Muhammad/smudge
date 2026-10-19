@@ -128,6 +128,9 @@ const sidesService = new SidesService(service, clock);
 // A plan's list of names follows who may see whom (blocks, hidden accounts), like comments do.
 const plans = new PlansService(service, clock);
 plans.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
+// A side's home lists its members and plans by the same audience rules.
+sidesService.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
+sidesService.planLister = (who, sideId) => plans.inSide(who, sideId);
 // An organisation's invite or email opens that organisation's side along with the chapter.
 identity.chapterListeners.push((c) => sidesService.joinByChapter(c));
 const messages = new MessageService(service, community, clock);

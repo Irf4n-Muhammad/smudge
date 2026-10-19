@@ -162,3 +162,57 @@ test("the view filter answers for a person alone, as the theme lookup asks it", 
   // IdentityService.themeFor probes with `{id: "", ownerId}` and no metadata.
   assert.equal(social.viewFilter("bob", { id: "", ownerId: "alice" } as never), true);
 });
+
+test("a side's home counts everyone, shows the people the viewer may see, and keeps private sides to members", async () => {
+  const { sides, post, social } = await setup();
+  sides.join(alice, "runners");
+  sides.join(bob, "runners");
+  post(alice, "Sunday long run", "runners");
+  post(alice, "Breakfast");
+  // Leo is not in Runners, but it is an open side: he sees who is in and what is posted.
+  const outside = sides.home(leo, "runners");
+  assert.equal(outside.member, false);
+  assert.equal(outside.since, undefined);
+  assert.equal(outside.members.count, 2);
+  assert.deepEqual(
+    outside.members.people.map((p) => p.id),
+    ["bob", "alice"],
+  );
+  assert.equal(outside.posts, 1);
+  assert.deepEqual(outside.plans, []);
+  // A member sees when they joined; people the viewer may not see are counted, not listed.
+  sides.peopleFilter = (viewerId, userId) => !(viewerId === "alice" && userId === "bob");
+  const inside = sides.home(alice, "runners");
+  assert.equal(inside.member, true);
+  assert.ok(inside.since);
+  assert.equal(inside.members.count, 2);
+  assert.deepEqual(
+    inside.members.people.map((p) => p.id),
+    ["alice"],
+  );
+  // Plans come from the plans layer; the home passes the viewer through.
+  sides.planLister = (actor, sideId) =>
+    sideId === "runners" && actor.userId === "alice"
+      ? [
+          {
+            postId: "p1",
+            title: "Track night",
+            caption: "",
+            ownerName: "Alice",
+            createdAt: "",
+            count: 2,
+            cameCount: 1,
+            going: true,
+            came: false,
+          },
+        ]
+      : [];
+  assert.equal(sides.home(alice, "runners").plans[0]?.title, "Track night");
+  assert.deepEqual(sides.home(bob, "runners").plans, []);
+  // Everyday's home is everyone; a private side and an unknown side both do not exist from outside.
+  assert.equal(sides.home(leo, "everyday").members.count, social.users().length);
+  rejects(() => sides.home(alice, "film-fest"), "NOT_FOUND");
+  rejects(() => sides.home(alice, "mars"), "NOT_FOUND");
+  sides.grant("leo", "film-fest");
+  assert.equal(sides.home(leo, "film-fest").members.count, 1);
+});

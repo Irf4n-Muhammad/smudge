@@ -22,6 +22,24 @@ test("switching sides changes the feed and where a new post goes; a private side
   await expect(page.getByRole("article", { name: /^Saturday, up top/ })).toHaveCount(0);
   await expect(page.locator(".composer strong")).toHaveText("How was the run?");
   await expect(page.locator(".post-card .side-tag").first()).toHaveText("Runners");
+  // The side's home sits at the top of its feed: who is in, how much is there, and its plans.
+  const home = page.getByRole("region", { name: "Runners home" });
+  await expect(home.getByRole("heading", { name: "Runners" })).toBeVisible();
+  await expect(home.locator(".side-home-meta")).toContainText("4 members");
+  await expect(
+    home.getByRole("list", { name: "People in Runners" }).getByRole("button"),
+  ).toHaveCount(4);
+  await expect(home.getByRole("button", { name: /^Track night/ })).toContainText("2 in");
+  // Opening a side from the Sides tab lands on that home.
+  await bar.getByRole("button", { name: "Everyday" }).click();
+  await expect(page.getByRole("region", { name: "Runners home" })).toHaveCount(0);
+  await bar.getByRole("button", { name: "Join or leave sides" }).click();
+  await page.getByRole("button", { name: "Open Runners" }).click();
+  await expect(page.getByRole("region", { name: "Runners home" })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Runners" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 
   // Leo's private festival side is not offered, and its post is not found by search.
   await bar.getByRole("button", { name: "Join or leave sides" }).click();

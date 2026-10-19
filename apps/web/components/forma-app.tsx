@@ -59,7 +59,7 @@ import type { DecoratedPost } from "./post-decor";
 import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
 import { Welcome } from "./welcome";
-import { SidesBar, SidesPage } from "./sides";
+import { SideHome, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
 export function FormaApp() {
@@ -762,6 +762,9 @@ export function FormaApp() {
                 onChange={async () => {
                   await refresh();
                 }}
+                onOpen={(side) => {
+                  void switchSide(side).then(() => navigate("home"));
+                }}
               />
             ) : view === "who" && boot ? (
               <IdentityHub
@@ -848,6 +851,17 @@ export function FormaApp() {
                     sides={boot.sides}
                     onSwitch={(side) => void switchSide(side)}
                     onManage={() => navigate("sides")}
+                  />
+                )}
+                {view === "home" && inSide && (
+                  <SideHome
+                    key={activeSide.id}
+                    sideId={activeSide.id}
+                    version={posts.length}
+                    notify={notify}
+                    onOpenPost={openPost}
+                    onOpenUser={openUser}
+                    onLeft={refresh}
                   />
                 )}
                 {view === "home" && (

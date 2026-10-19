@@ -1,10 +1,24 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Check, Download, ImageIcon, Layers2, Link2, Plus, Share2 } from "lucide-react";
-import type { Side, SidesView } from "../../../packages/contracts/src/sides";
+import {
+  CalendarCheck,
+  Check,
+  Download,
+  ImageIcon,
+  Layers2,
+  Link2,
+  Plus,
+  Share2,
+} from "lucide-react";
+import type {
+  Side,
+  SideHome as SideHomeView,
+  SidesView,
+} from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
+import type { User } from "../../../packages/contracts/src/experience";
 import { api } from "./runtime";
-import { Dialog } from "./ui";
+import { Avatar, Dialog } from "./ui";
 
 /**
  * The row of sides above the feed (ADR 0027). One tap switches the whole app to that side: its
@@ -48,14 +62,159 @@ export function SidesBar({
   );
 }
 
+/**
+ * A side's home (ADR 0033): the top of the feed inside a side. Who is in, the side's plans and
+ * how much lives there, so a community reads as a place rather than a filter on the feed.
+ */
+export function SideHome({
+  sideId,
+  version,
+  notify,
+  onOpenPost,
+  onOpenUser,
+  onLeft,
+}: {
+  sideId: string;
+  /** Bumped by the parent when posts or memberships change, so the home refetches. */
+  version: number;
+  notify: (message: string) => void;
+  onOpenPost: (postId: string) => void;
+  onOpenUser: (userId: string) => void;
+  onLeft: () => Promise<void>;
+}) {
+  const [home, setHome] = useState<SideHomeView | null>(null);
+  const [card, setCard] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let gone = false;
+    api<SideHomeView>(`/sides/${encodeURIComponent(sideId)}/home`)
+      .then((h) => {
+        if (!gone) setHome(h);
+      })
+      .catch(() => {
+        if (!gone) setHome(null);
+      });
+    return () => {
+      gone = true;
+    };
+  }, [sideId, version]);
+  if (!home || home.side.id === EVERYDAY) return null;
+  const { side, members, plans } = home;
+  const more = members.count - members.people.length;
+  const since = home.since ? new Date(home.since) : null;
+  async function leave() {
+    setBusy(true);
+    try {
+      await api(`/sides/${encodeURIComponent(side.id)}/leave`, {});
+      notify(`You left ${side.name}.`);
+      await onLeft();
+    } catch (e) {
+      notify((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section
+      className="side-home"
+      aria-label={`${side.name} home`}
+      style={{ "--side-accent": side.accent } as React.CSSProperties}
+    >
+      {card && <ShareCardDialog side={side} notify={notify} onClose={() => setCard(false)} />}
+      <div className="side-home-band" aria-hidden="true">
+        <span className="side-home-mark">{side.name[0]}</span>
+      </div>
+      <div className="side-home-body">
+        <header className="side-home-head">
+          <div>
+            <h2>
+              {side.name}
+              {side.private && <small className="side-private">members only</small>}
+            </h2>
+            <p className="side-home-tag">{side.tagline}</p>
+          </div>
+          <div className="side-home-actions">
+            <button
+              className="quiet-button"
+              aria-label={`Share card for ${side.name}`}
+              title="Share card"
+              onClick={() => setCard(true)}
+            >
+              <ImageIcon size={14} /> Card
+            </button>
+            <button
+              className="quiet-button"
+              aria-label={`Leave ${side.name}`}
+              disabled={busy}
+              onClick={() => void leave()}
+            >
+              Leave
+            </button>
+          </div>
+        </header>
+        <p className="side-home-meta">
+          <strong>{members.count}</strong> {members.count === 1 ? "member" : "members"} ·{" "}
+          <strong>{home.posts}</strong> {home.posts === 1 ? "post" : "posts"}
+          {since && (
+            <>
+              {" "}
+              · you since {since.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            </>
+          )}
+        </p>
+        <ul className="side-home-people" aria-label={`People in ${side.name}`}>
+          {members.people.map((p) => (
+            <li key={p.id}>
+              <button
+                className="avatar-button"
+                title={p.name}
+                aria-label={p.name}
+                onClick={() => onOpenUser(p.id)}
+              >
+                <Avatar user={{ bio: "", ...p } as User} small />
+              </button>
+            </li>
+          ))}
+          {more > 0 && <li className="side-home-more">+{more}</li>}
+        </ul>
+        {plans.length > 0 && (
+          <div className="side-home-plans">
+            <h3>
+              <CalendarCheck size={14} /> Plans
+            </h3>
+            <ul>
+              {plans.map((p) => (
+                <li key={p.postId}>
+                  <button className="side-home-plan" onClick={() => onOpenPost(p.postId)}>
+                    <strong>{p.title}</strong>
+                    <span>
+                      {p.ownerName && `${p.ownerName} · `}
+                      {p.count} in
+                      {p.cameCount > 0 && ` · ${p.cameCount} came`}
+                      {p.came ? " · you were there" : p.going ? " · you're in" : ""}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 /** The Sides tab: join an open side, leave one, draw a card, or lay your sides out together. */
 export function SidesPage({
   sides,
   onChange,
+  onOpen,
   notify,
 }: {
   sides: SidesView;
   onChange: (next: SidesView) => Promise<void>;
+  /** Opens a side you are in: its home and feed. */
+  onOpen: (side: string) => void;
   notify: (message: string) => void;
 }) {
   const [busy, setBusy] = useState("");
@@ -71,7 +230,7 @@ export function SidesPage({
       setBusy("");
     }
   }
-  const row = (s: Side, action: React.ReactNode) => (
+  const row = (s: Side, action: React.ReactNode, open = false) => (
     <div
       key={s.id}
       className="side-row"
@@ -80,7 +239,17 @@ export function SidesPage({
       <span className="side-dot" />
       <div>
         <strong>
-          {s.name}
+          {open ? (
+            <button
+              className="side-open"
+              aria-label={`Open ${s.name}`}
+              onClick={() => onOpen(s.id)}
+            >
+              {s.name}
+            </button>
+          ) : (
+            s.name
+          )}
           {s.private && <small className="side-private">members only</small>}
         </strong>
         <small>{s.tagline}</small>
@@ -129,6 +298,7 @@ export function SidesPage({
                 </button>
               )}
             </span>,
+            s.id !== EVERYDAY,
           ),
         )}
       </div>

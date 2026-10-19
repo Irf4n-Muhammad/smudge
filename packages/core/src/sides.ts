@@ -7,7 +7,14 @@ import {
   sideById,
   sides,
 } from "../../contracts/src/sides.js";
-import type { FeedLayout, Side, SideId, SidesView } from "../../contracts/src/sides.js";
+import type {
+  FeedLayout,
+  Side,
+  SideHome,
+  SideId,
+  SidePlan,
+  SidesView,
+} from "../../contracts/src/sides.js";
 import { collectionById } from "../../contracts/src/identity.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
@@ -31,6 +38,10 @@ interface SideState {
  * writer shared them to Everyday. Rules live here; HTTP only forwards.
  */
 export class SidesService {
+  /** Installed by the community layer: whether `viewerId` may see `userId` at all. */
+  peopleFilter: (viewerId: string, userId: string) => boolean = () => true;
+  /** Installed by the plans layer: the side's plans the viewer may open. */
+  planLister: (actor: Actor, sideId: SideId) => SidePlan[] = () => [];
   constructor(
     private readonly social: SocialService,
     private readonly now: () => Date = () => new Date(),
@@ -105,6 +116,49 @@ export class SidesService {
       layout: this.layout(userId),
       mine,
       open: sides.filter((s) => !have.has(s.id) && !s.private && s.entry === "open"),
+    };
+  }
+  /**
+   * A side's home (ADR 0033): the side, who is in it, its plans and how much is posted there.
+   * A private side answers only to members, with the same "not found" as a side that does not
+   * exist. Counts cover everyone; the people shown are those the viewer may see.
+   */
+  home(actor: Actor, sideId: string): SideHome {
+    const viewerId = this.social.actor(actor);
+    const side = sideById(sideId);
+    const member = !!side && this.isMember(viewerId, side.id);
+    if (!side || (side.private && !member)) throw new AppError("NOT_FOUND", 404);
+    const users = new Map(this.social.users().map((u) => [u.id, u]));
+    const joined =
+      side.id === EVERYDAY
+        ? [...users.values()].map((u) => ({ userId: u.id, since: "" }))
+        : this.store
+            .all<Membership>("side-member")
+            .filter((m) => m.sideId === side.id && users.has(m.userId))
+            .sort((a, b) => b.since.localeCompare(a.since));
+    const mine = joined.find((m) => m.userId === viewerId);
+    const people = joined
+      .filter((m) => this.peopleFilter(viewerId, m.userId))
+      .slice(0, 8)
+      .map((m) => users.get(m.userId)!)
+      .map(({ id, name, handle, initials, color, avatarAssetId }) => ({
+        id,
+        name,
+        handle,
+        initials,
+        color,
+        ...(avatarAssetId ? { avatarAssetId } : {}),
+      }));
+    const posts = this.store
+      .all<Publication>("post")
+      .filter((p) => this.sideOf(p) === side.id && this.social.viewFilter(viewerId, p)).length;
+    return {
+      side,
+      member,
+      ...(member && mine?.since ? { since: mine.since } : {}),
+      members: { count: joined.length, people },
+      plans: this.planLister(actor, side.id),
+      posts,
     };
   }
   /** Membership granted by the system (seeds, an organisation's chapter); never an HTTP path. */

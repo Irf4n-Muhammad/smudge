@@ -409,6 +409,12 @@ everyday|house|org, entry: open|invite, private, orgId?, accent, prompt}`. Every
   (403). A remix (`POST /api/posts/:id/reuse`) drops the side.
 - **Bootstrap** carries `sides: {active, layout: separate|mixed, mine: Side[], open: Side[]}`
   (also `GET /api/sides`). Private sides appear only in `mine`.
+- `GET /api/sides/:id/home` (ADR 0033) answers `SideHome`: `{side, member, since?, members:
+{count, people: [{id,name,handle,initials,color,avatarAssetId?}]}, plans: SidePlan[], posts}`.
+  `people` are the newest members first, at most eight, minus people the viewer cannot see;
+  `count` covers everyone. `plans` are the side's `plan.join` posts the viewer may open, newest
+  first, at most three: `{postId,title,caption,ownerName,createdAt,count,cameCount,going,came}`.
+  A private side answers only to members; otherwise, and for an unknown side, `NOT_FOUND`.
 - `POST /api/sides/active {side}` switches (members only, else `NOT_FOUND`);
   `POST /api/sides/layout {layout}`; `POST /api/sides/:id/join` (open public sides only;
   `SIDE_INVITE_ONLY` 403, private or unknown → `NOT_FOUND`); `POST /api/sides/:id/leave`

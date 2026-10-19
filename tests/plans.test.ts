@@ -145,3 +145,29 @@ test("who actually came is kept next to who was in, and leaving drops both", asy
   assert.throws(() => call(bob, {}));
   assert.throws(() => call(bob, { came: "yes" }));
 });
+
+test("a side lists its plans for the side's home, newest first, only those the viewer may open", async () => {
+  const { social, plans, post } = await setup();
+  // The practice plan from setup lives in Everyday; a second one goes into Runners.
+  const built = buildPost(startPostDesign("plan", { headline: "Track night" }));
+  const draft = social.createDraft(bob, {
+    package: built.package,
+    metadata: { ...built.metadata, caption: "Thursday", contributors: [], side: "runners" },
+  });
+  const track = social.publish(bob, draft.id, draft.revision);
+  plans.join(cara, track.id, { going: true });
+  plans.join(cara, track.id, { came: true });
+  const listed = plans.inSide(alice, "runners");
+  assert.deepEqual(
+    listed.map((p) => [p.postId, p.title, p.caption, p.ownerName, p.count, p.cameCount, p.going]),
+    [[track.id, "Track night", "Thursday", "Bob", 1, 1, false]],
+  );
+  assert.deepEqual(
+    plans.inSide(alice, "everyday").map((p) => p.postId),
+    [post.id],
+  );
+  // A post the viewer may not see is not listed.
+  social.viewFilter = (viewerId, p) => !(viewerId === "alice" && p.id === track.id);
+  assert.deepEqual(plans.inSide(alice, "runners"), []);
+  assert.equal(plans.inSide(bob, "runners").length, 1);
+});
