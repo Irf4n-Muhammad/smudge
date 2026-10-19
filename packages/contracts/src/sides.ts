@@ -49,6 +49,16 @@ export const sides: Side[] = [
     prompt: "How was the run?",
   },
   {
+    id: "gamers",
+    name: "Gamers",
+    tagline: "Ranked nights, LAN weekends and the squad you queue with",
+    kind: "house",
+    entry: "open",
+    private: false,
+    accent: "#6b3df5",
+    prompt: "What are you playing tonight?",
+  },
+  {
     id: "film-fest",
     name: "Film Festival crew",
     tagline: "Lembayung Film Festival: crew and jury only",

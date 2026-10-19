@@ -32,6 +32,79 @@ const jury = page(
   `<style>*{box-sizing:border-box;margin:0}body{background:#0f1733;color:#eef1ff;font-family:${sans}}main{min-height:560px;padding:26px 22px}small{font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#8fb0ff}h1{font:400 52px/.95 ${condensed};text-transform:uppercase;margin-top:8px}ol{margin:20px 0 0 20px;font-size:15px;line-height:1.7}p{margin-top:18px;font-size:14px;opacity:.8}</style><main><small>CREW AND JURY ONLY</small><h1>Day one,<br>eleven shorts</h1><ol><li>Hujan di Bulan Juni: strong, long.</li><li>Kios: the sound mix needs a second look before Friday.</li><li>Lampu Merah: crowd favourite, jury split.</li></ol><p>Nothing here leaves this side until the awards.</p></main>`,
 );
 
+const clutch = page(
+  "Clutch · 1v3 on Ascent",
+  `<style>*{box-sizing:border-box;margin:0}body{background:#120b2a;color:#f3efff;font-family:${sans}}main{min-height:560px;padding:26px 22px;display:flex;flex-direction:column}.kick{font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.16em;color:#b79cff}h1{font:400 66px/.9 ${condensed};text-transform:uppercase;margin-top:8px}h1 em{font-style:normal;color:#d8ff3d}.score{display:flex;align-items:center;gap:14px;margin-top:22px;font:400 46px ${condensed}}.score small{font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;opacity:.7}.feed{margin-top:22px;display:grid;gap:8px}.feed div{display:flex;justify-content:space-between;padding:10px 12px;border-radius:10px;background:#1c1140;font-size:14px}.feed b{color:#d8ff3d}.feed span{font-family:ui-monospace,Menlo,monospace;opacity:.7}p{margin-top:auto;padding-top:18px;font-size:15px;line-height:1.5;opacity:.9}</style><main><div class="kick">▶ REPLAY · ROUND 23 · ASCENT</div><h1>One left,<br><em>three to go</em></h1><div class="score">11 <small>US</small> – <small>THEM</small> 11</div><div class="feed"><div><b>dani</b> ⟶ Vandal · headshot <span>0:14</span></div><div><b>dani</b> ⟶ Vandal · wallbang <span>0:09</span></div><div><b>dani</b> ⟶ Classic · defuse at 0.3s <span>0:01</span></div></div><p>Hands were shaking. Raka screaming on comms counts as a fourth kill.</p></main>`,
+);
+const cup = page(
+  "Weekend cup · bracket",
+  `<style>*{box-sizing:border-box;margin:0}body{background:#f3f0ff;color:#1b1230;font-family:${sans}}main{min-height:560px;padding:26px 22px}.kick{font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#6b3df5}h1{font:400 58px/.9 ${condensed};text-transform:uppercase;margin-top:8px}.bracket{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:22px;align-items:center}.m{display:grid;gap:6px}.t{background:#fff;border:2px solid #d9d0ff;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:700;display:flex;justify-content:space-between}.t.w{border-color:#6b3df5}.t small{font-family:ui-monospace,Menlo,monospace;font-weight:400;opacity:.6}.final .t{border-style:dashed}.lab{font:700 10px ui-monospace,Menlo,monospace;letter-spacing:.14em;opacity:.6;margin-bottom:4px}p{margin-top:20px;font-size:15px;line-height:1.5}</style><main><div class="kick">SATURDAY 14:00 · ARIF'S PLACE · BO3</div><h1>Weekend<br>cup</h1><div class="bracket"><div><div class="lab">SEMIS</div><div class="m"><div class="t w">Night Owls <small>2</small></div><div class="t">Kopi Squad <small>1</small></div></div><div class="m" style="margin-top:12px"><div class="t">Raka's Five <small>–</small></div><div class="t">Bandung LAN <small>–</small></div></div></div><div><div class="lab">FINAL</div><div class="m final"><div class="t">Night Owls</div><div class="t">?</div></div></div><div><div class="lab">PRIZE</div><div class="t w">Free coffee for a month ☕</div></div></div><p>Second semi plays Saturday. Bring your own mouse, we have the rest.</p></main>`,
+);
+
+/**
+ * Demo side (ADR 0033): Gamers, the second community to test the side's home against. Four
+ * people, a "squad up" plan with one who was there, a clip and a tournament bracket. Alex is
+ * not in it, so the demo also shows joining an open side. Runs once.
+ */
+export function seedGamers(service: SocialService, sides: SidesService) {
+  const store = service.store;
+  if (store.get("system", "seed-gamers-v1")) return;
+  const people = ["raka", "dani", "arif", "ines"].filter((id) => store.get("user", id));
+  store.transaction(() => {
+    for (const userId of people) sides.grant(userId, "gamers");
+  });
+  const publish = (owner: string, pkg: Experience, metadata: Metadata) => {
+    if (!store.get("user", owner)) return null;
+    const actor = { userId: owner };
+    const draft = service.createDraft(actor, { package: pkg, metadata });
+    return service.publish(actor, draft.id, draft.revision);
+  };
+  publish("arif", cup, {
+    title: "Weekend cup · bracket",
+    caption: "Semis Saturday at the coffee bar. Bring a mouse.",
+    format: "custom",
+    contributors: [],
+    side: "gamers",
+  });
+  publish("dani", clutch, {
+    title: "Clutch · 1v3 on Ascent",
+    caption: "Round 23. Hands still shaking.",
+    format: "custom",
+    contributors: [],
+    side: "gamers",
+  });
+  const squad = buildPost(
+    startPostDesign("plan", {
+      kicker: "Tonight 21:00 · Valorant ranked",
+      headline: "Squad up, *who's on?*",
+      text: "Five-stack or we don't queue. Comms on the usual Discord, mic on, nobody leaves before map three.",
+      palette: "night",
+      motion: true,
+    }),
+  );
+  const plan = publish("raka", squad.package, {
+    ...squad.metadata,
+    caption: "21:00, five-stack. Mic on.",
+    contributors: [],
+    side: "gamers",
+  });
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+  store.transaction(() => {
+    if (plan) {
+      if (store.get("user", "dani"))
+        store.put("rsvp", `${plan.id}:dani`, {
+          postId: plan.id,
+          userId: "dani",
+          at: daysAgo(1),
+          came: daysAgo(0.6),
+        });
+      if (store.get("user", "arif"))
+        store.put("rsvp", `${plan.id}:arif`, { postId: plan.id, userId: "arif", at: daysAgo(0.8) });
+    }
+    store.put("system", "seed-gamers-v1", { complete: true });
+  });
+}
+
 /** Demo sides: Runners for most of the demo accounts, and the private Film Festival crew. Runs once. */
 export function seedSides(service: SocialService, sides: SidesService) {
   const store = service.store;
