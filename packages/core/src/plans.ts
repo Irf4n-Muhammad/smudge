@@ -3,7 +3,7 @@ import type { User } from "../../contracts/src/experience.js";
 import type { SidePlan, SideRegular } from "../../contracts/src/sides.js";
 import { EVERYDAY } from "../../contracts/src/sides.js";
 import type { Actor } from "./index.js";
-import { AppError } from "./social.js";
+import { AppError, GUEST } from "./social.js";
 import type { Publication, SocialService } from "./social.js";
 
 interface Rsvp {
@@ -66,6 +66,10 @@ export class PlansService {
   private get store() {
     return this.social.store;
   }
+  /** A guest (ADR 0035) reads with the empty viewer, as the share links do; anyone else must exist. */
+  private viewer(actor: Actor) {
+    return actor.userId === GUEST ? GUEST : this.social.actor(actor);
+  }
   private list(postId: string) {
     return this.store
       .all<Rsvp>("rsvp")
@@ -74,7 +78,7 @@ export class PlansService {
   }
   /** Only reached through `capability`, which has already checked the viewer may see the post. */
   view(actor: Actor, postId: string): PlanView {
-    const viewerId = this.social.actor(actor);
+    const viewerId = this.viewer(actor);
     const all = this.list(postId);
     const users = new Map(this.social.users().map((u) => [u.id, u]));
     const people = all
@@ -122,7 +126,7 @@ export class PlansService {
    * that side, that the viewer may open. Newest first, at most `limit`.
    */
   inSide(actor: Actor, sideId: string, limit = 3): SidePlan[] {
-    const viewerId = this.social.actor(actor);
+    const viewerId = this.viewer(actor);
     const users = new Map(this.social.users().map((u) => [u.id, u]));
     return this.plansIn(viewerId, sideId)
       .slice(0, limit)
@@ -160,7 +164,7 @@ export class PlansService {
    * see. The counts are per person, never who was at which plan: that stays on each post.
    */
   regulars(actor: Actor, sideId: string, limit = 5): SideRegular[] {
-    const viewerId = this.social.actor(actor);
+    const viewerId = this.viewer(actor);
     const plans = new Set(this.plansIn(viewerId, sideId).map((p) => p.id));
     const tally = new Map<string, { plans: number; came: number }>();
     for (const r of this.store.all<Rsvp>("rsvp")) {

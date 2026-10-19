@@ -5,11 +5,21 @@ import { publicUser } from "./community.js";
 import type { CommunityService } from "./community.js";
 import type { IdentityService } from "./identity.js";
 import type { ProfileService } from "./profiles.js";
-import { AppError } from "./social.js";
+import { AppError, GUEST } from "./social.js";
 import type { Asset, Note, Publication, SocialService } from "./social.js";
+import { EVERYDAY, sideById } from "../../contracts/src/sides.js";
+import type { SideHome } from "../../contracts/src/sides.js";
 
-/** Nobody is signed in. Every audience rule is asked about this viewer. */
-const GUEST = "";
+/** A public side's page for a guest (ADR 0035): its home, plus its recent public posts. */
+export interface SharedSide extends SideHome {
+  recent: {
+    id: string;
+    title: string;
+    caption: string;
+    hasCover: boolean;
+    author: ReturnType<typeof publicUser>;
+  }[];
+}
 
 /**
  * What a share link shows to someone without an account: the same rules a stranger with an
@@ -23,8 +33,41 @@ export class SharingService {
     private readonly identity: IdentityService,
     private readonly profiles: ProfileService,
   ) {}
+  /** Installed by the sides layer: a side's home as the guest viewer sees it. */
+  sideHome: (sideId: string) => SideHome = () => {
+    throw new AppError("NOT_FOUND", 404);
+  };
   private get store() {
     return this.social.store;
+  }
+  /**
+   * A side's link (ADR 0035): the side's home for someone without an account, with the same
+   * audience rules as the home inside the app asked about the guest viewer. Private sides and
+   * Everyday are never answered, exactly like a side that does not exist.
+   */
+  side(sideId: string, limit = 12): SharedSide {
+    const side = sideById(sideId);
+    if (!side || side.private || side.id === EVERYDAY) throw new AppError("NOT_FOUND", 404);
+    const users = new Map(this.social.users().map((u) => [u.id, u]));
+    const recent = this.store
+      .all<Publication>("post")
+      .reverse()
+      .filter(
+        (p) =>
+          p.metadata.side === side.id &&
+          !this.identity.isMoment(p.id) &&
+          !this.community.hidden(p.ownerId) &&
+          this.social.viewFilter(GUEST, p),
+      )
+      .slice(0, limit)
+      .map((p) => ({
+        id: p.id,
+        title: p.metadata.title,
+        caption: p.metadata.caption,
+        hasCover: !!p.metadata.coverAssetId,
+        author: publicUser(users.get(p.ownerId)),
+      }));
+    return { ...this.sideHome(side.id), recent };
   }
   /** The publication behind a public post link, or NOT_FOUND exactly as for a missing post. */
   postRecord(id: string) {

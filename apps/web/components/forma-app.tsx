@@ -59,7 +59,7 @@ import type { DecoratedPost } from "./post-decor";
 import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
 import { Welcome } from "./welcome";
-import { SideHome, SidesBar, SidesPage } from "./sides";
+import { SideHome, SideResults, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
 export function FormaApp() {
@@ -902,6 +902,19 @@ export function FormaApp() {
                       <Plus size={21} />
                     </button>
                   </section>
+                )}
+                {view === "explore" && boot && (
+                  <SideResults
+                    sides={boot.sides}
+                    query={exploreQuery}
+                    notify={notify}
+                    onChange={async () => {
+                      await refresh();
+                    }}
+                    onOpen={(side) => {
+                      void switchSide(side).then(() => navigate("home"));
+                    }}
+                  />
                 )}
                 {view === "explore" && explored === null && (
                   <div className="empty-state">

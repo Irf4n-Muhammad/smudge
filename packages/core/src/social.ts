@@ -10,6 +10,12 @@ import type { DraftView, Experience, PostView, User } from "../../contracts/src/
 import type { Actor } from "./index.js";
 import { Store } from "./database.js";
 
+/**
+ * Nobody is signed in. The viewer every audience rule is asked about for a share link
+ * (`viewFilter`, `canSeeUser`); never a user id, so it can never own or write anything.
+ */
+export const GUEST = "";
+
 export class AppError extends Error {
   constructor(
     public readonly code: string,

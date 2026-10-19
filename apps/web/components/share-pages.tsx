@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
 import type { ProfilePackage } from "../../../packages/contracts/src/profile";
 import type { Experience } from "../../../packages/contracts/src/experience";
+import type { SideHome } from "../../../packages/contracts/src/sides";
 import { api, Runtime } from "./runtime";
 import { Avatar } from "./ui";
 import { CommentList } from "./comments";
@@ -245,6 +246,141 @@ export function SharedProfile({ handle }: { handle: string }) {
           </ul>
         )}
         <Invite name={view.user.name} side={side} />
+      </main>
+    </div>
+  );
+}
+
+interface SharedSideView extends SideHome {
+  recent: {
+    id: string;
+    title: string;
+    caption: string;
+    hasCover: boolean;
+    author: Person | null;
+  }[];
+}
+/**
+ * A side's link (ADR 0035): the side's home for someone without an account, the way a WhatsApp
+ * group would see it, and one way in. Members are sent into the side inside the app.
+ */
+export function SharedSide({ id }: { id: string }) {
+  const guest = useMemberRedirect(`/?side=${encodeURIComponent(id)}`);
+  const [view, setView] = useState<SharedSideView | null | "missing">(null);
+  useEffect(() => {
+    if (!guest) return;
+    api<SharedSideView>(`/public/sides/${encodeURIComponent(id)}/home`)
+      .then(setView)
+      .catch(() => setView("missing"));
+  }, [guest, id]);
+  if (view === "missing") return <Missing what="side" />;
+  if (!view) return <div className="share-page" aria-busy="true" />;
+  const { side, members, plans, regulars, recent } = view;
+  const more = members.count - members.people.length;
+  return (
+    <div className="share-page share-side">
+      <ShareBar />
+      <main className="share-main">
+        <section
+          className="side-home"
+          aria-label={`${side.name} home`}
+          style={{ "--side-accent": side.accent } as React.CSSProperties}
+        >
+          <div className="side-home-band" aria-hidden="true">
+            <span className="side-home-mark">{side.name[0]}</span>
+          </div>
+          <div className="side-home-body">
+            <header className="side-home-head">
+              <div>
+                <h1>{side.name}</h1>
+                <p className="side-home-tag">{side.tagline}</p>
+              </div>
+            </header>
+            <p className="side-home-meta">
+              <strong>{members.count}</strong> {members.count === 1 ? "member" : "members"} ·{" "}
+              <strong>{view.posts}</strong> {view.posts === 1 ? "post" : "posts"}
+            </p>
+            <ul className="side-home-people" aria-label={`People in ${side.name}`}>
+              {members.people.map((p) => (
+                <li key={p.id}>
+                  <a
+                    className="avatar-button"
+                    href={`/u/${encodeURIComponent(p.handle)}`}
+                    title={p.name}
+                    aria-label={p.name}
+                  >
+                    <Avatar user={asUser(p)} small />
+                  </a>
+                </li>
+              ))}
+              {more > 0 && <li className="side-home-more">+{more}</li>}
+            </ul>
+            {plans.length > 0 && (
+              <div className="side-home-plans">
+                <h3>Plans</h3>
+                <ul>
+                  {plans.map((p) => (
+                    <li key={p.postId}>
+                      <a className="side-home-plan" href={`/p/${encodeURIComponent(p.postId)}`}>
+                        <strong>{p.title}</strong>
+                        <span>
+                          {p.ownerName && `${p.ownerName} · `}
+                          {p.count} in
+                          {p.cameCount > 0 && ` · ${p.cameCount} came`}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {regulars.length > 0 && (
+              <div className="side-home-regulars">
+                <h3>Most often there</h3>
+                <ol aria-label={`Regulars in ${side.name}`}>
+                  {regulars.map((r, i) => (
+                    <li key={r.id}>
+                      <a className="side-home-regular" href={`/u/${encodeURIComponent(r.handle)}`}>
+                        <span className="side-home-rank">{i + 1}</span>
+                        <Avatar user={asUser(r)} small />
+                        <strong>{r.name}</strong>
+                        <span className="side-home-came">
+                          {r.came === 1 ? "once" : `${r.came} times`}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        </section>
+        {recent.length > 0 && (
+          <ul className="share-grid" aria-label="Posts">
+            {recent.map((p) => (
+              <li key={p.id}>
+                <a href={`/p/${encodeURIComponent(p.id)}`}>
+                  {p.hasCover ? (
+                    <img src={`/api/public/posts/${encodeURIComponent(p.id)}/cover`} alt="" />
+                  ) : (
+                    <div className="no-cover">{p.title}</div>
+                  )}
+                  <span>{p.title}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+        <section
+          className="share-cta"
+          style={{ "--side-accent": side.accent } as React.CSSProperties}
+        >
+          <h2>Join {side.name}</h2>
+          <p>
+            {side.tagline}. Make an account and you land in {side.name}.
+          </p>
+          <a href={`/?side=${encodeURIComponent(side.id)}`}>Join {side.name} on Smudge</a>
+        </section>
       </main>
     </div>
   );

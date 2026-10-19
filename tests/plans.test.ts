@@ -214,4 +214,25 @@ test("a side's regulars: who came most often across its plans, as the viewer may
     ["Alice"],
   );
   assert.equal(plans.regulars(bob, "runners", 0).length, 0);
+  // A guest (a side's link) reads the same lists as a stranger, and can never join.
+  const guest = { userId: "" };
+  assert.deepEqual(
+    plans.inSide(guest, "runners").map((p) => [p.title, p.count, p.going]),
+    [
+      ["Hills", 2, false],
+      ["Sunday long run", 2, false],
+      ["Tempo Tuesday", 3, false],
+    ],
+  );
+  assert.deepEqual(
+    plans.regulars(guest, "runners").map((r) => [r.name, r.came]),
+    [
+      ["Cara", 3],
+      ["Alice", 1],
+    ],
+  );
+  assert.throws(
+    () => plans.join(guest, tempo.id, { going: true }),
+    (e: { code?: string }) => e.code === "UNAUTHENTICATED",
+  );
 });

@@ -192,7 +192,10 @@ feature, not public authentication.
 - A side's home (ADR 0033): inside a side, the top of the feed is the side's home. Its colour,
   its name, how many are in and how much is posted, the people, and the side's plans with who is
   in and who came. Under **Most often there** it ranks who came most across the side's plans
-  (ADR 0034), from the Runners' seeded weeks. **Your sides** opens a side by its name.
+  (ADR 0034), from the Runners' seeded weeks. **Your sides** opens a side by its name, and so
+  does **Search** (type its name or a word of its tagline). **Invite** on the home shares the
+  side's link, `/s/<id>`, which opens the home without an account (ADR 0035); private sides
+  have no link.
 - Stamps and collections (ADR 0028): an organiser issues stamp codes for each race of a series
   under **Who you are**; a finisher's code adds the stamp to their collection, with the missing
   races shown as gaps, joins the series' side, and opens the race theme (**Finisher medal**; all

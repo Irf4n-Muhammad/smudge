@@ -1,5 +1,16 @@
 import { test, expect } from "@playwright/test";
 
+// Every test here ends back in Everyday: the demo account is shared with the specs that follow.
+test.afterEach(async ({ page }) => {
+  await page.evaluate(() =>
+    fetch("/api/sides/active", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ side: "everyday" }),
+    }),
+  );
+});
+
 test("switching sides changes the feed and where a new post goes; a private side stays unseen", async ({
   page,
 }) => {
@@ -117,4 +128,64 @@ test("an open side is joined from the Sides tab and lands on its home", async ({
     "aria-pressed",
     "true",
   );
+});
+
+test("a side is found by search, has an invite link, and its link opens its home without an account", async ({
+  page,
+  browser,
+}) => {
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  // Search: every word of the query is in the side's name or tagline (ADR 0035).
+  await page.getByRole("button", { name: "Search", exact: true }).first().click();
+  const search = page.getByLabel("Search all posts");
+  await search.fill("race days");
+  const found = page.getByRole("region", { name: "Sides" });
+  await expect(found.locator(".side-row")).toHaveCount(1);
+  await expect(found).toContainText("Runners");
+  await search.fill("squad");
+  await expect(found.locator(".side-row")).toHaveCount(1);
+  await expect(found).toContainText("Gamers");
+  await expect(found.getByRole("button", { name: "Join" })).toBeVisible();
+  await search.fill("nothing like this");
+  await expect(found).toHaveCount(0);
+  await search.fill("runners");
+  await found.getByRole("button", { name: "Open", exact: true }).click();
+  const home = page.getByRole("region", { name: "Runners home" });
+  await expect(home).toBeVisible();
+  // The invite link, for a chat group; without a share sheet it goes to the clipboard.
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await home.getByRole("button", { name: "Invite link for Runners" }).click();
+  await expect(page.locator(".toast")).toContainText("/s/runners");
+
+  // A guest who taps the link sees the side's home and one way in; a private side does not exist.
+  const guestContext = await browser.newContext();
+  const guest = await guestContext.newPage();
+  await guest.goto("/s/runners");
+  await expect(guest).toHaveTitle(/Runners on Smudge/);
+  const shared = guest.getByRole("region", { name: "Runners home" });
+  await expect(shared.getByRole("heading", { name: "Runners" })).toBeVisible();
+  await expect(shared.locator(".side-home-meta")).toContainText("4 members");
+  await expect(shared.getByRole("link", { name: /^Track night/ })).toContainText("in");
+  await expect(
+    shared.getByRole("list", { name: "Regulars in Runners" }).getByRole("link").first(),
+  ).toContainText("Maya");
+  await expect(guest.getByRole("link", { name: "Join Runners on Smudge" })).toHaveAttribute(
+    "href",
+    "/?side=runners",
+  );
+  await expect(guest.getByRole("list", { name: "Posts" }).getByRole("link").first()).toBeVisible();
+  const anonymous = await guest.evaluate(() =>
+    fetch("/api/sides/runners/home").then((r) => r.status),
+  );
+  expect(anonymous).toBe(401);
+  await guest.goto("/s/film-fest");
+  await expect(guest.getByRole("heading", { name: "This side isn’t available." })).toBeVisible();
+  await guestContext.close();
+  // A member who opens the link lands inside the side in the app.
+  await page.goto("/s/runners");
+  await expect(
+    page.getByRole("navigation", { name: "Your sides" }).getByRole("button", { name: "Runners" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page).not.toHaveURL(/side=/);
 });

@@ -7,6 +7,10 @@ import { Store } from "../packages/core/src/database.js";
 import { SocialService } from "../packages/core/src/social.js";
 import { IdentityService } from "../packages/core/src/identity.js";
 import { SidesService } from "../packages/core/src/sides.js";
+import { GUEST } from "../packages/core/src/social.js";
+import { SharingService } from "../packages/core/src/sharing.js";
+import { CommunityService } from "../packages/core/src/community.js";
+import { ProfileService } from "../packages/core/src/profiles.js";
 import { renderMoment } from "../apps/server/moments.js";
 import { simplePost } from "./fixtures.js";
 
@@ -226,4 +230,46 @@ test("a side's home counts everyone, shows the people the viewer may see, and ke
   rejects(() => sides.home(alice, "mars"), "NOT_FOUND");
   sides.grant("leo", "film-fest");
   assert.equal(sides.home(leo, "film-fest").members.count, 1);
+});
+
+test("a side's link shows an open side's home to a guest; private sides and Everyday do not exist", async () => {
+  const { sides, post, social, identity, store } = await setup();
+  const community = new CommunityService(social, () => false);
+  const sharing = new SharingService(social, community, identity, new ProfileService(social));
+  sharing.sideHome = (sideId) => sides.home({ userId: GUEST }, sideId);
+  sides.join(alice, "runners");
+  sides.join(bob, "runners");
+  post(alice, "Sunday long run", "runners");
+  post(alice, "Breakfast");
+  // The guest sees the same as a stranger with an account: everyone counted, the posts listed.
+  const page = sharing.side("runners");
+  assert.equal(page.member, false);
+  assert.equal(page.members.count, 2);
+  assert.deepEqual(
+    page.members.people.map((p) => p.id),
+    ["bob", "alice"],
+  );
+  assert.equal(page.posts, 1);
+  assert.deepEqual(
+    page.recent.map((p) => [p.title, p.author?.id]),
+    [["Sunday long run", "alice"]],
+  );
+  // A hidden person is counted but not listed, and their posts are not shown.
+  sides.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
+  store.put("suspension", "alice", { userId: "alice" });
+  const after = sharing.side("runners");
+  assert.deepEqual(
+    after.members.people.map((p) => p.id),
+    ["bob"],
+  );
+  assert.equal(after.members.count, 2);
+  assert.deepEqual(after.recent, []);
+  // Private sides and Everyday are never a page, even for a guest who guesses the id.
+  sides.grant("leo", "film-fest");
+  rejects(() => sharing.side("film-fest"), "NOT_FOUND");
+  rejects(() => sharing.side("everyday"), "NOT_FOUND");
+  rejects(() => sharing.side("mars"), "NOT_FOUND");
+  rejects(() => sides.home({ userId: GUEST }, "film-fest"), "NOT_FOUND");
+  // A guest can never be taken for a member or a plan's viewer.
+  rejects(() => sides.join({ userId: GUEST }, "runners"), "UNAUTHENTICATED");
 });

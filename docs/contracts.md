@@ -469,8 +469,15 @@ came?: boolean}` (at least one) records or removes the current viewer (`going`) 
   `/u/<handle>?side=<id>` for an open public side, `/u/<handle>` otherwise.
 - `GET /api/public/sides/:id` answers `{id, name, tagline, accent}` for a public side (guest
   rate limit); private sides are `NOT_FOUND`.
+- `GET /api/public/sides/:id/home` (ADR 0035) answers `SideHome & {recent: [{id, title, caption,
+hasCover, author}]}` for an open public side, as the guest viewer sees it (`member` false,
+  no `since`, the same people and post rules as for a stranger); `recent` are the side's public
+  posts, newest first, at most twelve. Private sides and Everyday are `NOT_FOUND`. The web app
+  serves it at `/s/<id>`; a signed-in person opening that page is sent to `/?side=<id>`.
 - The app reads `?side=<id>` on `/` and `/u/<handle>`: a signed-in member is switched to the
   side (joining first when it is open); a guest sees the side named on the public page.
+- Search (the Posts tab) lists the sides in `SidesView` (`mine` and `open`, never Everyday)
+  whose name or tagline contains every word of the query, above the posts.
 
 ## Gift themes (additive, ADR 0031)
 
