@@ -68,6 +68,45 @@ export const feedLayoutSchema = z.object({ layout: z.enum(["separate", "mixed"])
 export type FeedLayout = z.infer<typeof feedLayoutSchema>["layout"];
 export const shareInputSchema = z.object({ everyday: z.boolean() }).strict();
 
+/** A plan post inside a side, as the side's home lists it: who is in and who came (ADR 0029). */
+export interface SidePlan {
+  postId: string;
+  title: string;
+  caption: string;
+  ownerName: string;
+  createdAt: string;
+  count: number;
+  cameCount: number;
+  going: boolean;
+  came: boolean;
+}
+/**
+ * A side's home (ADR 0033): what a member, or someone deciding to join, sees first. People are
+ * the ones the viewer may see; counts cover everyone. Private sides answer only to members.
+ */
+export interface SideHome {
+  side: Side;
+  member: boolean;
+  /** When the viewer joined, for members. */
+  since?: string;
+  members: {
+    count: number;
+    /** Newest members first, at most eight, minus people the viewer cannot see. */
+    people: {
+      id: string;
+      name: string;
+      handle: string;
+      initials: string;
+      color: string;
+      avatarAssetId?: string;
+    }[];
+  };
+  /** The side's plans the viewer may open, newest first, at most three. */
+  plans: SidePlan[];
+  /** Posts in the side the viewer may open. */
+  posts: number;
+}
+
 /** What the app needs to draw the side switcher and composer. Private sides appear only in `mine`. */
 export interface SidesView {
   active: SideId;

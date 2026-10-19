@@ -16,6 +16,8 @@ export function sideRoutes(
   const actor = (res: Response) => res.locals.actor as Actor;
   const id = (value: unknown) => z.string().max(40).parse(value);
   api.get("/api/sides", (_req, res) => res.json(sides.me(actor(res))));
+  // A side's home (ADR 0033): members, plans and posts; private sides answer only to members.
+  api.get("/api/sides/:id/home", (req, res) => res.json(sides.home(actor(res), id(req.params.id))));
   // Your own share card (ADR 0030), as a picture; `side` picks which of your sides it is for.
   api.get("/api/me/card", (req, res) => {
     const card = cards.card(actor(res), req.query);

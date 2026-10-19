@@ -1,8 +1,10 @@
 import { z } from "zod";
 import type { User } from "../../contracts/src/experience.js";
+import type { SidePlan } from "../../contracts/src/sides.js";
+import { EVERYDAY } from "../../contracts/src/sides.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
-import type { SocialService } from "./social.js";
+import type { Publication, SocialService } from "./social.js";
 
 interface Rsvp {
   postId: string;
@@ -114,6 +116,38 @@ export class PlansService {
       this.store.put("rsvp", key, next);
     });
     return this.view(actor, postId);
+  }
+  /**
+   * The plans inside a side, for its home (ADR 0033): posts that declared `plan.join`, living in
+   * that side, that the viewer may open. Newest first, at most `limit`.
+   */
+  inSide(actor: Actor, sideId: string, limit = 3): SidePlan[] {
+    const viewerId = this.social.actor(actor);
+    const users = new Map(this.social.users().map((u) => [u.id, u]));
+    return this.store
+      .all<Publication>("post")
+      .reverse()
+      .filter(
+        (p) =>
+          (p.metadata.side ?? EVERYDAY) === sideId &&
+          (p.package.manifest.capabilities as string[]).includes("plan.join") &&
+          this.social.viewFilter(viewerId, p),
+      )
+      .slice(0, limit)
+      .map((p) => {
+        const v = this.view(actor, p.id);
+        return {
+          postId: p.id,
+          title: p.metadata.title,
+          caption: p.metadata.caption,
+          ownerName: users.get(p.ownerId)?.name ?? "",
+          createdAt: p.createdAt,
+          count: v.count,
+          cameCount: v.cameCount,
+          going: v.going,
+          came: v.came,
+        };
+      });
   }
   /** Who is in, for the feed card and tests; the same audience rule as the page's own read. */
   of(actor: Actor, postId: string) {
