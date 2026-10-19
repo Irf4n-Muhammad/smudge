@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 import type { Locator, Page } from "@playwright/test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -41,7 +42,6 @@ const custom = (html: string, capabilities: string[] = []) => ({
 
 test("feed formats, progress persistence, comments and bookmarks", async ({ page }) => {
   await boot(page);
-  await page.getByRole("button", { name: "Scrapbooks", exact: true }).click();
   const card = page.getByRole("article", { name: "Postcards from the coast by Maya Chen" });
   await card.scrollIntoViewIfNeeded();
   const frame = card.frameLocator("iframe");
@@ -52,7 +52,6 @@ test("feed formats, progress persistence, comments and bookmarks", async ({ page
   await note.click();
   await expect(note).toHaveAttribute("aria-expanded", "true");
   await page.reload();
-  await page.getByRole("button", { name: "Scrapbooks", exact: true }).click();
   await card.scrollIntoViewIfNeeded();
   await expect(
     card.frameLocator("iframe").getByRole("button", { name: "Fold the note ↙" }),
@@ -65,16 +64,12 @@ test("feed formats, progress persistence, comments and bookmarks", async ({ page
   if (await card.getByRole("button", { name: "Unsave post", exact: true }).count())
     await card.getByRole("button", { name: "Unsave post", exact: true }).click();
   await card.getByRole("button", { name: "Save post", exact: true }).click();
-  await page
-    .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "Saved", exact: true })
-    .click();
+  await openMore(page, "Saved");
   await expect(card).toBeVisible();
   await page
     .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "Your feed", exact: true })
+    .getByRole("button", { name: "Home", exact: true })
     .click();
-  await page.getByRole("button", { name: "Stories", exact: true }).click();
   await expect(
     page.getByRole("article", { name: "Take the scenic route by Leo Park" }),
   ).toBeVisible();
@@ -91,7 +86,7 @@ test("feed formats, progress persistence, comments and bookmarks", async ({ page
 
 test("studio edits, uploads, previews and publishes an immutable revision", async ({ page }) => {
   await boot(page);
-  await page.getByRole("button", { name: "My studio", exact: true }).first().click();
+  await openMore(page, "My studio");
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "New draft", exact: true }).click();
   const title = `A studio story ${Date.now()}`;
@@ -225,10 +220,12 @@ test("sandbox blocks host access and network; undeclared and cross-account opera
     data: { userId: "you" },
   });
   expect(hostile.status()).toBe(403);
-  await page.getByRole("button", { name: "Together", exact: true }).click();
   const shared = page
     .getByRole("article", { name: "The weekend, together by Maya Chen" })
     .frameLocator("iframe");
+  await page
+    .getByRole("article", { name: "The weekend, together by Maya Chen" })
+    .scrollIntoViewIfNeeded();
   await settled(page, page.getByRole("article", { name: "The weekend, together by Maya Chen" }));
   await shared.getByRole("textbox", { name: "Your memory" }).fill("Not invited");
   await shared.getByRole("button", { name: "Add your memory +" }).click();
@@ -237,14 +234,12 @@ test("sandbox blocks host access and network; undeclared and cross-account opera
 
 test("desktop/mobile layouts and offscreen runtime lifecycle", async ({ page }) => {
   await boot(page);
-  await page.getByRole("button", { name: "Scrapbooks", exact: true }).click();
   await expect(page.locator(".runtime").first()).toHaveAttribute("data-ready", "true");
   await page.screenshot({ path: "artifacts/feed-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "artifacts/feed-mobile.png" });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
-  await page.getByRole("button", { name: "For you", exact: true }).click();
   await page.locator(".feed-end").scrollIntoViewIfNeeded();
   await expect(page.locator(".post-card").first().locator("iframe")).toHaveCount(0);
   await page

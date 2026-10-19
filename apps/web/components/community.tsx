@@ -317,6 +317,8 @@ function describe(n: NotificationView) {
       return "accepted your follow request.";
     case "partner-request":
       return "wants to add you as their partner. Confirm it on Who you are.";
+    case "gift":
+      return "gave you a theme. It is waiting in Themes.";
     case "post-removed":
       return `Your post ${title} was removed for breaking the community rules.`;
     default:
@@ -511,7 +513,10 @@ export function MessagesPanel({
     }, 5000);
     return () => clearInterval(timer);
   }, [loadList, loadThread]);
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [thread?.messages.length]);
+  useEffect(() => {
+    // Newer browsers return a Promise from scrollIntoView; an effect may only return a cleanup.
+    void end.current?.scrollIntoView({ block: "end" });
+  }, [thread?.messages.length]);
   return (
     <section
       className={`community-panel messages ${open || group ? "has-thread" : ""}`}

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import type { PostView, User } from "../../../packages/contracts/src/experience";
 import type {
   ProfileDraft,
@@ -23,9 +24,21 @@ import {
   applyProfileDesign,
   defaultProfileDesign,
 } from "../../../packages/core/src/profile-design";
-import { Home, Search, Bell, Plus, UserRound, BadgeCheck, Pencil, Lock } from "lucide-react";
+import {
+  Home,
+  Search,
+  Bell,
+  MessageCircle,
+  Plus,
+  UserRound,
+  BadgeCheck,
+  Pencil,
+  Lock,
+} from "lucide-react";
 import type { Chapter } from "../../../packages/contracts/src/identity";
 import { ChapterList } from "./identity-hub";
+import { DecorFrame, themeStyle } from "./post-decor";
+import type { DecoratedPost } from "./post-decor";
 
 type PublicProfile = ProfileState & { manifest: ProfilePackage["manifest"] | null };
 type History = { state: ProfileState; publications: ProfilePublication[] };
@@ -37,21 +50,35 @@ export function ProfilePage({
   onRefresh,
   onNavigate,
   onUseDraft,
+  more,
 }: {
   ownerId: string;
   boot: Boot;
   posts: PostView[];
   onBack: () => void;
   onRefresh: () => Promise<void>;
-  onNavigate: (destination: "home" | "following" | "create" | "saved" | "profile") => void;
+  onNavigate: (
+    destination:
+      | "home"
+      | "following"
+      | "create"
+      | "saved"
+      | "profile"
+      | "explore"
+      | "messages"
+      | "notifications",
+  ) => void;
   onUseDraft: (id: string) => void;
+  /** The app's More menu (Saved, Themes, settings…), shown behind ☰ on your own profile. */
+  more?: ReactNode;
 }) {
   const owner = boot.users.find((u) => u.id === ownerId),
     mine = ownerId === boot.actor.userId;
   const [profile, setProfile] = useState<PublicProfile | null>(null),
     [error, setError] = useState("");
-  const [panel, setPanel] = useState<"search" | "activity" | null>(null);
+  const [panel, setPanel] = useState<"search" | null>(null);
   const [query, setQuery] = useState("");
+  const v2 = profile?.manifest?.schemaVersion === 2;
   const [editing, setEditing] = useState(false),
     [open, setOpen] = useState<PostView | null>(null),
     [motion, setMotion] = useState(false),
@@ -61,11 +88,25 @@ export function ProfilePage({
   const [discovery, setDiscovery] = useState<"credits" | "creator" | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]),
     [showChapters, setShowChapters] = useState(false);
+  const [theme, setTheme] = useState<DecoratedPost["decoration"] | null>(null);
   useEffect(() => {
     api<Chapter[]>(`/users/${encodeURIComponent(ownerId)}/chapters`).then(setChapters, () =>
       setChapters([]),
     );
   }, [ownerId]);
+  const loadTheme = useCallback(
+    () =>
+      api<{ theme: DecoratedPost["decoration"] | null }>(
+        `/users/${encodeURIComponent(ownerId)}/theme`,
+      ).then(
+        (r) => setTheme(r.theme),
+        () => setTheme(null),
+      ),
+    [ownerId],
+  );
+  useEffect(() => {
+    void loadTheme();
+  }, [loadTheme]);
   const refresh = useCallback(async () => {
     try {
       setProfile(await api(`/profiles/${encodeURIComponent(ownerId)}`));
@@ -132,7 +173,7 @@ export function ProfilePage({
   );
   return (
     <main
-      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${profile?.manifest?.schemaVersion === 2 && !editing ? "has-side-nav" : ""}`}
+      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${!editing ? "has-side-nav" : ""}`}
     >
       <header className="profile-controls">
         <button className="profile-back" aria-label="Back to feed" onClick={onBack}>
@@ -159,6 +200,16 @@ export function ProfilePage({
             </button>
           )}
         </div>
+        {theme && (
+          <span
+            className="profile-theme-chip"
+            style={themeStyle(theme)}
+            title={`Theme ${theme.name} by @${theme.creator}`}
+          >
+            {theme.name}
+            {theme.event && <small>{theme.event}</small>}
+          </span>
+        )}
         {mine && !editing && (
           <button className="profile-edit" aria-label="Edit profile" onClick={() => setEasy(true)}>
             <Pencil size={16} /> Edit<span className="profile-edit-long"> profile</span>
@@ -173,69 +224,131 @@ export function ProfilePage({
             <Search />
           </button>
         ) : (
-          <ThemeToggle />
+          !mine && <ThemeToggle />
         )}
-        <details
-          className="profile-options"
-          open={profile?.manifest?.schemaVersion !== 2 ? true : undefined}
-        >
-          <summary aria-label="Profile options">☰</summary>
-          <div className="profile-control-actions">
-            {profile?.manifest?.schemaVersion === 2 && <ThemeToggle />}
-            <button
-              aria-pressed={motion}
-              onClick={() => {
-                const next = !motion;
-                setMotion(next);
-                localStorage.setItem("forma-profile-motion", next ? "reduce" : "normal");
-              }}
-            >
-              Reduce motion
-            </button>
-            <button
-              hidden={editing}
-              onClick={async (e) => {
-                if (profile?.manifest?.schemaVersion === 2)
-                  e.currentTarget.closest("details")?.removeAttribute("open");
-                const url = `${window.location.origin}/u/${encodeURIComponent(owner.handle)}`;
-                try {
-                  await navigator.clipboard.writeText(url);
-                  setError("Profile link copied. Anyone with it can see this page.");
-                } catch {
-                  setError(url);
-                }
-              }}
-            >
-              Copy profile link
-            </button>
-            <button
-              hidden={editing}
-              onClick={(e) => {
-                setDiscovery("credits");
-                if (profile?.manifest?.schemaVersion === 2)
-                  e.currentTarget.closest("details")?.removeAttribute("open");
-              }}
-            >
-              Made with
-            </button>
-            {!editing && (
+        {v2 ? (
+          <details className="profile-options">
+            <summary aria-label="Profile options">☰</summary>
+            <div className="profile-control-actions">
+              {!mine && <ThemeToggle />}
               <button
-                onClick={(e) => {
-                  setDiscovery("creator");
-                  if (profile?.manifest?.schemaVersion === 2)
-                    e.currentTarget.closest("details")?.removeAttribute("open");
+                aria-pressed={motion}
+                onClick={() => {
+                  const next = !motion;
+                  setMotion(next);
+                  localStorage.setItem("forma-profile-motion", next ? "reduce" : "normal");
                 }}
               >
-                Creator's mods
+                Reduce motion
               </button>
-            )}
+              <button
+                hidden={editing}
+                onClick={async (e) => {
+                  if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                  const url = `${window.location.origin}/u/${encodeURIComponent(owner.handle)}`;
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    setError("Profile link copied. Anyone with it can see this page.");
+                  } catch {
+                    setError(url);
+                  }
+                }}
+              >
+                Copy profile link
+              </button>
+              <button
+                hidden={editing}
+                onClick={(e) => {
+                  setDiscovery("credits");
+                  if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                }}
+              >
+                Made with
+              </button>
+              {!editing && (
+                <button
+                  onClick={(e) => {
+                    setDiscovery("creator");
+                    if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                  }}
+                >
+                  Creator's mods
+                </button>
+              )}
+              {mine ? (
+                <button
+                  className="profile-primary"
+                  onClick={(e) => {
+                    setEditing((v) => !v);
+                    if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                  }}
+                >
+                  {editing ? "View published profile" : "Customize profile"}
+                </button>
+              ) : (
+                <button disabled={busy} className="profile-primary" onClick={() => void follow()}>
+                  {boot.following.includes(ownerId)
+                    ? "Unfollow"
+                    : boot.requested.includes(ownerId)
+                      ? "Requested"
+                      : "Follow"}
+                </button>
+              )}
+              {!mine && ownerId === "raka" && (
+                <button
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      const templates =
+                        await api<Record<string, ProfilePackage>>("/profile-templates");
+                      const d = await api<ProfileDraft>(
+                        "/profile-drafts",
+                        applyProfileDesign(templates.raka!, defaultProfileDesign),
+                      );
+                      const url = new URL(location.href);
+                      url.searchParams.set("profile", boot.actor.userId);
+                      url.searchParams.set("profileDraft", d.id);
+                      window.location.assign(url.toString());
+                    } catch (e) {
+                      setError((e as Error).message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Use this design
+                </button>
+              )}
+              <button
+                hidden={mine}
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await api(`/profiles/${ownerId}/report`, {});
+                    setError("Report recorded locally.");
+                  } catch (e) {
+                    setError((e as Error).message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Report profile
+              </button>
+              {mine && more}
+            </div>
+          </details>
+        ) : (
+          // Plain profiles: the one action that matters stays in the header; the rest is ☰.
+          <>
             {mine ? (
               <button
                 className="profile-primary"
                 onClick={(e) => {
                   setEditing((v) => !v);
-                  if (profile?.manifest?.schemaVersion === 2)
-                    e.currentTarget.closest("details")?.removeAttribute("open");
+                  if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
                 }}
               >
                 {editing ? "View published profile" : "Customize profile"}
@@ -249,51 +362,101 @@ export function ProfilePage({
                     : "Follow"}
               </button>
             )}
-            {!mine && ownerId === "raka" && (
-              <button
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  try {
-                    const templates =
-                      await api<Record<string, ProfilePackage>>("/profile-templates");
-                    const d = await api<ProfileDraft>(
-                      "/profile-drafts",
-                      applyProfileDesign(templates.raka!, defaultProfileDesign),
-                    );
-                    const url = new URL(location.href);
-                    url.searchParams.set("profile", boot.actor.userId);
-                    url.searchParams.set("profileDraft", d.id);
-                    window.location.assign(url.toString());
-                  } catch (e) {
-                    setError((e as Error).message);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                Use this design
-              </button>
-            )}
-            <button
-              hidden={mine}
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await api(`/profiles/${ownerId}/report`, {});
-                  setError("Report recorded locally.");
-                } catch (e) {
-                  setError((e as Error).message);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Report profile
-            </button>
-          </div>
-        </details>
+            <details className="profile-more">
+              <summary aria-label="More options">☰</summary>
+              <div className="profile-more-menu profile-control-actions">
+                <button
+                  aria-pressed={motion}
+                  onClick={() => {
+                    const next = !motion;
+                    setMotion(next);
+                    localStorage.setItem("forma-profile-motion", next ? "reduce" : "normal");
+                  }}
+                >
+                  Reduce motion
+                </button>
+                <button
+                  hidden={editing}
+                  onClick={async (e) => {
+                    if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                    const url = `${window.location.origin}/u/${encodeURIComponent(owner.handle)}`;
+                    try {
+                      await navigator.clipboard.writeText(url);
+                      setError("Profile link copied. Anyone with it can see this page.");
+                    } catch {
+                      setError(url);
+                    }
+                  }}
+                >
+                  Copy profile link
+                </button>
+                <button
+                  hidden={editing}
+                  onClick={(e) => {
+                    setDiscovery("credits");
+                    if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                  }}
+                >
+                  Made with
+                </button>
+                {!editing && (
+                  <button
+                    onClick={(e) => {
+                      setDiscovery("creator");
+                      if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                    }}
+                  >
+                    Creator's mods
+                  </button>
+                )}
+                {!mine && ownerId === "raka" && (
+                  <button
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        const templates =
+                          await api<Record<string, ProfilePackage>>("/profile-templates");
+                        const d = await api<ProfileDraft>(
+                          "/profile-drafts",
+                          applyProfileDesign(templates.raka!, defaultProfileDesign),
+                        );
+                        const url = new URL(location.href);
+                        url.searchParams.set("profile", boot.actor.userId);
+                        url.searchParams.set("profileDraft", d.id);
+                        window.location.assign(url.toString());
+                      } catch (e) {
+                        setError((e as Error).message);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Use this design
+                  </button>
+                )}
+                <button
+                  hidden={mine}
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await api(`/profiles/${ownerId}/report`, {});
+                      setError("Report recorded locally.");
+                    } catch (e) {
+                      setError((e as Error).message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Report profile
+                </button>
+                {mine && more}
+              </div>
+            </details>
+          </>
+        )}
       </header>
       {owner.private && !mine && !boot.following.includes(ownerId) && (
         <div className="profile-message private-note" role="note">
@@ -324,76 +487,91 @@ export function ProfilePage({
             await Promise.all([refresh(), onRefresh()]);
           }}
         />
-      ) : profile?.publicationId && profile.manifest ? (
-        <section aria-label="Public profile world" className="profile-world">
-          <Runtime
-            key={`${ownerId}:${profile.publicationId}`}
-            kind="profile"
-            target={profile.publicationId}
-            height={profile.manifest.height}
-            autoHeight={profile.manifest.schemaVersion === 2 && profile.manifest.autoHeight}
-            mobileHeight={
-              profile.manifest.schemaVersion === 2 ? profile.manifest.mobileHeight : undefined
-            }
-            reducedMotion={motion}
-            onOpenPost={openPost}
-            onSocialChange={onRefresh}
-          />
-        </section>
       ) : profile ? (
-        <section className="profile-default">
-          <header className="profile-default-head">
-            <Avatar user={owner} />
-            <div>
-              <h1>{owner.name}</h1>
-              <span className="profile-default-handle">@{owner.handle}</span>
-              {owner.bio && <p>{owner.bio}</p>}
-              <span className="profile-default-count">
-                {posts.filter((p) => p.ownerId === ownerId).length} posts
-              </span>
-            </div>
-            {!mine && (
-              <button
-                disabled={busy}
-                className={boot.following.includes(ownerId) ? "quiet-button" : "primary"}
-                onClick={() => void follow()}
-              >
-                {boot.following.includes(ownerId)
-                  ? "Following"
-                  : boot.requested.includes(ownerId)
-                    ? "Requested"
-                    : "Follow"}
-              </button>
-            )}
-          </header>
-          {mine && (
-            <p className="profile-default-hint">
-              Make this page yours: a painted wall, a comic, a scrapbook.{" "}
-              <button className="text-button" onClick={() => setEasy(true)}>
-                Pick a style
-              </button>
-            </p>
-          )}
-          <div className="profile-default-grid">
-            {posts
-              .filter((p) => p.ownerId === ownerId)
-              .map((p) => (
-                <button key={p.id} onClick={() => setOpen(p)}>
-                  {p.metadata.coverAssetId ? (
-                    <img src={`/api/assets/${p.metadata.coverAssetId}`} alt="" loading="lazy" />
-                  ) : (
-                    <span className="profile-default-blank" aria-hidden="true">
-                      ✳
+        <div
+          className={`profile-theme-frame ${theme ? "has-decor" : ""}`}
+          style={themeStyle(theme ?? undefined)}
+        >
+          <DecorFrame post={{ decoration: theme ?? undefined } as DecoratedPost}>
+            {profile?.publicationId && profile.manifest ? (
+              <section aria-label="Public profile world" className="profile-world">
+                <Runtime
+                  key={`${ownerId}:${profile.publicationId}`}
+                  kind="profile"
+                  target={profile.publicationId}
+                  height={profile.manifest.height}
+                  autoHeight={profile.manifest.schemaVersion === 2 && profile.manifest.autoHeight}
+                  mobileHeight={
+                    profile.manifest.schemaVersion === 2 ? profile.manifest.mobileHeight : undefined
+                  }
+                  reducedMotion={motion}
+                  onOpenPost={openPost}
+                  onSocialChange={onRefresh}
+                />
+              </section>
+            ) : (
+              <section className="profile-default">
+                <header className="profile-default-head">
+                  <Avatar user={owner} />
+                  <div>
+                    <h1>{owner.name}</h1>
+                    <span className="profile-default-handle">@{owner.handle}</span>
+                    {owner.bio && <p>{owner.bio}</p>}
+                    <span className="profile-default-count">
+                      {posts.filter((p) => p.ownerId === ownerId).length} posts
                     </span>
+                  </div>
+                  {!mine && (
+                    <button
+                      disabled={busy}
+                      className={boot.following.includes(ownerId) ? "quiet-button" : "primary"}
+                      onClick={() => void follow()}
+                    >
+                      {boot.following.includes(ownerId)
+                        ? "Following"
+                        : boot.requested.includes(ownerId)
+                          ? "Requested"
+                          : "Follow"}
+                    </button>
                   )}
-                  <strong>{p.metadata.title}</strong>
-                </button>
-              ))}
-          </div>
-          {!posts.some((p) => p.ownerId === ownerId) && (
-            <p className="fineprint">{mine ? "Your posts will show up here." : "No posts yet."}</p>
-          )}
-        </section>
+                </header>
+                {mine && (
+                  <p className="profile-default-hint">
+                    Make this page yours: a painted wall, a comic, a scrapbook.{" "}
+                    <button className="text-button" onClick={() => setEasy(true)}>
+                      Pick a style
+                    </button>
+                  </p>
+                )}
+                <div className="profile-default-grid">
+                  {posts
+                    .filter((p) => p.ownerId === ownerId)
+                    .map((p) => (
+                      <button key={p.id} onClick={() => setOpen(p)}>
+                        {p.metadata.coverAssetId ? (
+                          <img
+                            src={`/api/assets/${p.metadata.coverAssetId}`}
+                            alt=""
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className="profile-default-blank" aria-hidden="true">
+                            ✳
+                          </span>
+                        )}
+                        <strong>{p.metadata.title}</strong>
+                      </button>
+                    ))}
+                </div>
+                {!posts.some((p) => p.ownerId === ownerId) && (
+                  <p className="fineprint">
+                    {mine ? "Your posts will show up here." : "No posts yet."}
+                  </p>
+                )}
+              </section>
+            )}
+          </DecorFrame>
+        </div>
       ) : (
         <p className="profile-message">Opening profile…</p>
       )}
@@ -422,8 +600,8 @@ export function ProfilePage({
           }}
         />
       )}
-      {profile?.manifest?.schemaVersion === 2 && !editing && (
-        // A bottom bar on phones; on wider screens CSS turns it into the left sidebar.
+      {!editing && (
+        // The same tabs as the feed: a bottom bar on phones, the left sidebar on wider screens.
         <nav className="profile-bottom-nav" aria-label="Profile navigation">
           <a className="profile-nav-brand" href="/" aria-label="Smudge home">
             smudge
@@ -432,17 +610,21 @@ export function ProfilePage({
             <Home />
             <span>Home</span>
           </button>
-          <button onClick={() => setPanel("search")}>
+          <button onClick={() => onNavigate("explore")}>
             <Search />
             <span>Search</span>
+          </button>
+          <button className="wide-only" onClick={() => onNavigate("messages")}>
+            <MessageCircle />
+            <span>Messages</span>
+          </button>
+          <button className="wide-only" onClick={() => onNavigate("notifications")}>
+            <Bell />
+            <span>Notifications</span>
           </button>
           <button className="nav-create" onClick={() => onNavigate("create")}>
             <Plus />
             <span>Create</span>
-          </button>
-          <button onClick={() => setPanel("activity")}>
-            <Bell />
-            <span>Activity</span>
           </button>
           <button
             className={ownerId === boot.actor.userId ? "active" : undefined}
@@ -455,30 +637,19 @@ export function ProfilePage({
         </nav>
       )}
       {panel && (
-        <Dialog
-          title={panel === "search" ? "Search posts" : "Your activity"}
-          onClose={() => setPanel(null)}
-        >
+        <Dialog title="Search posts" onClose={() => setPanel(null)}>
           <div className="profile-discovery">
-            {panel === "search" ? (
-              <input
-                aria-label="Search published posts"
-                placeholder="Search titles, captions or people"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            ) : (
-              <p>Your likes, saved posts, and engagement on your own posts in this local demo.</p>
-            )}
+            <input
+              aria-label="Search published posts"
+              placeholder="Search titles, captions or people"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
             {posts
               .filter((p) =>
-                panel === "search"
-                  ? `${p.metadata.title} ${p.metadata.caption} ${p.author.name}`
-                      .toLowerCase()
-                      .includes(query.toLowerCase())
-                  : p.liked ||
-                    p.saved ||
-                    (p.ownerId === boot.actor.userId && (p.likes > 0 || p.comments > 0)),
+                `${p.metadata.title} ${p.metadata.caption} ${p.author.name}`
+                  .toLowerCase()
+                  .includes(query.toLowerCase()),
               )
               .map((p) => (
                 <button
@@ -495,13 +666,6 @@ export function ProfilePage({
                   </span>
                 </button>
               ))}
-            {panel === "activity" &&
-              !posts.some(
-                (p) =>
-                  p.liked ||
-                  p.saved ||
-                  (p.ownerId === boot.actor.userId && (p.likes > 0 || p.comments > 0)),
-              ) && <p>No activity yet. Like or save a post to keep it here.</p>}
           </div>
         </Dialog>
       )}

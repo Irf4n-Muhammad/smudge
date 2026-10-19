@@ -1,0 +1,447 @@
+/* Navigation: the Instagram shape. Home, Search, Create and Profile are the tabs (a bottom bar
+   on phones, the left rail on wider screens); Messages and Notifications join the rail and sit
+   in the phone's top corner; everything else is behind More, which the profile's ☰ repeats so a
+   phone reaches the same places from the Profile tab. Loaded last. */
+
+/* Rail */
+.sidebar-tagline,
+.sidebar-note {
+  display: none;
+}
+.main-nav {
+  margin-top: 28px;
+  gap: 4px;
+}
+.sidebar-bottom {
+  margin-top: auto;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+.sidebar-bottom .nav-item {
+  margin: 0;
+}
+.more-popover {
+  position: fixed;
+  left: 90px;
+  bottom: 24px;
+  top: auto;
+  right: auto;
+  z-index: 30;
+  min-width: 250px;
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--white, #fff);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 18%);
+}
+.more-menu .quiet-button {
+  border: 0;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.more-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+.more-switch select {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white, #fff);
+  color: var(--ink);
+  font: inherit;
+}
+.more-menu .demo-auth {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.sidebar .more-menu .signup-link,
+.more-menu .signup-link {
+  width: auto;
+  height: auto;
+  padding: 4px 0;
+  justify-content: flex-start;
+  font-size: 13px;
+}
+
+/* Wide screens: the rail shows its labels, like the profile's. */
+@media (min-width: 1200px) {
+  .sidebar {
+    width: 212px;
+    padding-inline: 12px;
+    border-radius: 28px;
+  }
+  .workspace {
+    margin-left: 240px;
+  }
+  .sidebar .brand {
+    margin-left: 10px;
+  }
+  .nav-item {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 0 14px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+  .nav-item > span:not(.nav-badge) {
+    display: inline;
+  }
+  .nav-item .nav-badge {
+    position: static;
+    margin-left: auto;
+  }
+  .sidebar-bottom {
+    justify-items: stretch;
+  }
+  .sidebar .account-switch {
+    width: 100%;
+  }
+  .more-popover {
+    left: 240px;
+  }
+}
+
+/* Top bar: the feed picker where Instagram puts its logo menu; the phone's bell and DM. */
+.feed-picker-button,
+.view-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font: 700 19px/1.2 var(--ui);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.feed-picker-button:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink);
+}
+.feed-menu {
+  top: calc(100% + 6px);
+  left: 0;
+  right: auto;
+  min-width: 260px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--white, #fff);
+  border: 1px solid var(--line);
+}
+.feed-menu button {
+  display: grid;
+  gap: 2px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.feed-menu button[aria-checked="true"] {
+  background: var(--accent-light);
+}
+.feed-menu small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.feed-menu-label {
+  display: block;
+  margin-top: 4px;
+  padding: 10px 10px 4px;
+  border-top: 1px solid var(--line);
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.topbar .icon-button {
+  margin-top: 0;
+  color: var(--ink);
+}
+.topbar-tab {
+  position: relative;
+  display: none;
+  padding: 6px;
+}
+.topbar-tab .nav-badge {
+  top: 0;
+  right: 0;
+}
+.app-shell[data-view="home"] .season-chip {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Search: posts and people under one roof. */
+.search-tabs {
+  display: flex;
+  gap: 6px;
+}
+.search-tabs button {
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.search-tabs button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Phones: wordmark, feed picker, bell and DM on one line; four tabs below. */
+@media (max-width: 700px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    height: auto;
+    column-gap: 8px;
+    padding: 10px 12px 8px 16px;
+  }
+  .topbar::after {
+    content: none;
+  }
+  .mobile-brand {
+    margin-right: 6px;
+  }
+  .feed-picker-button,
+  .view-title {
+    font-size: 16px;
+    padding: 6px 8px;
+  }
+  .view-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar .search,
+  .topbar .refresh-feed {
+    display: none;
+  }
+  .topbar-tab {
+    display: inline-flex;
+  }
+  .app-shell[data-view="home"] .season-chip {
+    transform: none;
+  }
+  .mobile-nav button.active {
+    color: var(--ink);
+  }
+  .mobile-nav button.active svg {
+    stroke-width: 2.6;
+  }
+  .profile-bottom-nav .wide-only {
+    display: none;
+  }
+}
+
+/* Profile: the More menu behind ☰. Illustrated profiles already have a ☰ (their actions live in
+   it); plain profiles keep their actions in the header and get a ☰ of their own beside them. */
+.profile-illustrated .profile-options[open] .profile-control-actions {
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: 260px;
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+  border-radius: 16px;
+}
+.profile-illustrated .profile-control-actions > button {
+  width: 100%;
+  text-align: left;
+}
+.profile-illustrated .profile-control-actions > button[hidden] {
+  display: none;
+}
+.profile-control-actions > .more-menu {
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.profile-more {
+  margin-left: auto;
+  position: relative;
+}
+.profile-more summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 25px;
+  padding: 8px;
+}
+.profile-more summary::-webkit-details-marker {
+  display: none;
+}
+.profile-more[open] .profile-more-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  width: 260px;
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+  padding: 10px;
+  border-radius: 16px;
+  background: var(--paper, #f5f3ee);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 18%);
+  z-index: 40;
+}
+.profile-control-actions .more-menu .quiet-button,
+.profile-more-menu .more-menu .quiet-button {
+  justify-content: flex-start;
+  padding: 12px 14px;
+  font-size: 14px;
+  text-align: left;
+}
+.profile-control-actions .more-menu-row,
+.profile-more-menu .more-menu-row {
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.profile-control-actions .more-menu .demo-auth,
+.profile-more-menu .more-menu .demo-auth {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+/* The Home tab replaces the profile's back link at every width. */
+.has-side-nav .profile-back {
+  display: none;
+}
+
+/* On a phone the profile's menu is a sheet under the header, scrolling on its own. */
+@media (max-width: 700px) {
+  .profile-more[open] .profile-more-menu,
+  .profile-illustrated .profile-options[open] .profile-control-actions {
+    position: fixed;
+    top: 64px;
+    right: 10px;
+    left: auto;
+    width: min(300px, calc(100vw - 20px));
+    max-height: calc(100vh - 150px);
+  }
+}
+
+/* Home: sides as a stories row, the way Instagram opens its Home. */
+.sides-bar {
+  display: flex;
+  gap: 14px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 2px 0 18px;
+  padding: 4px 2px 6px;
+}
+.sides-bar::-webkit-scrollbar {
+  display: none;
+}
+.side-chip {
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+  width: 68px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 500;
+}
+.side-chip.active {
+  background: none;
+  color: var(--ink);
+  font-weight: 700;
+}
+.side-face {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--side-accent, var(--ink));
+  font: 700 20px var(--ui);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  transition: box-shadow 0.15s;
+}
+.side-chip.active .side-face {
+  background: var(--side-accent, var(--ink));
+  color: #fff;
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 4px var(--side-accent, var(--ink));
+}
+.side-more .side-face {
+  background: none;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  border: 0;
+}
+.side-name {
+  display: block;
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-name .side-lock::before,
+.side-name .side-lock::after {
+  content: none;
+}
+.side-name .side-lock {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--muted);
+  vertical-align: middle;
+}
+.app-shell[data-view="home"] .season-chip {
+  position: static;
+  transform: none;
+}
+.more-menu-row .season-chip {
+  position: static;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .sides-bar {
+    margin: 4px 0 14px;
+    padding-inline: 14px;
+  }
+  /* The ☰ sits on the header line beside the primary action. */
+  .profile-controls .profile-more {
+    margin-left: auto;
+  }
+}
+
+/* The Sides tab: the old dialog's content as a page. */
+.sides-page {
+  width: min(640px, 100%);
+  margin-inline: auto;
+  display: grid;
+  gap: 14px;
+}
+.sides-page h1 {
+  font: 700 26px var(--ui);
+  letter-spacing: -0.03em;
+}
+@media (max-width: 700px) {
+  .sides-page {
+    padding-inline: 14px;
+  }
+}

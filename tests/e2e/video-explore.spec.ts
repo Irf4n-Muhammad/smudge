@@ -68,8 +68,8 @@ test("a video added in the post editor plays in the feed, with a poster frame", 
 
 test("explore shows people you don't follow and searches every post", async ({ page }) => {
   await signIn(page);
-  await page.getByRole("button", { name: "Explore" }).filter({ visible: true }).first().click();
-  await expect(page.getByRole("heading", { name: "Wander a little further." })).toBeVisible();
+  await page.getByRole("button", { name: "Search" }).filter({ visible: true }).first().click();
+  await expect(page.getByRole("searchbox", { name: "Search all posts" })).toBeVisible();
   const following = await page.evaluate(() =>
     fetch("/api/bootstrap")
       .then((r) => r.json())

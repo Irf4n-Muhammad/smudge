@@ -34,6 +34,7 @@ export function Runtime({
   onEdit,
   onReady,
   guest = false,
+  clip = false,
 }: {
   target: string;
   preview?: boolean;
@@ -54,6 +55,11 @@ export function Runtime({
   onReady?: () => void;
   /** Opened from a share link without an account: read-only, through the public endpoints. */
   guest?: boolean;
+  /**
+   * A feed window: the page may not scroll inside the frame, so a swipe or wheel over the post
+   * always scrolls the feed. The whole page opens full screen instead.
+   */
+  clip?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null),
     frame = useRef<HTMLIFrameElement>(null);
@@ -82,8 +88,10 @@ export function Runtime({
       setVisible(true);
       return;
     }
+    // Open posts about two screens before they arrive, so a fast scroll meets finished posts
+    // instead of loading placeholders; frames that far away again are disposed to save memory.
     const observer = new IntersectionObserver(([entry]) => setVisible(!!entry?.isIntersecting), {
-      rootMargin: "160px",
+      rootMargin: "200% 0px",
     });
     if (container.current) observer.observe(container.current);
     return () => observer.disconnect();
@@ -146,6 +154,11 @@ export function Runtime({
         if (kind === "profile" && autoHeight)
           frame.current?.contentWindow?.postMessage(
             { type: "forma:layout", nonce: ticket.nonce, autoHeight: true },
+            "*",
+          );
+        if (clip)
+          frame.current?.contentWindow?.postMessage(
+            { type: "forma:layout", nonce: ticket.nonce, clip: true },
             "*",
           );
         if (preview)
@@ -240,7 +253,7 @@ export function Runtime({
       appearanceObserver.disconnect();
       window.removeEventListener("message", receive);
     };
-  }, [ticket, kind, autoHeight, preview, guest]);
+  }, [ticket, kind, autoHeight, preview, guest, clip]);
   useEffect(() => {
     if (error || (ready && (!autoHeight || kind !== "profile" || measuredHeight !== null)))
       readyNow.current?.();

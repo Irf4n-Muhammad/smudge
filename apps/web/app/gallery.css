@@ -166,12 +166,16 @@ html[data-theme="dark"] .ambient-light::before {
   display: none;
 }
 
-/* The rhythm: one big window, then a pair, again and again. */
+/*
+ * The rhythm: one even column you can scroll freely, like Instagram (ADR 0023). Every post shows
+ * the same 4:5 window; the whole world opens on "Enter world". A TikTok-style snap feed is a
+ * separate mode for later, not this one.
+ */
 .post-list {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
-  gap: 64px 28px;
-  width: min(1120px, calc(100% - 96px));
+  grid-template-columns: minmax(0, 1fr);
+  gap: 56px;
+  width: min(520px, calc(100% - 48px));
   margin: 0 auto;
   padding-bottom: 40px;
   /* Glows and decorations may spill a little past the column, never past the page. */
@@ -181,13 +185,14 @@ html[data-theme="dark"] .ambient-light::before {
 .post-list > .post-card {
   min-width: 0;
 }
-.post-list > .post-card:nth-child(3n + 1),
-.post-list > .world-stage,
-.post-list > .post-card:only-child {
-  grid-column: 1 / -1;
+.post-list > .post-card .runtime,
+.post-list > .post-card .moment-cover {
+  aspect-ratio: 4 / 5;
+  height: auto;
+  min-height: 0 !important;
 }
-.post-list > .post-card:nth-child(3n) {
-  margin-top: 70px;
+.post-list > .post-card .runtime iframe {
+  height: 100% !important;
 }
 .post-list > .world-stage {
   margin-top: 0;
@@ -300,14 +305,6 @@ html[data-theme="dark"] .classic-post .runtime {
   display: grid;
   place-items: center;
 }
-.post-list > .post-card:not(:nth-child(3n + 1)) .world-enter {
-  width: 44px;
-  padding: 0;
-  justify-content: center;
-}
-.post-list > .post-card:not(:nth-child(3n + 1)) .world-enter em {
-  display: none;
-}
 /* Under the window only what you act on; the kind already sits on the window. */
 .classic-post .format-tag {
   display: none;
@@ -340,18 +337,10 @@ html[data-theme="dark"] .classic-post .runtime {
   }
 }
 
-/* Phone: one world per screen, swipe to the next. */
+/* Phone: the same free-scrolling column, edge to edge. No snapping, so a flick skips ahead. */
 @media (max-width: 700px) {
   .workspace {
     margin-left: 0;
-  }
-  html:has(.app-shell[data-view="home"]),
-  html:has(.app-shell[data-view="following"]) {
-    scroll-snap-type: y mandatory;
-  }
-  .app-shell[data-view="home"] .topbar,
-  .app-shell[data-view="following"] .topbar {
-    scroll-snap-align: start;
   }
   .feed-toolbar {
     padding: 6px 12px 10px;
@@ -376,13 +365,7 @@ html[data-theme="dark"] .classic-post .runtime {
   }
   .post-list > .post-card {
     margin: 0;
-    min-height: 100svh;
-    padding: 14px 10px 96px;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-  }
-  .post-list > .post-card:nth-child(3n) {
-    margin-top: 0;
+    padding: 14px 10px 0;
   }
   .post-list > .world-stage {
     border-radius: 0;
@@ -396,21 +379,18 @@ html[data-theme="dark"] .classic-post .runtime {
     padding: 12px 6px 0;
   }
   /* A round button on a phone, so it does not cover the post's headline. */
-  .post-list > .post-card .world-enter,
-  .post-list > .post-card:not(:nth-child(3n + 1)) .world-enter {
+  .post-list > .post-card .world-enter {
     top: 12px;
     right: 12px;
     width: auto;
     height: 40px;
     padding: 3px;
   }
-  .post-list > .post-card .world-enter em,
-  .post-list > .post-card:not(:nth-child(3n + 1)) .world-enter em {
+  .post-list > .post-card .world-enter em {
     display: none;
   }
   .feed-end {
-    min-height: 50svh;
-    scroll-snap-align: end;
+    padding-bottom: 96px;
   }
 
   /* The bottom bar becomes a floating dock. */

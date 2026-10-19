@@ -118,8 +118,11 @@ export function PostEditor({
   editing = false,
   onStudio,
   onImport,
+  side,
 }: {
   draftId?: string | undefined;
+  /** The side a new post goes to (ADR 0027); absent means Everyday. */
+  side?: { id: string; name: string } | undefined;
   onClose: () => void;
   onPublished: () => Promise<void>;
   /** Opened from a published post's menu: publishing updates that post in place. */
@@ -255,7 +258,12 @@ export function PostEditor({
       open(
         await api<DraftView>("/drafts", {
           package: built.package,
-          metadata: { ...built.metadata, caption: "", contributors: [] },
+          metadata: {
+            ...built.metadata,
+            caption: "",
+            contributors: [],
+            ...(side ? { side: side.id } : {}),
+          },
         }),
       );
       // Photos make a post, so a new one starts there.
@@ -468,7 +476,9 @@ export function PostEditor({
     sheet === "field"
       ? photo
         ? `Photo ${Number(photoIndex) + 1}`
-        : (fieldTitles[field ?? ""] ?? "Edit")
+        : field === "kicker" && d.style === "plan"
+          ? "When and where"
+          : (fieldTitles[field ?? ""] ?? "Edit")
       : sheet === "style"
         ? "Style"
         : sheet === "colors"
@@ -510,7 +520,9 @@ export function PostEditor({
                 ? "Not saved"
                 : editing
                   ? "Saved · people see changes when you update"
-                  : "Draft saved · only you see it"}
+                  : side
+                    ? `Posting to ${side.name} · draft only you see`
+                    : "Draft saved · only you see it"}
           </small>
         </div>
         <button className="easy-publish" disabled={busy} onClick={() => void publish()}>
@@ -542,11 +554,15 @@ export function PostEditor({
           </button>
           {sheet === "field" && field === "kicker" && (
             <TextField
-              title="Small label"
+              title={d.style === "plan" ? "When and where" : "Small label"}
               value={d.kicker}
               max={40}
-              placeholder="Tonight, A story, Hot take…"
-              hint="Leave it empty to hide it."
+              placeholder={
+                d.style === "plan" ? "Sunday 05:30 · GBK" : "Tonight, A story, Hot take…"
+              }
+              hint={
+                d.style === "plan" ? "The badge above the headline." : "Leave it empty to hide it."
+              }
               onChange={(v) => change({ ...d, kicker: v })}
             />
           )}

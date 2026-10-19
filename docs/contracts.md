@@ -119,6 +119,8 @@ makes declared media viewable with the public post. No video processing is imple
 | polls.vote            | `await forma.poll.vote(0)`                         | Valid option; replaces current viewer's vote          |
 | reactions.read        | `await forma.reactions.read()`                     | Preset options, counts, own choice, recent wall       |
 | reactions.place       | `await forma.reactions.place("proud")`             | One preset sticker per viewer; `null` removes it      |
+| plan.read             | `await forma.plan.read()`                          | Count, whether the viewer is in, visible names        |
+| plan.join             | `await forma.plan.join(true)`                      | Adds or removes the current viewer only               |
 
 Declare each capability used. A poll also requires `manifest.poll` with question and 2-6 option
 labels. Writes are not inferred from read permission or vice versa. Preview uses separate state.
@@ -227,6 +229,16 @@ layout hint, not a capability or access to host DOM. Content beyond 4000 still s
 Viewport-height-based creator layouts should leave this option off to avoid resize feedback.
 Legacy profiles and post runtimes ignore sizing messages.
 
+## Feed windows (additive, ADR 0023)
+
+In the feed every post shows a fixed 4:5 window. After ready, the host sends nonce-bound
+`forma:layout` with `clip: true`; the SDK then sets `overflow: hidden` on the document, so the
+frame never scrolls and a swipe or wheel over a post scrolls the feed. Content past the window is
+seen with **Enter world** (full screen, unclipped). Pages should still design for any height
+(`100vh` layouts fill the window); fixed-height pages show the runtime background below. Inner
+scroll containers a page creates itself are not prevented. Full-screen posts, profiles and
+previews are not clipped.
+
 ## Draft identity (additive; package versions unchanged)
 
 Profile drafts and publications may include `identity: {name,bio,avatarAssetId}`. Name is trimmed,
@@ -327,6 +339,138 @@ by the host (moment template, or the owner's current decoration plus defaults), 
 package, and visitors cannot submit text. Preview is read-only. Audience rules apply: a viewer who
 cannot see the post gets `NOT_FOUND`. See ADR 0011.
 
+## Themes (ADR 0022)
+
+Themes are host catalog data (`decorations`, `themeEvents` in `contracts/src/identity.ts`), never
+accepted from a client or package. `DecorationTier` is now `market | members | event` (was
+`free | members | seasonal | sponsored`); `sponsor` is an optional label, and an event theme names
+its event with `eventId` instead of `seasonId`. Every theme has a `font` from `themeFonts`. Stored
+choices are ids only, so no stored data changes; a choice is re-checked against its lock on read.
+Feed `PostDecor.decoration` gains `font` and, for event themes, `event` (the event's name).
+`GET /api/users/:id/theme` returns `{ theme }` with the same shape, or `null`.
+`GET /api/decorations` items gain `font`, `event` and `seasonal`.
+
+## Community themes (additive, ADR 0024)
+
+`OverlayPiece` is now a union: catalog pieces carry `svg` (trusted markup), community pieces carry
+`html` and `css` instead and are only ever drawn as an image. Clients must not insert a piece's
+`html` as markup. Approved community themes appear in `GET /api/decorations` items, in
+`PostDecor.decoration` and in `GET /api/users/:id/theme` with the same fields as catalog themes;
+their ids start with `t-`.
+
+- `POST /api/themes/submissions` takes `themeSubmissionSchema` (`contracts/src/themes.ts`):
+  `{ name, accent, font, kind, eventId?, orgId?, pieces }`. Each piece is
+  `{ anchor, width, height, dx, dy, html, css }`, and must stay within the edge band. Unknown
+  keys, including any creator field, are rejected. Returns the submission with
+  `status: "pending"`. `THEME_QUEUE_FULL` (429) at 5 waiting submissions; rate limited per
+  address.
+- `GET /api/themes/submissions` lists the caller's own submissions, newest first, with `status`
+  (`pending | approved | rejected | removed`) and the reviewer's `note`.
+- `DELETE /api/themes/submissions/:id` removes the caller's own submission unless it is approved
+  (`THEME_IN_MARKET`, 409).
+- Moderators only (404 for everyone else): `GET /api/moderation/themes` lists waiting then
+  approved themes; `POST /api/moderation/themes/:id` takes `{ decision: "approve" | "reject" |
+"remove", note? }`. Approve and reject apply to waiting themes, remove to approved ones;
+  anything else is `THEME_ALREADY_REVIEWED` (409).
+
+## Trip places (additive, ADR 0026)
+
+Travel chapters may carry `place` (a `PlaceId` from `places` in `contracts/src/identity.ts`, so
+far only `bali`) next to `country`. `POST /api/identity/travel` adds a separate chapter, labelled
+with the place's name, when the photo's position is inside a place of the photo's country. Trip
+entries in `themeEvents` may name a `place`; such an event opens only with a chapter for that
+place, while a country event opens with any chapter in that country, place or not. New event ids:
+`trip-japan`, `trip-korea`, `trip-thailand` and `trip-bali`.
+
+## Personal theme edits (additive, ADR 0025)
+
+A community piece's HTML may mark editable text with `data-text="name"` (`[a-z][a-z0-9-]{0,23}`).
+Community pieces in responses may carry `texts: { [name]: string }`; clients replace the text of
+the matching elements with it as plain text, never as markup. `GET /api/decorations` items gain
+`edit: { pieces: { dx, dy }[], texts } | null`, the caller's saved version.
+
+- `POST /api/decorations/edit` takes `themeEditSchema`: `{ decorationId, pieces, texts }`. `pieces`
+  has one `{ dx, dy }` per piece of the theme; every one must stay in the edge band. `texts` keys
+  are `"<piece index>.<slot>"`, values 1 to 40 characters without control characters, and each
+  must name a slot of that piece. `DECORATION_LOCKED` (403) for a theme the caller cannot wear,
+  `THEME_EDIT_INVALID` (400) otherwise. Returns the same state as `GET /api/decorations`.
+- `DELETE /api/decorations/edit/:id` drops the caller's version.
+
+Edits apply only to their owner's profile, posts and theme lookups, and are re-checked against
+the theme on every read: a theme whose pieces changed shows its original instead.
+
+## Sides (additive, ADR 0027)
+
+- **Catalog.** `sides` in `packages/contracts/src/sides.ts`: `{id, name, tagline, kind:
+everyday|house|org, entry: open|invite, private, orgId?, accent, prompt}`. Everyday is the side
+  everyone has.
+- **Post metadata.** `metadata.side?: SideId` (`/^[a-z0-9-]{2,32}$/`); absent means Everyday.
+  Set when the draft is created; publishing refuses `SIDE_UNKNOWN` (400) or `SIDE_NOT_JOINED`
+  (403). A remix (`POST /api/posts/:id/reuse`) drops the side.
+- **Bootstrap** carries `sides: {active, layout: separate|mixed, mine: Side[], open: Side[]}`
+  (also `GET /api/sides`). Private sides appear only in `mine`.
+- `POST /api/sides/active {side}` switches (members only, else `NOT_FOUND`);
+  `POST /api/sides/layout {layout}`; `POST /api/sides/:id/join` (open public sides only;
+  `SIDE_INVITE_ONLY` 403, private or unknown → `NOT_FOUND`); `POST /api/sides/:id/leave`
+  (`SIDE_REQUIRED` 400 for Everyday). Each answers the sides view.
+- `POST /api/posts/:id/share {everyday: boolean}` by the owner; `SIDE_ALREADY_EVERYDAY` 400 for
+  a post that is in Everyday already.
+- **Feed and explore** (`GET /api/feed`, `/api/explore`, and MCP `list_feed`) list the active
+  side's posts, or every side you are in when the layout is mixed, plus posts shared to Everyday
+  when Everyday is active. Each post may carry `side: {id, name, accent}` and `shared`.
+- **Visibility.** A private side's posts are visible only to members (or when shared to
+  Everyday), through the same `viewFilter` as blocks and private accounts: links, search,
+  comments and profiles follow it. A public side's post opens by its link for anyone.
+- Membership from an organisation's chapter (`invites/redeem`, `email/confirm`) is granted by
+  the server in the same transaction; no request body names a side to join that way.
+
+## Stamps and collections (additive, ADR 0028)
+
+- **Catalog.** `collections` in `contracts/src/identity.ts`: `{id, name, orgId, side?, stamps:
+{id, name}[]}`. `chapterKinds` gains `stamp`; a stamp chapter carries `collection` and `stamp`.
+- `POST /api/identity/invites` accepts `kind: "stamp"` with `stamp: {collection, stamp}`
+  (required for that kind, refused on others); the collection must belong to `orgId`
+  (`STAMP_UNKNOWN` 400). `invites/redeem` refuses a stamp already held (`STAMP_ALREADY_HELD` 409) and otherwise adds the chapter and the organisation's side.
+- `GET /api/identity/me` gains `collections` (as below, for yourself) and `issuable` (the
+  collections your organisations issue stamps for). `GET /api/users/:id/collections` answers
+  `[{id, name, org, side, held, total, stamps: [{id, name, held, label?, at?}]}]`, counting
+  only the stamps the viewer may see (audience as for chapters).
+- `ThemeEvent` gains kinds `stamp {collection, stamp}` and `collection {collection}`; the
+  lock reason names the race or the count still missing.
+
+## Plans (additive, ADR 0029)
+
+- `plan.read` / `plan.join` raise the v2 capability limit from 8 to 10. `plan.read` answers
+  `{count, cameCount, going, came, people: [{id, name, handle, initials, color, came}]}` (at
+  most 40 names, newest first, only people the viewer may see); `plan.join {going?: boolean,
+came?: boolean}` (at least one) records or removes the current viewer (`going`) and marks
+  whether they were there (`came`, which implies being in; `going: false` drops both) and
+  answers the same shape. Preview answers an empty list and refuses `plan.join`
+  (`PREVIEW_READ_ONLY` 403). Deleting the post removes its records.
+- The easy editor's `plan` style (`postDesignSchema.style`) is the only generated package that
+  declares them; `buildPost` writes a fixed `plan.js` for it. The SDK exposes
+  `forma.plan.read()`, `forma.plan.join(going)` and `forma.plan.came(came)`.
+
+## Share cards (additive, ADR 0030)
+
+- `GET /api/me/card?side=<id>` (default `everyday`) answers `image/svg+xml`, 1080×1350, with no
+  external references; `NOT_FOUND` for a side you are not in or that does not exist.
+  `GET /api/me/card/data` answers `{user, side, theme, stamps, path}`; `path` is
+  `/u/<handle>?side=<id>` for an open public side, `/u/<handle>` otherwise.
+- `GET /api/public/sides/:id` answers `{id, name, tagline, accent}` for a public side (guest
+  rate limit); private sides are `NOT_FOUND`.
+- The app reads `?side=<id>` on `/` and `/u/<handle>`: a signed-in member is switched to the
+  side (joining first when it is open); a guest sees the side named on the public page.
+
+## Gift themes (additive, ADR 0031)
+
+- `POST /api/decorations/gift {toId, decorationId, note ≤140}` by the giver. `GIFT_SELF` 400,
+  `GIFT_NOT_MARKET` 400 for an unknown, `members` or `event` theme, `INVALID_USER` for an
+  unknown receiver, and the block rule applies. Answers `{id}` and notifies the receiver
+  (`NotificationType` gains `gift`).
+- `GET /api/decorations` gains `gifts: [{id, decoration: {id, name, accent}, from: {id, name,
+handle}, note, at}]`, newest first, for the caller as receiver.
+
 ## Post buttons (additive)
 
 Post metadata accepts an optional `link: { label, url? }`. `label` is 1 to 32 characters and is the
@@ -416,7 +560,7 @@ plain `http:` despite the rules above. It is ignored in production.
 
 Posts made in the easy post editor keep their settings in `smudge/post.js`
 (`window.smudgePost = {…};`), validated by `postDesignSchema` in `packages/core/src/easy-post.ts`:
-`style` (`poster`, `magazine`, `gallery`, `scrapbook`, `note`), `palette`, `font`, `kicker` (≤40),
+`style` (`poster`, `magazine`, `gallery`, `scrapbook`, `note`, `plan`), `palette`, `font`, `kicker` (≤40),
 `headline` (1–90, `*stars*` make italics), `text` (≤1500, blank lines split paragraphs), `quote`
 (≤200), `photos` (≤12 of `{ assetId, caption ≤120 }`) and `motion`. `buildPost` regenerates
 `index.html`, `post.css` and, with motion on, a fixed `motion.js` (and `video.js`, see Videos

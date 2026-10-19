@@ -17,20 +17,19 @@ import {
   Sparkles,
   RefreshCw,
   X,
-  BadgeCheck,
-  Palette,
-  UserPlus,
   Gift,
-  LogIn,
-  Settings,
   Bell,
   MessageCircle,
-  UserSearch,
-  ShieldCheck,
   Menu,
   Globe,
+  UserPlus,
+  LogIn,
+  Shapes,
 } from "lucide-react";
+import { MoreMenu } from "./app-nav";
+import type { MoreKey } from "./app-nav";
 import { MessagesPanel, ModerationPanel, NotificationsPanel, PeoplePanel } from "./community";
+import { ThemeReviews } from "./theme-studio";
 import type { AuthState } from "../../../packages/contracts/src/accounts";
 import {
   AccountPanel,
@@ -50,7 +49,6 @@ import { Studio } from "./studio";
 import { SiteImport } from "./site-import";
 import { PostEditor } from "./post-editor";
 import type { Boot } from "./types";
-import { ThemeToggle } from "./theme-toggle";
 import { Cockpit } from "./cockpit";
 import { BreakoutFeed } from "./breakout-feed";
 import { ProfilePage } from "./profile-page";
@@ -58,9 +56,12 @@ import { IdentityHub } from "./identity-hub";
 import { MomentComposer } from "./moment-composer";
 import { DecorationsPanel } from "./decorations-panel";
 import type { DecoratedPost } from "./post-decor";
-import { SeasonChip, SeasonLayer } from "./season";
+import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
 import { Welcome } from "./welcome";
+import { SidesBar, SidesPage } from "./sides";
+import type { SidesView } from "../../../packages/contracts/src/sides";
+import { EVERYDAY } from "../../../packages/contracts/src/sides";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
   const [cockpit, setCockpit] = useState(false);
@@ -68,7 +69,6 @@ export function FormaApp() {
   const [boot, setBoot] = useState<Boot | null>(null),
     [posts, setPosts] = useState<DecoratedPost[]>([]),
     [view, setView] = useState("home"),
-    [filter, setFilter] = useState("all"),
     [query, setQuery] = useState(""),
     [loading, setLoading] = useState(true),
     [failure, setFailure] = useState("");
@@ -92,7 +92,7 @@ export function FormaApp() {
     [badges, setBadges] = useState({ notifications: 0, messages: 0 }),
     [messageTo, setMessageTo] = useState<string | null>(null),
     [more, setMore] = useState(false),
-    [modes, setModes] = useState(false),
+    [feedMenu, setFeedMenu] = useState(false),
     /** Just signed up: a photo and a few people before the first feed. */
     [welcome, setWelcome] = useState(false);
   /** A toast can carry one way back, like Undo after blocking someone. */
@@ -108,6 +108,27 @@ export function FormaApp() {
       // Signed out or offline: keep the last counts.
     }
   }, []);
+  // The feed picker and More close on an outside click or Escape, like any popover menu.
+  useEffect(() => {
+    if (!feedMenu && !more) return;
+    const close = () => {
+      setFeedMenu(false);
+      setMore(false);
+    };
+    const onPointer = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (!t?.closest?.(".post-menu-wrap, .more-popover, .sidebar-bottom")) close();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("pointerdown", onPointer);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [feedMenu, more]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 5500);
@@ -154,7 +175,25 @@ export function FormaApp() {
           return refresh();
         })
         .catch((e: Error) => notify(e.message));
-    void refresh();
+    // A share card's link (ADR 0030) lands inside that side: switch to it, joining first if open.
+    const landing = params.get("side");
+    void refresh().then(async () => {
+      if (!landing) return;
+      try {
+        await api("/sides/active", { side: landing }).catch(() =>
+          api(`/sides/${encodeURIComponent(landing)}/join`, {}).then(() =>
+            api("/sides/active", { side: landing }),
+          ),
+        );
+        await refresh();
+      } catch {
+        // Not a side you can enter from a link, or not signed in yet; the page still opens.
+        return;
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete("side");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    });
     const requestedProfile = new URLSearchParams(window.location.search).get("profile");
     if (requestedProfile || new URLSearchParams(window.location.search).has("profileDraft")) {
       setProfile(requestedProfile ?? "you");
@@ -215,6 +254,17 @@ export function FormaApp() {
       notify((e as Error).message);
     }
   }
+  /** One tap moves the whole app into that side: its feed, its composer, its colour. */
+  async function switchSide(side: string) {
+    if (side === boot?.sides.active) return;
+    try {
+      await api<SidesView>("/sides/active", { side });
+      await refresh();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }
   function create() {
     setEditingPost(false);
     setActiveDraft(undefined);
@@ -238,13 +288,11 @@ export function FormaApp() {
   function openUser(userId: string) {
     setProfile(userId);
     setView("profile");
-    setFilter("all");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function openPost(id: string) {
     setFocusPost(id);
     setView("post");
-    setFilter("all");
     setProfile(null);
     window.history.replaceState(null, "", `/?post=${encodeURIComponent(id)}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -291,6 +339,8 @@ export function FormaApp() {
       </>
     );
   const me = boot?.users.find((u) => u.id === boot.actor.userId);
+  const activeSide = boot?.sides.mine.find((s) => s.id === boot.sides.active);
+  const inSide = !!activeSide && activeSide.id !== EVERYDAY;
   const selectedUser = profile ? boot?.users.find((u) => u.id === profile) : me;
   const visible = (view === "explore" ? (explored ?? []) : posts).filter(
     (p) =>
@@ -298,7 +348,6 @@ export function FormaApp() {
       (view !== "saved" || p.saved) &&
       (view !== "post" || p.id === focusPost) &&
       (view !== "profile" || p.ownerId === (profile ?? boot?.actor.userId)) &&
-      (filter === "all" || p.metadata.format === filter) &&
       `${p.metadata.title} ${p.metadata.caption} ${p.author.name}`
         .toLowerCase()
         .includes(query.toLowerCase()),
@@ -306,10 +355,62 @@ export function FormaApp() {
   function navigate(next: string) {
     if (view === "post") window.history.replaceState(null, "", "/");
     setView(next);
-    setFilter("all");
     setProfile(null);
+    setMore(false);
+    setFeedMenu(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  /** The Instagram-style places; everything else lives behind More or the profile ☰. */
+  const mainTabs: [string, typeof Home, string][] = [
+    ["home", Home, "Home"],
+    ["explore", Search, "Search"],
+    ["sides", Shapes, "Sides"],
+    ["messages", MessageCircle, "Messages"],
+    ["notifications", Bell, "Notifications"],
+    ["create", Plus, "Create"],
+    ["profile", UserRound, "Profile"],
+  ];
+  const tab =
+    view === "following" || view === "post"
+      ? "home"
+      : view === "people"
+        ? "explore"
+        : ["saved", "decor", "who", "account", "moderation"].includes(view)
+          ? "more"
+          : view;
+  function openTab(key: string) {
+    if (key === "create") {
+      setMore(false);
+      createPost();
+      return;
+    }
+    if (key === "messages") setMessageTo(null);
+    navigate(key);
+  }
+  const demoSwitch =
+    !production && me && boot
+      ? { users: boot.users, meId: me.id, onSwitch: (id: string) => void switchUser(id) }
+      : null;
+  function pickMore(key: MoreKey) {
+    setMore(false);
+    if (key === "card") navigate("sides");
+    else if (key === "studio") void create();
+    else if (key === "moment") setMomentOpen(true);
+    else if (key === "import") setImportOpen(true);
+    else if (key === "signup" || key === "login") setAuthDialog(key);
+    else navigate(key);
+  }
+  /** Search covers posts and people, like Instagram's search tab; the sides row sits below. */
+  const searchTabs = (
+    <div className="search-tabs" aria-label="Search">
+      <button aria-pressed={view === "explore"} onClick={() => navigate("explore")}>
+        Posts
+      </button>
+      <button aria-pressed={view === "people"} onClick={() => navigate("people")}>
+        People
+      </button>
+    </div>
+  );
   if (view === "profile" && boot && !studio)
     return (
       <ProfilePage
@@ -332,12 +433,19 @@ export function FormaApp() {
           window.history.replaceState(null, "", "/");
           setCockpit(false);
           setBreakout(false);
-          if (destination === "create") {
-            void create();
-            return;
-          }
-          navigate(destination);
+          openTab(destination);
         }}
+        more={
+          <MoreMenu
+            moderator={!!auth?.moderator}
+            production={production}
+            demo={demoSwitch}
+            onPick={(key) => {
+              window.history.replaceState(null, "", "/");
+              pickMore(key);
+            }}
+          />
+        }
         onBack={() => {
           setView("home");
           setProfile(null);
@@ -364,27 +472,19 @@ export function FormaApp() {
       <Cockpit posts={posts} boot={boot} onRefresh={refresh} onExit={() => changeMode(false)} />
     );
   return (
-    <div className="app-shell" data-view={view}>
-      <AmbientLight watch={`${view}:${filter}:${visible.map((p) => p.id).join(",")}`} />
+    <div
+      className="app-shell"
+      data-view={view}
+      data-side={activeSide?.id}
+      style={{ "--side-accent": activeSide?.accent } as React.CSSProperties}
+    >
+      <AmbientLight watch={`${view}:${visible.map((p) => p.id).join(",")}`} />
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Smudge home">
           <span className="brand-mark">s</span>smudge<span className="brand-dot">.</span>
         </a>
-        <div className="sidebar-tagline">Life, in your own shape.</div>
         <nav className="main-nav" aria-label="Main navigation">
-          {[
-            ["home", Home, "Your feed"],
-            ["following", Users, "Following"],
-            ["saved", Bookmark, "Saved"],
-            ["who", BadgeCheck, "Who you are"],
-            ["decor", Palette, "Decorations"],
-            ["profile", UserRound, "My profile"],
-            ["explore", Compass, "Explore"],
-            ["people", UserSearch, "Find people"],
-            ["notifications", Bell, "Notifications"],
-            ["messages", MessageCircle, "Messages"],
-            ...(auth?.moderator ? [["moderation", ShieldCheck, "Moderation"]] : []),
-          ].map(([key, Icon, label]) => {
+          {mainTabs.map(([key, Icon, label]) => {
             const I = Icon as typeof Home;
             const count =
               key === "notifications"
@@ -394,96 +494,39 @@ export function FormaApp() {
                   : 0;
             return (
               <button
-                key={String(key)}
-                aria-label={count ? `${label} (${count} new)` : String(label)}
-                title={String(label)}
-                className={view === key ? "nav-item active" : "nav-item"}
-                onClick={() => {
-                  if (key === "messages") setMessageTo(null);
-                  navigate(String(key));
-                }}
+                key={key}
+                aria-label={
+                  key === "create" ? "Create a post" : count ? `${label} (${count} new)` : label
+                }
+                title={label}
+                className={
+                  key === "create"
+                    ? "nav-item nav-create"
+                    : tab === key
+                      ? "nav-item active"
+                      : "nav-item"
+                }
+                onClick={() => openTab(key)}
               >
-                <I size={20} />
-                <span>{String(label)}</span>
+                <I size={22} />
+                <span>{label}</span>
                 {count > 0 && <span className="badge nav-badge">{count > 99 ? "99+" : count}</span>}
-                {view === key && <span className="nav-dot" />}
               </button>
             );
           })}
-          <button className="nav-item" aria-label="My studio" title="My studio" onClick={create}>
-            <Layers size={20} />
-            <span>My studio</span>
-          </button>
         </nav>
-        <button
-          className="primary create-button"
-          aria-label="Create a post"
-          title="Create a post"
-          onClick={createPost}
-        >
-          <Plus size={19} />
-          Create a post
-        </button>
-        <button
-          className="quiet-button moment-button"
-          title="Share a moment"
-          onClick={() => setMomentOpen(true)}
-        >
-          <Gift size={16} />
-          Share a moment
-        </button>
-        <button
-          className="quiet-button moment-button import-button"
-          title="Import a website"
-          onClick={() => setImportOpen(true)}
-        >
-          <Globe size={16} />
-          Import a website
-        </button>
-        <div className="sidebar-note">
-          <span className="note-star">✧</span>
-          <p>
-            No two stories
-            <br />
-            have to look alike.
-          </p>
-          <button onClick={() => (production ? create() : setConnect(true))}>
-            Make it yours <ArrowUpRight size={15} />
-          </button>
-        </div>
         <div className="sidebar-bottom">
-          {production ? (
-            me && (
-              <button
-                className="account-row"
-                aria-label="Account and sign-in"
-                title={`${me.name} · Account and sign-in`}
-                onClick={() => navigate("account")}
-              >
-                <Avatar user={me} />
-                <span>
-                  <strong>{me.name}</strong>
-                  <small>Account and sign-in</small>
-                </span>
-              </button>
-            )
-          ) : (
-            <div className="local-label">
-              <span />
-              LOCAL PLAYGROUND
-            </div>
-          )}
-          {!production && me && (
+          {demoSwitch && (
             <div className="account-switch">
-              <Avatar user={me} />
+              <Avatar user={me!} />
               <label>
                 <span>Preview as</span>
                 <select
                   aria-label="Preview as demo account"
-                  value={me.id}
-                  onChange={(e) => void switchUser(e.target.value)}
+                  value={demoSwitch.meId}
+                  onChange={(e) => demoSwitch.onSwitch(e.target.value)}
                 >
-                  {boot!.users.map((u) => (
+                  {demoSwitch.users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}
                     </option>
@@ -511,45 +554,66 @@ export function FormaApp() {
               </button>
             </div>
           )}
+          <button
+            className={tab === "more" || more ? "nav-item active" : "nav-item"}
+            aria-label="More"
+            title="More"
+            aria-haspopup="menu"
+            aria-expanded={more}
+            onClick={() => setMore((v) => !v)}
+          >
+            <Menu size={22} />
+            <span>More</span>
+          </button>
         </div>
       </aside>
+      {/* Outside the rail: the rail scrolls and blurs, which would clip a popover inside it. */}
+      {more && (
+        <div className="post-menu more-popover">
+          <MoreMenu moderator={!!auth?.moderator} production={production} onPick={pickMore} />
+        </div>
+      )}
       <div className="workspace">
         <header className="topbar">
           <a className="mobile-brand" href="/" aria-label="Smudge home">
             smudge
           </a>
-          <div className="breadcrumb">
-            Your space <span>/</span>{" "}
-            <strong>
-              {view === "home"
-                ? "The feed"
-                : view === "profile"
-                  ? "Profile"
-                  : view === "who"
-                    ? "Who you are"
-                    : view === "decor"
-                      ? "Decor"
-                      : view === "account"
-                        ? "Account"
-                        : view === "people"
-                          ? "People"
-                          : view[0]?.toUpperCase() + view.slice(1)}
-            </strong>
-          </div>
-          <div className="topbar-right">
-            <div className="post-menu-wrap modes-wrap">
+          {view === "home" || view === "following" ? (
+            <div className="post-menu-wrap feed-picker">
               <button
-                className="enter-cockpit"
-                aria-expanded={modes}
-                onClick={() => setModes((v) => !v)}
+                className="feed-picker-button"
+                aria-haspopup="menu"
+                aria-expanded={feedMenu}
+                title="Choose your feed"
+                onClick={() => setFeedMenu((v) => !v)}
               >
-                ✧ Ways to browse
+                {view === "following" ? "Following" : "For you"} <ChevronDown size={16} />
               </button>
-              {modes && (
-                <div className="post-menu modes-menu">
+              {feedMenu && (
+                <div className="post-menu feed-menu" role="menu">
                   <button
+                    role="menuitemradio"
+                    aria-checked={view === "home"}
+                    onClick={() => navigate("home")}
+                  >
+                    <strong>For you</strong>
+                    <small>
+                      {inSide ? `Everything in ${activeSide.name}` : "Everyone's pages"}
+                    </small>
+                  </button>
+                  <button
+                    role="menuitemradio"
+                    aria-checked={view === "following"}
+                    onClick={() => navigate("following")}
+                  >
+                    <strong>Following</strong>
+                    <small>Only people you follow</small>
+                  </button>
+                  <span className="feed-menu-label">Ways to browse</span>
+                  <button
+                    role="menuitem"
                     onClick={() => {
-                      setModes(false);
+                      setFeedMenu(false);
                       setBreakout(true);
                       window.history.replaceState(null, "", "/?mode=breakout");
                       window.scrollTo(0, 0);
@@ -559,8 +623,9 @@ export function FormaApp() {
                     <small>Posts float free on one long page</small>
                   </button>
                   <button
+                    role="menuitem"
                     onClick={() => {
-                      setModes(false);
+                      setFeedMenu(false);
                       changeMode(true);
                     }}
                   >
@@ -570,34 +635,71 @@ export function FormaApp() {
                 </div>
               )}
             </div>
-            <ThemeToggle />
-            <label className="search">
-              <Search size={16} />
-              <input
-                aria-label="Search posts"
-                placeholder="Find a little inspiration"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <kbd>⌕</kbd>
-            </label>
-            <button
-              className="icon-button account-button"
-              aria-label="Account settings"
-              title="Account settings"
-              onClick={() => navigate("account")}
-            >
-              <Settings size={18} />
-            </button>
-            {me && (
-              <button
-                className="avatar-button"
-                aria-label="Open my profile"
-                onClick={() => navigate("profile")}
-              >
-                <Avatar user={me} small />
-              </button>
+          ) : (
+            <strong className="view-title">
+              {view === "profile"
+                ? "Profile"
+                : view === "who"
+                  ? "Who you are"
+                  : view === "decor"
+                    ? "Themes"
+                    : view === "account"
+                      ? "Account settings"
+                      : view === "people" || view === "explore"
+                        ? "Search"
+                        : view === "sides"
+                          ? "Sides"
+                          : view === "post"
+                            ? "Post"
+                            : view[0]?.toUpperCase() + view.slice(1)}
+            </strong>
+          )}
+          <div className="topbar-right">
+            {["home", "following", "saved"].includes(view) && (
+              <>
+                <label className="search">
+                  <Search size={16} />
+                  <input
+                    aria-label="Search posts"
+                    placeholder="Find a little inspiration"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
+                <button
+                  className="icon-button refresh-feed"
+                  aria-label="Refresh feed"
+                  title="Refresh feed"
+                  onClick={() => void refresh()}
+                >
+                  <RefreshCw size={16} />
+                </button>
+              </>
             )}
+            <button
+              className="icon-button topbar-tab"
+              aria-label={
+                badges.notifications
+                  ? `Notifications (${badges.notifications} new)`
+                  : "Notifications"
+              }
+              title="Notifications"
+              onClick={() => navigate("notifications")}
+            >
+              <Bell size={22} />
+              {badges.notifications > 0 && (
+                <span className="badge nav-badge">{badges.notifications}</span>
+              )}
+            </button>
+            <button
+              className="icon-button topbar-tab"
+              aria-label={badges.messages ? `Messages (${badges.messages} new)` : "Messages"}
+              title="Messages"
+              onClick={() => openTab("messages")}
+            >
+              <MessageCircle size={22} />
+              {badges.messages > 0 && <span className="badge nav-badge">{badges.messages}</span>}
+            </button>
           </div>
         </header>
         <div className="content-layout">
@@ -614,19 +716,22 @@ export function FormaApp() {
                 onChanged={refresh}
               />
             ) : view === "people" && boot ? (
-              <PeoplePanel
-                key={boot.actor.userId}
-                notify={notify}
-                onFollowChanged={refresh}
-                onMessage={(id) => {
-                  setMessageTo(id);
-                  navigate("messages");
-                }}
-                onOpen={(id) => {
-                  setProfile(id);
-                  setView("profile");
-                }}
-              />
+              <>
+                <section className="explore-heading">{searchTabs}</section>
+                <PeoplePanel
+                  key={boot.actor.userId}
+                  notify={notify}
+                  onFollowChanged={refresh}
+                  onMessage={(id) => {
+                    setMessageTo(id);
+                    navigate("messages");
+                  }}
+                  onOpen={(id) => {
+                    setProfile(id);
+                    setView("profile");
+                  }}
+                />
+              </>
             ) : view === "notifications" && boot ? (
               <NotificationsPanel
                 key={boot.actor.userId}
@@ -646,7 +751,18 @@ export function FormaApp() {
                 onRead={refreshBadges}
               />
             ) : view === "moderation" && boot && auth?.moderator ? (
-              <ModerationPanel notify={notify} />
+              <>
+                <ModerationPanel notify={notify} />
+                <ThemeReviews notify={notify} />
+              </>
+            ) : view === "sides" && boot ? (
+              <SidesPage
+                sides={boot.sides}
+                notify={notify}
+                onChange={async () => {
+                  await refresh();
+                }}
+              />
             ) : view === "who" && boot ? (
               <IdentityHub
                 key={boot.actor.userId}
@@ -656,15 +772,19 @@ export function FormaApp() {
                 onMoment={() => setMomentOpen(true)}
               />
             ) : view === "decor" && boot ? (
-              <DecorationsPanel key={boot.actor.userId} notify={notify} onChanged={refresh} />
+              <DecorationsPanel
+                key={boot.actor.userId}
+                me={me}
+                users={boot.users}
+                notify={notify}
+                onChanged={refresh}
+              />
             ) : (
               <>
                 {view !== "profile" && <SeasonLayer />}
                 {view === "explore" ? (
                   <section className="explore-heading">
-                    <span className="eyebrow">EXPLORE</span>
-                    <h1>Wander a little further.</h1>
-                    <p>Pages from people you don’t follow yet, and a search across every post.</p>
+                    {searchTabs}
                     <label className="explore-search">
                       <Search size={17} />
                       <input
@@ -676,9 +796,6 @@ export function FormaApp() {
                         onChange={(e) => setExploreQuery(e.target.value)}
                       />
                     </label>
-                    <button className="link-button" onClick={() => navigate("people")}>
-                      Looking for someone? Find people
-                    </button>
                   </section>
                 ) : view === "post" ? (
                   <section className="single-post-heading">
@@ -701,7 +818,6 @@ export function FormaApp() {
                   </section>
                 ) : (
                   <section className="feed-heading">
-                    <SeasonChip />
                     <div>
                       <div className="eyebrow">
                         <span className="tiny-dot" /> DIFFERENT MINDS. DIFFERENT WORLDS.
@@ -727,26 +843,43 @@ export function FormaApp() {
                     </div>
                   </section>
                 )}
+                {boot && ["home", "following", "saved", "explore"].includes(view) && (
+                  <SidesBar
+                    sides={boot.sides}
+                    onSwitch={(side) => void switchSide(side)}
+                    onManage={() => navigate("sides")}
+                  />
+                )}
                 {view === "home" && (
                   <section className="composer">
                     <span className="composer-symbol">
                       <Feather size={22} />
                     </span>
                     <button onClick={createPost}>
-                      <strong>What does your day look like?</strong>
-                      <span>A photo, a story, a whole little world.</span>
+                      <strong>{activeSide?.prompt ?? "What does your day look like?"}</strong>
+                      <span>
+                        {inSide
+                          ? activeSide.private
+                            ? `Only people in ${activeSide.name} see it.`
+                            : `Posts to ${activeSide.name}. Share it to Everyday later if you like.`
+                          : "A photo, a story, a whole little world."}
+                      </span>
                     </button>
-                    <button className="quiet-button" onClick={() => setMomentOpen(true)}>
-                      <Gift size={15} /> Moment
-                    </button>
-                    <button
-                      className="quiet-button composer-import"
-                      aria-label="Import a website"
-                      title="Import a website"
-                      onClick={() => setImportOpen(true)}
-                    >
-                      <Globe size={15} /> Website
-                    </button>
+                    {!inSide && (
+                      <button className="quiet-button" onClick={() => setMomentOpen(true)}>
+                        <Gift size={15} /> Moment
+                      </button>
+                    )}
+                    {!inSide && (
+                      <button
+                        className="quiet-button composer-import"
+                        aria-label="Import a website"
+                        title="Import a website"
+                        onClick={() => setImportOpen(true)}
+                      >
+                        <Globe size={15} /> Website
+                      </button>
+                    )}
                     <button
                       className="composer-plus"
                       aria-label="Create a post"
@@ -755,35 +888,6 @@ export function FormaApp() {
                       <Plus size={21} />
                     </button>
                   </section>
-                )}
-                {view !== "post" && view !== "explore" && (
-                  <div className="feed-toolbar">
-                    <div className="feed-tabs" aria-label="Filter post formats">
-                      {[
-                        ["all", "For you"],
-                        ["scrapbook", "Scrapbooks"],
-                        ["story", "Stories"],
-                        ["collaborative", "Together"],
-                      ].map(([id, label]) => (
-                        <button
-                          key={id}
-                          aria-pressed={filter === id}
-                          className={filter === id ? "selected" : ""}
-                          onClick={() => setFilter(id!)}
-                        >
-                          {id === "all" && <Sparkles size={13} />} {label}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      className="icon-button refresh-feed"
-                      aria-label="Refresh feed"
-                      title="Refresh feed"
-                      onClick={() => void refresh()}
-                    >
-                      <RefreshCw size={16} />
-                    </button>
-                  </div>
                 )}
                 {view === "explore" && explored === null && (
                   <div className="empty-state">
@@ -930,7 +1034,6 @@ export function FormaApp() {
                       onClick={() => {
                         setProfile(user.id);
                         setView("profile");
-                        setFilter("all");
                         window.scrollTo({ top: 0 });
                       }}
                     >
@@ -970,71 +1073,23 @@ export function FormaApp() {
         </div>
       </div>
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        <button aria-label="Your feed" onClick={() => navigate("home")}>
-          <Home size={21} />
-        </button>
-        <button aria-label="Explore" onClick={() => navigate("explore")}>
-          <Compass size={21} />
-        </button>
-        <button
-          aria-label={
-            badges.notifications ? `Notifications (${badges.notifications} new)` : "Notifications"
-          }
-          onClick={() => navigate("notifications")}
-        >
-          <Bell size={21} />
-          {badges.notifications > 0 && (
-            <span className="badge nav-badge">{badges.notifications}</span>
-          )}
-        </button>
-        <button className="mobile-create" aria-label="Create a post" onClick={createPost}>
-          <Plus size={23} />
-        </button>
-        <button
-          aria-label={badges.messages ? `Messages (${badges.messages} new)` : "Messages"}
-          onClick={() => {
-            setMessageTo(null);
-            navigate("messages");
-          }}
-        >
-          <MessageCircle size={21} />
-          {badges.messages > 0 && <span className="badge nav-badge">{badges.messages}</span>}
-        </button>
-        <button aria-label="Find people" onClick={() => navigate("people")}>
-          <UserSearch size={21} />
-        </button>
-        <button aria-label="More" onClick={() => setMore(true)}>
-          <Menu size={21} />
-        </button>
-      </nav>
-      {more && (
-        <Dialog title="More" onClose={() => setMore(false)}>
-          <div className="more-menu">
-            {(
-              [
-                ["profile", UserRound, "My profile"],
-                ["following", Users, "Following"],
-                ["saved", Bookmark, "Saved"],
-                ["who", BadgeCheck, "Who you are"],
-                ["decor", Palette, "Decorations"],
-                ["account", Settings, "Account settings"],
-                ...(auth?.moderator ? [["moderation", ShieldCheck, "Moderation"]] : []),
-              ] as [string, typeof Home, string][]
-            ).map(([key, I, label]) => (
+        {["home", "explore", "create", "sides", "profile"]
+          .map((k) => mainTabs.find(([key]) => key === k)!)
+          .map(([key, Icon, label]) => {
+            const I = Icon as typeof Home;
+            return (
               <button
                 key={key}
-                className="quiet-button"
-                onClick={() => {
-                  setMore(false);
-                  navigate(key);
-                }}
+                aria-label={key === "create" ? "Create a post" : label}
+                aria-current={tab === key ? "page" : undefined}
+                className={key === "create" ? "mobile-create" : tab === key ? "active" : ""}
+                onClick={() => openTab(key)}
               >
-                <I size={18} /> {label}
+                <I size={key === "create" ? 23 : 22} />
               </button>
-            ))}
-          </div>
-        </Dialog>
-      )}
+            );
+          })}
+      </nav>
       {toast && (
         <div className="toast" role="status">
           <span>✳</span>
@@ -1090,6 +1145,7 @@ export function FormaApp() {
         <PostEditor
           draftId={postEditor.draftId}
           editing={editingPost}
+          side={inSide ? { id: activeSide.id, name: activeSide.name } : undefined}
           onClose={() => {
             setPostEditor(null);
             setEditingPost(false);

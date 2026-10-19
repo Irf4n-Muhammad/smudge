@@ -21,6 +21,11 @@ export function sdkSource(nonce: string) {
         style.textContent=event.data.reducedMotion?'*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}':'';
         window.dispatchEvent(new CustomEvent('forma:theme',{detail:{theme:event.data.theme}}));
       }
+      if(event.data.type==='forma:layout' && event.data.clip===true && !document.getElementById('forma-clip-policy')){
+        const style=document.createElement('style');style.id='forma-clip-policy';
+        style.textContent='html,body{overflow:hidden!important}';
+        document.head.append(style);
+      }
       if(event.data.type==='forma:layout' && event.data.autoHeight===true && !resizeObserver){
         const style=document.createElement('style');
         style.textContent='html,body{min-height:0}body{display:flow-root}';
@@ -56,7 +61,8 @@ export function sdkSource(nonce: string) {
       progress:{read:()=>request('viewer.progress.read'),write:value=>request('viewer.progress.write',value)},
       contributions:{list:()=>request('contributions.read'),add:value=>request('contributions.create',value)},
       poll:{read:()=>request('polls.read'),vote:option=>request('polls.vote',{option})},
-      reactions:{read:()=>request('reactions.read'),place:sticker=>request('reactions.place',{sticker})}
+      reactions:{read:()=>request('reactions.read'),place:sticker=>request('reactions.place',{sticker})},
+      plan:{read:()=>request('plan.read'),join:going=>request('plan.join',{going:going!==false}),came:came=>request('plan.join',{came:came!==false})}
     }),writable:false});
     // While the owner edits a draft, a tap picks what to change instead of using the page.
     window.addEventListener('click',event=>{

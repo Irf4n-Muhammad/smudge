@@ -39,10 +39,28 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   is bounded to 22px and disabled for reduced motion. No package permissions or runtime boundary
   changes are involved; this does not yet expose arbitrary creator HTML outside its iframe.
 
-- `apps/web/components/forma-app.tsx`: navigation, feed state, demo account switching.
+- `apps/web/components/forma-app.tsx`: navigation, feed state, demo account switching. The
+  tabs (Home, Search, Messages, Notifications, Create, Profile) and the feed picker live here;
+  `app-nav.tsx` is the More menu the rail and the profile's ☰ share; `app/nav.css` is the shape
+  (ADR 0032).
 - `post-card.tsx`, `studio.tsx`, `ui.tsx`: social actions, authoring, shared dialog/avatar UI.
 - `runtime.tsx`: viewport lifecycle, frame identity validation, typed request forwarding.
 - `theme-toggle.tsx`, `app/worlds.css`: persisted/system appearance and full-width feed layout.
+- `theme-piece.tsx`, `theme-studio.tsx`: community theme pieces are a designer's HTML and CSS,
+  turned into an SVG `foreignObject` image and shown as `<img>`, never inserted as markup; the
+  browser's image isolation (no scripts, no outside loads, no input) is the boundary. The studio
+  and the moderators' review queue live here; rules and storage are in `packages/core/src/themes.ts`
+  (ADR 0024).
+- `decorations-panel.tsx`, `theme-editor.tsx`: the Themes gallery, the preview of yourself in a
+  theme, and the personal editor (drag pieces within the edge band, rewrite `data-text` slots).
+  The edit is stored and re-checked against the theme in `packages/core/src/identity.ts` (ADR 0025).
+- `sides.tsx`, `app/sides.css`: the side switcher and the join/leave dialog (ADR 0027). Rules in
+  `packages/core/src/sides.ts`: membership records, the active side, `viewFilter` for private
+  sides, `feedFilter` for listing, and the publish guard; HTTP in `apps/server/side-routes.ts`.
+- `packages/core/src/plans.ts`: `plan.read` / `plan.join` handlers (ADR 0029), one record per
+  post and person; `packages/core/src/easy-post.ts` generates the Plan style and its `plan.js`.
+- `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
+  and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same
   posts and social API, opens existing isolated Runtime instances, and scopes its CSS to the mode.
   The cockpit is trusted host code; no post receives access to navigation or host DOM. Its dark

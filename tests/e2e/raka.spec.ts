@@ -125,12 +125,6 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
     .click();
   await expect(page.getByRole("dialog")).toContainText("One more page");
   await page.getByRole("button", { name: "Close dialog" }).click();
-  await page
-    .getByRole("navigation", { name: "Profile navigation" })
-    .getByRole("button", { name: "Activity", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText("Your activity");
-  await page.getByRole("button", { name: "Close dialog" }).click();
   await page.setViewportSize({ width: 1440, height: 1050 });
   const followButton = frame.locator("#profile-follow");
   await expect(followButton).toBeEnabled();

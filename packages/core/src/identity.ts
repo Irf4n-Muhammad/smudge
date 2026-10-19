@@ -3,7 +3,10 @@ import type { User, PostView, Experience } from "../../contracts/src/experience.
 import {
   birthdaySchema,
   chapterAudienceSchema,
+  collectionById,
+  collections,
   countries,
+  places,
   countryChoiceSchema,
   decorationById,
   decorationChoiceSchema,
@@ -23,7 +26,9 @@ import {
   seasons,
   signupSchema,
   stickerById,
+  themeEventById,
   travelProofSchema,
+  giftInputSchema,
 } from "../../contracts/src/identity.js";
 import type {
   Audience,
@@ -33,13 +38,15 @@ import type {
   MomentInput,
   MomentKind,
   Org,
+  OverlayPiece,
   PostDecor,
   Season,
 } from "../../contracts/src/identity.js";
+import { pieceDepth, textSlots, themeBand, themeEditSchema } from "../../contracts/src/themes.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
 import type { Asset, Publication, SocialService } from "./social.js";
-import { countryAt, jpegGps } from "./exif.js";
+import { countryAt, jpegGps, placeAt } from "./exif.js";
 import { queueMail } from "./mail.js";
 import type { OutboxMessage } from "./mail.js";
 import { reservedHandles } from "../../contracts/src/accounts.js";
@@ -57,13 +64,24 @@ interface EmailChallenge {
 interface Invite {
   code: string;
   orgId: string;
-  kind: "member" | "title";
+  kind: "member" | "title" | "stamp";
   label: string;
+  /** Stamp invites: the stamp this code hands out. */
+  collection?: string | undefined;
+  stamp?: string | undefined;
   from?: number | undefined;
   to?: number | "now" | undefined;
   uses: number;
   used: number;
   createdBy: string;
+  createdAt: string;
+}
+interface Gift {
+  id: string;
+  fromId: string;
+  toId: string;
+  decorationId: string;
+  note: string;
   createdAt: string;
 }
 interface PartnerRequest {
@@ -77,10 +95,17 @@ interface Choice {
   id: string | null;
   since: string;
 }
+/** A wearer's own version of a theme: where its pieces sit and the words in its text slots. */
+interface ThemeEdit {
+  pieces: { dx: number; dy: number }[];
+  texts: Record<string, string>;
+}
 interface Prefs {
   country?: CountryCode;
   base?: Choice;
   seasons?: Record<string, Choice>;
+  /** By theme id, so switching away and back keeps someone's edits. */
+  edits?: Record<string, ThemeEdit>;
 }
 export interface Moment {
   postId: string;
@@ -204,9 +229,12 @@ export class IdentityService {
     const circle = this.inCircle(viewer, ownerId);
     return this.chapters(ownerId).filter((c) => c.audience === "public" || circle);
   }
+  /** Told about every new chapter inside its transaction (sides: an organisation's side opens). */
+  chapterListeners: ((chapter: Chapter) => void)[] = [];
   private addChapter(chapter: Omit<Chapter, "id" | "createdAt">) {
     const value: Chapter = { ...chapter, id: randomUUID(), createdAt: this.now().toISOString() };
     this.store.put("chapter", value.id, value);
+    for (const listener of this.chapterListeners) listener(value);
     return value;
   }
   setChapterAudience(actor: Actor, id: string, input: unknown) {
@@ -325,6 +353,16 @@ export class IdentityService {
     const parsed = inviteCreateSchema.parse(input);
     if (!this.adminOrgs(userId).some((o) => o.id === parsed.orgId))
       throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    // A stamp can only be issued by the organiser of its collection.
+    if (parsed.stamp) {
+      const collection = collectionById(parsed.stamp.collection);
+      if (
+        !collection ||
+        collection.orgId !== parsed.orgId ||
+        !collection.stamps.some((st) => st.id === parsed.stamp!.stamp)
+      )
+        throw new AppError("STAMP_UNKNOWN", 400);
+    }
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     const code = Array.from(randomBytes(10), (b) => alphabet[b % alphabet.length]).join("");
     const invite: Invite = {
@@ -332,6 +370,7 @@ export class IdentityService {
       orgId: parsed.orgId,
       kind: parsed.kind,
       label: parsed.label,
+      ...(parsed.stamp ? { collection: parsed.stamp.collection, stamp: parsed.stamp.stamp } : {}),
       ...parsed.period,
       uses: parsed.uses,
       used: 0,
@@ -354,6 +393,14 @@ export class IdentityService {
     if (this.store.get("invite-use", `${invite.code}:${userId}`))
       throw new AppError("INVITE_ALREADY_USED", 409);
     if (invite.used >= invite.uses) throw new AppError("INVITE_EXHAUSTED", 410);
+    // One stamp per person: a second code for the same race adds nothing to the collection.
+    if (
+      invite.kind === "stamp" &&
+      this.chapters(userId).some(
+        (c) => c.kind === "stamp" && c.collection === invite.collection && c.stamp === invite.stamp,
+      )
+    )
+      throw new AppError("STAMP_ALREADY_HELD", 409);
     return this.store.transaction(() => {
       this.store.put("invite", invite.code, { ...invite, used: invite.used + 1 });
       this.store.put("invite-use", `${invite.code}:${userId}`, { userId });
@@ -362,6 +409,9 @@ export class IdentityService {
         kind: invite.kind,
         label: invite.label,
         orgId: invite.orgId,
+        ...(invite.kind === "stamp"
+          ? { collection: invite.collection!, stamp: invite.stamp! }
+          : {}),
         ...(invite.from === undefined ? {} : { from: invite.from }),
         ...(invite.to === undefined ? {} : { to: invite.to }),
         method: "invite",
@@ -427,16 +477,20 @@ export class IdentityService {
     if (!gps) throw new AppError("PHOTO_HAS_NO_LOCATION");
     const country = countryAt(gps.lat, gps.lon);
     if (!country) throw new AppError("COUNTRY_NOT_SUPPORTED");
+    // A place counts only inside the country the photo was placed in, so the two never disagree.
+    const found = placeAt(gps.lat, gps.lon);
+    const place = found && places[found].country === country ? found : undefined;
     const existing = this.chapters(userId).find(
-      (c) => c.kind === "travel" && c.country === country,
+      (c) => c.kind === "travel" && c.country === country && c.place === place,
     );
     if (existing) return existing;
     return this.store.transaction(() =>
       this.addChapter({
         ownerId: userId,
         kind: "travel",
-        label: `Been to ${countries[country]}`,
+        label: `Been to ${place ? places[place].name : countries[country]}`,
         country,
+        ...(place ? { place } : {}),
         from: this.now().getUTCFullYear(),
         method: "photo-location",
         audience: parsed.audience,
@@ -478,11 +532,25 @@ export class IdentityService {
       incoming: requests.filter((r) => r.to === userId),
       outgoing: requests.filter((r) => r.from === userId),
       adminOrgs: this.adminOrgs(userId).map(({ admins, ...o }) => o),
+      collections: this.collectionsFor(actor, userId),
+      /** Collections the organisations you manage issue stamps for, for the invite form. */
+      issuable: collections.filter((c) => this.adminOrgs(userId).some((o) => o.id === c.orgId)),
       outbox: this.outbox(actor),
     };
   }
 
   // Seasons and decorations ----------------------------------------------------------------
+  /**
+   * Approved community themes (ADR 0024), supplied by the theme studio. They join the shipped
+   * catalog; a theme that is later removed simply stops resolving, so nobody wears it any more.
+   */
+  communityThemes: () => Decoration[] = () => [];
+  private catalog() {
+    return [...decorations, ...this.communityThemes()];
+  }
+  private decorationById(id: string) {
+    return decorationById(id) ?? this.communityThemes().find((d) => d.id === id);
+  }
   private prefs(userId: string) {
     return this.store.get<Prefs>("prefs", userId) ?? {};
   }
@@ -522,20 +590,20 @@ export class IdentityService {
       const choice = prefs.seasons?.[season.key];
       if (!choice)
         return {
-          decoration: decorationById(season.defaultDecorationId)!,
+          decoration: this.decorationById(season.defaultDecorationId)!,
           source: "season-default" as const,
           since: null,
         };
-      if (choice.id && this.unlock(userId, decorationById(choice.id)).ok)
+      if (choice.id && this.unlock(userId, this.decorationById(choice.id)).ok)
         return {
-          decoration: decorationById(choice.id)!,
+          decoration: this.decorationById(choice.id)!,
           source: "season-choice" as const,
           since: choice.since,
         };
     }
-    if (prefs.base?.id && this.unlock(userId, decorationById(prefs.base.id)).ok)
+    if (prefs.base?.id && this.unlock(userId, this.decorationById(prefs.base.id)).ok)
       return {
-        decoration: decorationById(prefs.base.id)!,
+        decoration: this.decorationById(prefs.base.id)!,
         source: "base" as const,
         since: prefs.base.since,
       };
@@ -556,17 +624,189 @@ export class IdentityService {
                 : `Members of ${org.name}. Ask them for an invite code.`,
           };
     }
-    if (decoration.tier === "seasonal") {
-      const active = this.activeSeason(userId);
-      if (active?.id !== decoration.seasonId) {
-        const season = seasons.find((s) => s.id === decoration.seasonId)!;
+    if (decoration.tier === "event") {
+      const event = themeEventById(decoration.eventId!)!;
+      if (event.kind === "season" && this.activeSeason(userId)?.id !== event.seasonId) {
+        const season = seasons.find((s) => s.id === event.seasonId)!;
         return {
           ok: false,
           reason: `Only during ${season.name} (${season.start} to ${season.end}).`,
         };
       }
+      // A trip theme stays yours while the travel chapter that proves it exists.
+      // A place's chapter also proves its country; a country's chapter does not prove a place.
+      if (
+        event.kind === "trip" &&
+        !this.chapters(userId).some(
+          (c) =>
+            c.kind === "travel" &&
+            c.country === event.country &&
+            (!event.place || c.place === event.place),
+        )
+      )
+        return {
+          ok: false,
+          reason: `${event.name}. Prove it with a photo taken in ${
+            event.place ? places[event.place].name : countries[event.country]
+          }.`,
+        };
+      if (event.kind === "stamp" || event.kind === "collection") {
+        const collection = collectionById(event.collection)!;
+        const held = this.stampsHeld(userId, collection.id);
+        if (event.kind === "stamp" && !held.has(event.stamp)) {
+          const stamp = collection.stamps.find((st) => st.id === event.stamp)!;
+          return {
+            ok: false,
+            reason: `Finishers of ${stamp.name}. Enter the stamp code from ${orgById(collection.orgId)!.name}.`,
+          };
+        }
+        if (event.kind === "collection" && held.size < collection.stamps.length)
+          return {
+            ok: false,
+            reason: `All ${collection.stamps.length} stamps of ${collection.name}; you have ${held.size}.`,
+          };
+      }
     }
     return { ok: true };
+  }
+  private stampsHeld(userId: string, collectionId: string) {
+    return new Set(
+      this.chapters(userId)
+        .filter((c) => c.kind === "stamp" && c.collection === collectionId)
+        .map((c) => c.stamp!),
+    );
+  }
+  /**
+   * Collections (ADR 0028) as the viewer may see them: every collection the owner holds at least
+   * one visible stamp in, with the missing stamps shown as gaps.
+   */
+  collectionsFor(actor: Actor, ownerId: string) {
+    const visible = this.chaptersFor(actor, ownerId).filter((c) => c.kind === "stamp");
+    return collections
+      .map((collection) => {
+        const mine = visible.filter((c) => c.collection === collection.id);
+        if (mine.length === 0) return null;
+        return {
+          id: collection.id,
+          name: collection.name,
+          org: orgById(collection.orgId)!.name,
+          side: collection.side ?? null,
+          held: mine.length,
+          total: collection.stamps.length,
+          stamps: collection.stamps.map((st) => {
+            const chapter = mine.find((c) => c.stamp === st.id);
+            return {
+              id: st.id,
+              name: st.name,
+              held: !!chapter,
+              ...(chapter ? { label: chapter.label, at: chapter.createdAt } : {}),
+            };
+          }),
+        };
+      })
+      .filter((c) => c !== null);
+  }
+  // Gifts (ADR 0031) ------------------------------------------------------------------------
+  /**
+   * Giving a theme is a social act with a note, not a purchase: market themes are open to wear
+   * already, so the gift adds the reason and the name. Earned themes (proof, membership) can
+   * never be given, which keeps the moat: a finisher medal is only ever a finisher's.
+   */
+  giftDecoration(actor: Actor, input: unknown) {
+    const userId = this.social.actor(actor);
+    const { toId, decorationId, note } = giftInputSchema.parse(input);
+    if (toId === userId) throw new AppError("GIFT_SELF", 400);
+    this.user(toId);
+    this.social.relationGuard(userId, toId);
+    const decoration = this.decorationById(decorationId);
+    if (!decoration || decoration.tier !== "market")
+      throw new AppError("GIFT_NOT_MARKET", 400, {
+        reason: "Only market themes can be given. Proof and membership themes are earned.",
+      });
+    const gift: Gift = {
+      id: randomUUID(),
+      fromId: userId,
+      toId,
+      decorationId,
+      note,
+      createdAt: this.now().toISOString(),
+    };
+    this.store.transaction(() => {
+      this.store.put("gift", gift.id, gift);
+      this.social.emit({ type: "gift", actorId: userId, targetId: toId });
+    });
+    return { id: gift.id };
+  }
+  /** Gifts someone received, newest first, with the giver named when they still exist. */
+  private gifts(userId: string) {
+    const users = new Map(this.social.users().map((u) => [u.id, u]));
+    return this.store
+      .all<Gift>("gift")
+      .filter((g) => g.toId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .flatMap((g) => {
+        const from = users.get(g.fromId);
+        const d = this.decorationById(g.decorationId);
+        if (!from || !d) return [];
+        return [
+          {
+            id: g.id,
+            decoration: { id: d.id, name: d.name, accent: d.accent },
+            from: { id: from.id, name: from.name, handle: from.handle },
+            note: g.note,
+            at: g.createdAt,
+          },
+        ];
+      });
+  }
+
+  /** Season themes come and go with their dates, so they can never be someone's everyday look. */
+  private seasonal(decoration: Decoration) {
+    return decoration.tier === "event" && themeEventById(decoration.eventId!)?.kind === "season";
+  }
+  /**
+   * The theme as its wearer edited it. Edits are re-checked on read, like the lock: a piece moved
+   * out of the edge band, or text for a slot the design no longer has, is simply ignored.
+   */
+  private edited(d: Decoration, ownerId: string | undefined): OverlayPiece[] {
+    const edit = ownerId ? this.prefs(ownerId).edits?.[d.id] : undefined;
+    if (!edit) return d.pieces;
+    return d.pieces.map((p, i) => {
+      const moved = edit.pieces.length === d.pieces.length ? { ...p, ...edit.pieces[i]! } : p;
+      const piece = pieceDepth(moved) <= themeBand ? moved : p;
+      if (!("html" in piece)) return piece;
+      const slots = textSlots(piece.html);
+      const texts = Object.fromEntries(
+        Object.entries(edit.texts)
+          .filter(([key]) => key.startsWith(`${i}.`) && slots.includes(key.slice(2)))
+          .map(([key, text]) => [key.slice(2), text]),
+      );
+      return Object.keys(texts).length ? { ...piece, texts } : piece;
+    });
+  }
+  private themeView(d: Decoration, users: User[], ownerId?: string) {
+    const event = d.eventId ? themeEventById(d.eventId) : undefined;
+    return {
+      id: d.id,
+      name: d.name,
+      accent: d.accent,
+      font: d.font,
+      tier: d.tier,
+      ...(event ? { event: event.name } : {}),
+      ...(d.sponsor ? { sponsor: d.sponsor } : {}),
+      creator: users.find((u) => u.id === d.creatorId)?.handle ?? d.creatorId,
+      pieces: this.edited(d, ownerId),
+    };
+  }
+  /** The theme someone wears, for their profile page. Wearing it is the owner's own choice. */
+  themeFor(actor: Actor, ownerId: string) {
+    const viewer = this.social.actor(actor);
+    this.user(ownerId);
+    // A theme dresses posts and can reveal a trip, so it follows who may see those posts: blocks,
+    // hidden and private accounts all answer through the same view filter chain.
+    if (!this.social.viewFilter(viewer, { id: "", ownerId } as Publication)) return null;
+    const effective = this.effectiveDecoration(ownerId);
+    return effective ? this.themeView(effective.decoration, this.social.users(), ownerId) : null;
   }
   decorations(actor: Actor) {
     const userId = this.social.actor(actor);
@@ -578,31 +818,74 @@ export class IdentityService {
         : { id: null, source: "none" },
       season: season ? { id: season.id, name: season.name, key: season.key } : null,
       country: this.prefs(userId).country ?? null,
-      items: decorations.map((d) => {
+      gifts: this.gifts(userId),
+      items: this.catalog().map((d) => {
         const lock = this.unlock(userId, d);
+        const event = d.eventId ? themeEventById(d.eventId) : undefined;
         return {
           id: d.id,
           name: d.name,
           tier: d.tier,
           accent: d.accent,
+          font: d.font,
+          event: event?.name ?? null,
+          seasonal: this.seasonal(d),
           sponsor: d.sponsor,
           creator: this.store.get<User>("user", d.creatorId)?.handle ?? d.creatorId,
           emotes: d.emotes.map((id) => stickerById(id)!),
           pieces: d.pieces,
+          /** The caller's own edit of this theme, if they made one. */
+          edit: this.prefs(userId).edits?.[d.id] ?? null,
           unlocked: lock.ok,
           reason: lock.reason ?? null,
         };
       }),
     };
   }
+  /** Saves the caller's own version of a theme they may wear. The theme stays as it is for others. */
+  editDecoration(actor: Actor, input: unknown) {
+    const userId = this.social.actor(actor);
+    const { decorationId, pieces, texts } = themeEditSchema.parse(input);
+    const decoration = this.decorationById(decorationId);
+    const lock = this.unlock(userId, decoration);
+    if (!lock.ok) throw new AppError("DECORATION_LOCKED", 403, { reason: lock.reason });
+    const d = decoration!;
+    if (pieces.length !== d.pieces.length)
+      throw new AppError("THEME_EDIT_INVALID", 400, { reason: "One position per piece." });
+    pieces.forEach((at, i) => {
+      if (pieceDepth({ ...d.pieces[i]!, ...at }) > themeBand)
+        throw new AppError("THEME_EDIT_INVALID", 400, {
+          reason: `Piece ${i + 1} would cover the post. Keep it near an edge.`,
+        });
+    });
+    for (const key of Object.keys(texts)) {
+      const piece = d.pieces[Number(key[0])];
+      if (!piece || !("html" in piece) || !textSlots(piece.html).includes(key.slice(2)))
+        throw new AppError("THEME_EDIT_INVALID", 400, { reason: "That text cannot be changed." });
+    }
+    const prefs = this.prefs(userId);
+    const next = { ...prefs, edits: { ...prefs.edits, [d.id]: { pieces, texts } } };
+    this.store.transaction(() => this.store.put("prefs", userId, next));
+    return this.decorations(actor);
+  }
+  /** Back to the designer's original. */
+  resetDecorationEdit(actor: Actor, decorationId: string) {
+    const userId = this.social.actor(actor);
+    const prefs = this.prefs(userId);
+    if (prefs.edits?.[decorationId]) {
+      const { [decorationId]: _gone, ...edits } = prefs.edits;
+      this.store.transaction(() => this.store.put("prefs", userId, { ...prefs, edits }));
+    }
+    return this.decorations(actor);
+  }
   chooseDecoration(actor: Actor, input: unknown) {
     const userId = this.social.actor(actor);
     const { decorationId, scope } = decorationChoiceSchema.parse(input);
     if (decorationId !== null) {
-      const decoration = decorationById(decorationId);
+      const decoration = this.decorationById(decorationId);
       const lock = this.unlock(userId, decoration);
       if (!lock.ok) throw new AppError("DECORATION_LOCKED", 403, { reason: lock.reason });
-      if (scope === "base" && decoration!.tier === "seasonal")
+      if (scope === "base" && this.seasonal(decoration!))
         throw new AppError("SEASONAL_NOT_PERMANENT");
     }
     const prefs = this.prefs(userId);
@@ -640,7 +923,7 @@ export class IdentityService {
       all += weight;
     }
     const creatorPot = creatorPool.monthly * creatorPool.creatorShare;
-    const mine = decorations
+    const mine = this.catalog()
       .filter((d) => d.creatorId === userId)
       .map((d) => {
         const t = totals.get(d.id) ?? { adopters: 0, weight: 0 };
@@ -815,19 +1098,7 @@ export class IdentityService {
       return {
         ...post,
         likes: hideCounts ? 0 : post.likes,
-        ...(d
-          ? {
-              decoration: {
-                id: d.id,
-                name: d.name,
-                accent: d.accent,
-                tier: d.tier,
-                ...(d.sponsor ? { sponsor: d.sponsor } : {}),
-                creator: users.find((u) => u.id === d.creatorId)?.handle ?? d.creatorId,
-                pieces: d.pieces,
-              },
-            }
-          : {}),
+        ...(d ? { decoration: this.themeView(d, users, post.ownerId) } : {}),
         ...(moment ? { moment: this.momentView(moment) } : {}),
         reactions: {
           options: this.reactionOptions(this.social.post(post.id)),

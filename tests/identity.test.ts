@@ -6,8 +6,10 @@ import { join } from "node:path";
 import { Store } from "../packages/core/src/database.js";
 import { SocialService } from "../packages/core/src/social.js";
 import { IdentityService } from "../packages/core/src/identity.js";
-import { countryAt, jpegGps } from "../packages/core/src/exif.js";
+import { countryAt, jpegGps, placeAt } from "../packages/core/src/exif.js";
 import { renderMoment } from "../apps/server/moments.js";
+import { decorations } from "../packages/contracts/src/identity.js";
+import { pieceDepth, themeBand } from "../packages/contracts/src/themes.js";
 
 const alice = { userId: "alice" },
   bob = { userId: "bob" },
@@ -318,6 +320,73 @@ test("seasons apply a default, allow a manual choice per season, and members the
   );
 });
 
+test("a proven trip opens its event themes, which the profile and feed both wear", async () => {
+  const { identity, social } = await setup("2026-03-10T10:00:00Z");
+  const paris = () => identity.decorations(alice).items.find((d) => d.id === "paris")!;
+  assert.equal(paris().unlocked, false);
+  assert.equal(paris().event, "Trip to France");
+  rejects(
+    () => identity.chooseDecoration(alice, { decorationId: "paris", scope: "base" }),
+    "DECORATION_LOCKED",
+  );
+  const tokyo = social.upload(alice, {
+    name: "tokyo.jpg",
+    mime: "image/jpeg",
+    base64: jpegAt(35.68, 139.69).toString("base64"),
+  });
+  identity.travelProof(alice, { assetId: tokyo.id });
+  assert.equal(paris().unlocked, false, "another country does not open it");
+  const photo = social.upload(alice, {
+    name: "paris.jpg",
+    mime: "image/jpeg",
+    base64: jpegAt(48.86, 2.35).toString("base64"),
+  });
+  const chapter = identity.travelProof(alice, { assetId: photo.id });
+  assert.equal(paris().unlocked, true);
+  // Unlike a season, a trip theme can be someone's everyday look.
+  identity.chooseDecoration(alice, { decorationId: "paris", scope: "base" });
+  assert.deepEqual(
+    { ...identity.themeFor(bob, "alice"), pieces: undefined },
+    {
+      id: "paris",
+      name: "Paris",
+      accent: "#1f3a5f",
+      font: "serif",
+      tier: "event",
+      event: "Trip to France",
+      creator: "ines",
+      pieces: undefined,
+    },
+  );
+  const post = social.publish(
+    alice,
+    social.createDraft(alice, {
+      package: {
+        manifest: {
+          schemaVersion: 1,
+          runtimeVersion: "web-v1",
+          name: "x",
+          entrypoint: "index.html",
+          capabilities: [],
+        },
+        files: { "index.html": "<p>x</p>" },
+      },
+      metadata: { title: "x" },
+    }).id,
+    1,
+  );
+  const view = identity.decorate(bob, social.feed(bob)).find((p) => p.id === post.id)!;
+  assert.equal(view.decoration?.id, "paris");
+  assert.equal(view.decoration?.font, "serif");
+  // Removing the proof takes the theme off; the stored choice cannot outlive it.
+  identity.removeChapter(alice, chapter.id);
+  assert.equal(identity.themeFor(bob, "alice"), null);
+  assert.equal(
+    identity.decorate(bob, social.feed(bob)).find((p) => p.id === post.id)!.decoration,
+    undefined,
+  );
+});
+
 test("creator estimate weighs new adopters above old ones and defaults at half", async () => {
   const { identity, clock } = await setup("2026-03-10T10:00:00Z");
   identity.chooseDecoration(alice, { decorationId: "cat-peek", scope: "base" });
@@ -337,4 +406,48 @@ test("open signup creates distinct handles", async () => {
   assert.equal(user.handle, "salsa.bila");
   assert.equal(user.initials, "SB");
   rejects(() => identity.signup({ name: "Other", handle: "salsa.bila" }), "HANDLE_TAKEN");
+});
+
+test("theme pieces stay in a band along the edge, so the post underneath stays readable", () => {
+  // The same rule community submissions are held to; buttons sit above pieces, never under.
+  for (const d of decorations)
+    for (const p of d.pieces)
+      assert.ok(
+        pieceDepth(p) <= themeBand,
+        `${d.id} ${p.anchor} reaches ${pieceDepth(p)}px into the post`,
+      );
+});
+
+test("a trip to a place opens its own theme, while the country alone does not", async () => {
+  const { identity, social } = await setup("2026-03-10T10:00:00Z");
+  assert.equal(placeAt(-8.65, 115.22), "bali", "Denpasar");
+  assert.equal(placeAt(-8.17, 114.45), "bali", "Gilimanuk, on the west tip");
+  assert.equal(placeAt(-8.58, 116.12), null, "Lombok is not Bali");
+  assert.equal(placeAt(-8.22, 114.36), null, "Banyuwangi, across the strait");
+  const item = (id: string) => identity.decorations(alice).items.find((d) => d.id === id)!;
+  const prove = (name: string, lat: number, lon: number) =>
+    identity.travelProof(alice, {
+      assetId: social.upload(alice, {
+        name,
+        mime: "image/jpeg",
+        base64: jpegAt(lat, lon).toString("base64"),
+      }).id,
+    });
+  assert.equal(
+    item("bali-frangipani").reason,
+    "Trip to Bali. Prove it with a photo taken in Bali.",
+  );
+  const jakarta = prove("jakarta.jpg", -6.2, 106.8);
+  assert.equal(jakarta.label, "Been to Indonesia");
+  assert.equal(item("bali-frangipani").unlocked, false, "Indonesia is not Bali");
+  const bali = prove("ubud.jpg", -8.51, 115.26);
+  assert.equal(bali.label, "Been to Bali");
+  assert.equal(bali.country, "ID");
+  assert.notEqual(bali.id, jakarta.id);
+  assert.equal(prove("kuta.jpg", -8.72, 115.17).id, bali.id, "one chapter per place");
+  assert.equal(item("bali-frangipani").unlocked, true);
+  assert.equal(item("sakura-gate").unlocked, false);
+  prove("kyoto.jpg", 35.01, 135.77);
+  assert.equal(item("sakura-gate").unlocked, true);
+  assert.equal(item("sakura-gate").event, "Trip to Japan");
 });

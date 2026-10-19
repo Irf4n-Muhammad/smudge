@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openMoreMenu } from "./nav";
 
 test("post buttons open pages in the in-app sheet, and the season can be switched", async ({
   page,
@@ -37,7 +38,7 @@ test("post buttons open pages in the in-app sheet, and the season can be switche
 
   // The season is the viewer's pick and survives a reload.
   const before = await page.evaluate(() => document.documentElement.dataset.season);
-  await page.getByRole("button", { name: /^Season:/ }).click();
+  await (await openMoreMenu(page)).getByRole("button", { name: /^Season:/ }).click();
   const after = await page.evaluate(() => document.documentElement.dataset.season);
   expect(after).not.toBe(before);
   await page.reload();

@@ -1,0 +1,494 @@
+/*
+ * Themes (ADR 0022): one look for a person, worn on their profile and around every post of
+ * theirs in the feed. The post content stays untouched and readable; a theme only dresses the
+ * frame around it: edge pieces, an accent ring and glow, and the face of the owner's name.
+ */
+:root {
+  --theme-ui: var(--ui);
+  --theme-serif: "Instrument Serif", Georgia, serif;
+  --theme-hand: var(--hand);
+  --theme-display: "Bricolage Grotesque", var(--ui);
+  --theme-spray: var(--wordmark);
+}
+
+.post-card.themed.classic-post .runtime,
+.post-card.themed.classic-post .moment-cover {
+  box-shadow:
+    0 0 0 3px var(--decor-accent),
+    0 30px 80px -20px color-mix(in srgb, var(--decor-accent) 45%, transparent);
+}
+html[data-theme="dark"] .post-card.themed.classic-post .runtime,
+html[data-theme="dark"] .post-card.themed.classic-post .moment-cover {
+  box-shadow:
+    0 0 0 3px var(--decor-accent),
+    0 30px 90px -18px color-mix(in srgb, var(--decor-accent) 55%, transparent);
+}
+.post-card.themed .author strong {
+  font-family: var(--decor-font);
+  font-size: 1.12em;
+  font-weight: 400;
+}
+.post-card.themed .author strong small {
+  font-family: var(--ui);
+  font-size: 0.8em;
+}
+.post-card.themed .author .avatar {
+  box-shadow: 0 0 0 2px var(--decor-accent);
+}
+.post-card.themed .decor-credit strong {
+  font-family: var(--decor-font);
+  font-weight: 400;
+  font-size: 1.15em;
+}
+
+/* The theme picker: grouped by what opens a theme. */
+.theme-group {
+  margin-top: 26px;
+}
+.theme-group h2 {
+  margin: 0;
+  font: 700 18px var(--ui);
+}
+.theme-group > .fineprint {
+  margin: 4px 0 12px;
+}
+.decoration-sample {
+  display: grid;
+  place-items: center;
+}
+.theme-font-sample {
+  color: #fff;
+  font-size: 22px;
+  text-shadow: 0 1px 2px #0006;
+}
+.theme-font-ui {
+  font-family: var(--theme-ui);
+}
+.theme-font-serif {
+  font-family: var(--theme-serif);
+}
+.theme-font-hand {
+  font-family: var(--theme-hand);
+}
+.theme-font-display {
+  font-family: var(--theme-display);
+}
+.theme-font-spray {
+  font-family: var(--theme-spray);
+}
+
+/* Profile: the owner's theme frames their world and names itself in the header. */
+.profile-theme-frame {
+  position: relative;
+  /* Pieces may hang past the world's edge, never past the page (no sideways scroll on phones). */
+  overflow-x: clip;
+  overflow-clip-margin: 0;
+}
+.profile-theme-frame.has-decor .decor-frame > .profile-world,
+.profile-theme-frame.has-decor .decor-frame > .profile-default {
+  box-shadow: 0 0 0 3px var(--decor-accent);
+  border-radius: 18px;
+}
+.profile-theme-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--decor-accent);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--decor-accent) 14%, transparent);
+  font-family: var(--decor-font);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.profile-theme-chip small {
+  font-family: var(--ui);
+  font-size: 11px;
+  color: var(--muted);
+}
+/* A phone's header row is already full; the theme still shows in the frame and its pieces. */
+@media (max-width: 520px) {
+  .profile-theme-chip {
+    display: none;
+  }
+}
+/*
+ * On a profile the pieces hang in a band above the world instead of over the header controls,
+ * a little smaller than on a post, growing from the edge they cling to.
+ */
+.profile-theme-frame.has-decor {
+  padding-top: 64px;
+}
+.profile-illustrated .profile-theme-frame .decor-frame {
+  max-width: 1024px;
+  margin-inline: auto;
+}
+.profile-theme-frame .decor-piece {
+  transform: scale(0.7);
+  transform-origin: center bottom;
+}
+.profile-theme-frame .decor-piece.decor-bottom-left,
+.profile-theme-frame .decor-piece.decor-bottom-right {
+  transform-origin: center top;
+}
+
+/* Community themes (ADR 0024): a designer's HTML and CSS, drawn as an image. */
+.decor-piece .theme-piece-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.theme-studio {
+  margin: 40px 16px 0;
+  display: grid;
+  gap: 10px;
+}
+.theme-studio h2,
+.theme-mine h3 {
+  margin: 0;
+}
+.theme-studio-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.theme-studio-form {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.theme-studio-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.theme-studio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.theme-studio-row label {
+  flex: 1 1 120px;
+}
+.theme-studio-row .theme-number {
+  flex: 0 1 72px;
+}
+.theme-studio-form textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+.theme-piece-editor {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px 12px;
+  min-width: 0;
+}
+.theme-studio-preview {
+  position: sticky;
+  top: 80px;
+  display: grid;
+  gap: 12px;
+  padding: 44px 34px 0;
+}
+.theme-studio-problem {
+  margin: 0;
+  font-size: 12px;
+  color: #b3261e;
+}
+.theme-mine ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.theme-mine li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.theme-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  color: var(--muted);
+}
+.theme-status-approved {
+  color: #1f7a4d;
+}
+.theme-status-rejected,
+.theme-status-removed {
+  color: #b3261e;
+}
+.theme-review-sample {
+  width: min(240px, 70%);
+  padding: 40px 30px 10px;
+}
+.theme-code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  max-height: 220px;
+  overflow: auto;
+  background: var(--soft, #0000000d);
+  padding: 8px;
+  border-radius: 8px;
+}
+.theme-review-note {
+  width: 100%;
+}
+@media (max-width: 700px) {
+  .theme-studio {
+    margin-inline: 8px;
+  }
+  .theme-studio-grid {
+    grid-template-columns: 1fr;
+  }
+  .theme-studio-preview {
+    position: static;
+    padding: 44px 40px 0;
+  }
+}
+
+/* Picking and editing a theme (ADR 0025). */
+.theme-wearing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 16px 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.theme-wearing .quiet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.theme-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px;
+}
+.theme-filters .chip {
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.theme-filters .chip.active {
+  background: var(--ink);
+  color: var(--paper, #fff);
+  border-color: var(--ink);
+}
+.theme-card-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: inherit;
+}
+.theme-designer-link {
+  margin: 28px 16px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.theme-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 16px 8px;
+}
+.theme-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.8fr);
+  gap: 22px;
+  align-items: center;
+  padding: 8px 4px 4px;
+}
+.theme-preview-info {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.theme-preview-info .primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.theme-stage {
+  position: relative;
+  width: min(340px, 100%);
+  margin: 56px auto 40px;
+}
+.theme-stage-card {
+  border-radius: 18px;
+  padding: 12px;
+  background: var(--card, #fff);
+  box-shadow:
+    0 0 0 2px var(--decor-accent),
+    0 10px 30px color-mix(in srgb, var(--decor-accent) 30%, transparent);
+}
+.theme-stage-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.theme-stage-head strong {
+  font-family: var(--decor-font);
+  font-size: 17px;
+}
+.theme-stage-body {
+  aspect-ratio: 4 / 5;
+  border-radius: 10px;
+  opacity: 0.3;
+}
+.theme-stage .decor-credit {
+  margin: 8px 0 0;
+}
+.theme-edit-art,
+.theme-edit-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.decor-piece.theme-edit-piece {
+  pointer-events: auto;
+  cursor: grab;
+  outline: 2px dashed color-mix(in srgb, var(--decor-accent) 70%, transparent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.decor-piece.theme-edit-piece:active {
+  cursor: grabbing;
+}
+.decor-piece.theme-edit-piece:focus-visible {
+  outline-style: solid;
+}
+.theme-editor {
+  display: grid;
+  gap: 10px;
+}
+.theme-edit-texts {
+  display: grid;
+  gap: 10px;
+  max-width: 420px;
+  margin: 0 auto;
+  width: 100%;
+}
+.theme-edit-texts label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.theme-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+@media (max-width: 700px) {
+  .theme-preview {
+    grid-template-columns: 1fr;
+  }
+}
+.theme-edit-piece,
+.theme-edit-piece * {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.theme-editor,
+.theme-preview {
+  padding: 0 24px 20px;
+}
+
+/* Gifts (ADR 0031) */
+.theme-gifts {
+  margin: 0 0 18px;
+  display: grid;
+  gap: 8px;
+}
+.theme-gifts h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  margin: 0;
+}
+.theme-gift {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--gift-accent, #ff5a1f) 14%, var(--white));
+}
+.theme-gift-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gift-accent, #ff5a1f);
+  flex-shrink: 0;
+}
+.theme-gift > div {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.theme-gift strong {
+  font-size: 14px;
+}
+.theme-gift q {
+  font-size: 13px;
+  opacity: 0.8;
+}
+.theme-gift-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.theme-gift-form {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+.theme-gift-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.theme-gift-form select,
+.theme-gift-form input {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line, #ddd);
+  background: var(--white);
+  color: inherit;
+}
+.theme-gift-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}

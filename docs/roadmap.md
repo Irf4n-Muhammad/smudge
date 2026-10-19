@@ -16,6 +16,31 @@
       GPS), proof-locked moment pages with circle/public audience, preset one-per-person reactions,
       edge decorations with members-only, sponsored and seasonal tiers, local seasons by country,
       simulated decaying creator pool, open signup and full-screen posts. See ADR 0011.
+- [x] Themes: one look worn on the profile and around every post in the feed (edges, frame,
+      name face), in three kinds (event, members, market), with trip events opened by a proven
+      trip (France first). See ADR 0022.
+- [x] More trip themes (Japan, South Korea, Thailand) and trips to a place inside a country
+      (Bali). See ADR 0026.
+- [x] Open theme market: anyone submits a theme made of their own HTML and CSS, moderators review
+      it, and approved themes join the market; pieces are drawn as images. See ADR 0024.
+- [x] Wear and edit themes: a gallery with a preview of yourself, and a personal version where
+      you drag pieces and rewrite designer-marked text. See ADR 0025.
+- [x] Sides: one account, many worlds (Everyday, Runners, a private festival crew side), each
+      its own feed and composer, a post in one side with an explicit share to Everyday, private
+      sides invisible from outside, entry by tap or by an organisation's invite. See ADR 0027.
+- [x] Stamps and collections: organiser-issued stamp codes, a collection with visible gaps,
+      and themes that open with one stamp or the full set. See ADR 0028.
+- [x] Plans: a post people join from inside the post, with the count and the names. Challenges
+      (a shared counter) and live race-day posts are the next shapes. See ADR 0029.
+- [x] Share cards: a picture of you in a side, saved or shared from the phone, whose link lands
+      inside the side. See ADR 0030.
+- [x] Gift themes: a market theme sent to someone with a note, worn from "Gifts for you".
+      No payment yet. See ADR 0031.
+- [x] Navigation in Instagram's shape: four tabs plus Messages and Notifications, one feed with
+      a For you / Following picker, Search with Posts and People, More behind the profile ☰.
+      The fifth tab is empty on purpose. See ADR 0032.
+- [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
+      wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 
 - [x] Local versioned mod library, source/asset sharing, complete or partial installs, part mixing,
       owned version updates, covers, private preview, undo, and matching MCP tools.
@@ -56,7 +81,9 @@ the application does not include or automatically connect a hosted model.
   Single instance on one SQLite file. Not yet deployed anywhere; the owner chooses the host.
 
 - Identity: email is a local outbox, organisations/admins are a static catalog, photo location is
-  evidence not proof, no lunar-calendar seasons, user-made decorations and real payouts are not built.
+  evidence not proof, no lunar-calendar seasons, buying market themes and real payouts are not
+  built. Community themes cannot use web fonts, outside images or interaction, and approval is
+  one moderator's call with no appeal. Personal edits cover position and text only, not colours. Trip themes exist for France, Japan, South Korea, Thailand and Bali; places use coarse boxes.
 
 - Profiles use bounded iframe heights, with optional content sizing up to 4000px and internal
   scrolling for larger documents. Visual controls currently support the Raka shell and compatible

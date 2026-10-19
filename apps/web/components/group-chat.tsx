@@ -144,7 +144,10 @@ export function GroupThread({
     const timer = setInterval(() => void load(), 5000);
     return () => clearInterval(timer);
   }, [load]);
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [thread?.messages.length]);
+  useEffect(() => {
+    // Newer browsers return a Promise from scrollIntoView; an effect may only return a cleanup.
+    void end.current?.scrollIntoView({ block: "end" });
+  }, [thread?.messages.length]);
   useEffect(() => {
     if (members) void api<Person[]>("/groups/candidates").then(setCandidates);
   }, [members]);

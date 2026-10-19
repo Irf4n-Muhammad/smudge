@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openMore, openPeople, pickFeed } from "./nav";
 
 // Switching between people waits out each toast, so these run longer than most.
 test.describe.configure({ timeout: 120_000 });
@@ -36,7 +37,7 @@ async function viewAs(page: Page, option: string | { label: string }) {
 }
 // Waits for the button the current viewer should see, since switching people reloads the panel.
 async function findPerson(page: Page, handle: string, button: string) {
-  await page.getByRole("button", { name: "Find people", exact: true }).click();
+  await openPeople(page);
   const target = page.getByRole("button", { name: button, exact: true });
   await expect(async () => {
     await page.getByLabel("Search people").fill(handle);
@@ -47,7 +48,7 @@ async function findPerson(page: Page, handle: string, button: string) {
 
 test("a private account turns follows into requests the owner accepts", async ({ page }) => {
   const { handle, name } = await signUp(page, "quiet");
-  await page.getByRole("button", { name: "Account settings" }).click();
+  await openMore(page, "Account settings");
   const privateSwitch = page.getByRole("switch", { name: /Private account/ });
   await privateSwitch.click();
   await toast(page, "Your account is private");

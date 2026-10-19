@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { postPackageSchema } from "./index.js";
+import { sideIdSchema } from "./sides.js";
 
 export const capabilities = [
   "viewer.progress.read",
@@ -10,6 +11,8 @@ export const capabilities = [
   "polls.vote",
   "reactions.read",
   "reactions.place",
+  "plan.read",
+  "plan.join",
 ] as const;
 export const capability = z.enum(capabilities);
 export const manifestV2 = z
@@ -20,7 +23,7 @@ export const manifestV2 = z
     entrypoint: z.literal("index.html"),
     capabilities: z
       .array(capability)
-      .max(8)
+      .max(10)
       .refine((v) => new Set(v).size === v.length, "Duplicate capability"),
     assets: z.array(z.string().uuid()).max(12).default([]),
     stage: z
@@ -102,6 +105,8 @@ export const metadataSchema = z
     format: z.enum(["photo", "scrapbook", "story", "collaborative", "custom"]).default("custom"),
     contributors: z.array(z.string().max(40)).max(10).default([]),
     link: postLinkSchema.optional(),
+    /** The side this post lives in (ADR 0027); absent means Everyday. Membership is checked on publish. */
+    side: sideIdSchema.optional(),
     /** Set by website import: the page this post was rebuilt from, shown as "Imported from". */
     source: z
       .object({

@@ -31,6 +31,15 @@ import { seedIdentity } from "./seed-identity.js";
 import { seedSmudge } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
+import { themeRoutes } from "./theme-routes.js";
+import { ThemeStudio } from "../../packages/core/src/themes.js";
+import { seedThemes } from "./seed-themes.js";
+import { SidesService } from "../../packages/core/src/sides.js";
+import { PlansService } from "../../packages/core/src/plans.js";
+import { ShareCardService } from "../../packages/core/src/share-card.js";
+import { sideById } from "../../packages/contracts/src/sides.js";
+import { sideRoutes } from "./side-routes.js";
+import { seedGift, seedPlan, seedSides, seedStamps } from "./seed-sides.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
@@ -107,11 +116,20 @@ const isAdmin = (userId: string) => {
   return account.emailVerified && !!account.email && config.adminEmails.includes(account.email);
 };
 const community = new CommunityService(service, isAdmin, clock);
+const studio = new ThemeStudio(service, isAdmin, clock);
+identity.communityThemes = () => studio.approved();
+accounts.erasers.push((userId) => studio.erase(userId));
 accounts.loginGate = (userId) => {
   if (community.isSuspended(userId)) throw new AppError("ACCOUNT_SUSPENDED", 403);
 };
 accounts.erasers.push((userId) => community.erase(userId));
 const privacy = new PrivacyService(service, community, clock);
+const sidesService = new SidesService(service, clock);
+// A plan's list of names follows who may see whom (blocks, hidden accounts), like comments do.
+const plans = new PlansService(service, clock);
+plans.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
+// An organisation's invite or email opens that organisation's side along with the chapter.
+identity.chapterListeners.push((c) => sidesService.joinByChapter(c));
 const messages = new MessageService(service, community, clock);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
@@ -125,6 +143,12 @@ if (config.demoContent) {
   seedProfiles(profiles);
   seedSmudge(service);
   seedPhotos(service);
+  // After the photo seed, which adds Arif.
+  seedThemes(service, studio);
+  seedSides(service, sidesService);
+  seedStamps(service);
+  seedPlan(service);
+  seedGift(service);
 }
 const sharing = new SharingService(service, community, identity, profiles);
 const media = new MediaService(service, resolve(dataDir, "media"));
@@ -306,6 +330,7 @@ api.get("/api/bootstrap", (_req, res) =>
     following: service.following(actor(res)),
     requested: privacy.requested(actor(res)),
     assets: service.assets(actor(res)),
+    sides: sidesService.me(actor(res)),
   }),
 );
 const authLimit = rateLimit({ windowMs: 15 * 60_000, max: 30 });
@@ -380,17 +405,29 @@ api.post("/api/signup", (req, res) => {
   res.json(user);
 });
 api.get("/api/feed", (_req, res) =>
-  res.json(identity.decorate(actor(res), service.feed(actor(res)))),
+  res.json(
+    identity
+      .decorate(actor(res), service.feed(actor(res)))
+      .map((p) => ({ ...p, ...sidesService.tag(p) })),
+  ),
 );
 // Moments are for the people who care, so they are never pushed to strangers or search.
 api.get("/api/explore", (req, res) =>
   res.json(
     identity
       .decorate(actor(res), service.explore(actor(res), req.query.q))
-      .filter((p) => !("moment" in p && p.moment)),
+      .filter((p) => !("moment" in p && p.moment))
+      .map((p) => ({ ...p, ...sidesService.tag(p) })),
   ),
 );
+sideRoutes(
+  api,
+  sidesService,
+  new ShareCardService(service, identity, sidesService),
+  config.publicUrl.origin,
+);
 identityRoutes(api, identity);
+themeRoutes(api, studio, rateLimit({ windowMs: 60 * 60_000, max: 20 }));
 communityRoutes(api, community, messages, privacy, accounts, clearSession, authLimit);
 // Google sign-in. The state and PKCE verifier live in a short-lived cookie scoped to the
 // callback path; SameSite=Lax because Google sends the browser back with a top-level GET.
@@ -659,6 +696,12 @@ api.post("/api/posts/:id/edit", (req, res) => {
 // Share links: read-only views anyone can open without an account.
 const guestLimit = rateLimit({ windowMs: 60_000, max: 120 });
 api.get("/api/public/showcase", guestLimit, (_req, res) => res.json(sharing.showcase()));
+// A share card's landing page names the side it came from; private sides are never acknowledged.
+api.get("/api/public/sides/:id", guestLimit, (req, res) => {
+  const side = sideById(z.string().max(40).parse(req.params.id));
+  if (!side || side.private) throw new AppError("NOT_FOUND", 404);
+  res.json({ id: side.id, name: side.name, tagline: side.tagline, accent: side.accent });
+});
 api.get("/api/public/posts/:id", guestLimit, (req, res) =>
   res.json(sharing.post(String(req.params.id))),
 );
@@ -740,11 +783,12 @@ api.post("/api/posts/:id/reuse", (req, res) => {
       for (const [before, after] of replacements)
         pkg.files[path] = pkg.files[path]!.replaceAll(`asset:${before}`, `asset:${after}`);
   }
+  const { side: _side, ...copied } = post.metadata;
   res.json(
     service.createDraft(actor(res), {
       package: pkg,
       metadata: {
-        ...post.metadata,
+        ...copied,
         coverAssetId,
         title: `${post.metadata.title} — remix`.slice(0, 100),
         contributors: [],
@@ -883,6 +927,7 @@ api.get("/api/spec", (_req, res) =>
       contributions:
         "await forma.contributions.list(); await forma.contributions.add({text:'My memory'})",
       poll: "await forma.poll.read(); await forma.poll.vote(0)",
+      plan: "await forma.plan.read(); await forma.plan.join(true) // or false to step out",
       appearance:
         "forma.appearance.theme is light or dark. Style html[data-theme=dark] or listen for the forma:theme window event. Appearance updates do not reload the post.",
     },

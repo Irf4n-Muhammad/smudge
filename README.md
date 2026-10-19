@@ -28,13 +28,13 @@ password accounts, real email through Resend, and one Docker container that serv
 separate post-runtime hostname: `npm run build && npm start` with the settings in `.env.example`.
 Step-by-step guide: [docs/deploy.md](docs/deploy.md). Decision record: ADR 0012.
 
-In the playground, **Create an account** and **Log in** at the bottom of the sidebar use the same
-real account system; confirmation and reset emails appear in the local demo inbox on **Who you
-are**. The gear icon in the top bar opens **Account** (email status, change password, log out,
-blocked accounts, delete account).
+In the playground, **Create an account** and **Log in** (behind **More** in the sidebar, or the
+profile's ☰ on a phone) use the same real account system; confirmation and reset emails appear
+in the local demo inbox on **Who you are**. **Account settings** in the same menu covers email
+status, change password, log out, blocked accounts and delete account.
 
-**Community basics** (ADR 0013). **Find people** searches by name or @handle and suggests friends
-of friends. **Notifications** shows follows, likes, comments and stickers, with a red badge for
+**Community basics** (ADR 0013). **Search → People** searches by name or @handle and suggests
+friends of friends. **Notifications** shows follows, likes, comments and stickers, with a red badge for
 unread ones. **Messages** works between people when one follows the other. A post's **⋯** menu has
 **Report post** (with a reason) and **Block**. Alex is a moderator in the playground, so
 **Moderation** lists open reports with Remove post, Dismiss and Suspend account. On phones these
@@ -50,9 +50,11 @@ leave one preset sticker. As Alex, open **Who you are**, enter `alex@student.lem
 the code from the **local demo inbox** (no email leaves this app), verify, then **Share a moment →
 Graduation**. Locked templates show their rule: new job (work email `@kopinusantara.co`), birthday
 (only around the stored date), trip (a JPEG with GPS), together (partner confirms), club or event
-titles (invite code; Maya admins Teater Senja, Leo the film festival). **Decorations** lists free,
-members-only, sponsored and seasonal pieces that cling to post edges, with a simulated creator
-payout. **Create an account** at the bottom of the sidebar opens signup to anyone. Rules: ADR 0011;
+titles (invite code; Maya admins Teater Senja, Leo the film festival). **Themes** lists event,
+members and market themes, with a simulated creator payout. A theme is worn on your profile and
+around every post of yours in the feed (edges, frame ring, the face of your name). Inès wears
+**Paris**, opened by her proven trip to France; as Alex, prove a trip with a JPEG taken in France
+and **Paris** opens for you too (ADR 0022). **Create an account** at the bottom of the sidebar opens signup to anyone. Rules: ADR 0011;
 design brief: `docs/design-handoff.md`.
 
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
@@ -109,7 +111,8 @@ decoration does not block clicks. Likes/saves and **Open story** use existing pu
 These three compositions are host-authored visual prototypes; MCP-authored extension layers
 are not yet supported. The normal feed and its isolated programmable posts remain available.
 
-Click **Enter hyperspace** (or open `/?mode=cockpit`) for the spatial navigation experiment.
+Choose **Enter hyperspace** from the feed picker at the top of Home (or open `/?mode=cockpit`)
+for the spatial navigation experiment.
 Drag the planet to rotate the post orbit, use arrow keys while the orbit is focused, or select
 a small planet. **Enter this world** opens the real isolated post; the transmission panel reads
 and writes its actual comments. Likes and saves use the same feed data. **Back to feed** exits.
@@ -121,17 +124,23 @@ a star in Leo's constellation, or open Inès's envelope. Use the moon/sun contro
 to switch day/night; your choice survives reload and applies to the studio and new worlds.
 
 1. Open the note in Maya's scrapbook; reload and see that your place was saved.
-2. Filter **Stories** and choose a path. Your vote and reading progress persist.
-3. Filter **Together** and add a memory as Alex. Switch **Preview as** to Inès and try again:
-   Inès can read but is not an invited contributor.
+2. Scroll to Leo's story and choose a path. Your vote and reading progress persist.
+3. Scroll to Maya's shared weekend and add a memory as Alex. Switch **Preview as** to Inès and
+   try again: Inès can read but is not an invited contributor.
 4. Like, comment, bookmark, follow, search, or open a profile. Counts reflect local data.
-5. Open **My studio**: make a draft, edit its title/caption or source, upload a photo, save and
+5. Open **My studio** (behind **More**): make a draft, edit its title/caption or source, upload a photo, save and
    preview, then publish. **Use format** on an existing post creates a separate editable draft.
 6. Connect a local AI client with [the MCP setup](docs/mcp.md). It can author an interaction that
    is not in the seed catalog. It does not need a model hosted by Smudge.
 
-On narrow screens, bottom navigation opens the feed, following, studio, saved posts and profile.
-Desktop account switching is a simulation feature, not public authentication.
+**Navigation** (ADR 0032) has the shape people know from Instagram: **Home**, **Search**,
+**Create** and **Profile** are the tabs (a bottom bar on phones, the left rail on wider screens);
+**Messages** and **Notifications** join the rail and sit in a phone's top corner. The feed picker
+at the top of Home switches **For you** and **Following** and holds the two ways to browse.
+Everything else (Saved, Themes, Who you are, Share card, My studio, Account settings,
+Moderation) is behind **More** in the rail and the ☰ on your own profile. Posts of every
+format share one feed; there is no format filter. Desktop account switching is a simulation
+feature, not public authentication.
 
 ## What is implemented
 
@@ -160,6 +169,44 @@ Desktop account switching is a simulation feature, not public authentication.
 - Videos in easy posts (MP4/WebM/MOV up to 30 MB and 3 minutes, streamed by the runtime) and an
   Explore page with search across all posts (ADR 0020).
 - Private accounts with follow requests, and group chats of up to 32 people (ADR 0021).
+- An Instagram-style feed (ADR 0023): one free-scrolling column, every post in the same 4:5
+  window, posts loaded ahead, and a swipe over a post always scrolls the feed.
+- Themes (ADR 0022): one look on the profile and around posts in the feed; event, members and
+  market kinds; trip themes opened by a proven trip: France, Japan, South Korea, Thailand, and
+  Bali as a place inside Indonesia (ADR 0026). Market themes are free;
+  buying is not built.
+- Open theme market (ADR 0024): anyone designs a theme in their own HTML and CSS under **Themes →
+  Send your own theme**, with a live preview; moderators approve, reject or take down themes under
+  **Moderation → Themes to review**. Designs are drawn as images, so their code never runs in
+  the page. Seeded: Leo's approved **Neon open late** and Arif's **Coffee steam** waiting for
+  review.
+- Wear and edit themes (ADR 0025): **Themes** is a gallery; tap a theme to see yourself in it and
+  **Wear** it, then **Edit** to drag its pieces (mouse, finger or arrow keys, always near the
+  edges) and rewrite the text its designer marked. Only you get your version. Designing from code
+  is under **Send your own theme**.
+- Sides (ADR 0027): one account, many sides. **Everyday**, the open **Runners** side and a
+  private **Film Festival crew** side; the row above the feed switches the whole app to a side
+  (its feed, its composer, its colour), a post lives in the side it was written in, and its
+  writer can also share it to Everyday. Private sides are unseen from outside and open with the
+  organisation's invite under **Who you are**. Per-side themes are not built.
+- Stamps and collections (ADR 0028): an organiser issues stamp codes for each race of a series
+  under **Who you are**; a finisher's code adds the stamp to their collection, with the missing
+  races shown as gaps, joins the series' side, and opens the race theme (**Finisher medal**; all
+  five open **Series finisher**). Try the demo code `BORO2026OK` under **Invite code**.
+- Plans (ADR 0029): a post people join. The **Plan** style in **Create a post** puts when, where
+  and the call up top and a box with **I'm in**, the count and the names below; the page uses
+  `plan.read` / `plan.join`, which only ever add or remove the person who tapped. Once you are
+  in, **I was there** keeps who actually came, the record a group chat never has. Try the track
+  night in **Runners**. Challenges and live race posts are not built.
+- Share cards (ADR 0030): **Card** on a side in **Your sides** draws a picture of you in that
+  side (your theme, your stamps) to save, share from the phone's share sheet, or copy as a link;
+  the link lands whoever taps it inside the side. Private sides are not named in links.
+- Gift themes (ADR 0031): **Give as a gift** on a market theme sends it to someone with a note;
+  it waits under **Gifts for you** in their Themes. Earned themes cannot be given. Nothing is
+  charged in this prototype.
+- Navigation (ADR 0032): Home, Search, Create and Profile tabs, Messages and Notifications in
+  the rail or the phone's top corner, one feed with a For you / Following picker, and everything
+  else behind More and the profile's ☰.
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.
@@ -194,7 +241,8 @@ Browser sessions reset when the server restarts, but content remains. The defaul
 
 Stop the development servers before running E2E tests: they use the same ports and start their own
 instance. Tests never overwrite `.local/forma.sqlite`. Failure traces go in `test-results/`;
-desktop/mobile screenshots go in `artifacts/`. CI is configured but has not been run on GitHub here.
+desktop/mobile screenshots go in `artifacts/`. GitHub Actions (`.github/workflows/ci.yml`) runs
+`npm run check`, the web build and the E2E suite on every pull request and push to `main`.
 
 ## Find the right place
 
@@ -262,8 +310,8 @@ open without signing up.
 
 In the post editor, **Add photos or videos** takes videos too: the first frame becomes its poster
 and cover, and it plays inside the post (silently behind the headline in the Poster style).
-**Explore** in the sidebar (the compass on phones) shows posts from people you don't follow yet,
-and its search box finds any post by title, caption, person or `#tag`.
+**Search** (the magnifier tab) shows posts from people you don't follow yet, and its search box
+finds any post by title, caption, person or `#tag`; its **People** tab is Find people.
 
 ## Private accounts and groups
 

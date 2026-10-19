@@ -32,6 +32,7 @@ test("public room and comic profiles open real owner posts, follow and honor vis
   await expect(page.getByRole("dialog")).toHaveAttribute("aria-label", "A beautiful little mess");
   await expect(page.getByRole("dialog").locator(".runtime")).toHaveAttribute("data-ready", "true");
   await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.getByLabel("More options", { exact: true }).click();
   await page.getByRole("button", { name: "Reduce motion", exact: true }).click();
   await expect(frame.locator("html")).toHaveAttribute("data-motion", "reduce");
   await page.getByRole("button", { name: "Switch to night mode" }).click();
@@ -45,6 +46,7 @@ test("public room and comic profiles open real owner posts, follow and honor vis
   ).toBe(true);
   await page.reload();
   await expect(frame.locator("html")).toHaveAttribute("data-motion", "reduce");
+  await page.getByLabel("More options", { exact: true }).click();
   await page.getByRole("button", { name: "Report profile" }).click();
   await expect(page.getByRole("status")).toContainText("Report recorded locally");
   await page.goto("/?profile=leo");

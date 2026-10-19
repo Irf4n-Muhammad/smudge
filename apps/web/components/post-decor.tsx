@@ -2,14 +2,17 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { BadgeCheck, Maximize2 } from "lucide-react";
+import type { SideTag } from "./types";
 import type { PostView } from "../../../packages/contracts/src/experience";
 import type { OverlayPiece, PostDecor, Sticker } from "../../../packages/contracts/src/identity";
 import { api, Runtime } from "./runtime";
 import { PageSheet } from "./page-sheet";
+import { PieceArt } from "./theme-piece";
 
-export type DecoratedPost = PostView & Partial<PostDecor>;
+export type DecoratedPost = PostView & Partial<PostDecor> & SideTag;
 
-const place = (p: OverlayPiece): CSSProperties => {
+/** Where a piece sits relative to its anchor corner of the frame. */
+export const place = (p: OverlayPiece): CSSProperties => {
   const style: CSSProperties = { width: p.width, height: p.height };
   if (p.anchor.startsWith("top")) style.top = p.dy;
   if (p.anchor.startsWith("bottom")) style.bottom = -p.dy - p.height;
@@ -20,6 +23,16 @@ const place = (p: OverlayPiece): CSSProperties => {
   return style;
 };
 
+/** CSS variables a theme sets on whatever it dresses: a post card, a profile, a sample. */
+export function themeStyle(theme: DecoratedPost["decoration"]): CSSProperties | undefined {
+  return theme
+    ? ({
+        "--decor-accent": theme.accent,
+        "--decor-font": `var(--theme-${theme.font})`,
+      } as CSSProperties)
+    : undefined;
+}
+
 /**
  * Transparent decoration that clings to the post edges. The post itself keeps its standard
  * shape; pieces sit outside or over the border and never take clicks.
@@ -27,21 +40,29 @@ const place = (p: OverlayPiece): CSSProperties => {
 export function DecorFrame({ post, children }: { post: DecoratedPost; children: ReactNode }) {
   const d = post.decoration;
   return (
-    <div
-      className={`decor-frame ${d ? "has-decor" : ""}`}
-      style={d ? ({ "--decor-accent": d.accent } as CSSProperties) : undefined}
-    >
+    <div className={`decor-frame ${d ? "has-decor" : ""}`} style={themeStyle(d)}>
       {children}
-      {d?.pieces.map((p, i) => (
-        <span
-          key={i}
-          className={`decor-piece decor-${p.anchor}`}
-          style={place(p)}
-          aria-hidden="true"
-          // Pieces come from the trusted host catalog, never from post packages or users.
-          dangerouslySetInnerHTML={{ __html: p.svg }}
-        />
-      ))}
+      {d?.pieces.map((p, i) =>
+        "svg" in p ? (
+          <span
+            key={i}
+            className={`decor-piece decor-${p.anchor}`}
+            style={place(p)}
+            aria-hidden="true"
+            // Only catalog pieces carry svg: trusted host data, never from packages or users.
+            dangerouslySetInnerHTML={{ __html: p.svg }}
+          />
+        ) : (
+          <span
+            key={i}
+            className={`decor-piece decor-${p.anchor}`}
+            style={place(p)}
+            aria-hidden="true"
+          >
+            <PieceArt html={p.html} css={p.css} width={p.width} height={p.height} texts={p.texts} />
+          </span>
+        ),
+      )}
     </div>
   );
 }
@@ -51,8 +72,8 @@ export function DecorCredit({ post }: { post: DecoratedPost }) {
   if (!d) return null;
   return (
     <p className="decor-credit">
-      {d.tier === "seasonal" ? "Season decoration" : "Decoration"} <strong>{d.name}</strong> by @
-      {d.creator}
+      Theme <strong>{d.name}</strong>
+      {d.event ? ` · ${d.event}` : d.tier === "members" ? " · Members" : ""} · by @{d.creator}
       {d.sponsor ? ` · with ${d.sponsor}` : ""}
     </p>
   );

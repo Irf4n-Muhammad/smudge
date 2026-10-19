@@ -11,6 +11,9 @@ export function identityRoutes(api: Express, identity: IdentityService) {
   api.get("/api/users/:id/chapters", (req, res) =>
     res.json(identity.chaptersFor(actor(res), id(req.params.id))),
   );
+  api.get("/api/users/:id/collections", (req, res) =>
+    res.json(identity.collectionsFor(actor(res), id(req.params.id))),
+  );
   api.post("/api/chapters/:id/audience", (req, res) =>
     res.json(identity.setChapterAudience(actor(res), id(req.params.id), req.body)),
   );
@@ -51,9 +54,21 @@ export function identityRoutes(api: Express, identity: IdentityService) {
   api.post("/api/identity/country", (req, res) =>
     res.json(identity.setCountry(actor(res), req.body)),
   );
+  api.get("/api/users/:id/theme", (req, res) =>
+    res.json({ theme: identity.themeFor(actor(res), id(req.params.id)) }),
+  );
   api.get("/api/decorations", (_req, res) => res.json(identity.decorations(actor(res))));
   api.post("/api/decorations/choose", (req, res) =>
     res.json(identity.chooseDecoration(actor(res), req.body)),
+  );
+  api.post("/api/decorations/edit", (req, res) =>
+    res.json(identity.editDecoration(actor(res), req.body)),
+  );
+  api.delete("/api/decorations/edit/:id", (req, res) =>
+    res.json(identity.resetDecorationEdit(actor(res), id(req.params.id))),
+  );
+  api.post("/api/decorations/gift", (req, res) =>
+    res.json(identity.giftDecoration(actor(res), req.body)),
   );
   api.get("/api/creator/earnings", (_req, res) => res.json(identity.earnings(actor(res))));
   api.get("/api/moments/templates", (_req, res) => res.json(identity.templates(actor(res))));
