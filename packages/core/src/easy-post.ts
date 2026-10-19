@@ -7,7 +7,7 @@ import type { Experience } from "../../contracts/src/experience.js";
  * advanced editor, MCP and "Use format" keep working on the same package. Every string is
  * escaped; the only script is the fixed motion script below.
  */
-export const postStyles = ["poster", "magazine", "gallery", "scrapbook", "note"] as const;
+export const postStyles = ["poster", "magazine", "gallery", "scrapbook", "note", "plan"] as const;
 export type PostStyle = (typeof postStyles)[number];
 export const postStyleInfo: Record<PostStyle, { name: string; note: string }> = {
   poster: { name: "Poster", note: "One big photo, one huge line" },
@@ -15,6 +15,7 @@ export const postStyleInfo: Record<PostStyle, { name: string; note: string }> = 
   gallery: { name: "Gallery", note: "Swipe through your photos" },
   scrapbook: { name: "Scrapbook", note: "Taped photos and handwritten notes" },
   note: { name: "Big note", note: "Just words, loud and clear" },
+  plan: { name: "Plan", note: "Invite people and see who's in" },
 };
 
 export const postPalettes = {
@@ -85,6 +86,7 @@ const styleDefaults: Record<PostStyle, { palette: PostPalette; font: PostFont }>
   gallery: { palette: "paper", font: "bold" },
   scrapbook: { palette: "blush", font: "hand" },
   note: { palette: "lime", font: "bold" },
+  plan: { palette: "ocean", font: "bold" },
 };
 const starters: Record<PostStyle, Pick<PostDesign, "kicker" | "headline" | "text" | "quote">> = {
   poster: {
@@ -115,6 +117,12 @@ const starters: Record<PostStyle, Pick<PostDesign, "kicker" | "headline" | "text
     kicker: "Hot take",
     headline: "Say it *louder*",
     text: "One thought, big enough to stop the scroll.",
+    quote: "",
+  },
+  plan: {
+    kicker: "Sunday 05:30 · GBK",
+    headline: "Long run, *who's in?*",
+    text: "Easy pace, 21K, coffee after. Say where and when up top; people tap I'm in and their names show up here.",
     quote: "",
   },
 };
@@ -400,9 +408,70 @@ main h1 em{font-style:normal;color:inherit;background:linear-gradient(transparen
       html = `<section class="hero">${kicker}${h1}</section><div class="band" aria-hidden="true"><div>${lane}${lane}</div></div><section class="rest">${text}${quote}${photos.length ? `<div class="grid">${photos.map((p, i) => figure(p, i)).join("")}</div>` : ""}</section>`;
       break;
     }
+    case "plan": {
+      // The box with the button comes right under the call, so it is in view inside a feed card
+      // on a phone; the details and photos follow for whoever opens the post.
+      css += `.hero{display:grid;gap:14px;padding:6vw 5vw 2vw}
+.hero h1{font-size:clamp(36px,9vw,110px);max-width:12ch}
+.hero .kicker{justify-self:start;padding:8px 12px;border:2px solid var(--accent);color:var(--accent);border-radius:999px;text-transform:none;letter-spacing:.04em;font-size:13px}
+.plan{margin:3vw 5vw;padding:18px;border-radius:22px;background:var(--soft);display:grid;gap:12px}
+.plan .join{justify-self:start;border:0;border-radius:999px;padding:14px 26px;background:var(--accent);color:var(--bg);font:900 17px var(--head);cursor:pointer;transition:transform .15s}
+.plan .join:active{transform:scale(.97)}.plan .join.on{background:var(--ink);color:var(--bg)}
+.plan .join[disabled]{opacity:.6;cursor:default}
+.plan .going{font:700 14px var(--body)}.plan .going b{font:900 26px/1 var(--head);margin-right:6px}
+.plan .faces{display:flex;flex-wrap:wrap;gap:6px;min-height:34px}
+.plan .face{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#1b1b1f;font:700 12px var(--body);border:2px solid var(--bg)}
+.plan .names{font-size:14px;opacity:.85;line-height:1.4}
+.rest{display:grid;gap:18px;padding:2vw 5vw 10vh;max-width:720px}
+.rest .text{font-size:clamp(17px,2.2vw,21px);opacity:.92}
+.rest figure :is(img,video){width:100%;border-radius:18px}`;
+      html = `<section class="hero">${kicker}${h1}</section><section class="plan rv" data-plan aria-label="Who's in"><button class="join" type="button" data-plan-join>I'm in</button><p class="going"><b data-plan-count>0</b><span data-plan-label>people in</span></p><div class="faces" data-plan-faces></div><p class="names" data-plan-names>Tap the button and your name shows up here.</p></section><section class="rest">${text}${quote}${photos.map((p, i) => figure(p, i)).join("")}</section>`;
+      break;
+    }
   }
   return { html, css };
 }
+
+/**
+ * The plan box asks the host who is in and toggles the viewer with one tap. Outside Smudge (a
+ * saved copy, a guest page) `forma` is missing or refuses, and the box says so instead of lying.
+ */
+const planScript = `(() => {
+  const box = document.querySelector("[data-plan]");
+  if (!box) return;
+  const btn = box.querySelector("[data-plan-join]"), count = box.querySelector("[data-plan-count]"),
+    label = box.querySelector("[data-plan-label]"), faces = box.querySelector("[data-plan-faces]"),
+    names = box.querySelector("[data-plan-names]");
+  let going = false, busy = false;
+  const show = (v) => {
+    going = !!v.going;
+    count.textContent = String(v.count);
+    label.textContent = v.count === 1 ? "person in" : "people in";
+    btn.textContent = going ? "I'm out" : "I'm in";
+    btn.classList.toggle("on", going);
+    faces.replaceChildren(...v.people.slice(0, 12).map((p) => {
+      const s = document.createElement("span");
+      s.className = "face"; s.style.background = p.color; s.title = p.name; s.textContent = p.initials;
+      return s;
+    }));
+    const list = v.people.map((p) => p.name);
+    const extra = v.count - list.length;
+    names.textContent = !v.count ? "Nobody yet. Be the first." :
+      (list.length > 3 ? list.slice(0, 3).join(", ") + " and " + (list.length - 3 + extra) + " more" :
+      list.length ? list.join(", ") + (extra > 0 ? " and " + extra + " more" : "") : extra + " in") + (going ? " · you're in" : "");
+  };
+  const fail = (e) => {
+    names.textContent = /RUNTIME|GUEST|NOT_FOUND|sign/i.test(String(e && e.message)) ? "Open this in Smudge to join." : "Could not reach Smudge. Try again.";
+  };
+  if (!window.forma || !window.forma.plan) { btn.disabled = true; names.textContent = "Open this in Smudge to join."; return; }
+  window.forma.plan.read().then(show).catch(fail);
+  btn.addEventListener("click", () => {
+    if (busy || document.documentElement.dataset.editing === "on") return;
+    busy = true; btn.disabled = true;
+    window.forma.plan.join(!going).then(show).catch(fail).finally(() => { busy = false; btn.disabled = false; });
+  });
+})();
+`;
 
 /** Background videos play muted unless the viewer asked for less motion; a tap pauses or plays. */
 const videoScript = `for(const v of document.querySelectorAll("video[data-background]")){v.muted=true;if(!matchMedia("(prefers-reduced-motion: reduce)").matches)v.play().catch(()=>{});v.closest("section,figure").addEventListener("click",()=>v.paused?v.play().catch(()=>{}):v.pause())}`;
@@ -417,6 +486,7 @@ export function buildPost(input: unknown) {
   ];
   const { html, css } = render(design);
   const background = html.includes("data-background");
+  const plan = design.style === "plan";
   const data = JSON.stringify(design).replace(/</g, "\\u003c");
   const pkg: Experience = {
     manifest: {
@@ -424,15 +494,16 @@ export function buildPost(input: unknown) {
       runtimeVersion: "web-v1",
       name: plain(design.headline).slice(0, 100),
       entrypoint: "index.html",
-      capabilities: [],
+      capabilities: plan ? ["plan.read", "plan.join"] : [],
       assets,
     },
     files: {
-      "index.html": `<link rel="stylesheet" href="post.css"><script src="smudge/post.js"></script>${html}${design.motion ? '<script src="motion.js"></script>' : ""}${background ? '<script src="video.js"></script>' : ""}`,
+      "index.html": `<link rel="stylesheet" href="post.css"><script src="smudge/post.js"></script>${html}${design.motion ? '<script src="motion.js"></script>' : ""}${background ? '<script src="video.js"></script>' : ""}${plan ? '<script src="plan.js"></script>' : ""}`,
       "post.css": css,
       [settingsFile]: `window.smudgePost = ${data};\n`,
       ...(design.motion ? { "motion.js": motionScript } : {}),
       ...(background ? { "video.js": videoScript } : {}),
+      ...(plan ? { "plan.js": planScript } : {}),
     },
   };
   return {

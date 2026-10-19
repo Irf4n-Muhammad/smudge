@@ -61,7 +61,8 @@ export function sdkSource(nonce: string) {
       progress:{read:()=>request('viewer.progress.read'),write:value=>request('viewer.progress.write',value)},
       contributions:{list:()=>request('contributions.read'),add:value=>request('contributions.create',value)},
       poll:{read:()=>request('polls.read'),vote:option=>request('polls.vote',{option})},
-      reactions:{read:()=>request('reactions.read'),place:sticker=>request('reactions.place',{sticker})}
+      reactions:{read:()=>request('reactions.read'),place:sticker=>request('reactions.place',{sticker})},
+      plan:{read:()=>request('plan.read'),join:going=>request('plan.join',{going:going!==false})}
     }),writable:false});
     // While the owner edits a draft, a tap picks what to change instead of using the page.
     window.addEventListener('click',event=>{

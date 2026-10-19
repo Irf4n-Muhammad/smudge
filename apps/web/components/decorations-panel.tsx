@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Lock, PenLine } from "lucide-react";
+import { ArrowLeft, Gift, Lock, PenLine } from "lucide-react";
 import type { User } from "../../../packages/contracts/src/experience";
 import type { OverlayPiece, Sticker, ThemeFont } from "../../../packages/contracts/src/identity";
 import { api } from "./runtime";
@@ -26,10 +26,18 @@ type Item = {
   unlocked: boolean;
   reason: string | null;
 };
+type GiftView = {
+  id: string;
+  decoration: { id: string; name: string; accent: string };
+  from: { id: string; name: string; handle: string };
+  note: string;
+  at: string;
+};
 type State = {
   current: { id: string | null; source: string };
   season: { id: string; name: string; key: string } | null;
   country: string | null;
+  gifts: GiftView[];
   items: Item[];
 };
 type Earnings = {
@@ -55,10 +63,13 @@ type Filter = (typeof filters)[number]["tier"];
  */
 export function DecorationsPanel({
   me,
+  users,
   notify,
   onChanged,
 }: {
   me: User | undefined;
+  /** Everyone a gift can go to. */
+  users: User[];
   notify: (s: string) => void;
   onChanged: () => Promise<void>;
 }) {
@@ -67,7 +78,9 @@ export function DecorationsPanel({
     [filter, setFilter] = useState<Filter>("all"),
     [open, setOpen] = useState<string | null>(null),
     [editing, setEditing] = useState(false),
-    [designer, setDesigner] = useState(false);
+    [designer, setDesigner] = useState(false),
+    [giving, setGiving] = useState(false),
+    [gift, setGift] = useState({ toId: "", note: "" });
   const load = useCallback(async () => {
     try {
       setState(await api<State>("/decorations"));
@@ -147,7 +160,20 @@ export function DecorationsPanel({
   const close = () => {
     setOpen(null);
     setEditing(false);
+    setGiving(false);
   };
+  async function give(decorationId: string) {
+    const to = users.find((u) => u.id === gift.toId);
+    if (!to) return notify("Choose who it is for.");
+    try {
+      await api("/decorations/gift", { toId: gift.toId, decorationId, note: gift.note });
+      notify(`Sent to ${to.name}. They will find it in Themes.`);
+      setGiving(false);
+      setGift({ toId: "", note: "" });
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }
   return (
     <section className="decorations" aria-label="Themes">
       <header className="identity-head">
@@ -180,6 +206,42 @@ export function DecorationsPanel({
             <PenLine size={14} /> Edit my theme
           </button>
         </div>
+      )}
+      {state.gifts.length > 0 && (
+        <section className="theme-gifts" aria-label="Gifts for you">
+          <h2>
+            <Gift size={16} /> Gifts for you
+          </h2>
+          {state.gifts.map((g) => (
+            <article
+              key={g.id}
+              className="theme-gift"
+              style={{ "--gift-accent": g.decoration.accent } as React.CSSProperties}
+            >
+              <span className="theme-gift-dot" aria-hidden="true" />
+              <div>
+                <strong>
+                  {g.from.name} gave you {g.decoration.name}
+                </strong>
+                {g.note && <q>{g.note}</q>}
+              </div>
+              {state.current.id === g.decoration.id ? (
+                <span className="decoration-on">Wearing it</span>
+              ) : (
+                <button
+                  className="primary small"
+                  onClick={() =>
+                    void choose(g.decoration.id, state.season ? "season" : "base").then(
+                      (ok) => ok && notify(`You are wearing ${g.decoration.name}.`),
+                    )
+                  }
+                >
+                  Wear it
+                </button>
+              )}
+            </article>
+          ))}
+        </section>
       )}
       <div className="theme-filters" role="group" aria-label="Show themes">
         {filters.map((f) => (
@@ -305,6 +367,65 @@ export function DecorationsPanel({
                     <Lock size={12} /> {item.reason}
                   </span>
                 )}
+                {item.tier === "market" &&
+                  (giving ? (
+                    <form
+                      className="theme-gift-form"
+                      aria-label="Give this theme"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void give(item.id);
+                      }}
+                    >
+                      <label>
+                        For
+                        <select
+                          required
+                          value={gift.toId}
+                          onChange={(e) => setGift({ ...gift, toId: e.target.value })}
+                        >
+                          <option value="">Choose someone</option>
+                          {users
+                            .filter((u) => u.id !== me?.id)
+                            .map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.name}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      <label>
+                        A note
+                        <input
+                          maxLength={140}
+                          placeholder="Congrats on the sub-5!"
+                          value={gift.note}
+                          onChange={(e) => setGift({ ...gift, note: e.target.value })}
+                        />
+                      </label>
+                      <div className="theme-gift-form-actions">
+                        <button className="primary">Send the gift</button>
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() => setGiving(false)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <p className="fineprint">
+                        It appears in their Themes with your note. Nothing is charged in this
+                        prototype.
+                      </p>
+                    </form>
+                  ) : (
+                    <button
+                      className="quiet-button theme-gift-button"
+                      onClick={() => setGiving(true)}
+                    >
+                      <Gift size={14} /> Give as a gift
+                    </button>
+                  ))}
               </div>
             </div>
           )}

@@ -1061,6 +1061,14 @@ export const decorationChoiceSchema = z
   })
   .strict();
 export const countryChoiceSchema = z.object({ country: countrySchema }).strict();
+/** A theme given to someone else (ADR 0031): only market themes, with a short note. */
+export const giftInputSchema = z
+  .object({
+    toId: z.string().min(1).max(40),
+    decorationId: z.string().max(40),
+    note: z.string().trim().max(140),
+  })
+  .strict();
 
 export const momentKinds = [
   "graduation",

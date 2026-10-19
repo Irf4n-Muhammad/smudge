@@ -67,6 +67,9 @@ export function identityRoutes(api: Express, identity: IdentityService) {
   api.delete("/api/decorations/edit/:id", (req, res) =>
     res.json(identity.resetDecorationEdit(actor(res), id(req.params.id))),
   );
+  api.post("/api/decorations/gift", (req, res) =>
+    res.json(identity.giftDecoration(actor(res), req.body)),
+  );
   api.get("/api/creator/earnings", (_req, res) => res.json(identity.earnings(actor(res))));
   api.get("/api/moments/templates", (_req, res) => res.json(identity.templates(actor(res))));
   api.post("/api/moments", (req, res) => res.json(identity.createMoment(actor(res), req.body)));

@@ -54,6 +54,10 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
 - `sides.tsx`, `app/sides.css`: the side switcher and the join/leave dialog (ADR 0027). Rules in
   `packages/core/src/sides.ts`: membership records, the active side, `viewFilter` for private
   sides, `feedFilter` for listing, and the publish guard; HTTP in `apps/server/side-routes.ts`.
+- `packages/core/src/plans.ts`: `plan.read` / `plan.join` handlers (ADR 0029), one record per
+  post and person; `packages/core/src/easy-post.ts` generates the Plan style and its `plan.js`.
+- `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
+  and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same
   posts and social API, opens existing isolated Runtime instances, and scopes its CSS to the mode.
   The cockpit is trusted host code; no post receives access to navigation or host DOM. Its dark

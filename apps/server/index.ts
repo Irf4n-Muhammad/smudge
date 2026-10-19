@@ -35,8 +35,11 @@ import { themeRoutes } from "./theme-routes.js";
 import { ThemeStudio } from "../../packages/core/src/themes.js";
 import { seedThemes } from "./seed-themes.js";
 import { SidesService } from "../../packages/core/src/sides.js";
+import { PlansService } from "../../packages/core/src/plans.js";
+import { ShareCardService } from "../../packages/core/src/share-card.js";
+import { sideById } from "../../packages/contracts/src/sides.js";
 import { sideRoutes } from "./side-routes.js";
-import { seedSides, seedStamps } from "./seed-sides.js";
+import { seedGift, seedPlan, seedSides, seedStamps } from "./seed-sides.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
@@ -122,6 +125,9 @@ accounts.loginGate = (userId) => {
 accounts.erasers.push((userId) => community.erase(userId));
 const privacy = new PrivacyService(service, community, clock);
 const sidesService = new SidesService(service, clock);
+// A plan's list of names follows who may see whom (blocks, hidden accounts), like comments do.
+const plans = new PlansService(service, clock);
+plans.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
 // An organisation's invite or email opens that organisation's side along with the chapter.
 identity.chapterListeners.push((c) => sidesService.joinByChapter(c));
 const messages = new MessageService(service, community, clock);
@@ -141,6 +147,8 @@ if (config.demoContent) {
   seedThemes(service, studio);
   seedSides(service, sidesService);
   seedStamps(service);
+  seedPlan(service);
+  seedGift(service);
 }
 const sharing = new SharingService(service, community, identity, profiles);
 const media = new MediaService(service, resolve(dataDir, "media"));
@@ -412,7 +420,12 @@ api.get("/api/explore", (req, res) =>
       .map((p) => ({ ...p, ...sidesService.tag(p) })),
   ),
 );
-sideRoutes(api, sidesService);
+sideRoutes(
+  api,
+  sidesService,
+  new ShareCardService(service, identity, sidesService),
+  config.publicUrl.origin,
+);
 identityRoutes(api, identity);
 themeRoutes(api, studio, rateLimit({ windowMs: 60 * 60_000, max: 20 }));
 communityRoutes(api, community, messages, privacy, accounts, clearSession, authLimit);
@@ -683,6 +696,12 @@ api.post("/api/posts/:id/edit", (req, res) => {
 // Share links: read-only views anyone can open without an account.
 const guestLimit = rateLimit({ windowMs: 60_000, max: 120 });
 api.get("/api/public/showcase", guestLimit, (_req, res) => res.json(sharing.showcase()));
+// A share card's landing page names the side it came from; private sides are never acknowledged.
+api.get("/api/public/sides/:id", guestLimit, (req, res) => {
+  const side = sideById(z.string().max(40).parse(req.params.id));
+  if (!side || side.private) throw new AppError("NOT_FOUND", 404);
+  res.json({ id: side.id, name: side.name, tagline: side.tagline, accent: side.accent });
+});
 api.get("/api/public/posts/:id", guestLimit, (req, res) =>
   res.json(sharing.post(String(req.params.id))),
 );
@@ -908,6 +927,7 @@ api.get("/api/spec", (_req, res) =>
       contributions:
         "await forma.contributions.list(); await forma.contributions.add({text:'My memory'})",
       poll: "await forma.poll.read(); await forma.poll.vote(0)",
+      plan: "await forma.plan.read(); await forma.plan.join(true) // or false to step out",
       appearance:
         "forma.appearance.theme is light or dark. Style html[data-theme=dark] or listen for the forma:theme window event. Appearance updates do not reload the post.",
     },

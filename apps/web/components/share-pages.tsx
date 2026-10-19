@@ -67,7 +67,23 @@ function ShareBar() {
     </header>
   );
 }
-function Invite({ name }: { name: string }) {
+type SideLanding = { id: string; name: string; tagline: string; accent: string };
+function Invite({ name, side }: { name: string; side?: SideLanding | null }) {
+  if (side)
+    return (
+      <section
+        className="share-cta"
+        style={{ "--side-accent": side.accent } as React.CSSProperties}
+      >
+        <h2>
+          Join {name} in {side.name}
+        </h2>
+        <p>
+          {side.tagline}. Make an account and you land in {side.name} with {name}.
+        </p>
+        <a href={`/?side=${encodeURIComponent(side.id)}`}>Join {side.name} on Smudge</a>
+      </section>
+    );
   return (
     <section className="share-cta">
       <h2>Say something to {name}</h2>
@@ -151,12 +167,23 @@ export function SharedPost({ id }: { id: string }) {
 export function SharedProfile({ handle }: { handle: string }) {
   const [view, setView] = useState<SharedProfileView | null | "missing">(null);
   const [guest, setGuest] = useState(false);
+  const [side, setSide] = useState<SideLanding | null>(null);
   useEffect(() => {
+    // A share card's link names the side it came from (ADR 0030).
+    const landing = new URLSearchParams(window.location.search).get("side");
     void api<SharedProfileView>(`/public/users/${encodeURIComponent(handle)}`)
       .then(async (v) => {
         const state = await api<{ signedIn?: boolean }>("/auth/state").catch(() => ({}));
         if ((state as { signedIn?: boolean }).signedIn)
-          return window.location.replace(`/?profile=${encodeURIComponent(v.user.id)}`);
+          return window.location.replace(
+            `/?profile=${encodeURIComponent(v.user.id)}${landing ? `&side=${encodeURIComponent(landing)}` : ""}`,
+          );
+        if (landing)
+          setSide(
+            await api<SideLanding>(`/public/sides/${encodeURIComponent(landing)}`).catch(
+              () => null,
+            ),
+          );
         setView(v);
         setGuest(true);
       })
@@ -217,7 +244,7 @@ export function SharedProfile({ handle }: { handle: string }) {
             ))}
           </ul>
         )}
-        <Invite name={view.user.name} />
+        <Invite name={view.user.name} side={side} />
       </main>
     </div>
   );

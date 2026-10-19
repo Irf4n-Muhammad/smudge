@@ -42,6 +42,7 @@ export type NotificationType =
   | "partner-request"
   | "follow-request"
   | "follow-accepted"
+  | "gift"
   | "post-removed";
 
 export interface PersonView {

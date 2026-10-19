@@ -119,6 +119,8 @@ makes declared media viewable with the public post. No video processing is imple
 | polls.vote            | `await forma.poll.vote(0)`                         | Valid option; replaces current viewer's vote          |
 | reactions.read        | `await forma.reactions.read()`                     | Preset options, counts, own choice, recent wall       |
 | reactions.place       | `await forma.reactions.place("proud")`             | One preset sticker per viewer; `null` removes it      |
+| plan.read             | `await forma.plan.read()`                          | Count, whether the viewer is in, visible names        |
+| plan.join             | `await forma.plan.join(true)`                      | Adds or removes the current viewer only               |
 
 Declare each capability used. A poll also requires `manifest.poll` with question and 2-6 option
 labels. Writes are not inferred from read permission or vice versa. Preview uses separate state.
@@ -436,6 +438,37 @@ everyday|house|org, entry: open|invite, private, orgId?, accent, prompt}`. Every
 - `ThemeEvent` gains kinds `stamp {collection, stamp}` and `collection {collection}`; the
   lock reason names the race or the count still missing.
 
+## Plans (additive, ADR 0029)
+
+- `plan.read` / `plan.join` raise the v2 capability limit from 8 to 10. `plan.read` answers
+  `{count, going, people: [{id, name, handle, initials, color}]}` (at most 40 names, newest
+  first, only people the viewer may see); `plan.join {going: boolean}` records or removes the
+  current viewer and answers the same shape. Preview answers an empty list and refuses
+  `plan.join` (`PREVIEW_READ_ONLY` 403). Deleting the post removes its records.
+- The easy editor's `plan` style (`postDesignSchema.style`) is the only generated package that
+  declares them; `buildPost` writes a fixed `plan.js` for it. The SDK exposes
+  `forma.plan.read()` and `forma.plan.join(going)`.
+
+## Share cards (additive, ADR 0030)
+
+- `GET /api/me/card?side=<id>` (default `everyday`) answers `image/svg+xml`, 1080×1350, with no
+  external references; `NOT_FOUND` for a side you are not in or that does not exist.
+  `GET /api/me/card/data` answers `{user, side, theme, stamps, path}`; `path` is
+  `/u/<handle>?side=<id>` for an open public side, `/u/<handle>` otherwise.
+- `GET /api/public/sides/:id` answers `{id, name, tagline, accent}` for a public side (guest
+  rate limit); private sides are `NOT_FOUND`.
+- The app reads `?side=<id>` on `/` and `/u/<handle>`: a signed-in member is switched to the
+  side (joining first when it is open); a guest sees the side named on the public page.
+
+## Gift themes (additive, ADR 0031)
+
+- `POST /api/decorations/gift {toId, decorationId, note ≤140}` by the giver. `GIFT_SELF` 400,
+  `GIFT_NOT_MARKET` 400 for an unknown, `members` or `event` theme, `INVALID_USER` for an
+  unknown receiver, and the block rule applies. Answers `{id}` and notifies the receiver
+  (`NotificationType` gains `gift`).
+- `GET /api/decorations` gains `gifts: [{id, decoration: {id, name, accent}, from: {id, name,
+handle}, note, at}]`, newest first, for the caller as receiver.
+
 ## Post buttons (additive)
 
 Post metadata accepts an optional `link: { label, url? }`. `label` is 1 to 32 characters and is the
@@ -525,7 +558,7 @@ plain `http:` despite the rules above. It is ignored in production.
 
 Posts made in the easy post editor keep their settings in `smudge/post.js`
 (`window.smudgePost = {…};`), validated by `postDesignSchema` in `packages/core/src/easy-post.ts`:
-`style` (`poster`, `magazine`, `gallery`, `scrapbook`, `note`), `palette`, `font`, `kicker` (≤40),
+`style` (`poster`, `magazine`, `gallery`, `scrapbook`, `note`, `plan`), `palette`, `font`, `kicker` (≤40),
 `headline` (1–90, `*stars*` make italics), `text` (≤1500, blank lines split paragraphs), `quote`
 (≤200), `photos` (≤12 of `{ assetId, caption ≤120 }`) and `motion`. `buildPost` regenerates
 `index.html`, `post.css` and, with motion on, a fixed `motion.js` (and `video.js`, see Videos

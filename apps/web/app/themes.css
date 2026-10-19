@@ -420,3 +420,75 @@ html[data-theme="dark"] .post-card.themed.classic-post .moment-cover {
 .theme-preview {
   padding: 0 24px 20px;
 }
+
+/* Gifts (ADR 0031) */
+.theme-gifts {
+  margin: 0 0 18px;
+  display: grid;
+  gap: 8px;
+}
+.theme-gifts h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  margin: 0;
+}
+.theme-gift {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--gift-accent, #ff5a1f) 14%, var(--white));
+}
+.theme-gift-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gift-accent, #ff5a1f);
+  flex-shrink: 0;
+}
+.theme-gift > div {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.theme-gift strong {
+  font-size: 14px;
+}
+.theme-gift q {
+  font-size: 13px;
+  opacity: 0.8;
+}
+.theme-gift-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.theme-gift-form {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+.theme-gift-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.theme-gift-form select,
+.theme-gift-form input {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line, #ddd);
+  background: var(--white);
+  color: inherit;
+}
+.theme-gift-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}

@@ -159,7 +159,25 @@ export function FormaApp() {
           return refresh();
         })
         .catch((e: Error) => notify(e.message));
-    void refresh();
+    // A share card's link (ADR 0030) lands inside that side: switch to it, joining first if open.
+    const landing = params.get("side");
+    void refresh().then(async () => {
+      if (!landing) return;
+      try {
+        await api("/sides/active", { side: landing }).catch(() =>
+          api(`/sides/${encodeURIComponent(landing)}/join`, {}).then(() =>
+            api("/sides/active", { side: landing }),
+          ),
+        );
+        await refresh();
+      } catch {
+        // Not a side you can enter from a link, or not signed in yet; the page still opens.
+        return;
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete("side");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    });
     const requestedProfile = new URLSearchParams(window.location.search).get("profile");
     if (requestedProfile || new URLSearchParams(window.location.search).has("profileDraft")) {
       setProfile(requestedProfile ?? "you");
@@ -685,6 +703,7 @@ export function FormaApp() {
               <DecorationsPanel
                 key={boot.actor.userId}
                 me={me}
+                users={boot.users}
                 notify={notify}
                 onChanged={refresh}
               />

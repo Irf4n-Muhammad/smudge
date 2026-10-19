@@ -30,6 +30,12 @@
       sides invisible from outside, entry by tap or by an organisation's invite. See ADR 0027.
 - [x] Stamps and collections: organiser-issued stamp codes, a collection with visible gaps,
       and themes that open with one stamp or the full set. See ADR 0028.
+- [x] Plans: a post people join from inside the post, with the count and the names. Challenges
+      (a shared counter) and live race-day posts are the next shapes. See ADR 0029.
+- [x] Share cards: a picture of you in a side, saved or shared from the phone, whose link lands
+      inside the side. See ADR 0030.
+- [x] Gift themes: a market theme sent to someone with a note, worn from "Gifts for you".
+      No payment yet. See ADR 0031.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

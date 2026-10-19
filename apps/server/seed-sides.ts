@@ -3,6 +3,7 @@ import type { SocialService } from "../../packages/core/src/social.js";
 import type { Chapter } from "../../packages/contracts/src/identity.js";
 import type { SidesService } from "../../packages/core/src/sides.js";
 import type { Experience, Metadata } from "../../packages/contracts/src/experience.js";
+import { buildPost, startPostDesign } from "../../packages/core/src/easy-post.js";
 
 const sans = `system-ui,-apple-system,"Segoe UI",Roboto,sans-serif`;
 const condensed = `Impact,"Arial Narrow Bold","Helvetica Neue",sans-serif`;
@@ -26,10 +27,6 @@ const raceDay = page(
   "Race day · Borobudur Marathon",
   `<style>*{box-sizing:border-box;margin:0}body{background:#1b1b1f;color:#fff;font-family:${sans}}main{min-height:560px;padding:26px 22px;display:flex;flex-direction:column}.bib{background:#fff;color:#1b1b1f;border-radius:18px;padding:22px;margin-top:10px;position:relative}.bib:before,.bib:after{content:"";position:absolute;top:12px;width:12px;height:12px;border-radius:50%;background:#1b1b1f}.bib:before{left:14px}.bib:after{right:14px}.bib small{display:block;text-align:center;font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.2em;color:#e07a1f}.bib b{display:block;text-align:center;font:400 120px/1 ${condensed};margin:6px 0}.bib span{display:block;text-align:center;font-size:14px;opacity:.75}h1{font:400 44px/.95 ${condensed};text-transform:uppercase;margin-top:22px;color:#e07a1f}p{margin-top:12px;font-size:15px;line-height:1.5;opacity:.9}</style><main><div class="bib"><small>BOROBUDUR MARATHON 2026</small><b>4217</b><span>Leo Pratama · Full · Wave C</span></div><h1>Tomorrow, 4 a.m.</h1><p>Carb-loaded, bib pinned, alarm set three times. If you see 4217 crawling past kilometre 35, shout something.</p></main>`,
 );
-const track = page(
-  "Thursday track · who's in?",
-  `<style>*{box-sizing:border-box;margin:0}body{background:#e9f3ee;color:#13302a;font-family:${sans}}main{min-height:560px;padding:26px 22px}h1{font:400 58px/.9 ${condensed};text-transform:uppercase}.lane{margin-top:22px;border-radius:999px;padding:14px 18px;background:#fff;border:2px solid #0f8b8d;display:flex;justify-content:space-between;font-weight:700}.lane+.lane{margin-top:10px}.lane small{font-weight:400;opacity:.7}p{margin-top:22px;font-size:15px;line-height:1.5}</style><main><h1>Thursday<br>track night</h1><div class="lane">8 × 400 m <small>lane 1 · 19:30</small></div><div class="lane">4 × 800 m <small>lane 2 · 19:30</small></div><div class="lane">Easy 5K <small>outer lanes · 19:45</small></div><p>Senayan track, Thursday. Bring water, bring someone slower than you so you feel fast.</p></main>`,
-);
 const jury = page(
   "Jury notes · day 1",
   `<style>*{box-sizing:border-box;margin:0}body{background:#0f1733;color:#eef1ff;font-family:${sans}}main{min-height:560px;padding:26px 22px}small{font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#8fb0ff}h1{font:400 52px/.95 ${condensed};text-transform:uppercase;margin-top:8px}ol{margin:20px 0 0 20px;font-size:15px;line-height:1.7}p{margin-top:18px;font-size:14px;opacity:.8}</style><main><small>CREW AND JURY ONLY</small><h1>Day one,<br>eleven shorts</h1><ol><li>Hujan di Bulan Juni: strong, long.</li><li>Kios: the sound mix needs a second look before Friday.</li><li>Lampu Merah: crowd favourite, jury split.</li></ol><p>Nothing here leaves this side until the awards.</p></main>`,
@@ -52,17 +49,6 @@ export function seedSides(service: SocialService, sides: SidesService) {
       metadata: {
         title: "Sunday long run · 21K",
         caption: "Negative split, finally. Thursday track, anyone?",
-        format: "custom",
-        contributors: [],
-        side: "runners",
-      },
-    },
-    {
-      owner: "ines",
-      pkg: track,
-      metadata: {
-        title: "Thursday track · who's in?",
-        caption: "Senayan, 19:30. Intervals or an easy 5K, your pick.",
         format: "custom",
         contributors: [],
         side: "runners",
@@ -98,6 +84,62 @@ export function seedSides(service: SocialService, sides: SidesService) {
     service.publish(actor, draft.id, draft.revision);
   }
   store.transaction(() => store.put("system", "seed-sides-v1", { complete: true }));
+}
+
+/**
+ * A demo plan (ADR 0029): Ines's track night is a post people join, with two already in, so the
+ * first tap on "I'm in" shows a name joining a list rather than starting one. Runs once.
+ */
+export function seedPlan(service: SocialService) {
+  const store = service.store;
+  if (store.get("system", "seed-plan-v1") || !store.get("user", "ines")) return;
+  const built = buildPost(
+    startPostDesign("plan", {
+      kicker: "Thursday 19:30 · Senayan track",
+      headline: "Track night, *who's in?*",
+      text: "8 × 400 m on lane 1, or an easy 5K on the outer lanes. Bring water, bring someone slower than you so you feel fast.",
+      motion: true,
+    }),
+  );
+  const actor = { userId: "ines" };
+  const draft = service.createDraft(actor, {
+    package: built.package,
+    metadata: {
+      ...built.metadata,
+      caption: "Senayan, 19:30. Intervals or an easy 5K, your pick.",
+      contributors: [],
+      side: "runners",
+    },
+  });
+  const post = service.publish(actor, draft.id, draft.revision);
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+  store.transaction(() => {
+    for (const [userId, days] of [
+      ["maya", 2],
+      ["leo", 1],
+    ] as const)
+      if (store.get("user", userId))
+        store.put("rsvp", `${post.id}:${userId}`, { postId: post.id, userId, at: daysAgo(days) });
+    store.put("system", "seed-plan-v1", { complete: true });
+  });
+}
+
+/** A demo gift (ADR 0031): Maya gave Alex a market theme with a note. Runs once. */
+export function seedGift(service: SocialService) {
+  const store = service.store;
+  if (store.get("system", "seed-gift-v1")) return;
+  store.transaction(() => {
+    if (store.get("user", "maya") && store.get("user", "you"))
+      store.put("gift", "gift-seed-maya-you", {
+        id: "gift-seed-maya-you",
+        fromId: "maya",
+        toId: "you",
+        decorationId: "cat-peek",
+        note: "For finally finishing the 21K. Wear it with pride!",
+        createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+      });
+    store.put("system", "seed-gift-v1", { complete: true });
+  });
 }
 
 /**

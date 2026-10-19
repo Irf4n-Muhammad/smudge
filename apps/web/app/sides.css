@@ -209,3 +209,49 @@
 .collection .fineprint {
   margin: 10px 0 0;
 }
+
+/* Share card (ADR 0030) */
+.side-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.side-actions .quiet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.share-card-preview {
+  margin: 12px 0;
+  aspect-ratio: 4 / 5;
+  max-height: 52vh;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--side-accent, #1b1b1f) 12%, transparent);
+  overflow: hidden;
+}
+.share-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.share-card-wait {
+  font-size: 14px;
+  opacity: 0.7;
+}
+.share-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.share-card-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.share-card-link {
+  margin-top: 10px;
+  word-break: break-all;
+}

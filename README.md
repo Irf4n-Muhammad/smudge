@@ -186,6 +186,16 @@ Desktop account switching is a simulation feature, not public authentication.
   under **Who you are**; a finisher's code adds the stamp to their collection, with the missing
   races shown as gaps, joins the series' side, and opens the race theme (**Finisher medal**; all
   five open **Series finisher**). Try the demo code `BORO2026OK` under **Invite code**.
+- Plans (ADR 0029): a post people join. The **Plan** style in **Create a post** puts when, where
+  and the call up top and a box with **I'm in**, the count and the names below; the page uses
+  `plan.read` / `plan.join`, which only ever add or remove the person who tapped. Try the track
+  night in **Runners**. Challenges and live race posts are not built.
+- Share cards (ADR 0030): **Card** on a side in **Your sides** draws a picture of you in that
+  side (your theme, your stamps) to save, share from the phone's share sheet, or copy as a link;
+  the link lands whoever taps it inside the side. Private sides are not named in links.
+- Gift themes (ADR 0031): **Give as a gift** on a market theme sends it to someone with a note;
+  it waits under **Gifts for you** in their Themes. Earned themes cannot be given. Nothing is
+  charged in this prototype.
 - Website import (ADR 0017): one server-side read of a page you own, with SSRF guards, photos
   re-encoded as your assets, and a script-free Article/Shop/Portfolio post you edit before publishing.
 - Studio with versioned drafts, package import/validation, photo upload, preview, reuse and publish.

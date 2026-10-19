@@ -28,6 +28,7 @@ import {
   stickerById,
   themeEventById,
   travelProofSchema,
+  giftInputSchema,
 } from "../../contracts/src/identity.js";
 import type {
   Audience,
@@ -73,6 +74,14 @@ interface Invite {
   uses: number;
   used: number;
   createdBy: string;
+  createdAt: string;
+}
+interface Gift {
+  id: string;
+  fromId: string;
+  toId: string;
+  decorationId: string;
+  note: string;
   createdAt: string;
 }
 interface PartnerRequest {
@@ -697,6 +706,60 @@ export class IdentityService {
       })
       .filter((c) => c !== null);
   }
+  // Gifts (ADR 0031) ------------------------------------------------------------------------
+  /**
+   * Giving a theme is a social act with a note, not a purchase: market themes are open to wear
+   * already, so the gift adds the reason and the name. Earned themes (proof, membership) can
+   * never be given, which keeps the moat: a finisher medal is only ever a finisher's.
+   */
+  giftDecoration(actor: Actor, input: unknown) {
+    const userId = this.social.actor(actor);
+    const { toId, decorationId, note } = giftInputSchema.parse(input);
+    if (toId === userId) throw new AppError("GIFT_SELF", 400);
+    this.user(toId);
+    this.social.relationGuard(userId, toId);
+    const decoration = this.decorationById(decorationId);
+    if (!decoration || decoration.tier !== "market")
+      throw new AppError("GIFT_NOT_MARKET", 400, {
+        reason: "Only market themes can be given. Proof and membership themes are earned.",
+      });
+    const gift: Gift = {
+      id: randomUUID(),
+      fromId: userId,
+      toId,
+      decorationId,
+      note,
+      createdAt: this.now().toISOString(),
+    };
+    this.store.transaction(() => {
+      this.store.put("gift", gift.id, gift);
+      this.social.emit({ type: "gift", actorId: userId, targetId: toId });
+    });
+    return { id: gift.id };
+  }
+  /** Gifts someone received, newest first, with the giver named when they still exist. */
+  private gifts(userId: string) {
+    const users = new Map(this.social.users().map((u) => [u.id, u]));
+    return this.store
+      .all<Gift>("gift")
+      .filter((g) => g.toId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .flatMap((g) => {
+        const from = users.get(g.fromId);
+        const d = this.decorationById(g.decorationId);
+        if (!from || !d) return [];
+        return [
+          {
+            id: g.id,
+            decoration: { id: d.id, name: d.name, accent: d.accent },
+            from: { id: from.id, name: from.name, handle: from.handle },
+            note: g.note,
+            at: g.createdAt,
+          },
+        ];
+      });
+  }
+
   /** Season themes come and go with their dates, so they can never be someone's everyday look. */
   private seasonal(decoration: Decoration) {
     return decoration.tier === "event" && themeEventById(decoration.eventId!)?.kind === "season";
@@ -755,6 +818,7 @@ export class IdentityService {
         : { id: null, source: "none" },
       season: season ? { id: season.id, name: season.name, key: season.key } : null,
       country: this.prefs(userId).country ?? null,
+      gifts: this.gifts(userId),
       items: this.catalog().map((d) => {
         const lock = this.unlock(userId, d);
         const event = d.eventId ? themeEventById(d.eventId) : undefined;

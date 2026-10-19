@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { Check, Layers2, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Download, ImageIcon, Layers2, Link2, Plus, Share2 } from "lucide-react";
 import type { Side, SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
 import { api } from "./runtime";
@@ -54,6 +54,7 @@ export function SidesDialog({
   notify: (message: string) => void;
 }) {
   const [busy, setBusy] = useState("");
+  const [card, setCard] = useState<Side | null>(null);
   async function run(key: string, call: () => Promise<SidesView>, done?: string) {
     setBusy(key);
     try {
@@ -82,6 +83,7 @@ export function SidesDialog({
       {action}
     </div>
   );
+  if (card) return <ShareCardDialog side={card} notify={notify} onClose={() => setCard(null)} />;
   return (
     <Dialog title="Your sides" onClose={onClose}>
       <p className="fineprint sides-intro">
@@ -92,25 +94,35 @@ export function SidesDialog({
         {sides.mine.map((s) =>
           row(
             s,
-            s.id === EVERYDAY ? (
-              <span className="side-kept">
-                <Check size={14} /> Always
-              </span>
-            ) : (
+            <span className="side-actions">
               <button
                 className="quiet-button"
-                disabled={busy === s.id}
-                onClick={() =>
-                  void run(
-                    s.id,
-                    () => api<SidesView>(`/sides/${s.id}/leave`, {}),
-                    `You left ${s.name}.`,
-                  )
-                }
+                aria-label={`Share card for ${s.name}`}
+                title="Share card"
+                onClick={() => setCard(s)}
               >
-                Leave
+                <ImageIcon size={14} /> Card
               </button>
-            ),
+              {s.id === EVERYDAY ? (
+                <span className="side-kept">
+                  <Check size={14} /> Always
+                </span>
+              ) : (
+                <button
+                  className="quiet-button"
+                  disabled={busy === s.id}
+                  onClick={() =>
+                    void run(
+                      s.id,
+                      () => api<SidesView>(`/sides/${s.id}/leave`, {}),
+                      `You left ${s.name}.`,
+                    )
+                  }
+                >
+                  Leave
+                </button>
+              )}
+            </span>,
           ),
         )}
       </div>
@@ -160,6 +172,145 @@ export function SidesDialog({
           <small>One feed with everything you're in. Off, each side is its own feed.</small>
         </span>
       </label>
+    </Dialog>
+  );
+}
+
+/**
+ * Your share card (ADR 0030): one picture of you in a side, made to be sent out of Smudge. The
+ * server draws it as SVG; the browser turns it into a PNG here, so nothing is uploaded anywhere.
+ */
+export function ShareCardDialog({
+  side,
+  notify,
+  onClose,
+}: {
+  side: Side;
+  notify: (message: string) => void;
+  onClose: () => void;
+}) {
+  const [svg, setSvg] = useState<string | null>(null);
+  const [path, setPath] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [canShare, setCanShare] = useState(false);
+  useEffect(() => {
+    let gone = false;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/me/card?side=${encodeURIComponent(side.id)}`);
+        if (!response.ok) throw new Error("The card could not be made.");
+        const text = await response.text();
+        const data = await api<{ path: string }>(
+          `/me/card/data?side=${encodeURIComponent(side.id)}`,
+        );
+        if (gone) return;
+        setSvg(text);
+        setPath(data.path);
+        setCanShare(typeof navigator.share === "function");
+      } catch (e) {
+        notify((e as Error).message);
+      }
+    })();
+    return () => {
+      gone = true;
+    };
+  }, [side.id, notify]);
+  const link = path ? new URL(path, window.location.origin).href : "";
+  async function png() {
+    const blob = new Blob([svg ?? ""], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("The card could not be drawn."));
+        img.src = url;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = 1080;
+      canvas.height = 1350;
+      canvas.getContext("2d")!.drawImage(image, 0, 0, 1080, 1350);
+      return await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("The card could not be saved."))),
+          "image/png",
+        ),
+      );
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+  async function save() {
+    setBusy(true);
+    try {
+      const blob = await png();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `smudge-${side.id}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+    } catch (e) {
+      notify((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function share() {
+    setBusy(true);
+    try {
+      const file = new File([await png()], `smudge-${side.id}.png`, { type: "image/png" });
+      const data = { files: [file], text: `${side.name} on Smudge: ${link}` };
+      if (navigator.canShare?.(data)) await navigator.share(data);
+      else await navigator.share({ text: `${side.name} on Smudge`, url: link });
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") notify((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(link);
+      notify("Link copied.");
+    } catch {
+      notify(link);
+    }
+  }
+  return (
+    <Dialog title="Share card" onClose={onClose}>
+      <p className="fineprint sides-intro">
+        A picture of you in {side.name}, for a chat group or a story. Whoever taps the link lands
+        {side.private || side.id === EVERYDAY
+          ? " on your page."
+          : ` on your page, inside ${side.name}.`}
+      </p>
+      <div
+        className="share-card-preview"
+        style={{ "--side-accent": side.accent } as React.CSSProperties}
+      >
+        {svg ? (
+          <img
+            src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
+            alt={`Your ${side.name} card`}
+          />
+        ) : (
+          <span className="share-card-wait">Drawing your card…</span>
+        )}
+      </div>
+      <div className="share-card-actions">
+        <button className="primary" disabled={!svg || busy} onClick={() => void save()}>
+          <Download size={15} /> Save image
+        </button>
+        {canShare && (
+          <button className="quiet-button" disabled={!svg || busy} onClick={() => void share()}>
+            <Share2 size={15} /> Share
+          </button>
+        )}
+        <button className="quiet-button" disabled={!link} onClick={() => void copy()}>
+          <Link2 size={15} /> Copy link
+        </button>
+      </div>
+      {link && <p className="fineprint share-card-link">{link}</p>}
     </Dialog>
   );
 }

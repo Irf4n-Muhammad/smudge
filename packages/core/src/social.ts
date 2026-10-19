@@ -82,7 +82,7 @@ export type SocialEvent =
       postId: string;
     }
   | {
-      type: "partner-request" | "follow-request" | "follow-accepted";
+      type: "partner-request" | "follow-request" | "follow-accepted" | "gift";
       actorId: string;
       targetId: string;
     };

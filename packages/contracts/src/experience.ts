@@ -11,6 +11,8 @@ export const capabilities = [
   "polls.vote",
   "reactions.read",
   "reactions.place",
+  "plan.read",
+  "plan.join",
 ] as const;
 export const capability = z.enum(capabilities);
 export const manifestV2 = z
@@ -21,7 +23,7 @@ export const manifestV2 = z
     entrypoint: z.literal("index.html"),
     capabilities: z
       .array(capability)
-      .max(8)
+      .max(10)
       .refine((v) => new Set(v).size === v.length, "Duplicate capability"),
     assets: z.array(z.string().uuid()).max(12).default([]),
     stage: z

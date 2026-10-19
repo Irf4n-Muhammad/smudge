@@ -476,7 +476,9 @@ export function PostEditor({
     sheet === "field"
       ? photo
         ? `Photo ${Number(photoIndex) + 1}`
-        : (fieldTitles[field ?? ""] ?? "Edit")
+        : field === "kicker" && d.style === "plan"
+          ? "When and where"
+          : (fieldTitles[field ?? ""] ?? "Edit")
       : sheet === "style"
         ? "Style"
         : sheet === "colors"
@@ -552,11 +554,15 @@ export function PostEditor({
           </button>
           {sheet === "field" && field === "kicker" && (
             <TextField
-              title="Small label"
+              title={d.style === "plan" ? "When and where" : "Small label"}
               value={d.kicker}
               max={40}
-              placeholder="Tonight, A story, Hot take…"
-              hint="Leave it empty to hide it."
+              placeholder={
+                d.style === "plan" ? "Sunday 05:30 · GBK" : "Tonight, A story, Hot take…"
+              }
+              hint={
+                d.style === "plan" ? "The badge above the headline." : "Leave it empty to hide it."
+              }
               onChange={(v) => change({ ...d, kicker: v })}
             />
           )}
