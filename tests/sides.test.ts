@@ -51,14 +51,17 @@ test("everyone is in Everyday; open sides are joined with a tap and left again",
   );
   assert.deepEqual(
     sides.me(alice).open.map((s) => s.id),
-    ["runners"],
+    ["runners", "gamers"],
   );
   sides.join(alice, "runners");
   assert.deepEqual(
     sides.me(alice).mine.map((s) => s.id),
     ["everyday", "runners"],
   );
-  assert.equal(sides.me(alice).open.length, 0);
+  assert.deepEqual(
+    sides.me(alice).open.map((s) => s.id),
+    ["gamers"],
+  );
   sides.setActive(alice, { side: "runners" });
   assert.equal(sides.me(alice).active, "runners");
   // Leaving a side drops you back into Everyday; Everyday itself cannot be left.

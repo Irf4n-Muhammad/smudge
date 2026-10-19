@@ -39,7 +39,7 @@ import { PlansService } from "../../packages/core/src/plans.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
 import { sideRoutes } from "./side-routes.js";
-import { seedGift, seedPlan, seedSides, seedStamps } from "./seed-sides.js";
+import { seedGamers, seedGift, seedPlan, seedSides, seedStamps } from "./seed-sides.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
@@ -151,6 +151,7 @@ if (config.demoContent) {
   seedSides(service, sidesService);
   seedStamps(service);
   seedPlan(service);
+  seedGamers(service, sidesService);
   seedGift(service);
 }
 const sharing = new SharingService(service, community, identity, profiles);

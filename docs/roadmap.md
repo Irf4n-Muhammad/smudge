@@ -40,8 +40,9 @@
       a For you / Following picker, Search with Posts and People, More behind the profile ☰.
       The fifth tab is Sides. See ADR 0032.
 - [x] A side's home: inside a side, the feed opens with the side's colour, name, members, post
-      count and plans, so a community reads as a place. Next: a gaming side, attendance per
-      side, a join link that opens the home without an account. See ADR 0033.
+      count and plans, so a community reads as a place. Gamers is the second seeded community,
+      with a squad-up plan, a clip and a bracket. Next: attendance per side, a join link that
+      opens the home without an account. See ADR 0033.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

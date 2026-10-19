@@ -81,3 +81,32 @@ test("switching sides changes the feed and where a new post goes; a private side
   await expect(shared).toHaveCount(1);
   await expect(shared.locator(".side-tag")).toHaveClass(/shared/);
 });
+
+test("an open side is joined from the Sides tab and lands on its home", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  const bar = page.getByRole("navigation", { name: "Your sides" });
+  await expect(bar.getByRole("button", { name: "Gamers" })).toHaveCount(0);
+  await bar.getByRole("button", { name: "Join or leave sides" }).click();
+  const sidesPage = page.getByRole("region", { name: "Your sides" });
+  await sidesPage
+    .locator(".side-row")
+    .filter({ hasText: "Gamers" })
+    .getByRole("button", { name: "Join" })
+    .click();
+  await expect(page.locator(".toast")).toContainText("You're in Gamers.");
+  await sidesPage.getByRole("button", { name: "Open Gamers" }).click();
+  const home = page.getByRole("region", { name: "Gamers home" });
+  await expect(home.getByRole("heading", { name: "Gamers" })).toBeVisible();
+  await expect(home.locator(".side-home-meta")).toContainText("5 members");
+  await expect(home.locator(".side-home-meta")).toContainText("3 posts");
+  await expect(home.getByRole("button", { name: /^Squad up/ })).toContainText("2 in · 1 came");
+  await expect(page.locator(".composer strong")).toHaveText("What are you playing tonight?");
+  await expect(page.getByRole("article", { name: /^Weekend cup/ })).toHaveCount(1);
+  await home.getByRole("button", { name: "Leave Gamers" }).click();
+  await expect(page.locator(".toast")).toContainText("You left Gamers.");
+  await expect(bar.getByRole("button", { name: "Everyday" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
