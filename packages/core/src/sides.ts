@@ -18,7 +18,7 @@ import type {
 } from "../../contracts/src/sides.js";
 import { collectionById } from "../../contracts/src/identity.js";
 import type { Actor } from "./index.js";
-import { AppError } from "./social.js";
+import { AppError, GUEST } from "./social.js";
 import type { Publication, SocialService } from "./social.js";
 
 interface Membership {
@@ -127,7 +127,9 @@ export class SidesService {
    * exist. Counts cover everyone; the people shown are those the viewer may see.
    */
   home(actor: Actor, sideId: string): SideHome {
-    const viewerId = this.social.actor(actor);
+    // A guest (ADR 0035) is the empty viewer, as for share links: never a member, so a private
+    // side does not exist for them.
+    const viewerId = actor.userId === GUEST ? GUEST : this.social.actor(actor);
     const side = sideById(sideId);
     const member = !!side && this.isMember(viewerId, side.id);
     if (!side || (side.private && !member)) throw new AppError("NOT_FOUND", 404);

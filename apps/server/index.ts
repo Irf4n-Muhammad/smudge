@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "
 import { resolve, dirname } from "node:path";
 import { z } from "zod";
 import { Store } from "../../packages/core/src/database.js";
-import { SocialService, AppError } from "../../packages/core/src/social.js";
+import { SocialService, AppError, GUEST } from "../../packages/core/src/social.js";
 import type { Asset } from "../../packages/core/src/social.js";
 import type { Actor } from "../../packages/core/src/index.js";
 import { bridgeRequestSchema } from "../../packages/contracts/src/experience.js";
@@ -157,6 +157,8 @@ if (config.demoContent) {
   seedGift(service);
 }
 const sharing = new SharingService(service, community, identity, profiles);
+// A side's link (ADR 0035) shows its home to guests, asked about the guest viewer.
+sharing.sideHome = (sideId) => sidesService.home({ userId: GUEST }, sideId);
 const media = new MediaService(service, resolve(dataDir, "media"));
 const mods = new ModService(profiles);
 if (config.demoContent) {
@@ -708,6 +710,10 @@ api.get("/api/public/sides/:id", guestLimit, (req, res) => {
   if (!side || side.private) throw new AppError("NOT_FOUND", 404);
   res.json({ id: side.id, name: side.name, tagline: side.tagline, accent: side.accent });
 });
+// A side's link (ADR 0035): the home of an open side for someone without an account.
+api.get("/api/public/sides/:id/home", guestLimit, (req, res) =>
+  res.json(sharing.side(z.string().max(40).parse(req.params.id))),
+);
 api.get("/api/public/posts/:id", guestLimit, (req, res) =>
   res.json(sharing.post(String(req.params.id))),
 );

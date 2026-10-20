@@ -103,6 +103,29 @@ export function SideHome({
   const { side, members, plans, regulars } = home;
   const more = members.count - members.people.length;
   const since = home.since ? new Date(home.since) : null;
+  const inviteLink = side.private ? "" : new URL(`/s/${side.id}`, window.location.origin).href;
+  /** The side's link (ADR 0035), for a chat group: the device's share sheet, else the clipboard. */
+  async function invite() {
+    const data = {
+      title: `${side.name} on Smudge`,
+      text: `Join ${side.name} on Smudge`,
+      url: inviteLink,
+    };
+    try {
+      if (typeof navigator.share === "function" && navigator.canShare?.(data)) {
+        await navigator.share(data);
+        return;
+      }
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+    }
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      notify(`Invite link copied: ${inviteLink}`);
+    } catch {
+      notify(inviteLink);
+    }
+  }
   async function leave() {
     setBusy(true);
     try {
@@ -135,6 +158,16 @@ export function SideHome({
             <p className="side-home-tag">{side.tagline}</p>
           </div>
           <div className="side-home-actions">
+            {inviteLink && (
+              <button
+                className="quiet-button"
+                aria-label={`Invite link for ${side.name}`}
+                title="Invite link"
+                onClick={() => void invite()}
+              >
+                <Link2 size={14} /> Invite
+              </button>
+            )}
             <button
               className="quiet-button"
               aria-label={`Share card for ${side.name}`}
@@ -223,6 +256,84 @@ export function SideHome({
           </div>
         )}
       </div>
+    </section>
+  );
+}
+
+/** Every word of the query is in the side's name or tagline (ADR 0035), like post search. */
+export function matchSides(sides: SidesView, query: string): Side[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+  return [...sides.mine, ...sides.open].filter((s) => {
+    if (s.id === EVERYDAY) return false;
+    const text = `${s.name} ${s.tagline}`.toLowerCase();
+    return words.every((w) => text.includes(w));
+  });
+}
+
+/** Sides that match a search, above the posts: open yours, or join one with a tap. */
+export function SideResults({
+  sides,
+  query,
+  onChange,
+  onOpen,
+  notify,
+}: {
+  sides: SidesView;
+  query: string;
+  onChange: (next: SidesView) => Promise<void>;
+  onOpen: (side: string) => void;
+  notify: (message: string) => void;
+}) {
+  const [busy, setBusy] = useState("");
+  const matches = matchSides(sides, query);
+  if (matches.length === 0) return null;
+  const mine = new Set(sides.mine.map((s) => s.id));
+  async function join(side: Side) {
+    setBusy(side.id);
+    try {
+      await onChange(await api<SidesView>(`/sides/${encodeURIComponent(side.id)}/join`, {}));
+      notify(`You're in ${side.name}.`);
+      onOpen(side.id);
+    } catch (e) {
+      notify((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+  return (
+    <section className="side-results" aria-label="Sides">
+      <h2 className="panel-title">Sides</h2>
+      {matches.map((s) => (
+        <div
+          key={s.id}
+          className="side-row"
+          style={{ "--side-accent": s.accent } as React.CSSProperties}
+        >
+          <span className="side-dot" />
+          <div>
+            <strong>
+              <button
+                className="side-open"
+                aria-label={`Open ${s.name}`}
+                onClick={() => onOpen(s.id)}
+              >
+                {s.name}
+              </button>
+            </strong>
+            <small>{s.tagline}</small>
+          </div>
+          {mine.has(s.id) ? (
+            <button className="quiet-button" onClick={() => onOpen(s.id)}>
+              Open
+            </button>
+          ) : (
+            <button className="primary" disabled={busy === s.id} onClick={() => void join(s)}>
+              Join
+            </button>
+          )}
+        </div>
+      ))}
     </section>
   );
 }
