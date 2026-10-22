@@ -17,6 +17,26 @@ every session and proposes lines for it at the end. Muhammad decides what goes i
 - Payment is solved. The open problem is bringing people in and keeping them.
 - Method: human desire, then context and goal (fixed), then the way (radical), then whether the
   difference matters or is sugarcoating. Think top down from maximum potential.
+- Center sentence: "Smudge: semua yang lu lakuin jadi bukti, dan bukti itu yang bikin lu dikenal dan
+  dipercaya orang-orang lu." The strength is owning credentials, including ones nobody issues
+  today (30 Persija matches, 60 boxing sessions, 40 coffee shops). Moments, GPS-proven place
+  reviews and community proof are the same thing seen from three sides.
+- Credentials must be recognised by people (community, friends), not only handed out by the
+  system; Foursquare badges died because they were about the app. A credential is worth what it
+  unlocks (ticket priority, brand access, sponsored moments). If it can be faked, it is worth
+  nothing. Credentials belong to the person, are opt-in, and are shown per Side.
+- Communities are bubbles: nested, official page on top, open to anyone. Proof gives weight, not
+  entry. Talk is born from a thing (a boss, a route, a match), so it stays findable instead of
+  scrolling away. Inside, talk is ordinary text like Reddit; posts are programs built from data.
+  Post format is a feature, not a moat. The moat is the proven name that builds up across every
+  bubble in front of your own people.
+- Each community has its own moat: gamers and runners on proof, football on the match as a room.
+- Rule: a feature Instagram can paste on without breaking its machine is not a weapon.
+- Rule: the toy has to be about the person, not about the toy.
+- Entry door: places (food, hangouts, trips) and live links in WA that open without an account.
+- Money: themes as skins and season passes, transaction cuts, intent-based ads (search, places,
+  sponsored moments) as a complement. Creators are paid from sales and transactions, not only an
+  ad pool. Never paid verification.
 
 ## Rejected
 
@@ -43,3 +63,8 @@ every session and proposes lines for it at the end. Muhammad decides what goes i
 
 - Instagram answers the desire to be seen; Smudge could answer the desire to be known. Weakest
   point: people may want to be known only occasionally, not every day.
+- The proven-name moat is worth nothing on day one; it only builds over time, so the entry door
+  has to carry the first weeks.
+- Communities with almost no proof (book clubs, film fans) are weaker bubbles.
+- Unanswered: is the friends feed strong enough for daily return?
+- ADR 0011 excludes lunar-calendar seasons (Ramadan, Eid); revisit if seasonal themes matter.
