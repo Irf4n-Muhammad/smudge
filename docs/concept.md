@@ -3,40 +3,85 @@
 The `smudge-concept` panel (`.claude/agents/smudge-concept.md`) reads this file at the start of
 every session and proposes lines for it at the end. Muhammad decides what goes in.
 
-## Settled
+There are two separate products. Keep their ideas apart.
 
-- Center: "website on apps". Each post, profile and page is its own HTML/CSS/JS program that opens
-  fully inside the app. Personal websites are beautiful but dead on phones because they are hard
-  to find and hard to make. Smudge fixes both: found through follow and feed, made by picking a theme.
-- Themes are made in bulk by anyone and curated by Smudge. Sources: events (Muhammad picks the
-  events, designs come from the open market and are labelled), membership, and a free market
-  unrelated to the other two.
+1. **Smudge**: Instagram, but every profile and post is HTML, so a profile can be a real website.
+2. **Bubble**: a nested Reddit where members are verified by achievement.
+
+## 1. Smudge
+
+### What it is
+
+- Like Instagram, but each post, profile and page is its own HTML/CSS/JS program that opens fully
+  inside the app. Profile shape is free through themes.
+- Pitch: "your social profile is your portfolio". A programmer shows a live GitHub card and
+  projects grouped by topic; Instagram only has a grid and one bio link.
+- Businesses (restaurants, gyms, shops) make their official website here: menu, hours, prices,
+  owner photos, plus reviews from people you follow who actually went.
+- Demand: whoever wants to be shown needs a page as complete as a website, but websites are formal,
+  hard to make and nobody visits them. Whoever is searching wants everything in one trusted place
+  instead of jumping between Google reviews, photos and a website. Smudge: a page as complete as a
+  website, found as easily as social media. A social media engine for websites, not a search engine.
+
+### Themes
+
+- Making a profile is as easy as Canva. Themes are made in bulk (AI templates from us, plus anyone
+  in an open market) and curated. Modding is open for those who want it.
 - A theme shows in the feed, not only on the profile.
-- A moment is a theme unlocked by proof (photo GPS in Paris unlocks the Paris theme).
-- Social media for everyone, aimed at Instagram's size.
-- Payment is solved. The open problem is bringing people in and keeping them.
+- Some themes unlock only through verification (e.g. a UofT theme for UofT people, a Paris theme
+  from photo GPS in Paris). These cannot be bought elsewhere, which is what keeps ordinary users who
+  only picked a theme from leaving.
+
+### Growth and money
+
+- Early on, sell the place to put your website, not the network: people come for the tool and stay
+  for the network. Links go in Instagram bios, LinkedIn and WA groups and open without an account,
+  so every site advertises Smudge.
+- In that phase we compete directly with Carrd, Linktree and Framer, so it must be clearly easier or
+  better.
+- Money: themes as skins and season passes, transaction cuts, intent-based ads (places, search,
+  sponsored moments) as a complement. Creators are paid from sales and transactions. Never paid
+  verification.
+
+### Why Instagram won't copy
+
+- Its feed and ads live on a uniform format, and running other people's HTML is a security risk for
+  it. Free design alone is not unique (Carrd, Wix exist); the unique part is websites living inside
+  a feed and found through your people.
+
+### Open
+
+- The network effect is empty on day one; the tool has to carry the first weeks.
+- Is the friends feed strong enough for daily return?
+- ADR 0011 excludes lunar-calendar seasons (Ramadan, Eid); revisit if seasonal themes matter.
+
+## 2. Bubble
+
+### What it is
+
+- A nested Reddit: small bubbles inside big ones (soulslike inside games), an official page on top,
+  open to anyone.
+- The argument is verified by achievement. Proof comes from data (Steam or PSN hours, Strava,
+  bosses beaten, FPL rank) or from places and people (GPS at a gym or stadium, a coach vouching).
+- Proof gives weight, not entry. Answers from proven members rank higher.
+- Talk is born from a thing (a boss, a route, a match), so it stays findable: one Malenia, not 40
+  Malenia threads.
+
+### Moat and limits
+
+- Post format is a feature, not a moat. The moat is the proven name that builds up and cannot be
+  taken to Discord (closed islands) or Reddit (anonymous, unproven).
+- Credentials must be recognised by people, not only handed out by the system (Foursquare badges
+  died because they were about the app). A credential is worth what it unlocks. If it can be faked,
+  it is worth nothing. Credentials belong to the person and are opt-in.
+- Communities with almost no proof (book clubs, film fans) are weaker bubbles.
+
+## Shared rules
+
 - Method: human desire, then context and goal (fixed), then the way (radical), then whether the
   difference matters or is sugarcoating. Think top down from maximum potential.
-- Center sentence: "Smudge: semua yang lu lakuin jadi bukti, dan bukti itu yang bikin lu dikenal dan
-  dipercaya orang-orang lu." The strength is owning credentials, including ones nobody issues
-  today (30 Persija matches, 60 boxing sessions, 40 coffee shops). Moments, GPS-proven place
-  reviews and community proof are the same thing seen from three sides.
-- Credentials must be recognised by people (community, friends), not only handed out by the
-  system; Foursquare badges died because they were about the app. A credential is worth what it
-  unlocks (ticket priority, brand access, sponsored moments). If it can be faked, it is worth
-  nothing. Credentials belong to the person, are opt-in, and are shown per Side.
-- Communities are bubbles: nested, official page on top, open to anyone. Proof gives weight, not
-  entry. Talk is born from a thing (a boss, a route, a match), so it stays findable instead of
-  scrolling away. Inside, talk is ordinary text like Reddit; posts are programs built from data.
-  Post format is a feature, not a moat. The moat is the proven name that builds up across every
-  bubble in front of your own people.
-- Each community has its own moat: gamers and runners on proof, football on the match as a room.
-- Rule: a feature Instagram can paste on without breaking its machine is not a weapon.
-- Rule: the toy has to be about the person, not about the toy.
-- Entry door: places (food, hangouts, trips) and live links in WA that open without an account.
-- Money: themes as skins and season passes, transaction cuts, intent-based ads (search, places,
-  sponsored moments) as a complement. Creators are paid from sales and transactions, not only an
-  ad pool. Never paid verification.
+- A feature Instagram can paste on without breaking its machine is not a weapon.
+- The toy has to be about the person, not about the toy.
 
 ## Rejected
 
@@ -44,6 +89,7 @@ every session and proposes lines for it at the end. Muhammad decides what goes i
   under agenda item 7.
 - "Don't compete with Discord" as a reason to close off an idea.
 - Deep research reports for these questions: no meaningful information.
+- Mixing Smudge and Bubble into one product.
 
 ## Agenda
 
@@ -58,13 +104,3 @@ every session and proposes lines for it at the end. Muhammad decides what goes i
 | 7   | Reaching people: niche, open for all, or both           | open   |
 | 8   | Features: which, why they matter, which are radical     | open   |
 | 9   | At maximum potential, do people still use other apps?   | open   |
-
-## Open hypotheses
-
-- Instagram answers the desire to be seen; Smudge could answer the desire to be known. Weakest
-  point: people may want to be known only occasionally, not every day.
-- The proven-name moat is worth nothing on day one; it only builds over time, so the entry door
-  has to carry the first weeks.
-- Communities with almost no proof (book clubs, film fans) are weaker bubbles.
-- Unanswered: is the friends feed strong enough for daily return?
-- ADR 0011 excludes lunar-calendar seasons (Ramadan, Eid); revisit if seasonal themes matter.
