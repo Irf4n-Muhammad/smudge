@@ -5,54 +5,95 @@ every session and proposes lines for it at the end. Muhammad decides what goes i
 
 There are two separate products. Keep their ideas apart.
 
-1. **Smudge**: Instagram, but every profile and post is HTML, so a profile can be a real website.
+1. **Smudge**: where the moments of your life live; every profile, post and page is HTML.
 2. **Bubble**: a nested Reddit where members are verified by achievement.
 
 ## 1. Smudge
 
 ### What it is
 
-- Like Instagram, but each post, profile and page is its own HTML/CSS/JS program that opens fully
-  inside the app. Profile shape is free through themes.
-- Pitch: "your social profile is your portfolio". A programmer shows a live GitHub card and
-  projects grouped by topic; Instagram only has a grid and one bio link.
-- Businesses (restaurants, gyms, shops) make their official website here: menu, hours, prices,
-  owner photos, plus reviews from people you follow who actually went.
-- Demand: whoever wants to be shown needs a page as complete as a website, but websites are formal,
-  hard to make and nobody visits them. Whoever is searching wants everything in one trusted place
-  instead of jumping between Google reviews, photos and a website. Smudge: a page as complete as a
-  website, found as easily as social media. A social media engine for websites, not a search engine.
+- Center: "Smudge is where the moments of your life live, from the plan to the memory, and only the
+  people who were there are in it."
+- Like Instagram, but each post, profile and page is its own HTML/CSS/JS program. Three parts form
+  one loop:
+  1. **Moments** (the activity): weddings, reunions, birthdays, trips, dinners.
+  2. **Profile** (where the results pile up): a timeline of where you were present and with whom,
+     and at the same time your website or portfolio, as easy as picking a theme.
+  3. **Businesses** (where the activity happens): venues, restaurants, gyms, cafes and wedding
+     vendors get an official page, stamps and reviews from people proven to have come.
+- One QR scan at the venue ties them: it opens the moment's album, proves presence and gives a stamp.
+- Loop: planning a moment picks a place from business pages (ranked by friends' proven reviews) →
+  everyone scans at the place → the moment becomes a memory on every attendee's profile → friends
+  see it and plan their own moment there.
+- Closest competitor: Partiful. Pitch: "Partiful, but moments pile up into your life timeline and
+  connect to the place they happened."
 
-### Themes
+### Moments
 
-- Making a profile is as easy as Canva. Themes are made in bulk (AI templates from us, plus anyone
-  in an open market) and curated. Modding is open for those who want it.
-- A theme shows in the feed, not only on the profile.
-- Some themes unlock only through verification (e.g. a UofT theme for UofT people, a Paris theme
-  from photo GPS in Paris). These cannot be bought elsewhere, which is what keeps ordinary users who
-  only picked a theme from leaving.
+- Shaped like a Telegram group: the invite page pinned on top; a chat tab (announcement mode for
+  big events, free chat for small ones); an album tab; small groups inside the moment.
+- Small groups inherit date, place and dress code, are hidden from the parent, and close with it.
+- Unlike Telegram, a moment closes itself after the event and becomes one memory card on each
+  attendee's profile. A group that keeps meeting is offered to become a permanent circle.
+- Norm: only people who were there. Intimacy comes from shared presence, not small size. No public
+  like counts; outsiders see nothing unless the host opens it.
+- Wedding flow: host picks a template, vendors attach → link goes to WA, opens without an account →
+  RSVP with a phone number gives the host a guest count → updates reach RSVP'd guests → at the door
+  a QR replaces the guestbook and opens the album (digital gift envelope here too) → afterwards the
+  same link becomes album plus thank-you. Viewing needs no account; uploading photos does.
+- Album: chapters from the invite's rundown, photos sorted in by time; official photographer (credited)
+  and most-responded photos on top; a "your photos" tab from tags and small groups (no face
+  recognition yet); guest wishes inside; live on the day, locked a few days later after the hosts
+  rearrange.
+- Before-event chat must be at least as comfortable as a WA group (fast, notifications, photos,
+  voice notes), or people make a WA group and the "after" never happens.
+- Big moments (weddings, reunions) pull new people; small ones (birthdays, trips, dinners) keep them.
+
+### Where HTML matters
+
+- Invites, albums and memory cards are programs shaped by the moment's theme. The theme market
+  becomes a market for moment templates: digital-invite sellers now selling over WA sell here, and
+  we take a cut.
+- Profiles stay free websites: "your social profile is your portfolio". A "use this theme" button on
+  every profile makes profiles spread; the theme maker gets credit and a share.
+- Some themes unlock only through proof (UofT, Paris), which nothing else can sell.
 
 ### Growth and money
 
-- Early on, sell the place to put your website, not the network: people come for the tool and stay
-  for the network. Links go in Instagram bios, LinkedIn and WA groups and open without an account,
-  so every site advertises Smudge.
-- In that phase we compete directly with Carrd, Linktree and Framer, so it must be clearly easier or
-  better.
-- Money: themes as skins and season passes, transaction cuts, intent-based ads (places, search,
-  sponsored moments) as a complement. Creators are paid from sales and transactions. Never paid
-  verification.
+- Entry door: weddings in Indonesia (an existing paid market with no platform; one couple pulls
+  hundreds). Product supports all moment types from day one.
+- Links are the watermark: every moment link opened in WA shows "made with Smudge".
+- Money: businesses and vendors pay for pages and tools (customer reach, AI receptionist, proven
+  visit reports), people buy themes and templates, intent-based ads appear where people search for
+  places. Feed stays intimate with few or no ads. Never paid verification; never sell or license
+  people's data.
+- Start as a complement to Instagram, not a rival; attention ads and an explore of strangers'
+  programs come only once big.
+- Rough best case (estimate, unchecked): about $10B a year, more if intent ads grow.
 
-### Why Instagram won't copy
+### Why others won't copy
 
-- Its feed and ads live on a uniform format, and running other people's HTML is a security risk for
-  it. Free design alone is not unique (Carrd, Wix exist); the unique part is websites living inside
-  a feed and found through your people.
+- Instagram: uniform feed and ads; running other people's HTML is a security risk; a moment owned by
+  hundreds is not its shape.
+- WhatsApp can copy planning (it has group Events) but not the after: no profiles or timeline, and
+  end-to-end encryption stops it arranging 300 guests' photos server-side. No places either. So the
+  moat is after the event and the place; before the event must simply be good.
+- Moments never ask anyone to leave WhatsApp: each is a new small group, so the move-together
+  problem that stopped Telegram does not apply.
+
+### Not doing
+
+- Food delivery, being a bank or Stripe, store backend, pay-per-visit as the main billing.
+- Replacing WhatsApp. Maximum potential is "where your friend circles live": groups from WhatsApp,
+  memories from Instagram.
 
 ### Open
 
-- The network effect is empty on day one; the tool has to carry the first weeks.
-- Is the friends feed strong enough for daily return?
+- Test one real wedding end to end: do guests sign up, upload photos, and create their own small
+  moment within a month?
+- Weddings are rare per person; small gatherings must count as moments for weekly return.
+- HTML safety (hangs, login-look phishing, code moderation) and location data (no background
+  tracking, store results only, per-action permission).
 - ADR 0011 excludes lunar-calendar seasons (Ramadan, Eid); revisit if seasonal themes matter.
 
 ## 2. Bubble
