@@ -6,7 +6,7 @@ every session and proposes lines for it at the end. Muhammad decides what goes i
 There are two separate products. Keep their ideas apart.
 
 1. **Smudge**: where the moments of your life live; every profile, post and page is HTML.
-2. **Bubble**: a nested Reddit where members are verified by achievement.
+2. **Bubble**: a nested Reddit with a world map of interest bubbles you can step into.
 
 ## 1. Smudge
 
@@ -100,22 +100,54 @@ There are two separate products. Keep their ideas apart.
 
 ### What it is
 
-- A nested Reddit: small bubbles inside big ones (soulslike inside games), an official page on top,
-  open to anyone.
-- The argument is verified by achievement. Proof comes from data (Steam or PSN hours, Strava,
-  bosses beaten, FPL rank) or from places and people (GPS at a gym or stadium, a coach vouching).
-- Proof gives weight, not entry. Answers from proven members rank higher.
-- Talk is born from a thing (a boss, a route, a match), so it stays findable: one Malenia, not 40
-  Malenia threads.
+- Premise: everyone lives inside interest bubbles, and today those bubbles are invisible. You
+  cannot see how big a bubble is, whether it is growing, where it is busy, or its mood, nor which
+  bubbles you are in.
+- Form: a nested feed like Reddit (bubbles inside bubbles), posting free like Reddit. The feed is
+  what people open daily.
+- The one thing that differs: a world map of bubbles. Size from people, color from mood, glow when
+  growing; zoom follows the nesting (Games → Soulslike → Elden Ring). A private personal map shows
+  which bubbles you are in, shareable like Wrapped.
+- The map is a door, not a picture: tap a country to enter that country's feed of the bubble,
+  auto-translated ("what Koreans think of this patch"), or jump to another bubble's view of the same
+  thing (runners and sneakerheads on one shoe). Communities are split by language and app today
+  (Reddit, X, 5ch, Bilibili, DC Inside); nowhere shows how the rest of the world talks about the
+  same thing.
+- One line: "See the world as bubbles, and find yours."
 
-### Moat and limits
+### Features on the map
 
-- Post format is a feature, not a moat. The moat is the proven name that builds up and cannot be
-  taken to Discord (closed islands) or Reddit (anonymous, unproven).
-- Credentials must be recognised by people, not only handed out by the system (Foursquare badges
-  died because they were about the app). A credential is worth what it unlocks. If it can be faked,
-  it is worth nothing. Credentials belong to the person and are opt-in.
-- Communities with almost no proof (book clubs, film fans) are weaker bubbles.
+- Trending counts real people, not posts, per bubble and per country, and measures change (growth,
+  mood shift) rather than volume. Unlike Twitter, bots and news do not dominate.
+- Country page: top songs, most played games, games made there, and its people's feed. Every chart
+  is a door into the conversation.
+- Live reaction: during a World Cup final, a big release or a patch, the map moves and you can enter
+  any country's feed. This is the main puller.
+- Bridges: bilingual people who explain context between two bubbles get known for it.
+- Replay: a time slider showing how a bubble grew or how its mood changed.
+- Context card: for a person or topic you keep hearing about but do not know, show which bubble it
+  comes from, why it is known (explained from inside), a sourced timeline, and the bubble's mood.
+  "TikTok gives the fragment, Bubble gives the whole picture."
+
+### Moat and money
+
+- The map can be copied; it is the marketing. The moat is people from many countries already in one
+  place, which no regional platform gets by adding a feature.
+- Money: official bubbles free; studios and brands pay for crowd and mood insight; countries
+  (cultural agencies, tourism boards) and local game makers pay for an official country page, marked
+  official and kept apart from people's posts.
+- Verified by achievement started as a Smudge idea (theme unlocks). Bubble may use it to keep
+  crowds real and weigh answers, but it is not the core.
+
+### Open
+
+- Translation of community slang; cold start per country (start with 2 or 3 countries big in one
+  bubble); outsiders flooding another country's feed (maybe read-only first).
+- Context cards about real people: defamation risk, gossip drift, accuracy while a story is hot.
+- Privacy: aggregates only, no slice under about 100 people, rough country only, personal map
+  private by default.
+- Chart data from Spotify or Steam may not be licensed; move to Bubble's own activity over time.
+- Paid campaigns and state pages must be marked and kept out of trending.
 
 ## Shared rules
 
