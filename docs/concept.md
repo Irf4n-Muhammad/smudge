@@ -182,8 +182,7 @@ There are two separate products. Keep their ideas apart.
 ### Open
 
 - Prestige: lineage and belts need a form of challenge in bubbles without head-to-head (film,
-  books); academy needs term limits and secret votes against cliques and bribes; booking cut-off
-  for credit split between several gurus; pay-if-it-works needs clear targets and a guard against
+  books); academy needs term limits and secret votes against cliques and bribes; booking needs a rule for splitting credit between several gurus; pay-if-it-works needs clear targets and a guard against
   account boosting in games; AI data needs consent and aggregates only.
 - Other ideas from the same talk, not yet placed: a proof wallet as its own product used by both
   Smudge and Bubble; reviews only from people who scanned in (overlaps Smudge businesses); a
