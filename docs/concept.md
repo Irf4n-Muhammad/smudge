@@ -158,10 +158,21 @@ There are two separate products. Keep their ideas apart.
   helped 2,300 people beat Malenia"); others can only count likes.
 - Booking: pay someone for a real-time consult or lesson, priced by legitimacy (proven results)
   more than fame. Unlike ADPList or Topmate, mentors are chosen by outcome, not self-filled
-  profiles, and not only for careers. Likely Bubble's main money: a marketplace cut. The guru's
-  outcome count only grows on sessions booked through Bubble, which keeps them from leaving to WA.
-- Pay if it works: money held until the result is proven (sub-4 marathon on Strava), or a bounty
-  board where gurus apply and are paid on success. Only possible where results are provable.
+  profiles. Likely Bubble's main money: a marketplace cut. The guru's outcome count only grows on
+  sessions booked through Bubble, which keeps them from leaving to WA.
+- Booking is narrow: general tips are free on YouTube, so people only pay for what is about them:
+  someone reviewing how they play or move (ranked replays, running form, boxing form), a plan for
+  their situation, and life decisions (university, career, joining a team). YouTube creators can
+  link videos and earn guru credit, so YouTube is a source, not a rival.
+- Results are used to choose a guru, not to pay one: payment stays per session; across many
+  students the outcome count stays honest.
+- Curator: for bubbles without achievements (film, books, music), prove taste instead. Predictions
+  recorded before the result (review scores, box office, award winners, artists found early) build
+  a track record ("right on 78% of 200 films"). Curators can join the academy and be booked. No
+  money stakes (not gambling); guesses hidden until the result; only for public outcomes.
+- Rival: for the middle, not the top. Bubble pairs you with one person in another country at
+  exactly your level by proof; weekly progress, peek at their country's feed, a stronger rival when
+  you pass them. Replace inactive rivals fast; talking is optional, numbers by default.
 - AI from proven paths: an assistant trained on thousands of real journeys to success, answering
   from people in the same position who made it. Data grows with every success. Subscription; the AI
   covers the common path and can recommend a guru for the personal one.
@@ -182,11 +193,9 @@ There are two separate products. Keep their ideas apart.
 ### Open
 
 - Prestige: lineage and belts need a form of challenge in bubbles without head-to-head (film,
-  books); academy needs term limits and secret votes against cliques and bribes; booking needs a rule for splitting credit between several gurus; pay-if-it-works needs clear targets and a guard against
-  account boosting in games; AI data needs consent and aggregates only.
-- Other ideas from the same talk, not yet placed: a proof wallet as its own product used by both
-  Smudge and Bubble; reviews only from people who scanned in (overlaps Smudge businesses); a
-  standalone context card as the cheapest test of Bubble's premise.
+  books); academy needs term limits and secret votes against cliques and bribes; booking needs a
+  rule for splitting credit between several gurus and a guard against account boosting in games;
+  AI data needs consent and aggregates only.
 - Translation of community slang; cold start per country (start with 2 or 3 countries big in one
   bubble); outsiders flooding another country's feed (maybe read-only first).
 - Context cards about real people: defamation risk, gossip drift, accuracy while a story is hot.
@@ -194,6 +203,34 @@ There are two separate products. Keep their ideas apart.
   private by default.
 - Chart data from Spotify or Steam may not be licensed; move to Bubble's own activity over time.
 - Paid campaigns and state pages must be marked and kept out of trending.
+
+## Other ideas, not yet a product
+
+- A proof wallet as its own product used by both Smudge and Bubble.
+- Reviews only from people who scanned in (overlaps Smudge businesses).
+- A standalone context card as the cheapest test of Bubble's premise.
+- A "really experienced it" mark other sites (marketplaces, maps, stores) can add against fake
+  reviews. Weak: big platforms can build it themselves.
+
+### B2B: selling proof of who really did what
+
+- Research panels of real people (fastest): survey respondents are proven to be the right people
+  (bots and fake "gamers" are research's biggest problem), and behavior beats stated opinion (says
+  they hate the patch, still plays daily). Strong in games, sport and places; weak where proof is
+  weak (film, books). Food works through places: Smudge stamps show who ate where and who came
+  back (return rate is the honest taste signal); taste itself via tasting sessions for proven fans;
+  packaged food via receipt scans (Fetch already does this). Data comes from both products, so where
+  it lives is undecided.
+- Hiring by proof instead of CVs (biggest, slowest): CVs are AI-written and applications flood in;
+  employers search for proven work (open-source contributions, finished bootcamps) and vouches
+  from proven people. LinkedIn's market (billions a year from companies; rough, unchecked). Hard:
+  HR habits, anti-discrimination rules, access to work data.
+- Concert tickets for real fans: presale priority for proven fans (listening hours, past concerts,
+  time in the bubble) against bots and scalpers, as in Jakarta's Coldplay ticket war. Ticketmaster's
+  Verified Fan checks human, not fan. Sold to promoters per ticket. Hard: Ticketmaster exclusive
+  contracts, Spotify data access, fairness to new fans.
+- Location data for opening stores: not only how many pass (Placer.ai does this from phone
+  location) but what kind of people, from consented Smudge scans. Needs many places on our QR first.
 
 ## Shared rules
 
@@ -209,6 +246,9 @@ There are two separate products. Keep their ideas apart.
 - "Don't compete with Discord" as a reason to close off an idea.
 - Deep research reports for these questions: no meaningful information.
 - Mixing Smudge and Bubble into one product.
+- Pay if it works (money held until a result is proven), for gurus and as its own product: results
+  depend on too many things outside the provider's control (the student's effort, injury, time),
+  unlike a delivered IT project, so good providers would leave.
 
 ## Agenda
 
