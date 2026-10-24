@@ -129,6 +129,46 @@ There are two separate products. Keep their ideas apart.
   comes from, why it is known (explained from inside), a sourced timeline, and the bubble's mood.
   "TikTok gives the fragment, Bubble gives the whole picture."
 
+### Prestige, gurus and booking
+
+- A stamp matters only if it is hard, recognised by people (not just the system), and sits on a
+  visible ladder. Model: the World Marathon Majors Six Star medal; Sydney's push to join shows
+  issuers want into a good bracket because it sends people to them, which solves the issuer
+  chicken-and-egg. We curate brackets; issuers pay to join.
+- Few brackets: prestige only needs to be read inside its own bubble, so one Slam per bubble, only
+  bubbles big and old enough earn one, and if more than about 1% finish, next year gets harder.
+- Slam: a permanent name with contents renewed each year (like the Ballon d'Or), because games keep
+  changing. Example: "Soulslike Slam 2026", the 4 hardest soulslikes of that year. Old Slams become
+  veteran marks. Calendar: picks announced at the start of the year, chase during it, finishers at
+  the end. Studios cannot pay to get in; picks by community or a fixed rule (lowest completion rate).
+- What the holder gets: identity that travels (Bubble name, Smudge theme unlock, CV), a closed
+  circle of holders, and the next rung. Holders are the "one person who pulls 1000".
+- Radical layer, prestige as power rather than decoration:
+  - Academy: holders pick next year's Slam and vote the bubble's awards ("Soulslike of the Year"
+    by proven players, not journalists); winners put the laurel on their cover.
+  - Belts that can be taken: each bubble has a belt holder per country, challengers can take it,
+    and the map shows who holds what. Gives daily return.
+  - Lineage: a title is granted by someone who holds it, their name stays on yours, and they share
+    blame for cheating (as in jiu-jitsu).
+  - Country against country: everyone's titles add to a national score; only matters with a real
+    consequence (the top country hosts next year's Slam Invitational, like Eurovision). Otherwise a
+    marketing moment, not the core.
+  - Group titles: clubs and guilds chase a Slam together, a reason to invite friends.
+- Guru: prestige for making others succeed. Bubble links advice to proven outcomes ("your tips
+  helped 2,300 people beat Malenia"); others can only count likes.
+- Booking: pay someone for a real-time consult or lesson, priced by legitimacy (proven results)
+  more than fame. Unlike ADPList or Topmate, mentors are chosen by outcome, not self-filled
+  profiles, and not only for careers. Likely Bubble's main money: a marketplace cut. The guru's
+  outcome count only grows on sessions booked through Bubble, which keeps them from leaving to WA.
+- Pay if it works: money held until the result is proven (sub-4 marathon on Strava), or a bounty
+  board where gurus apply and are paid on success. Only possible where results are provable.
+- AI from proven paths: an assistant trained on thousands of real journeys to success, answering
+  from people in the same position who made it. Data grows with every success. Subscription; the AI
+  covers the common path and can recommend a guru for the personal one.
+- Money from Slams: a small season entry fee (tracking, race number, physical medal; finishing
+  never bought, a free route stays) and a yearly Slam Invitational for finishers (broadcast,
+  sponsors, tickets), like Boston qualifying.
+
 ### Moat and money
 
 - The map can be copied; it is the marketing. The moat is people from many countries already in one
@@ -141,6 +181,13 @@ There are two separate products. Keep their ideas apart.
 
 ### Open
 
+- Prestige: lineage and belts need a form of challenge in bubbles without head-to-head (film,
+  books); academy needs term limits and secret votes against cliques and bribes; booking cut-off
+  for credit split between several gurus; pay-if-it-works needs clear targets and a guard against
+  account boosting in games; AI data needs consent and aggregates only.
+- Other ideas from the same talk, not yet placed: a proof wallet as its own product used by both
+  Smudge and Bubble; reviews only from people who scanned in (overlaps Smudge businesses); a
+  standalone context card as the cheapest test of Bubble's premise.
 - Translation of community slang; cold start per country (start with 2 or 3 countries big in one
   bubble); outsiders flooding another country's feed (maybe read-only first).
 - Context cards about real people: defamation risk, gossip drift, accuracy while a story is hot.
