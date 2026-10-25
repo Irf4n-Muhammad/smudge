@@ -46,11 +46,20 @@ export const rsvpInputSchema = z
   .strict();
 export type RsvpInput = z.infer<typeof rsvpInputSchema>;
 
+export const gatheringPhases = ["upcoming", "live", "closed"] as const;
+export type GatheringPhase = (typeof gatheringPhases)[number];
+
 /** What anyone with the link sees. No guest names or counts: those are the host's. */
 export interface GatheringInvite extends GatheringInput {
   id: string;
   hostName: string;
   createdAt: string;
+  /** Before the day, the day until the album locks, and after (ADR 0039). */
+  phase: GatheringPhase;
+  /** The host's thank-you, shown on the same link once the moment is closed. */
+  thanks: string;
+  /** Whether the host picked a cover photo, served publicly for the memory card. */
+  cover: boolean;
 }
 export interface GatheringRsvpView {
   name: string;
@@ -182,4 +191,35 @@ export interface GatheringAlbum {
   wishes: GatheringWishView[];
   photographers: string[];
   count: number;
+  /** After the day the album locks (ADR 0039): no new photos, tags or wishes. */
+  phase: GatheringPhase;
+  /** The date the album locks on its own, at the end of that day at the venue. */
+  locksAfter: string;
+  thanks: string;
+  coverId?: string;
+  /** Your memory card for this moment, if you came: shown on your profile or hidden. */
+  card?: "shown" | "hidden";
+}
+
+/**
+ * Closing the moment (ADR 0039). The host writes the thank-you, picks the cover, orders photos
+ * and may lock the album before it locks on its own.
+ */
+export const closingInputSchema = z
+  .object({ thanks: text(600).optional(), lock: z.literal(true).optional() })
+  .strict();
+export const coverInputSchema = z.object({ photoId: z.string().uuid().nullable() }).strict();
+export const photoMoveInputSchema = z.object({ direction: z.enum(["up", "down"]) }).strict();
+export const cardInputSchema = z.object({ shown: z.boolean() }).strict();
+/** A moment you came to, as it shows on your profile. */
+export interface MemoryCard {
+  gatheringId: string;
+  kind: GatheringKind;
+  title: string;
+  date: string;
+  place: string;
+  cover: boolean;
+  /** How many people came in through the door. */
+  people: number;
+  host: boolean;
 }

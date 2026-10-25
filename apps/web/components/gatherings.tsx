@@ -82,11 +82,18 @@ export function Invitation({ id }: { id: string }) {
   return (
     <main className="invite">
       <DoorNotice state={door} signedIn={signedIn} onSignedIn={() => setJustSignedIn(true)} />
+      {invite.phase === "closed" && <ThankYou invite={invite} />}
       <InviteBody invite={invite}>
-        <Rsvp id={invite.id} {...(signedIn ? { onDone: () => void loadSpace() } : {})} />
+        {invite.phase !== "closed" && (
+          <Rsvp id={invite.id} {...(signedIn ? { onDone: () => void loadSpace() } : {})} />
+        )}
         {signedIn && (
           <section className="invite-block">
-            <p>Sudah konfirmasi lewat WhatsApp keluarga? Masuk langsung ke grup momennya.</p>
+            <p>
+              {invite.phase === "closed"
+                ? "Ikut hadir? Gabung ke momennya untuk melihat album."
+                : "Sudah konfirmasi lewat WhatsApp keluarga? Masuk langsung ke grup momennya."}
+            </p>
             <button
               className="invite-link"
               onClick={() =>
@@ -101,6 +108,20 @@ export function Invitation({ id }: { id: string }) {
         )}
       </InviteBody>
     </main>
+  );
+}
+
+/** After the moment closes, the same link opens on the host's thank-you (ADR 0039). */
+function ThankYou({ invite }: { invite: GatheringInvite }) {
+  return (
+    <section className="invite-block invite-thanks" aria-label="Terima kasih">
+      {invite.cover && (
+        <img src={`/api/public/gatherings/${encodeURIComponent(invite.id)}/cover`} alt="" />
+      )}
+      <h2>Terima kasih</h2>
+      {invite.thanks && <p>{invite.thanks}</p>}
+      <p className="invite-soft">Album momen ini sudah ditutup dan disimpan untuk yang hadir.</p>
+    </section>
   );
 }
 
@@ -187,7 +208,8 @@ function MomentSpace({
   onChange: (space: GatheringSpace) => void;
   arrived?: boolean;
 }) {
-  const [tab, setTab] = useState<Tab>(arrived ? "album" : "chat");
+  const closed = space.invite.phase === "closed";
+  const [tab, setTab] = useState<Tab>(arrived || closed ? "album" : "chat");
   const [groupId, setGroupId] = useState<string | null>(null);
   const { invite } = space;
   const group = space.groups.find((g) => g.id === groupId) ?? null;
@@ -215,6 +237,11 @@ function MomentSpace({
           </nav>
         )}
       </header>
+      {closed && (
+        <p className="moment-welcome" role="status">
+          {space.invite.thanks || "Momen ini sudah selesai. Terima kasih sudah menjadi bagiannya."}
+        </p>
+      )}
       {arrived && (
         <p className="moment-welcome" role="status">
           Selamat datang! Kehadiranmu sudah tercatat. Tambahkan fotomu ke album.

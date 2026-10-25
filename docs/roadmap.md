@@ -57,8 +57,11 @@
 - [x] The day: a door QR on the host's phone that changes every 30 seconds and records who came
       in, and a live album every member fills, sorted into chapters by the rundown, with
       photographers first, likes only their poster sees, "Foto kamu" and wishes. Photos are
-      resized and lose their GPS position. Next: locking the album after the day and closing
-      into a memory card. See ADR 0038.
+      resized and lose their GPS position. See ADR 0038.
+- [x] Closing a moment: the album locks three days after the day (or when the host locks it),
+      the host writes a thank-you, picks a cover and reorders photos, the same link opens on the
+      thank-you, and everyone who came gets a memory card on their profile. Next: the test
+      wedding. See ADR 0039.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

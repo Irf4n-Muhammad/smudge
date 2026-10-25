@@ -67,6 +67,8 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   arrivals, and the live album, whose files live in `moments/` in the data directory. Photos are
   resized and stripped of metadata in `apps/server/gathering-routes.ts`; pages in
   `components/moment-day.tsx` (`/m/<id>/door`, the Album tab).
+  The same service closes a moment (ADR 0039): the lock, the thank-you, the cover, the host's
+  order and the memory cards shown by `MemoryCards` on the profile page.
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same

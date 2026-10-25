@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { MemoryCards } from "./moment-day";
 import type { ReactNode } from "react";
 import type { PostView, User } from "../../../packages/contracts/src/experience";
 import type {
@@ -575,6 +576,7 @@ export function ProfilePage({
       ) : (
         <p className="profile-message">Opening profile…</p>
       )}
+      {!editing && profile && <MemoryCards ownerId={ownerId} mine={mine} />}
       {!editing && profile && (
         <ProfileDiscovery
           ownerId={ownerId}

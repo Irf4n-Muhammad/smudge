@@ -780,3 +780,46 @@
 .album-wishes li p {
   margin: 2px 0 0;
 }
+
+/* Closing the moment (ADR 0039). */
+.invite-thanks img {
+  width: 100%;
+  max-height: 360px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+.invite-soft {
+  color: var(--invite-soft);
+  font-size: 14px;
+}
+.album-status {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.album-closing {
+  display: grid;
+  gap: 8px;
+}
+.album-closing textarea {
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+}
+.album-closing button {
+  padding: 6px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-size: 14px;
+}
+.album-viewer .door-actions button {
+  color: var(--invite-ink, #3a3128);
+}

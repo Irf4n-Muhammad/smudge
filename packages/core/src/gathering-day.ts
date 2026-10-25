@@ -4,7 +4,11 @@ import { join } from "node:path";
 import { z } from "zod";
 import {
   albumTagInputSchema,
+  cardInputSchema,
   checkinInputSchema,
+  closingInputSchema,
+  coverInputSchema,
+  photoMoveInputSchema,
   doorCodeInputSchema,
   localTimeSchema,
   photoLikeInputSchema,
@@ -16,8 +20,10 @@ import {
   type GatheringDoor,
   type GatheringPerson,
   type GatheringWishView,
+  type MemoryCard,
 } from "../../contracts/src/gatherings.js";
 import type { Actor } from "./index.js";
+import { locksAfter, venueTime } from "./gatherings.js";
 import type { Gathering, GatheringsService } from "./gatherings.js";
 import { AppError } from "./social.js";
 import type { SocialService } from "./social.js";
@@ -63,8 +69,6 @@ const passMs = 12 * 60 * 60_000;
 const maxPhotos = 5000;
 const maxPhotosEach = 300;
 const maxTags = 50;
-/** Without a camera time, a photo is placed by when it arrived, at Indonesian western time. */
-const venueZone = "Asia/Jakarta";
 
 const sign = (secret: string, text: string, length: number) =>
   createHmac("sha256", secret).update(text).digest("base64url").slice(0, length);
@@ -77,6 +81,8 @@ const same = (a: string, b: string) =>
  * beside the database, like videos, and only members of the moment can open them.
  */
 export class MomentDayService {
+  /** Installed by the server: whether `viewerId` may see `userId`'s memory cards (privacy). */
+  cardFilter: (viewerId: string, userId: string) => boolean = () => true;
   constructor(
     private readonly social: SocialService,
     private readonly gatherings: GatheringsService,
@@ -177,18 +183,9 @@ export class MomentDayService {
       throw new AppError("NOT_FOUND", 404);
     return photo;
   }
-  private venueNow() {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: venueZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).formatToParts(this.now());
-    const v = (type: string) => parts.find((p) => p.type === type)!.value;
-    return `${v("year")}-${v("month")}-${v("day")}T${v("hour")}:${v("minute")}`;
+  /** After the album locks, nothing is added; likes and taking your own photo down still work. */
+  private assertOpen(gathering: Gathering) {
+    if (this.gatherings.phase(gathering) === "closed") throw new AppError("ALBUM_LOCKED", 409);
   }
   /**
    * A member adds a photo. Its place in the album comes from the camera's time, else the time
@@ -206,7 +203,8 @@ export class MomentDayService {
       clientTime?: unknown;
     },
   ) {
-    const { me } = this.gatherings.memberOf(actor, id);
+    const { me, gathering } = this.gatherings.memberOf(actor, id);
+    this.assertOpen(gathering);
     const photos = this.store.all<Photo>("gathering-photo").filter((p) => p.gatheringId === id);
     if (photos.length >= maxPhotos) throw new AppError("ALBUM_FULL", 409);
     if (photos.filter((p) => p.ownerId === me).length >= maxPhotosEach)
@@ -221,7 +219,7 @@ export class MomentDayService {
         ? fromCamera.data
         : fromPhone.success
           ? fromPhone.data
-          : this.venueNow(),
+          : venueTime(this.now()),
       at: this.now().toISOString(),
       width: input.width,
       height: input.height,
@@ -293,15 +291,7 @@ export class MomentDayService {
       };
       chapters[chapterOf(p.takenAt)]!.photos.push(view);
     }
-    // The photographers' pictures first, then the ones people liked most, then in time order.
-    const count = (p: AlbumPhoto) => likes.filter((l) => l.photoId === p.id).length;
-    for (const c of chapters)
-      c.photos.sort(
-        (a, b) =>
-          Number(b.photographer) - Number(a.photographer) ||
-          count(b) - count(a) ||
-          a.takenAt.localeCompare(b.takenAt),
-      );
+    for (const c of chapters) this.sortChapter(gathering, c.photos, likes);
     const wishes = this.store
       .all<Wish>("gathering-wish")
       .filter((w) => w.gatheringId === id && see(w.userId))
@@ -309,12 +299,46 @@ export class MomentDayService {
       .map((w) => ({ w, from: this.gatherings.person(w.userId) }))
       .filter((x): x is { w: Wish; from: GatheringPerson } => !!x.from)
       .map(({ w, from }): GatheringWishView => ({ from, text: w.text, at: w.at }));
+    const came = this.came(gathering, me);
     return {
       chapters: chapters.filter((c) => c.photos.length),
       wishes,
       photographers,
       count: photos.length,
+      phase: this.gatherings.phase(gathering),
+      locksAfter: locksAfter(gathering.date),
+      thanks: gathering.thanks ?? "",
+      ...(gathering.coverPhotoId ? { coverId: gathering.coverPhotoId } : {}),
+      ...(came
+        ? { card: this.store.get("gathering-card-hidden", `${id}:${me}`) ? "hidden" : "shown" }
+        : {}),
     };
+  }
+  /**
+   * The photos the host moved come first, in the host's order. The rest follow: the
+   * photographers' pictures, then the ones people liked most, then in time order.
+   */
+  private sortChapter(gathering: Gathering, photos: AlbumPhoto[], likes: PhotoLike[]) {
+    const order = gathering.albumOrder ?? [];
+    const placed = (p: AlbumPhoto) => {
+      const at = order.indexOf(p.id);
+      return at < 0 ? Number.MAX_SAFE_INTEGER : at;
+    };
+    const count = (p: AlbumPhoto) => likes.filter((l) => l.photoId === p.id).length;
+    photos.sort(
+      (a, b) =>
+        placed(a) - placed(b) ||
+        Number(b.photographer) - Number(a.photographer) ||
+        count(b) - count(a) ||
+        a.takenAt.localeCompare(b.takenAt),
+    );
+  }
+  /** The host and everyone who came in through the door get a memory card. */
+  private came(gathering: Gathering, userId: string) {
+    return (
+      gathering.ownerId === userId ||
+      !!this.store.get("gathering-checkin", `${gathering.id}:${userId}`)
+    );
   }
   like(actor: Actor, id: string, photoId: string, input: unknown) {
     const { me, gathering } = this.gatherings.memberOf(actor, id);
@@ -337,6 +361,7 @@ export class MomentDayService {
     const { me, gathering } = this.gatherings.memberOf(actor, id);
     const photo = this.photo(gathering, me, photoId);
     const { userId, on } = albumTagInputSchema.parse(input);
+    this.assertOpen(gathering);
     if (userId !== me && photo.ownerId !== me) throw new AppError("NOT_YOURS", 403);
     if (on && !this.gatherings.isMember(gathering, userId)) throw new AppError("NOT_A_MEMBER", 400);
     const tags = on
@@ -369,8 +394,9 @@ export class MomentDayService {
   }
   /** One wish per member; writing again replaces it. */
   wish(actor: Actor, id: string, input: unknown) {
-    const { me } = this.gatherings.memberOf(actor, id);
+    const { me, gathering } = this.gatherings.memberOf(actor, id);
     const { text } = wishInputSchema.parse(input);
+    this.assertOpen(gathering);
     this.store.transaction(() =>
       this.store.put("gathering-wish", `${id}:${me}`, {
         gatheringId: id,
@@ -382,7 +408,118 @@ export class MomentDayService {
     return this.album(actor, id);
   }
 
+  // Closing the moment (ADR 0039) -----------------------------------------------------------
+  /** The host writes the thank-you, and may lock the album before it locks on its own. */
+  close(actor: Actor, id: string, input: unknown) {
+    const { gathering } = this.asHost(actor, id);
+    const { thanks, lock } = closingInputSchema.parse(input);
+    this.store.transaction(() =>
+      this.store.put("gathering", id, {
+        ...gathering,
+        ...(thanks !== undefined ? { thanks } : {}),
+        ...(lock && !gathering.lockedAt ? { lockedAt: this.now().toISOString() } : {}),
+      } satisfies Gathering),
+    );
+    return this.album(actor, id);
+  }
+  setCover(actor: Actor, id: string, input: unknown) {
+    const { me, gathering } = this.asHost(actor, id);
+    const { photoId } = coverInputSchema.parse(input);
+    if (photoId) this.photo(gathering, me, photoId);
+    const { coverPhotoId: _old, ...rest } = gathering;
+    this.store.transaction(() =>
+      this.store.put("gathering", id, {
+        ...rest,
+        ...(photoId ? { coverPhotoId: photoId } : {}),
+      } satisfies Gathering),
+    );
+    return this.album(actor, id);
+  }
+  /** The host moves a photo one place up or down within its chapter, even after the lock. */
+  move(actor: Actor, id: string, photoId: string, input: unknown) {
+    const { me, gathering } = this.asHost(actor, id);
+    this.photo(gathering, me, photoId);
+    const { direction } = photoMoveInputSchema.parse(input);
+    const chapter = this.album(actor, id).chapters.find((c) =>
+      c.photos.some((p) => p.id === photoId),
+    )!;
+    const ids = chapter.photos.map((p) => p.id);
+    const at = ids.indexOf(photoId);
+    const to = direction === "up" ? at - 1 : at + 1;
+    if (to < 0 || to >= ids.length) return this.album(actor, id);
+    [ids[at], ids[to]] = [ids[to]!, ids[at]!];
+    // This chapter's photos take their new places; other chapters keep theirs.
+    const albumOrder = [...ids, ...(gathering.albumOrder ?? []).filter((p) => !ids.includes(p))];
+    this.store.transaction(() =>
+      this.store.put("gathering", id, { ...gathering, albumOrder } satisfies Gathering),
+    );
+    return this.album(actor, id);
+  }
+  /** The cover anyone may see: the host chose it for the memory cards and the closed page. */
+  coverFile(id: string) {
+    const gathering = this.gatherings.find(id);
+    const photo = gathering.coverPhotoId
+      ? this.store.get<Photo>("gathering-photo", gathering.coverPhotoId)
+      : undefined;
+    if (!photo || photo.gatheringId !== id) throw new AppError("NOT_FOUND", 404);
+    return this.path(photo.id, true);
+  }
+  /** Someone who came shows the memory card on their profile, or hides it. */
+  setCard(actor: Actor, id: string, input: unknown) {
+    const { me, gathering } = this.gatherings.memberOf(actor, id);
+    if (!this.came(gathering, me)) throw new AppError("NOT_FOUND", 404);
+    const { shown } = cardInputSchema.parse(input);
+    const key = `${id}:${me}`;
+    this.store.transaction(() => {
+      if (shown) this.store.remove("gathering-card-hidden", key);
+      else this.store.put("gathering-card-hidden", key, { gatheringId: id, userId: me });
+    });
+    return this.album(actor, id);
+  }
+  /**
+   * The moments someone came to, once each is closed, newest first: the attendance timeline on
+   * a profile. Hidden cards and moments the viewer may not see that person's cards for are left out.
+   */
+  cards(actor: Actor, userId: string): MemoryCard[] {
+    const me = this.social.actor(actor);
+    if (!this.gatherings.peopleFilter(me, userId) || !this.cardFilter(me, userId)) return [];
+    return this.store
+      .all<Gathering>("gathering")
+      .filter(
+        (g) =>
+          this.came(g, userId) &&
+          this.gatherings.phase(g) === "closed" &&
+          !this.store.get("gathering-card-hidden", `${g.id}:${userId}`),
+      )
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .map((g) => ({
+        gatheringId: g.id,
+        kind: g.kind,
+        title: g.title,
+        date: g.date,
+        place: g.place,
+        cover: !!g.coverPhotoId,
+        people: this.gatherings.arrived(g).length,
+        host: g.ownerId === userId,
+      }));
+  }
+
   private dropPhoto(photoId: string) {
+    const photo = this.store.get<Photo>("gathering-photo", photoId);
+    const gathering = photo && this.store.get<Gathering>("gathering", photo.gatheringId);
+    if (
+      gathering &&
+      (gathering.coverPhotoId === photoId || gathering.albumOrder?.includes(photoId))
+    ) {
+      const { coverPhotoId, ...rest } = gathering;
+      this.store.put("gathering", gathering.id, {
+        ...rest,
+        ...(coverPhotoId && coverPhotoId !== photoId ? { coverPhotoId } : {}),
+        ...(gathering.albumOrder
+          ? { albumOrder: gathering.albumOrder.filter((p) => p !== photoId) }
+          : {}),
+      } satisfies Gathering);
+    }
     for (const key of this.store.ids("gathering-photo-like"))
       if (key.startsWith(`${photoId}:`)) this.store.remove("gathering-photo-like", key);
     this.store.remove("gathering-photo", photoId);
@@ -392,7 +529,7 @@ export class MomentDayService {
   private drop(id: string) {
     for (const p of this.store.all<Photo>("gathering-photo"))
       if (p.gatheringId === id) this.dropPhoto(p.id);
-    for (const kind of ["gathering-wish", "gathering-checkin"])
+    for (const kind of ["gathering-wish", "gathering-checkin", "gathering-card-hidden"])
       for (const key of this.store.ids(kind))
         if (key.startsWith(`${id}:`)) this.store.remove(kind, key);
     this.store.remove("gathering-door", id);
@@ -404,7 +541,12 @@ export class MomentDayService {
       else if (p.tags.includes(userId))
         this.store.put("gathering-photo", p.id, { ...p, tags: p.tags.filter((t) => t !== userId) });
     }
-    for (const kind of ["gathering-photo-like", "gathering-wish", "gathering-checkin"])
+    for (const kind of [
+      "gathering-photo-like",
+      "gathering-wish",
+      "gathering-checkin",
+      "gathering-card-hidden",
+    ])
       for (const key of this.store.ids(kind))
         if (key.endsWith(`:${userId}`)) this.store.remove(kind, key);
     for (const g of this.store.all<Gathering>("gathering"))

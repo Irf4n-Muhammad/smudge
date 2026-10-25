@@ -513,6 +513,15 @@ hasCover, author}]}` for an open public side, as the guest viewer sees it (`memb
 /api/gatherings/:id/photographers` takes `{userId, on}` from the host; `POST
 /api/gatherings/:id/wish` takes `{text}`. Each answers the album. `likes` is present only on the
   viewer's own photos.
+- Closing (ADR 0039). `GatheringInvite` has `phase` (`upcoming`, `live`, `closed`), `thanks` and
+  `cover`; `GatheringAlbum` has `phase`, `locksAfter`, `thanks`, `coverId?` and the viewer's
+  `card?` (`shown` or `hidden`). After the lock, photos, tags and wishes are `ALBUM_LOCKED`. The
+  host posts `{thanks?, lock?: true}` to `/api/gatherings/:id/close`, `{photoId | null}` to
+  `/api/gatherings/:id/cover` and `{direction: "up" | "down"}` to `.../photos/:photo/move`; each
+  answers the album. `GET /api/public/gatherings/:id/cover` serves the cover to anyone.
+  `POST /api/gatherings/:id/card` takes `{shown}` from someone who came. `GET
+/api/users/:id/moments` answers that person's `MemoryCard[]` for closed moments, filtered like
+  their posts.
 - The app reads `?side=<id>` on `/` and `/u/<handle>`: a signed-in member is switched to the
   side (joining first when it is open); a guest sees the side named on the public page.
 - Search (the Posts tab) lists the sides in `SidesView` (`mine` and `open`, never Everyday)

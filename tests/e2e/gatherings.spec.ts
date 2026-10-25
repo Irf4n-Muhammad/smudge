@@ -191,3 +191,81 @@ test("on the day: the door QR lets a guest in and counts them, and the album fil
   await expect(page.getByText(/menyukai/)).toHaveCount(0);
   await other.close();
 });
+
+test("after the day: the host thanks and locks the album, and guests who came get a memory card", async ({
+  page,
+  browser,
+}) => {
+  const call = (p: typeof page, path: string, body?: unknown) =>
+    p.evaluate(
+      async ({ path, body }) => {
+        const r = await fetch("/api" + path, {
+          method: body === undefined ? "GET" : "POST",
+          headers: { "Content-Type": "application/json" },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        });
+        if (!r.ok) throw new Error("API failed: " + r.status);
+        return r.json();
+      },
+      { path, body },
+    );
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  const made = (await call(page, "/gatherings", {
+    kind: "wedding",
+    title: "Lala & Bayu",
+    date: "2030-03-03",
+    place: "Kebun Raya",
+  })) as { id: string };
+  const door = (await call(page, `/gatherings/${made.id}/door`)) as { path: string };
+
+  const other = await browser.newContext();
+  const maya = await other.newPage();
+  await maya.goto("/");
+  await maya.locator(".post-card").first().waitFor();
+  await call(maya, "/session", { userId: "maya" });
+  await maya.goto(door.path);
+  await expect(maya.getByText("Kehadiranmu sudah tercatat")).toBeVisible();
+  const png = await sharp({
+    create: { width: 40, height: 30, channels: 3, background: "#7a9e7e" },
+  })
+    .png()
+    .toBuffer();
+  await maya
+    .locator('input[type="file"]')
+    .setInputFiles({ name: "kebun.png", mimeType: "image/png", buffer: png });
+  await expect(maya.getByRole("button", { name: "Foto dari Maya Chen" })).toBeVisible();
+
+  // The host picks the cover, writes the thank-you and locks the album.
+  await page.goto(`/m/${made.id}`);
+  await page.getByRole("tab", { name: "Album" }).click();
+  await page.getByRole("button", { name: "Foto dari Maya Chen" }).click();
+  await page.getByRole("button", { name: "Jadikan sampul" }).click();
+  await expect(page.getByRole("button", { name: "Sampul momen" })).toBeVisible();
+  await page.getByRole("button", { name: "Tutup" }).click();
+  await page.getByLabel("Ucapan terima kasih").fill("Terima kasih sudah datang!");
+  await page.getByRole("button", { name: "Kunci album sekarang" }).click();
+  await expect(page.getByText("Album sudah dikunci.")).toBeVisible();
+
+  // Maya can no longer add photos, and her card shows on her profile.
+  await maya.reload();
+  await expect(maya.getByRole("tab", { name: "Album" })).toHaveAttribute("aria-selected", "true");
+  await expect(maya.getByText("Terima kasih sudah datang!")).toBeVisible();
+  await expect(maya.getByText("Tambah foto")).toHaveCount(0);
+  await expect(maya.getByLabel("Tampilkan kartu kenangan di profilku")).toBeChecked();
+  await page.goto("/?profile=maya");
+  const cards = page.getByRole("region", { name: "Moments" });
+  await expect(cards.getByRole("link", { name: /Lala & Bayu/ })).toBeVisible();
+  await expect(cards.getByText("1 came")).toBeVisible();
+  await other.close();
+
+  // Anyone opening the old link sees the thank-you instead of the RSVP.
+  const strangerContext = await browser.newContext();
+  const stranger = await strangerContext.newPage();
+  await stranger.goto(`/m/${made.id}`);
+  await expect(stranger.getByRole("heading", { name: "Terima kasih" })).toBeVisible();
+  await expect(stranger.getByText("Terima kasih sudah datang!")).toBeVisible();
+  await expect(stranger.locator(".invite-thanks img")).toBeVisible();
+  await expect(stranger.getByRole("button", { name: "Kirim konfirmasi" })).toHaveCount(0);
+  await strangerContext.close();
+});

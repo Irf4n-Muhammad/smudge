@@ -210,3 +210,77 @@ test("the camera's time is read from EXIF", () => {
   );
   assert.equal(exifTakenAt(Buffer.from("nonsense")), null);
 });
+
+// Closing the moment (ADR 0039) ----------------------------------------------------------------
+test("the album locks three days after the day, or when the host locks it; likes still work", async () => {
+  const { gatherings, day, invite, photo, tick } = await setup();
+  assert.equal(gatherings.invite(invite.id).phase, "live");
+  const id = photo(bob, null);
+  assert.equal(day.album(bob, invite.id).locksAfter, "2026-12-15");
+  // 23:59 on the 15th in Jakarta is still open; the 16th is not.
+  tick(Date.parse("2026-12-15T16:59:00Z") - Date.parse("2026-12-12T02:00:00Z"));
+  assert.equal(day.album(bob, invite.id).phase, "live");
+  tick(60_000);
+  assert.equal(gatherings.invite(invite.id).phase, "closed");
+  rejects(() => photo(bob, null), "ALBUM_LOCKED");
+  rejects(() => day.wish(bob, invite.id, { text: "Telat" }), "ALBUM_LOCKED");
+  rejects(() => day.tag(bob, invite.id, id, { userId: "bob", on: true }), "ALBUM_LOCKED");
+  day.like(dina, invite.id, id, { on: true });
+  // The poster can still take their own photo down.
+  day.removePhoto(bob, invite.id, id);
+});
+
+test("the host thanks, locks early, picks a cover and reorders, and the link shows the thanks", async () => {
+  const { gatherings, day, invite, photo } = await setup();
+  const first = photo(bob, "2026-12-12T09:10");
+  const second = photo(bob, "2026-12-12T09:20");
+  rejects(() => day.close(bob, invite.id, { lock: true }), "NOT_HOST");
+  day.close(dina, invite.id, { thanks: "Terima kasih sudah datang!", lock: true });
+  const view = gatherings.invite(invite.id);
+  assert.equal(view.phase, "closed");
+  assert.equal(view.thanks, "Terima kasih sudah datang!");
+  assert.equal(view.cover, false);
+  rejects(() => day.coverFile(invite.id), "NOT_FOUND");
+  day.setCover(dina, invite.id, { photoId: second });
+  assert.equal(gatherings.invite(invite.id).cover, true);
+  assert.match(day.coverFile(invite.id), /-s\.jpg$/);
+  const order = () => day.album(bob, invite.id).chapters[0]!.photos.map((p) => p.id);
+  assert.deepEqual(order(), [first, second]);
+  rejects(() => day.move(bob, invite.id, second, { direction: "up" }), "NOT_HOST");
+  day.move(dina, invite.id, second, { direction: "up" });
+  assert.deepEqual(order(), [second, first]);
+  day.move(dina, invite.id, second, { direction: "up" });
+  assert.deepEqual(order(), [second, first]);
+  // Taking the cover down takes it off the cards too.
+  day.removePhoto(bob, invite.id, second);
+  assert.equal(gatherings.invite(invite.id).cover, false);
+  for (const hidden of ["lockedAt", "albumOrder", "coverPhotoId"])
+    assert.equal(hidden in gatherings.invite(invite.id), false);
+});
+
+test("everyone who came gets a memory card once the moment closes, and can hide it", async () => {
+  const { day, invite } = await setup();
+  const { pass } = day.exchange(invite.id, { code: day.door(dina, invite.id).code });
+  day.checkin(cara, invite.id, { pass });
+  // Bob joined from the link but never came through the door: no card.
+  assert.deepEqual(day.cards(bob, "cara"), []);
+  day.close(dina, invite.id, { lock: true });
+  const cards = day.cards(bob, "cara");
+  assert.deepEqual(
+    cards.map((c) => [c.title, c.people, c.host]),
+    [["Dina & Raka", 1, false]],
+  );
+  assert.equal(day.cards(bob, "bob").length, 0);
+  assert.equal(day.cards(bob, "dina")[0]!.host, true);
+  assert.equal(day.album(cara, invite.id).card, "shown");
+  assert.equal(day.album(bob, invite.id).card, undefined);
+  rejects(() => day.setCard(bob, invite.id, { shown: false }), "NOT_FOUND");
+  day.setCard(cara, invite.id, { shown: false });
+  assert.equal(day.album(cara, invite.id).card, "hidden");
+  assert.deepEqual(day.cards(bob, "cara"), []);
+  day.setCard(cara, invite.id, { shown: true });
+  // A private account's cards follow its posts: the server installs the rule.
+  day.cardFilter = (viewer, user) => viewer === user;
+  assert.deepEqual(day.cards(bob, "cara"), []);
+  assert.equal(day.cards(cara, "cara").length, 1);
+});

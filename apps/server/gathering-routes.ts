@@ -151,6 +151,26 @@ export function gatheringRoutes(
   api.post("/api/gatherings/:id/wish", messageLimit, (req, res) =>
     res.json(day.wish(actor(res), id(req.params.id), req.body)),
   );
+  // Closing the moment (ADR 0039).
+  api.post("/api/gatherings/:id/close", (req, res) =>
+    res.json(day.close(actor(res), id(req.params.id), req.body)),
+  );
+  api.post("/api/gatherings/:id/cover", (req, res) =>
+    res.json(day.setCover(actor(res), id(req.params.id), req.body)),
+  );
+  api.post("/api/gatherings/:id/photos/:photo/move", (req, res) =>
+    res.json(day.move(actor(res), id(req.params.id), id(req.params.photo), req.body)),
+  );
+  api.post("/api/gatherings/:id/card", (req, res) =>
+    res.json(day.setCard(actor(res), id(req.params.id), req.body)),
+  );
+  api.get("/api/users/:id/moments", (req, res) =>
+    res.json(day.cards(actor(res), z.string().min(1).max(64).parse(req.params.id))),
+  );
+  api.get("/api/public/gatherings/:id/cover", guestLimit, (req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=300");
+    res.type("image/jpeg").sendFile(day.coverFile(id(req.params.id)), { dotfiles: "allow" });
+  });
   api.get("/api/public/gatherings/:id", guestLimit, (req, res) =>
     res.json(gatherings.invite(id(req.params.id))),
   );

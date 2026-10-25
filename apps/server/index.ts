@@ -143,6 +143,8 @@ accounts.erasers.push((userId) => gatherings.erase(userId));
 gatherings.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
 const momentDay = new MomentDayService(service, gatherings, resolve(dataDir, "moments"), clock);
 accounts.erasers.push((userId) => momentDay.erase(userId));
+momentDay.cardFilter = (viewerId, userId) =>
+  community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 const messages = new MessageService(service, community, clock);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));

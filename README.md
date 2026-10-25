@@ -66,6 +66,9 @@ members, and small groups only their members see (ADR 0037).
 On the day, the host opens **Layar pintu** for a QR that changes every 30 seconds; scanning it
 records the guest's arrival and opens the **Album**, where every member adds photos that fall
 into chapters by the rundown (ADR 0038).
+Three days after the day the album locks (the host can lock it sooner with a thank-you); the
+same link then opens on the thank-you, and everyone who came finds a memory card under
+**Moments you were at** on their profile (ADR 0039).
 
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
 **Use this combination** previews the actual published composition with your identity and posts;

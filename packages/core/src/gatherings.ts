@@ -11,6 +11,7 @@ import {
   type GatheringInvite,
   type GatheringMessageView,
   type GatheringMode,
+  type GatheringPhase,
   type GatheringPerson,
   type GatheringSpace,
   type GatheringSummary,
@@ -27,7 +28,33 @@ export interface Gathering extends GatheringInput {
   mode?: GatheringMode;
   /** Members the host named as photographers (ADR 0038). */
   photographers?: string[];
+  /** Closing the moment (ADR 0039). */
+  thanks?: string;
+  lockedAt?: string;
+  coverPhotoId?: string;
+  /** Photos the host moved, in the order the host put them. */
+  albumOrder?: string[];
 }
+/** Weddings are placed by Indonesian western time until a moment carries its own zone. */
+export const venueZone = "Asia/Jakarta";
+/** A time at the venue as "YYYY-MM-DDTHH:MM". */
+export function venueTime(at: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: venueZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(at);
+  const v = (type: string) => parts.find((p) => p.type === type)!.value;
+  return `${v("year")}-${v("month")}-${v("day")}T${v("hour")}:${v("minute")}`;
+}
+/** Days the album stays open after the day itself, for photos that arrive late (ADR 0039). */
+export const albumOpenDays = 3;
+export const locksAfter = (date: string) =>
+  new Date(Date.parse(`${date}T00:00:00Z`) + albumOpenDays * 86_400_000).toISOString().slice(0, 10);
 interface GatheringMember {
   gatheringId: string;
   userId: string;
@@ -116,9 +143,31 @@ export class GatheringsService {
       .sort((a, b) => b.at.localeCompare(a.at));
   }
   private inviteOf(g: Gathering): GatheringInvite {
-    const { ownerId: _owner, mode: _mode, photographers: _photographers, ...rest } = g;
+    const {
+      ownerId: _owner,
+      mode: _mode,
+      photographers: _photographers,
+      thanks,
+      lockedAt: _locked,
+      coverPhotoId,
+      albumOrder: _order,
+      ...rest
+    } = g;
     const host = this.store.get<User>("user", g.ownerId);
-    return { ...rest, hostName: host?.name ?? "" };
+    return {
+      ...rest,
+      hostName: host?.name ?? "",
+      phase: this.phase(g),
+      thanks: thanks ?? "",
+      cover: !!coverPhotoId,
+    };
+  }
+  /** Before the day, from the day until the album locks, and after it. */
+  phase(g: Gathering): GatheringPhase {
+    if (g.lockedAt) return "closed";
+    const today = venueTime(this.now()).slice(0, 10);
+    if (today < g.date) return "upcoming";
+    return today > locksAfter(g.date) ? "closed" : "live";
   }
   create(actor: Actor, input: unknown): GatheringInvite {
     const ownerId = this.social.actor(actor);

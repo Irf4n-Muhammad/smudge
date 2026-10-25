@@ -7,6 +7,7 @@ import type {
   GatheringAlbum,
   GatheringDoor,
   GatheringSpace,
+  MemoryCard,
 } from "../../../packages/contracts/src/gatherings";
 import { AuthDialog, type AuthMode } from "./auth";
 import { HostShell, SignInFirst, useSignedIn } from "./gathering-shell";
@@ -264,20 +265,23 @@ export function Album({ base, space }: { base: string; space: GatheringSpace }) 
   const name = (userId: string) => space.members.find((m) => m.id === userId)?.name ?? "";
   return (
     <section className="moment-panel moment-album" aria-label="Album">
+      <AlbumStatus base={base} album={album} host={space.role === "host"} onAlbum={setAlbum} />
       <div className="album-bar">
-        <label className="invite-send album-add">
-          Tambah foto
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            hidden
-            onChange={(e) => {
-              void upload(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        {album.phase !== "closed" && (
+          <label className="invite-send album-add">
+            Tambah foto
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              hidden
+              onChange={(e) => {
+                void upload(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        )}
         <div className="moment-rooms" role="group" aria-label="Tampilkan">
           <button aria-pressed={only === "all"} onClick={() => setOnly("all")}>
             Semua foto
@@ -324,6 +328,7 @@ export function Album({ base, space }: { base: string; space: GatheringSpace }) 
         <PhotoViewer
           base={base}
           photo={open}
+          album={album}
           space={space}
           name={name}
           onAlbum={setAlbum}
@@ -341,6 +346,7 @@ export function Album({ base, space }: { base: string; space: GatheringSpace }) 
 function PhotoViewer({
   base,
   photo,
+  album,
   space,
   name,
   onAlbum,
@@ -348,6 +354,7 @@ function PhotoViewer({
 }: {
   base: string;
   photo: AlbumPhoto;
+  album: GatheringAlbum;
   space: GatheringSpace;
   name: (userId: string) => string;
   onAlbum: (album: GatheringAlbum) => void;
@@ -357,6 +364,9 @@ function PhotoViewer({
   const me = space.me;
   const tagged = photo.tagged.includes(me);
   const untagged = space.members.filter((m) => !photo.tagged.includes(m.id) && m.id !== me);
+  const open = album.phase !== "closed";
+  const host = space.role === "host";
+  const act = (to: string, body: unknown) => void api<GatheringAlbum>(to, body).then(onAlbum);
   return (
     <div className="album-viewer" role="dialog" aria-label="Foto" aria-modal="true">
       <img src={`/api${path}`} alt={`Foto dari ${photo.by.name}`} />
@@ -380,15 +390,17 @@ function PhotoViewer({
           >
             {photo.liked ? "Disukai" : "Suka"}
           </button>
-          <button
-            aria-pressed={tagged}
-            onClick={() =>
-              void api<GatheringAlbum>(`${path}/tags`, { userId: me, on: !tagged }).then(onAlbum)
-            }
-          >
-            {tagged ? "Bukan saya" : "Ada saya"}
-          </button>
-          {photo.mine && untagged.length > 0 && (
+          {open && (
+            <button
+              aria-pressed={tagged}
+              onClick={() =>
+                void api<GatheringAlbum>(`${path}/tags`, { userId: me, on: !tagged }).then(onAlbum)
+              }
+            >
+              {tagged ? "Bukan saya" : "Ada saya"}
+            </button>
+          )}
+          {open && photo.mine && untagged.length > 0 && (
             <select
               aria-label="Tandai teman"
               value=""
@@ -418,6 +430,22 @@ function PhotoViewer({
               Hapus foto
             </button>
           )}
+          {host && (
+            <>
+              <button
+                aria-pressed={album.coverId === photo.id}
+                onClick={() =>
+                  act(`${base}/cover`, { photoId: album.coverId === photo.id ? null : photo.id })
+                }
+              >
+                {album.coverId === photo.id ? "Sampul momen" : "Jadikan sampul"}
+              </button>
+              <button onClick={() => act(`${path}/move`, { direction: "up" })}>Geser maju</button>
+              <button onClick={() => act(`${path}/move`, { direction: "down" })}>
+                Geser mundur
+              </button>
+            </>
+          )}
           <button onClick={onClose}>Tutup</button>
         </div>
       </div>
@@ -438,25 +466,27 @@ function Wishes({
   return (
     <section className="album-wishes" aria-label="Ucapan">
       <h3>Ucapan</h3>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!text.trim()) return;
-          void api<GatheringAlbum>(`${base}/wish`, { text }).then((a) => {
-            onAlbum(a);
-            setText("");
-          });
-        }}
-      >
-        <textarea
-          aria-label="Tulis ucapan"
-          placeholder="Doa dan ucapan untuk tuan rumah"
-          value={text}
-          maxLength={280}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <button className="invite-send">Kirim ucapan</button>
-      </form>
+      {album.phase !== "closed" && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!text.trim()) return;
+            void api<GatheringAlbum>(`${base}/wish`, { text }).then((a) => {
+              onAlbum(a);
+              setText("");
+            });
+          }}
+        >
+          <textarea
+            aria-label="Tulis ucapan"
+            placeholder="Doa dan ucapan untuk tuan rumah"
+            value={text}
+            maxLength={280}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <button className="invite-send">Kirim ucapan</button>
+        </form>
+      )}
       <ul>
         {album.wishes.map((w) => (
           <li key={w.from.id}>
@@ -509,6 +539,128 @@ function Photographers({
           ))}
         </select>
       )}
+    </section>
+  );
+}
+
+const longDay = (date: string) =>
+  new Date(`${date}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "long" });
+/**
+ * Where the album stands (ADR 0039): open until three days after the day, then locked. The host
+ * writes the thank-you and may lock it early; someone who came chooses whether their memory card
+ * shows on their profile.
+ */
+function AlbumStatus({
+  base,
+  album,
+  host,
+  onAlbum,
+}: {
+  base: string;
+  album: GatheringAlbum;
+  host: boolean;
+  onAlbum: (album: GatheringAlbum) => void;
+}) {
+  const [thanks, setThanks] = useState(album.thanks);
+  const closed = album.phase === "closed";
+  const close = (body: { thanks?: string; lock?: true }) =>
+    void api<GatheringAlbum>(`${base}/close`, body).then(onAlbum);
+  return (
+    <div className="album-status">
+      <p className="moment-empty">
+        {closed
+          ? "Album sudah dikunci. Foto-foto ini disimpan untuk yang hadir."
+          : `Album terbuka sampai ${longDay(album.locksAfter)}, lalu dikunci.`}
+      </p>
+      {album.card && closed && (
+        <label className="moment-mode">
+          <input
+            type="checkbox"
+            checked={album.card === "shown"}
+            onChange={(e) =>
+              void api<GatheringAlbum>(`${base}/card`, { shown: e.target.checked }).then(onAlbum)
+            }
+          />
+          Tampilkan kartu kenangan di profilku
+        </label>
+      )}
+      {host && (
+        <form
+          className="album-closing"
+          aria-label="Penutup"
+          onSubmit={(e) => {
+            e.preventDefault();
+            close({ thanks });
+          }}
+        >
+          <textarea
+            aria-label="Ucapan terima kasih"
+            placeholder="Terima kasih sudah datang dan mendoakan kami."
+            value={thanks}
+            maxLength={600}
+            onChange={(e) => setThanks(e.target.value)}
+          />
+          <div className="door-actions">
+            <button>Simpan ucapan terima kasih</button>
+            {!closed && (
+              <button type="button" onClick={() => close({ thanks, lock: true })}>
+                Kunci album sekarang
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The attendance timeline on a profile (ADR 0039): a memory card for each closed moment the
+ * person came to. The profile is the app's, so this is in English like the rest of it.
+ */
+export function MemoryCards({ ownerId, mine }: { ownerId: string; mine: boolean }) {
+  const [cards, setCards] = useState<MemoryCard[]>([]);
+  useEffect(() => {
+    api<MemoryCard[]>(`/users/${encodeURIComponent(ownerId)}/moments`).then(setCards, () =>
+      setCards([]),
+    );
+  }, [ownerId]);
+  if (!cards.length) return null;
+  return (
+    <section className="memory-cards" aria-label="Moments">
+      <h2>{mine ? "Moments you were at" : "Moments they were at"}</h2>
+      <ul>
+        {cards.map((c) => (
+          <li key={c.gatheringId}>
+            <a href={`/m/${encodeURIComponent(c.gatheringId)}`}>
+              {c.cover ? (
+                <img
+                  src={`/api/public/gatherings/${encodeURIComponent(c.gatheringId)}/cover`}
+                  alt=""
+                  loading="lazy"
+                />
+              ) : (
+                <span className="memory-card-blank" aria-hidden="true">
+                  ✳
+                </span>
+              )}
+              <strong>{c.title}</strong>
+              <small>
+                {new Date(`${c.date}T00:00:00`).toLocaleDateString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}{" "}
+                · {c.place}
+              </small>
+              <small>
+                {c.host ? "Hosted · " : ""}
+                {c.people} came
+              </small>
+            </a>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
