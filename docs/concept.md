@@ -103,6 +103,14 @@ fills it first, zero decisions on the first screen, access to Spotify/WA and the
   character, official decorations), films and studios (an explorable world, puzzles that unlock
   the trailer, "which city is most hyped" map, a cinema QR sticker). Studios paying for opt-in
   campaign packs is money that is not ads. Start with one or two types; proposed: musicians.
+- Pay for listening (Oct 25): an artist releases a song on Smudge first; listeners pay as members,
+  the song stays exclusive about 3 months, then goes fully public. The song can be attached to any
+  page, like an embed in Notion, so friends' pages play and spread it. Aimed at artists who are
+  already fairly known, since they bring the crowd; independent artists are the fallback where
+  label contracts block an early window. Spotify pays about $3-5 per 1,000 streams; 300 paying
+  fans beat that. What is sold is the membership (early, "fan since", closeness), not the file,
+  because exclusive audio leaks within a day. Discovery stays free (a snippet), paying is for the
+  full song. Candidate for the first core activity only possible here.
 
 **Businesses:** they are opportunistic and need a way to sell, not just a place. They meet users
 naturally when a friend or creator chooses to display a product in their home: tap to buy, the
