@@ -7,6 +7,7 @@ import { Store } from "../packages/core/src/database.js";
 import { exifTakenAt } from "../packages/core/src/exif.js";
 import { MomentDayService } from "../packages/core/src/gathering-day.js";
 import { GatheringsService } from "../packages/core/src/gatherings.js";
+import { formatMomentReport, momentReport } from "../packages/core/src/moment-report.js";
 import { GUEST, SocialService } from "../packages/core/src/social.js";
 
 const dina = { userId: "dina" },
@@ -283,4 +284,56 @@ test("everyone who came gets a memory card once the moment closes, and can hide 
   day.cardFilter = (viewer, user) => viewer === user;
   assert.deepEqual(day.cards(bob, "cara"), []);
   assert.equal(day.cards(cara, "cara").length, 1);
+});
+
+test("the test report counts answers, accounts, photos and guests' own moments, with no names", async () => {
+  const { store, gatherings, day, invite, photo } = await setup();
+  gatherings.respond(bob, invite.id, {
+    name: "Bob",
+    phone: "0811 0000 0001",
+    attending: true,
+    guests: 2,
+  });
+  gatherings.respond({ userId: GUEST }, invite.id, {
+    name: "Tante Sri",
+    phone: "0812 3456 7890",
+    attending: false,
+  });
+  store.transaction(() =>
+    store.put("credential", "bob", { userId: "bob", createdAt: "2026-12-12T03:00:00Z" }),
+  );
+  const { pass } = day.exchange(invite.id, { code: day.door(dina, invite.id).code });
+  day.checkin(bob, invite.id, { pass });
+  photo(bob, null);
+  photo(bob, null);
+  day.wish(bob, invite.id, { text: "Selamat!" });
+  gatherings.create(bob, {
+    kind: "wedding",
+    title: "Bob & Ani",
+    date: "2027-05-01",
+    place: "Bogor",
+  });
+  const report = momentReport(store, invite.id, 4);
+  assert.deepEqual(
+    { ...report, title: undefined },
+    {
+      title: undefined,
+      date: "2026-12-12",
+      invited: 4,
+      answers: 2,
+      attending: 1,
+      heads: 2,
+      answeredSignedIn: 1,
+      members: 1,
+      arrived: 1,
+      newAccounts: 1,
+      uploaders: 1,
+      photos: 2,
+      wishes: 1,
+      ownMoments: 1,
+    },
+  );
+  const text = formatMomentReport(report).join("\n");
+  assert.match(text, /Answered the RSVP: 2 \(50%\)/);
+  assert.equal(/Bob|Sri|0812|890/.test(text), false);
 });

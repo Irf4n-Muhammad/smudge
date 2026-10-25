@@ -62,6 +62,9 @@
       the host writes a thank-you, picks a cover and reorders photos, the same link opens on the
       thank-you, and everyone who came gets a memory card on their profile. Next: the test
       wedding. See ADR 0039.
+- [x] Ready for the test wedding: `npm run moment-report` prints the four numbers the test is
+      judged by (answered, made an account, added a photo, made their own moment within 30 days)
+      as counts only. See `docs/runbooks/test-wedding.md`.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

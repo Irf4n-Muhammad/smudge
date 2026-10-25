@@ -19,6 +19,7 @@
     "build:core": "tsc",
     "build:web": "next build apps/web --webpack",
     "mcp": "node scripts/mcp.mjs",
+    "moment-report": "npm run build:core && node dist/scripts/moment-report.js",
     "test:e2e": "playwright test"
   },
   "dependencies": {
