@@ -1,0 +1,52 @@
+import { z } from "zod";
+
+/** One tap on your own page: what you are doing right now, kept as your archive (ADR 0041). */
+export const nowKinds = ["listening", "doing", "place", "thinking"] as const;
+export type NowKind = (typeof nowKinds)[number];
+export const nowInputSchema = z
+  .object({
+    kind: z.enum(nowKinds),
+    text: z.string().trim().min(1).max(80),
+    /** The artist, for a song. */
+    by: z.string().trim().max(50).optional(),
+  })
+  .strict();
+export type NowInput = z.infer<typeof nowInputSchema>;
+export interface NowView {
+  id: string;
+  kind: NowKind;
+  text: string;
+  by?: string;
+  at: string;
+}
+export interface NowArchive {
+  /** The newest entry, whatever its age; the viewer sees how old it is. */
+  current: NowView | null;
+  /** Newest first, at most a few hundred. */
+  entries: NowView[];
+  total: number;
+}
+/** What a page's program reads about its owner's now: enough for a "now doing" and "on repeat". */
+export interface NowLive {
+  current: NowView | null;
+  listening: NowView | null;
+  recent: NowView[];
+}
+
+/** Five answers make a page in about a minute: a line, a vibe, a colour, a song, what you're doing. */
+export const setupInputSchema = z
+  .object({
+    bio: z.string().trim().max(300),
+    vibe: z.string().regex(/^[a-z]{1,12}$/),
+    colour: z
+      .string()
+      .regex(/^[a-z]{1,12}$/)
+      .optional(),
+    song: z
+      .object({ title: z.string().trim().max(50), artist: z.string().trim().max(50) })
+      .strict()
+      .optional(),
+    doing: z.string().trim().max(80).optional(),
+  })
+  .strict();
+export type SetupInput = z.infer<typeof setupInputSchema>;

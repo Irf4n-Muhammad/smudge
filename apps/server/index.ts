@@ -38,6 +38,8 @@ import { SidesService } from "../../packages/core/src/sides.js";
 import { PlansService } from "../../packages/core/src/plans.js";
 import { GatheringsService } from "../../packages/core/src/gatherings.js";
 import { MomentDayService } from "../../packages/core/src/gathering-day.js";
+import { NowService } from "../../packages/core/src/now.js";
+import { setupColours, setupPage } from "../../packages/core/src/setup.js";
 import { gatheringRoutes } from "./gathering-routes.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
@@ -168,6 +170,13 @@ if (config.demoContent) {
   seedGift(service);
 }
 const sharing = new SharingService(service, community, identity, profiles);
+// Your now (ADR 0041): one-tap entries, read by the same people who may see your posts, and by
+// your own page program through profile.read.
+const nowService = new NowService(service, clock);
+nowService.viewFilter = (viewerId, userId) =>
+  community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
+accounts.erasers.push((userId) => nowService.erase(userId));
+profiles.extras = (viewerId, ownerId) => ({ now: nowService.live(viewerId, ownerId) });
 // A side's link (ADR 0035) shows its home to guests, asked about the guest viewer.
 sharing.sideHome = (sideId) => sidesService.home({ userId: GUEST }, sideId);
 const media = new MediaService(service, resolve(dataDir, "media"));
@@ -513,7 +522,7 @@ api.get("/api/profile-spec", (_req, res) =>
         "Optional profile v2 grants profile.social.read and profile.social.toggle enable forma.profile.social.read() and forma.profile.social.toggle({action:'follow'}) or {action:'like'|'save',postId}. Owner-bound targets only, no actor fields. Returns {writable,ownProfile,following,requested,followers,posts:[{id,likes,liked,saved,comments}]}. Preview is read-only. All parts share grants; these are not proof of a human gesture.",
       cover:
         "Profile v2 optional grant profile.cover enables await forma.profile.cover(postId), returning {src:dataURL,alt} or null for an owner-bound published cover. Fetch lazily. No arbitrary asset IDs or draft media.",
-      read: "await forma.profile.read() returns {owner:{id,name,handle,bio,initials,color},posts:[{id,title,caption,format,hasCover}]}; published posts of this profile owner only, no viewer identity or private state.",
+      read: "await forma.profile.read() returns {owner:{id,name,handle,bio,initials,color},posts:[{id,title,caption,format,hasCover}],now:{current,listening,recent:[{id,kind,text,by?,at}]}}; published posts and the owner's latest 'now' entries as the viewer may see them, no viewer identity or private state.",
       open: "await forma.profile.openPost(postId) opens an owner post in host controls; foreign posts rejected.",
       appearance:
         "Use html[data-theme=dark]. Respect html[data-motion=reduce] and prefers-reduced-motion. No autoplay sound.",
@@ -527,6 +536,25 @@ api.get("/api/me/email-prefs", (_req, res) => res.json(digest.prefs(actor(res)))
 api.post("/api/me/email-prefs", (req, res) => res.json(digest.setPrefs(actor(res), req.body)));
 api.post("/api/me/identity", (req, res) => res.json(profiles.updateIdentity(actor(res), req.body)));
 api.get("/api/profile-templates", (_req, res) => res.json(profileTemplates));
+api.get("/api/setup/vibes", (_req, res) =>
+  res.json(
+    Object.entries(profileTemplates).map(([key, t]) => ({
+      key,
+      name: t.manifest.name,
+      colours: setupColours(t),
+    })),
+  ),
+);
+api.post("/api/me/setup", (req, res) =>
+  res.json(setupPage(profiles, nowService, profileTemplates, actor(res), req.body)),
+);
+api.post("/api/me/now", (req, res) => res.json(nowService.add(actor(res), req.body)));
+api.delete("/api/me/now/:id", (req, res) =>
+  res.json(nowService.remove(actor(res), String(req.params.id))),
+);
+api.get("/api/users/:id/now", (req, res) =>
+  res.json(nowService.archive(actor(res).userId, String(req.params.id))),
+);
 api.get("/api/profiles/:ownerId", (req, res) => {
   community.assertVisibleUser(actor(res), String(req.params.ownerId));
   res.json(profiles.public(String(req.params.ownerId)));
@@ -734,6 +762,14 @@ api.get("/api/public/posts/:id/cover", guestLimit, (req, res) => {
 });
 api.get("/api/public/users/:handle", guestLimit, (req, res) =>
   res.json(sharing.profile(z.string().min(1).max(30).parse(req.params.handle))),
+);
+api.get("/api/public/users/:handle/now", guestLimit, (req, res) =>
+  res.json(
+    nowService.archive(
+      GUEST,
+      sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id,
+    ),
+  ),
 );
 // An invite takes answers without an account, so its writes get their own tighter limit.
 gatheringRoutes(

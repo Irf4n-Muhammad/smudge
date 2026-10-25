@@ -68,6 +68,10 @@
 - [x] From the album to the feed: members pick up to 12 of their own or tagged photos, which
       open as a draft post in the editor and, once published, show on their profile and in
       friends' feeds with a "From <moment>" label only members can use. See ADR 0040.
+- [x] Your page, the first thing you open (stage 1): five answers after signing up publish a
+      page; one tap notes what you are listening to, doing, where you are or what you are
+      thinking, and piles into an archive that friends and guests see under your privacy rules.
+      Next: the widget and the friends' row (stage 2). See ADR 0041.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { MemoryCards } from "./moment-day";
+import { NowBar } from "./now";
 import type { ReactNode } from "react";
 import type { PostView, User } from "../../../packages/contracts/src/experience";
 import type {
@@ -476,6 +477,9 @@ export function ProfilePage({
         <p className="profile-message" role="status">
           {error}
         </p>
+      )}
+      {!editing && (
+        <NowBar key={ownerId} ownerId={ownerId} mine={mine} onChanged={() => void refresh()} />
       )}
       {editing && mine ? (
         <ProfileEditor

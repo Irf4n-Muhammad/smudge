@@ -71,6 +71,9 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   order and the memory cards shown by `MemoryCards` on the profile page.
   It also turns picked album photos into a draft post and guards the post's moment label
   (ADR 0040).
+- `packages/core/src/now.ts` and `packages/core/src/setup.ts`: the one-tap "now" archive and the
+  five-answer setup that publishes a first page (ADR 0041); `components/now.tsx` (`NowBar`) and
+  `components/setup.tsx` on the web; `ProfileService.extras` feeds `profile.read` the live entries.
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same

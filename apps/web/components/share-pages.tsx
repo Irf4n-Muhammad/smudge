@@ -9,6 +9,7 @@ import { Avatar } from "./ui";
 import { CommentList } from "./comments";
 import type { CommentItem } from "./comments";
 import { MentionText } from "./mention-text";
+import { NowBar } from "./now";
 
 interface Person {
   id: string;
@@ -216,6 +217,7 @@ export function SharedProfile({ handle }: { handle: string }) {
             </div>
           </div>
         </section>
+        <NowBar ownerId={view.user.id} mine={false} guestHandle={handle} />
         {view.profile && manifest && (
           <section className="share-profile-world" aria-label={`${view.user.name}'s page`}>
             <Runtime

@@ -19,6 +19,8 @@ import type { Actor } from "./index.js";
 
 export class ProfileService {
   constructor(public readonly social: SocialService) {}
+  /** More about the owner for `profile.read`, as this viewer may see it; the server installs it. */
+  extras: (viewerId: string, ownerId: string) => Record<string, unknown> = () => ({});
   private identity(actor: Actor, input: unknown): ProfileIdentity {
     const value = profileIdentitySchema.parse(input);
     if (value.avatarAssetId) {
@@ -101,6 +103,7 @@ export class ProfileService {
       ? this.social.asset({ userId: ownerId }, owner.avatarAssetId)
       : null;
     return {
+      ...this.extras(actor.userId, ownerId),
       owner: {
         ...owner,
         ...(avatar ? { avatarSrc: `data:${avatar.mime};base64,${avatar.base64}` } : {}),

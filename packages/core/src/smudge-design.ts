@@ -71,7 +71,7 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v3";
+export const smudgeVersionMarker = "smudge:v4";
 
 export function supportsSmudgeDesign(pkg: ProfilePackage) {
   return (

@@ -206,6 +206,7 @@ export class SharingService {
         ? this.store.get<Asset>("asset", owner.avatarAssetId)
         : undefined;
       return {
+        ...this.profiles.extras(GUEST, ownerId),
         owner: {
           ...owner,
           ...(avatar ? { avatarSrc: `data:${avatar.mime};base64,${avatar.base64}` } : {}),

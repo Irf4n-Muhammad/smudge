@@ -27,9 +27,10 @@ Height is an integer 600–4000 CSS pixels. The same post file/path and asset li
 Larger documents scroll inside the frame; automatic content sizing is not implemented.
 Profile capabilities are independent of post capabilities:
 
-- `profile.read`: `await forma.profile.read()` returns `{owner, posts}`. Owner is the public
-  user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`. No draft, bookmark, session,
-  or viewer identity is supplied, including in visitor preview.
+- `profile.read`: `await forma.profile.read()` returns `{owner, posts, now}`. Owner is the public
+  user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`; `now` is the
+  owner's latest one-tap entries (`current`, `listening`, `recent`) as the viewer may see them
+  (ADR 0041). No draft, bookmark, session, or viewer identity is supplied, including in visitor preview.
 - `profile.openPost`: `await forma.profile.openPost(postId)` asks the host to open a published
   post. The server checks that it belongs to this profile owner before the host opens it.
 

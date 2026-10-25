@@ -58,7 +58,7 @@ import { DecorationsPanel } from "./decorations-panel";
 import type { DecoratedPost } from "./post-decor";
 import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
-import { Welcome } from "./welcome";
+import { Setup } from "./setup";
 import { SideHome, SideResults, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
@@ -1232,12 +1232,15 @@ export function FormaApp() {
         />
       )}
       {welcome && me && (
-        <Welcome
+        <Setup
           me={me}
-          onDone={async () => {
+          onDone={async (publicationId) => {
             setWelcome(false);
             await refresh();
-            notify("Welcome to Smudge. We sent you an email to confirm your address.");
+            if (publicationId) {
+              openUser(me.id);
+              notify("Your page is up. Tap it any time you open your phone.");
+            } else notify("Welcome to Smudge. We sent you an email to confirm your address.");
           }}
         />
       )}

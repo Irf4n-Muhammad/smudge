@@ -1,4 +1,4 @@
-// smudge:v3
+// smudge:v4
 // Paint wall page sections. Reads the easy-editor settings (smudge/settings.js), applies colours and
 // section order, draws the sections the owner added, and turns taps into edits while editing.
 (() => {
@@ -59,6 +59,44 @@
     });
     return frag;
   };
+  // "Now doing" and "On repeat" cards, from the settings or from the owner's live entries.
+  const nowCard = (text, place, progress, when) => {
+    const node = section("now", "NOW DOING");
+    const card = el("div", "sx-card");
+    if (place) card.append(el("span", "sx-pill", place));
+    card.append(el("strong", "", text));
+    if (when) card.append(el("small", "sx-when", when));
+    if (typeof progress === "number") {
+      const bar = el("div", "sx-bar");
+      bar.setAttribute("role", "img");
+      bar.setAttribute("aria-label", progress + "% done");
+      const fill = el("i");
+      fill.style.width = Math.max(0, Math.min(100, progress)) + "%";
+      bar.append(fill);
+      card.append(bar);
+    }
+    node.append(card);
+    return node;
+  };
+  const repeatCard = (song, artist) => {
+    const node = section("repeat", "ON REPEAT");
+    const card = el("div", "sx-card");
+    const disc = el("span", "sx-disc");
+    disc.setAttribute("aria-hidden", "true");
+    const text = el("div");
+    text.append(el("strong", "", song), el("small", "", artist || ""));
+    card.append(disc, text);
+    node.append(card);
+    return node;
+  };
+  const ago = (iso) => {
+    const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (mins < 60) return mins <= 1 ? "just now" : mins + " min ago";
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return hours + " h ago";
+    const days = Math.round(hours / 24);
+    return days === 1 ? "yesterday" : days + " days ago";
+  };
   const builders = {
     quote() {
       if (!s.quote.text) return null;
@@ -70,31 +108,11 @@
     },
     now() {
       if (!s.now.text) return null;
-      const node = section("now", "NOW DOING");
-      const card = el("div", "sx-card");
-      if (s.now.place) card.append(el("span", "sx-pill", s.now.place));
-      card.append(el("strong", "", s.now.text));
-      const bar = el("div", "sx-bar");
-      bar.setAttribute("role", "img");
-      bar.setAttribute("aria-label", s.now.progress + "% done");
-      const fill = el("i");
-      fill.style.width = Math.max(0, Math.min(100, s.now.progress)) + "%";
-      bar.append(fill);
-      card.append(bar);
-      node.append(card);
-      return node;
+      return nowCard(s.now.text, s.now.place, s.now.progress, "");
     },
     repeat() {
       if (!s.repeat.song) return null;
-      const node = section("repeat", "ON REPEAT");
-      const card = el("div", "sx-card");
-      const disc = el("span", "sx-disc");
-      disc.setAttribute("aria-hidden", "true");
-      const text = el("div");
-      text.append(el("strong", "", s.repeat.song), el("small", "", s.repeat.artist || ""));
-      card.append(disc, text);
-      node.append(card);
-      return node;
+      return repeatCard(s.repeat.song, s.repeat.artist);
     },
     countdown() {
       if (!s.countdown.date) return null;
@@ -246,5 +264,22 @@
       const node = builders[kind] && builders[kind]();
       if (node) host.append(node);
     }
+    // The owner's one-tap entries (ADR 0041) take over the cards they added, when there are any.
+    if (!window.forma || !forma.profile || !forma.profile.read) return;
+    forma.profile
+      .read()
+      .then((d) => {
+        const live = d && d.now;
+        if (!live) return;
+        const swap = (kind, node) => {
+          if (!order.includes(kind)) return;
+          const old = host.querySelector('[data-sm-section="' + kind + '"]');
+          if (old) old.replaceWith(node);
+          else host.append(node);
+        };
+        if (live.current) swap("now", nowCard(live.current.text, "", null, ago(live.current.at)));
+        if (live.listening) swap("repeat", repeatCard(live.listening.text, live.listening.by));
+      })
+      .catch(() => {});
   });
 })();

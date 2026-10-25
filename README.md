@@ -74,6 +74,12 @@ own, labelled with the moment (ADR 0040).
 For the test wedding, `npm run moment-report -- <id> --invited N` prints its numbers
 (`docs/runbooks/test-wedding.md`).
 
+**Your page.** A new account answers five questions (photo, one line, look, colour, what is
+playing or going on) and has a page. On it, **Listening / Doing / Somewhere / Thinking** notes
+what you are up to in one tap; the newest shows on top and the rest pile up under **Archive**.
+Friends see it on your profile, anyone at `/u/<handle>` without an account, and the Paint wall
+page shows it live in its "now" and "on repeat" sections (ADR 0041).
+
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
 **Use this combination** previews the actual published composition with your identity and posts;
 choose **Use this preview** to open your private draft, then publish when ready. A creator credit
