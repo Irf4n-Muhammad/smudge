@@ -127,6 +127,10 @@ fills it first, zero decisions on the first screen, access to Spotify/WA and the
   specific person, visible to everyone, and can die (Widgetable and Locket prove it). Whether it
   looks cheap is a design matter: programs must follow the page's theme like themed widgets, never
   clip art on top. What matters now is design and execution.
+- People's pages are the distribution channel: every member who attaches a song (or any work) to
+  their page spreads it; more pages means more reach per work, so creators release here because
+  distribution is built in. Spotify has no such thing, and Instagram cannot attach works to
+  profiles.
 
 **Businesses:** they are opportunistic and need a way to sell, not just a place. They meet users
 naturally when a friend or creator chooses to display a product in their home: tap to buy, the
