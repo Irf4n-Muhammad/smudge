@@ -140,6 +140,11 @@ fills it first, zero decisions on the first screen, access to Spotify/WA and the
   page's theme and connected to each other. The visited map ties to proof of presence from QR
   scans. Results must travel to Instagram stories easily; anonymous messages need filters and
   reporting from the start.
+- Also in (Oct 25): a home-screen widget showing one friend's page live (new photo, playing song,
+  the shared pet), tapped before reels can open; shared pages owned by two or more people (a
+  couple, a trip, a class), the next step after the shared pet and the link to moments; and a
+  study-or-work-together room on the page (friends' small avatars, a 25-minute timer, the same
+  music, no chat), which must stay usable alone. Proposed order: widget, shared pages, room.
 
 **Businesses:** they are opportunistic and need a way to sell, not just a place. They meet users
 naturally when a friend or creator chooses to display a product in their home: tap to buy, the
