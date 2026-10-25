@@ -118,6 +118,15 @@ fills it first, zero decisions on the first screen, access to Spotify/WA and the
   comics, games and songs, because they show and play inside pages rather than being downloaded.
   Start with one or two kinds; the difference from Patreon is that the work lives on people's
   pages and spreads from there, not only behind a paywall.
+- Product moat, in one line (Oct 25): pages that run programs, and programs that connect people.
+  Archive, proof, early release and embeds are derived from it. Programs that span pages (their
+  value is zero unless friends are here) are what pull friends in. Visual reference that passed
+  the filter: Rina's page as a designed zine (cream, big serif, taped photo), a small player with
+  her song, and in the corner a pixel cat "owned by Rina & Dika, 23 days old" that lives on both
+  pages, fed by either, runs away if both forget. People care because it is about them and one
+  specific person, visible to everyone, and can die (Widgetable and Locket prove it). Whether it
+  looks cheap is a design matter: programs must follow the page's theme like themed widgets, never
+  clip art on top. What matters now is design and execution.
 
 **Businesses:** they are opportunistic and need a way to sell, not just a place. They meet users
 naturally when a friend or creator chooses to display a product in their home: tap to buy, the
