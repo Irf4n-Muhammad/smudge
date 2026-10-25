@@ -25,8 +25,8 @@ kind of room in the home; the wedding entry door is replaced by young people.
   open the app without wanting to socialise (like Notion or Spotify); (2) other people get curious
   and envious, which pulls them in.
 - **Why Instagram can't copy:** the features can be copied, but Instagram cannot force 2 billion
-  people to switch from showing off photos to putting themselves together. Free to enter, zero
-  ads; success is time spent being there, not scroll time.
+  people to switch from showing off photos to putting themselves together. Free to enter; ads exist
+  like on any other social network. Success is time spent being there, not scroll time.
 - **Entry door:** young people. Money is not the constraint; spend it on creators' spotlight,
   density and content, not install ads.
 - **Funnel:** wow → show off → visit → build your own → come back.
