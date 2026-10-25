@@ -211,6 +211,10 @@ export function FormaApp() {
       setActiveDraft(id);
       setStudio(true);
     }
+    // A post started elsewhere, such as photos picked from a moment's album (ADR 0040), opens in
+    // the easy editor.
+    const easy = new URLSearchParams(window.location.search).get("postDraft");
+    if (easy) setPostEditor({ draftId: easy });
   }, [refresh]);
   const loadExplore = useCallback(async (q: string) => {
     try {

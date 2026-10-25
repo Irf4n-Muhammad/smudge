@@ -226,6 +226,19 @@ export function Album({ base, space }: { base: string; space: GatheringSpace }) 
   const [openId, setOpenId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(0);
   const [error, setError] = useState("");
+  // Picking photos for a post of your own (ADR 0040).
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const canShare = (p: AlbumPhoto) => p.mine || p.tagged.includes(space.me);
+  async function share() {
+    setError("");
+    try {
+      const { draftId } = await api<{ draftId: string }>(`${base}/share`, { photoIds: picked });
+      window.location.assign(`/?postDraft=${encodeURIComponent(draftId)}`);
+    } catch {
+      setError("Postingan belum bisa dibuat. Coba lagi.");
+    }
+  }
   const load = useCallback(
     () => api<GatheringAlbum>(`${base}/album`).then(setAlbum, () => {}),
     [base],
@@ -290,7 +303,33 @@ export function Album({ base, space }: { base: string; space: GatheringSpace }) 
             Foto kamu
           </button>
         </div>
+        {!picking && album.chapters.some((c) => c.photos.some(canShare)) && (
+          <button className="invite-link" onClick={() => setPicking(true)}>
+            Posting ke profil
+          </button>
+        )}
       </div>
+      {picking && (
+        <div className="album-picking" role="group" aria-label="Pilih foto untuk diposting">
+          <p>
+            Pilih sampai 12 foto: fotomu sendiri atau foto yang menandaimu. Postingannya masuk ke
+            profilmu dan feed temanmu.
+          </p>
+          <div className="door-actions">
+            <button className="invite-send" disabled={!picked.length} onClick={() => void share()}>
+              Lanjut dengan {picked.length} foto
+            </button>
+            <button
+              onClick={() => {
+                setPicking(false);
+                setPicked([]);
+              }}
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
       {uploading > 0 && <p role="status">Mengunggah {uploading} foto…</p>}
       {error && (
         <p className="invite-error" role="alert">
@@ -314,7 +353,22 @@ export function Album({ base, space }: { base: string; space: GatheringSpace }) 
             <ul className="album-grid">
               {c.photos.map((p) => (
                 <li key={p.id}>
-                  <button onClick={() => setOpenId(p.id)} aria-label={`Foto dari ${p.by.name}`}>
+                  <button
+                    onClick={() =>
+                      !picking
+                        ? setOpenId(p.id)
+                        : setPicked((now) =>
+                            now.includes(p.id)
+                              ? now.filter((id) => id !== p.id)
+                              : now.length < 12
+                                ? [...now, p.id]
+                                : now,
+                          )
+                    }
+                    disabled={picking && !canShare(p)}
+                    {...(picking ? { "aria-pressed": picked.includes(p.id) } : {})}
+                    aria-label={`Foto dari ${p.by.name}`}
+                  >
                     <img src={`/api${base}/photos/${p.id}?size=s`} alt="" loading="lazy" />
                     {p.photographer && <span className="album-badge">Fotografer</span>}
                   </button>

@@ -189,6 +189,20 @@ test("on the day: the door QR lets a guest in and counts them, and the album fil
   await page.getByRole("button", { name: "Foto dari Maya Chen" }).click();
   await expect(page.getByText("Foto oleh Maya Chen")).toBeVisible();
   await expect(page.getByText(/menyukai/)).toHaveCount(0);
+
+  // Maya picks her photo for a post: it opens in the editor and lands in the feed, from the moment.
+  await maya.getByRole("button", { name: "Posting ke profil" }).click();
+  await maya.getByRole("button", { name: "Foto dari Maya Chen" }).click();
+  await maya.getByRole("button", { name: "Lanjut dengan 1 foto" }).click();
+  await expect(maya).toHaveURL(/\?postDraft=/);
+  const editor = maya.getByRole("dialog", { name: "Edit your post" });
+  await editor.getByRole("button", { name: "Publish" }).click();
+  await expect(editor).toHaveCount(0);
+  const post = maya.getByRole("article", { name: /Rina & Tomi by/ }).first();
+  await expect(post.getByRole("link", { name: "From Rina & Tomi" })).toHaveAttribute(
+    "href",
+    `/m/${made.id}`,
+  );
   await other.close();
 });
 

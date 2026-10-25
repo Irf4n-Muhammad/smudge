@@ -337,3 +337,51 @@ test("the test report counts answers, accounts, photos and guests' own moments, 
   assert.match(text, /Answered the RSVP: 2 \(50%\)/);
   assert.equal(/Bob|Sri|0812|890/.test(text), false);
 });
+
+// Out of the album (ADR 0040) ------------------------------------------------------------------
+test("picked album photos become your own draft post, credited, and only a member may say so", async () => {
+  const { store, gatherings, day, invite, photo } = await setup();
+  const social = (day as unknown as { social: SocialService }).social;
+  gatherings.join(cara, invite.id);
+  const mine = photo(bob, null);
+  const caras = photo(cara, null);
+  rejects(() => day.share(bob, invite.id, { photoIds: [caras] }), "NOT_YOURS");
+  day.tag(cara, invite.id, caras, { userId: "bob", on: true });
+  const { draftId } = day.share(bob, invite.id, { photoIds: [mine, caras] });
+  const draft = social.draft(bob, draftId);
+  assert.deepEqual(draft.metadata.gathering, { id: invite.id, title: "Dina & Raka" });
+  assert.equal(draft.metadata.title, "Dina & Raka");
+  const pkg = draft.package as { manifest: { assets: string[] }; files: Record<string, string> };
+  assert.equal(pkg.manifest.assets.length, 2);
+  // Copies owned by Bob, not the album files themselves.
+  for (const assetId of pkg.manifest.assets)
+    assert.equal(store.get<{ ownerId: string }>("asset", assetId)!.ownerId, "bob");
+  assert.match(pkg.files["smudge/post.js"]!, /Foto: Cara/);
+  const post = social.publish(bob, draftId, draft.revision);
+  assert.equal(post.metadata.gathering?.id, invite.id);
+  // Someone outside the moment cannot borrow its name for a post.
+  const outsider = { userId: "eve" };
+  store.transaction(() =>
+    store.put("user", "eve", {
+      id: "eve",
+      name: "Eve",
+      handle: "eve",
+      initials: "E",
+      color: "#eee",
+    }),
+  );
+  const fake = social.createDraft(outsider, {
+    package: {
+      manifest: { ...draft.package.manifest, assets: [] },
+      files: { "index.html": "<p>hi</p>" },
+    },
+    metadata: {
+      title: "Hi",
+      caption: "",
+      contributors: [],
+      gathering: { id: invite.id, title: "Dina & Raka" },
+    },
+  });
+  rejects(() => social.publish(outsider, fake.id, fake.revision), "NOT_A_MEMBER");
+  rejects(() => day.share(outsider, invite.id, { photoIds: [mine] }), "NOT_FOUND");
+});

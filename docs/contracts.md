@@ -522,6 +522,11 @@ hasCover, author}]}` for an open public side, as the guest viewer sees it (`memb
   `POST /api/gatherings/:id/card` takes `{shown}` from someone who came. `GET
 /api/users/:id/moments` answers that person's `MemoryCard[]` for closed moments, filtered like
   their posts.
+- From the album (ADR 0040). `POST /api/gatherings/:id/share` takes `{photoIds}` (1-12; the
+  viewer's own photos or ones they are tagged in, else `NOT_YOURS`), copies them into the
+  viewer's images and answers `{draftId}` of a gallery draft. Post `metadata.gathering?: {id,
+title}` names the moment; publishing it needs membership and the moment's title
+  (`NOT_A_MEMBER`). The app opens `/?postDraft=<id>` in the post editor.
 - The app reads `?side=<id>` on `/` and `/u/<handle>`: a signed-in member is switched to the
   side (joining first when it is open); a guest sees the side named on the public page.
 - Search (the Posts tab) lists the sides in `SidesView` (`mine` and `open`, never Everyday)

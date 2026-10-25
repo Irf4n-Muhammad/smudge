@@ -69,6 +69,8 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   `components/moment-day.tsx` (`/m/<id>/door`, the Album tab).
   The same service closes a moment (ADR 0039): the lock, the thank-you, the cover, the host's
   order and the memory cards shown by `MemoryCards` on the profile page.
+  It also turns picked album photos into a draft post and guards the post's moment label
+  (ADR 0040).
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same

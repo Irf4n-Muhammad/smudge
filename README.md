@@ -69,6 +69,8 @@ into chapters by the rundown (ADR 0038).
 Three days after the day the album locks (the host can lock it sooner with a thank-you); the
 same link then opens on the thank-you, and everyone who came finds a memory card under
 **Moments you were at** on their profile (ADR 0039).
+In the Album, **Posting ke profil** turns photos you took or are tagged in into a post of your
+own, labelled with the moment (ADR 0040).
 For the test wedding, `npm run moment-report -- <id> --invited N` prints its numbers
 (`docs/runbooks/test-wedding.md`).
 

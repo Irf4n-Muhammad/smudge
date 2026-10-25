@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import {
@@ -13,6 +13,7 @@ import {
   localTimeSchema,
   photoLikeInputSchema,
   photographerInputSchema,
+  shareInputSchema,
   wishInputSchema,
   type AlbumChapter,
   type AlbumPhoto,
@@ -22,11 +23,12 @@ import {
   type GatheringWishView,
   type MemoryCard,
 } from "../../contracts/src/gatherings.js";
+import { buildPost, startPostDesign } from "./easy-post.js";
 import type { Actor } from "./index.js";
 import { locksAfter, venueTime } from "./gatherings.js";
 import type { Gathering, GatheringsService } from "./gatherings.js";
 import { AppError } from "./social.js";
-import type { SocialService } from "./social.js";
+import type { Asset, SocialService } from "./social.js";
 
 interface DoorKey {
   gatheringId: string;
@@ -91,6 +93,20 @@ export class MomentDayService {
   ) {
     mkdirSync(dir, { recursive: true });
     gatherings.onDrop.push((id) => this.drop(id));
+    // A post may say which moment it came from only when its author is in that moment.
+    const guard = social.publishGuard;
+    social.publishGuard = (actorId, draft) => {
+      guard(actorId, draft);
+      const from = draft.metadata.gathering;
+      if (!from) return;
+      const gathering = this.store.get<Gathering>("gathering", from.id);
+      if (
+        !gathering ||
+        !this.gatherings.isMember(gathering, actorId) ||
+        gathering.title.slice(0, 80) !== from.title
+      )
+        throw new AppError("NOT_A_MEMBER", 400);
+    };
   }
   private get store() {
     return this.social.store;
@@ -406,6 +422,51 @@ export class MomentDayService {
       } satisfies Wish),
     );
     return this.album(actor, id);
+  }
+
+  // Out of the album (ADR 0040) -------------------------------------------------------------
+  /**
+   * Photos picked from the album become a draft gallery post of your own, which you edit and
+   * publish like any other: then it is on your profile and in your followers' feeds, under the
+   * usual audience rules. You may pick photos you took and photos you are tagged in; someone
+   * else's photo is credited to them in its caption. The photos are copied, so taking one down
+   * from the album later does not break the post.
+   */
+  share(actor: Actor, id: string, input: unknown) {
+    const { me, gathering } = this.gatherings.memberOf(actor, id);
+    const { photoIds } = shareInputSchema.parse(input);
+    const photos = [...new Set(photoIds)].map((photoId) => this.photo(gathering, me, photoId));
+    if (photos.some((p) => p.ownerId !== me && !p.tags.includes(me)))
+      throw new AppError("NOT_YOURS", 403);
+    const copies = photos.map((p) => {
+      const asset: Asset = {
+        id: randomUUID(),
+        ownerId: me,
+        mime: "image/jpeg",
+        name: `${gathering.title.slice(0, 100)}.jpg`,
+        base64: readFileSync(this.path(p.id, false)).toString("base64"),
+      };
+      const credit = p.ownerId === me ? "" : this.gatherings.person(p.ownerId)?.name;
+      return { asset, caption: credit ? `Foto: ${credit}`.slice(0, 120) : "" };
+    });
+    this.store.transaction(() => {
+      for (const { asset } of copies) this.store.put("asset", asset.id, asset);
+    });
+    const title = gathering.title.slice(0, 80);
+    const built = buildPost(
+      startPostDesign("gallery", {
+        kicker: "",
+        headline: gathering.title.slice(0, 90),
+        text: "",
+        quote: "",
+        photos: copies.map((c) => ({ assetId: c.asset.id, caption: c.caption })),
+      }),
+    );
+    const draft = this.social.createDraft(actor, {
+      package: built.package,
+      metadata: { ...built.metadata, caption: "", contributors: [], gathering: { id, title } },
+    });
+    return { draftId: draft.id };
   }
 
   // Closing the moment (ADR 0039) -----------------------------------------------------------

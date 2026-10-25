@@ -78,6 +78,10 @@
   letter-spacing: 0.04em;
   color: var(--muted);
 }
+.gathering-mark {
+  color: inherit;
+  text-decoration: none;
+}
 .moment-mark.verified {
   color: #1f7a4d;
 }

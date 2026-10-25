@@ -65,6 +65,9 @@
 - [x] Ready for the test wedding: `npm run moment-report` prints the four numbers the test is
       judged by (answered, made an account, added a photo, made their own moment within 30 days)
       as counts only. See `docs/runbooks/test-wedding.md`.
+- [x] From the album to the feed: members pick up to 12 of their own or tagged photos, which
+      open as a draft post in the editor and, once published, show on their profile and in
+      friends' feeds with a "From <moment>" label only members can use. See ADR 0040.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

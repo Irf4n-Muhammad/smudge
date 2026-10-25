@@ -33,6 +33,7 @@ import {
   FullScreenButton,
   FullScreenPost,
   MomentCover,
+  GatheringMark,
   MomentMark,
   ReactionBar,
   themeStyle,
@@ -368,6 +369,11 @@ export function PostCard({
         {moment && (
           <div className="moment-line">
             <MomentMark post={post} />
+          </div>
+        )}
+        {post.metadata.gathering && (
+          <div className="moment-line">
+            <GatheringMark post={post} />
           </div>
         )}
         <ReactionBar post={post} notify={notify} onChange={onRefresh} />

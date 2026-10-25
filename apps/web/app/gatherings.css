@@ -823,3 +823,22 @@
 .album-viewer .door-actions button {
   color: var(--invite-ink, #3a3128);
 }
+
+/* Picking photos for a post (ADR 0040). */
+.album-picking {
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid var(--invite-gold);
+  border-radius: 12px;
+}
+.album-picking p {
+  margin: 0 0 8px;
+}
+.album-grid button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.album-grid button[aria-pressed="true"] {
+  outline: 3px solid var(--invite-gold);
+  outline-offset: -3px;
+}

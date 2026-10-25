@@ -210,6 +210,10 @@ export const closingInputSchema = z
   .strict();
 export const coverInputSchema = z.object({ photoId: z.string().uuid().nullable() }).strict();
 export const photoMoveInputSchema = z.object({ direction: z.enum(["up", "down"]) }).strict();
+/** Photos picked from the album for a post on your profile and in friends' feeds (ADR 0040). */
+export const shareInputSchema = z
+  .object({ photoIds: z.array(z.string().uuid()).min(1).max(12) })
+  .strict();
 export const cardInputSchema = z.object({ shown: z.boolean() }).strict();
 /** A moment you came to, as it shows on your profile. */
 export interface MemoryCard {

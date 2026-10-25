@@ -151,6 +151,9 @@ export function gatheringRoutes(
   api.post("/api/gatherings/:id/wish", messageLimit, (req, res) =>
     res.json(day.wish(actor(res), id(req.params.id), req.body)),
   );
+  api.post("/api/gatherings/:id/share", (req, res) =>
+    res.json(day.share(actor(res), id(req.params.id), req.body)),
+  );
   // Closing the moment (ADR 0039).
   api.post("/api/gatherings/:id/close", (req, res) =>
     res.json(day.close(actor(res), id(req.params.id), req.body)),
