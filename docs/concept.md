@@ -10,31 +10,43 @@ There are two separate products. Keep their ideas apart.
 
 ## 1. Smudge
 
-### Direction: your online home (Oct 2026)
+### Direction: your page, the first thing you open (Oct 2026)
 
 This replaces the moments-first framing below as the center. Moments and weddings stay, as one
-kind of room in the home; the wedding entry door is replaced by young people.
+kind of program on the page; the wedding entry door is replaced by young people. "Home" is only
+an internal word; to users it is their page.
 
-**Macro, in short:**
+**Macro, one line each (Oct 25):**
 
-- **Positioning:** "your online home". Vision: the place where everyone lives online, worldwide,
-  not Indonesia only.
-- **Problem it solves:** come and stay. Instagram compresses a person into nice photos and a
-  follower count; Smudge decompresses: visit a home and you understand who the person is.
-- **Two values:** (1) the home is worth it alone, long term, as a mirror of yourself and a reason to
-  open the app without wanting to socialise (like Notion or Spotify); (2) other people get curious
-  and envious, which pulls them in.
-- **Why Instagram can't copy:** the features can be copied, but Instagram cannot force 2 billion
-  people to switch from showing off photos to putting themselves together. Free to enter; feed, scroll
-  and ads exist like on any other social network.
-- **Entry door:** young people. Money is not the constraint; spend it on creators' spotlight,
-  density and content, not install ads.
-- **Funnel:** wow → show off → visit → build your own → come back.
-- **Three groups:** ordinary users live there; creators bring crowds and earn by merit; businesses
-  sell where people naturally meet them. Ordinary users are the core: without them the other two
-  have no reason to come.
-- **Smudge's job is tools:** how creators run their community and economy is theirs, as on
-  YouTube. Ours: good tools, plus what the law requires (minors, illegal content).
+1. **Problem:** people open the phone without a purpose, and today reels catch that moment.
+2. **Answer:** Smudge is the first thing you open when you don't know what to do, with everything
+   you usually do already there.
+3. **Your own place (strongest):** a page you arrange for your own use, your music one tap away.
+4. **Other people (the rest):** seeing what friends are up to, through a normal feed and scroll.
+5. **Form:** every page is HTML, so it holds programs you use, not only photos you look at.
+6. **Compression vs decompression:** Instagram shows a person through photos and numbers; Smudge
+   shows who they are.
+7. **Two values:** good to use alone long term, and makes others curious and envious.
+8. **Business model:** feed, scroll and ads as on any social network, plus themes, memberships,
+   early releases and commissions inside.
+9. **Entry door:** young people, worldwide, through things that go viral and are easy to make.
+   Money is not the constraint; spend it on spotlight, density and content, not install ads.
+10. **Ordinary users are the core:** without them creators and businesses have no reason to come.
+11. **Creators:** people first, then money; small hungry creators, by merit, from their closest
+    fans; no guaranteed money, no creator program at the start.
+12. **Fan interaction:** what only HTML can do (rooms unlocked together, traces left, a page that
+    remembers each fan), plus pay-for-early-access for any digital work.
+13. **Businesses:** they need a way to sell; they meet users through products people choose to
+    display on their pages.
+14. **Smudge's job:** tools, plus what the law requires. Communities and economies belong to
+    creators and businesses.
+15. **Product moat, one line:** pages that run programs, and programs that connect people.
+    Everything else (archive, proof, early release, embeds, distribution) derives from it.
+16. **HTML is a bet on openness:** users never feel it; it pays off only when programs open to
+    other makers, in stages, behind a strict sandbox.
+17. **Security:** most risks close by design from day one; the human ones (phishing by words,
+    bad content, bullying) need moderation and process, as on Instagram.
+18. **What matters now:** design and execution.
 
 **The home:**
 
