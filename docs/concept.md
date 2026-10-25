@@ -111,6 +111,13 @@ fills it first, zero decisions on the first screen, access to Spotify/WA and the
   fans beat that. What is sold is the membership (early, "fan since", closeness), not the file,
   because exclusive audio leaks within a day. Discovery stays free (a snippet), paying is for the
   full song. Candidate for the first core activity only possible here.
+- The same pattern for any digital work, not only songs: release here first, members pay for
+  early access, public a few months later, and the work can be attached to people's pages.
+  Fits comics and manga by chapter, podcasts and video episodes, short films and series, serial
+  books, small HTML games and demos, presets and templates, lessons, photo sets. Strongest:
+  comics, games and songs, because they show and play inside pages rather than being downloaded.
+  Start with one or two kinds; the difference from Patreon is that the work lives on people's
+  pages and spreads from there, not only behind a paywall.
 
 **Businesses:** they are opportunistic and need a way to sell, not just a place. They meet users
 naturally when a friend or creator chooses to display a product in their home: tap to buy, the
