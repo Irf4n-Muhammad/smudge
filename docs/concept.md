@@ -5,16 +5,17 @@ every session and proposes lines for it at the end. Muhammad decides what goes i
 
 There are two separate products. Keep their ideas apart.
 
-1. **Smudge**: where the moments of your life live; every profile, post and page is HTML.
+1. **Smudge**: your page, the first thing you open; every page runs programs, and programs connect
+   people. Built to replace Instagram, not to complement it.
 2. **Bubble**: a nested Reddit with a world map of interest bubbles you can step into.
 
 ## 1. Smudge
 
 ### Direction: your page, the first thing you open (Oct 2026)
 
-This replaces the moments-first framing below as the center. Moments and weddings stay, as one
-kind of program on the page; the wedding entry door is replaced by young people. "Home" is only
-an internal word; to users it is their page.
+The center is the page. Moments (weddings, reunions, trips, dinners) are one program on it, not
+the core and not the entry door. Smudge is a replacement for Instagram, not a complement. "Home"
+is only an internal word; to users it is their page.
 
 **Macro, one line each (Oct 25):**
 
@@ -177,96 +178,29 @@ boosting in the friends' feed. Feed, scroll and ads exist as on any social netwo
 - Big studios asking for custom work (the agency trap); campaigns stay opt-in on the studio's
   own page.
 
-### What it was (earlier framing)
+### Moments, as one program on the page
 
-- Center: "Smudge is where the moments of your life live, from the plan to the memory, and only the
-  people who were there are in it."
-- Like Instagram, but each post, profile and page is its own HTML/CSS/JS program. Three parts form
-  one loop:
-  1. **Moments** (the activity): weddings, reunions, birthdays, trips, dinners.
-  2. **Profile** (where the results pile up): a timeline of where you were present and with whom,
-     and at the same time your website or portfolio, as easy as picking a theme.
-  3. **Businesses** (where the activity happens): venues, restaurants, gyms, cafes and wedding
-     vendors get an official page, stamps and reviews from people proven to have come.
-- One QR scan at the venue ties them: it opens the moment's album, proves presence and gives a stamp.
-- Loop: planning a moment picks a place from business pages (ranked by friends' proven reviews) →
-  everyone scans at the place → the moment becomes a memory on every attendee's profile → friends
-  see it and plan their own moment there.
-- Closest competitor: Partiful. Pitch: "Partiful, but moments pile up into your life timeline and
-  connect to the place they happened."
+Built in stages 0 to 5 and kept. It is one use of the page among many, useful for weddings and
+any gathering, never the only one and not the entry door.
 
-### Moments
-
-- Shaped like a Telegram group: the invite page pinned on top; a chat tab (announcement mode for
-  big events, free chat for small ones); an album tab; small groups inside the moment.
-- Small groups inherit date, place and dress code, are hidden from the parent, and close with it.
-- Unlike Telegram, a moment closes itself after the event and becomes one memory card on each
-  attendee's profile. A group that keeps meeting is offered to become a permanent circle.
-- Norm: only people who were there. Intimacy comes from shared presence, not small size. No public
-  like counts; outsiders see nothing unless the host opens it.
-- Wedding flow: host picks a template, vendors attach → link goes to WA, opens without an account →
-  RSVP with a phone number gives the host a guest count → updates reach RSVP'd guests → at the door
-  a QR replaces the guestbook and opens the album (digital gift envelope here too) → afterwards the
-  same link becomes album plus thank-you. Viewing needs no account; uploading photos does.
-- Album: chapters from the invite's rundown, photos sorted in by time; official photographer (credited)
-  and most-responded photos on top; a "your photos" tab from tags and small groups (no face
-  recognition yet); guest wishes inside; live on the day, locked a few days later after the hosts
-  rearrange.
-- Before-event chat must be at least as comfortable as a WA group (fast, notifications, photos,
-  voice notes), or people make a WA group and the "after" never happens.
-- Big moments (weddings, reunions) pull new people; small ones (birthdays, trips, dinners) keep them.
-- Likes: the like button stays; the count is visible only to the poster.
-- Small posts: a photo posted in a moment goes into its album automatically; the poster chooses
-  whether to also show it on their profile, and what they show also appears in friends' feeds.
-- Strangers can find a profile (it is a website or portfolio); moments and albums stay closed to
-  the people who were there unless the host opens them.
-
-### Where HTML matters
-
-- Invites, albums and memory cards are programs shaped by the moment's theme. The theme market
-  becomes a market for moment templates: digital-invite sellers now selling over WA sell here, and
-  we take a cut.
-- Profiles stay free websites: "your social profile is your portfolio". A "use this theme" button on
-  every profile makes profiles spread; the theme maker gets credit and a share.
-- Some themes unlock only through proof (UofT, Paris), which nothing else can sell.
-
-### Growth and money
-
-- Entry door: weddings in Indonesia (an existing paid market with no platform; one couple pulls
-  hundreds). Product supports all moment types from day one.
-- Links are the watermark: every moment link opened in WA shows "made with Smudge".
-- Money: businesses and vendors pay for pages and tools (customer reach, AI receptionist, proven
-  visit reports), people buy themes and templates, intent-based ads appear where people search for
-  places. Feed stays intimate with few or no ads. Never paid verification; never sell or license
-  people's data.
-- Start as a complement to Instagram, not a rival; attention ads and an explore of strangers'
-  programs come only once big.
-- Rough best case (estimate, unchecked): about $10B a year, more if intent ads grow.
-
-### Why others won't copy
-
-- Instagram: uniform feed and ads; running other people's HTML is a security risk; a moment owned by
-  hundreds is not its shape.
-- WhatsApp can copy planning (it has group Events) but not the after: no profiles or timeline, and
-  end-to-end encryption stops it arranging 300 guests' photos server-side. No places either. So the
-  moat is after the event and the place; before the event must simply be good.
-- Moments never ask anyone to leave WhatsApp: each is a new small group, so the move-together
-  problem that stopped Telegram does not apply.
+- A moment is shaped like a Telegram group: the invite pinned on top, a chat tab, an album tab,
+  small groups inside. It closes after the event and becomes one memory card on each attendee's
+  page. Only people who were there are in it; outsiders see nothing unless the host opens it.
+- Wedding flow: template, vendors attach, link goes to WhatsApp and opens without an account,
+  RSVP by phone number, QR at the door replaces the guestbook and opens the live album, the same
+  link becomes album plus thank-you afterwards. Album chapters follow the rundown, photographer
+  and most-liked photos on top, "your photos" from tags, locked a few days after the hosts
+  rearrange. Picked photos can be posted to the page and friends' feeds.
+- Places: venues, restaurants, cafes and vendors can have a page with stamps and reviews from
+  people proven to have come. One QR scan ties the place, the proof and the album.
+- Proof of presence from these scans feeds the visited map and proof-locked themes.
+- WhatsApp can copy the planning but not the after: no pages, no timeline, and end-to-end
+  encryption stops it arranging 300 guests' photos. Moments never ask anyone to leave WhatsApp.
 
 ### Not doing
 
 - Food delivery, being a bank or Stripe, store backend, pay-per-visit as the main billing.
-- Replacing WhatsApp. Maximum potential is "where your friend circles live": groups from WhatsApp,
-  memories from Instagram.
-
-### Open
-
-- Test one real wedding end to end: do guests sign up, upload photos, and create their own small
-  moment within a month?
-- Weddings are rare per person; small gatherings must count as moments for weekly return.
-- HTML safety (hangs, login-look phishing, code moderation) and location data (no background
-  tracking, store results only, per-action permission).
-- ADR 0011 excludes lunar-calendar seasons (Ramadan, Eid); revisit if seasonal themes matter.
+- Replacing WhatsApp; it stays. Paid verification; selling or licensing people's data.
 
 ## 2. Bubble
 
@@ -422,7 +356,9 @@ boosting in the friends' feed. Feed, scroll and ads exist as on any social netwo
 - Selling themes as creators' main income: not how creators or public figures make money.
 - Smudge solving creators' community problems for them (paying moderators, running their
   economy): Smudge gives tools; the rest is the creator's job.
-- Weddings in Indonesia as the entry door: replaced by young people, worldwide.
+- Weddings in Indonesia as the entry door, and moments as the core: replaced by the page and
+  young people, worldwide. Moments stay as one program.
+- "A complement to Instagram": Smudge replaces Instagram.
 - Mixing Smudge and Bubble into one product.
 - Pay if it works (money held until a result is proven), for gurus and as its own product: results
   depend on too many things outside the provider's control (the student's effort, injury, time),
