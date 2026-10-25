@@ -48,6 +48,11 @@ There are two separate products. Keep their ideas apart.
 - Before-event chat must be at least as comfortable as a WA group (fast, notifications, photos,
   voice notes), or people make a WA group and the "after" never happens.
 - Big moments (weddings, reunions) pull new people; small ones (birthdays, trips, dinners) keep them.
+- Likes: the like button stays; the count is visible only to the poster.
+- Small posts: a photo posted in a moment goes into its album automatically; the poster chooses
+  whether to also show it on their profile, and what they show also appears in friends' feeds.
+- Strangers can find a profile (it is a website or portfolio); moments and albums stay closed to
+  the people who were there unless the host opens them.
 
 ### Where HTML matters
 
