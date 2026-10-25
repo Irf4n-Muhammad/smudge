@@ -143,7 +143,7 @@ export function MomentComposer({
     </button>
   );
   return (
-    <Dialog title={template ? template.name : "Share a moment"} onClose={onClose} wide>
+    <Dialog title={template ? template.name : "Share a milestone"} onClose={onClose} wide>
       {!template ? (
         <div className="template-picker">
           {open.length > 0 && (
@@ -333,7 +333,7 @@ export function MomentComposer({
               Back
             </button>
             <button className="primary" disabled={busy}>
-              {busy ? "Publishing…" : "Publish moment"}
+              {busy ? "Publishing…" : "Publish milestone"}
             </button>
           </div>
         </form>

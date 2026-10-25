@@ -1,0 +1,366 @@
+/* Moments as gatherings (ADR 0036). The invite keeps its own palette in light and dark mode:
+   it is the couple's page, not the app's. */
+.invite {
+  --invite-paper: #f6f0e6;
+  --invite-ink: #3a3128;
+  --invite-soft: #8a7b69;
+  --invite-gold: #a8834a;
+  --invite-line: #e3d8c6;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+  background: var(--invite-paper);
+  color: var(--invite-ink);
+  font-family: var(--ui, system-ui, sans-serif);
+  text-align: center;
+}
+.invite > * {
+  width: min(560px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+.invite-cover {
+  padding: 72px 0 40px;
+  border-bottom: 1px solid var(--invite-line);
+}
+.invite-kicker {
+  margin: 0 0 18px;
+  color: var(--invite-gold);
+  font-size: 13px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+.invite-cover h1 {
+  margin: 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: clamp(44px, 12vw, 72px);
+  font-weight: 400;
+  line-height: 1.05;
+}
+.invite-hosts {
+  margin: 16px 0 0;
+  color: var(--invite-soft);
+}
+.invite-date {
+  margin: 24px 0 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 22px;
+}
+.invite-block {
+  padding: 32px 0;
+  border-bottom: 1px solid var(--invite-line);
+}
+.invite-block h2 {
+  margin: 0 0 14px;
+  color: var(--invite-gold);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.invite-block p {
+  margin: 0 0 8px;
+  line-height: 1.55;
+}
+.invite-place {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 24px;
+}
+.invite-link {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--invite-gold);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.invite-note {
+  color: var(--invite-soft);
+  font-style: italic;
+}
+.invite-rundown {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.invite-rundown li {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 6px 0;
+}
+.invite-rundown time {
+  min-width: 52px;
+  color: var(--invite-gold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.invite-rundown span {
+  min-width: 140px;
+  text-align: left;
+}
+.invite-rsvp form {
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+.invite-rsvp label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.invite-rsvp small {
+  color: var(--invite-soft);
+  font-weight: 400;
+}
+.invite-rsvp input,
+.invite-rsvp select,
+.invite-rsvp textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-weight: 400;
+}
+.invite-rsvp textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+.invite-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.invite-choice button {
+  padding: 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.invite-choice button[aria-checked="true"] {
+  border-color: var(--invite-gold);
+  background: var(--invite-gold);
+  color: #fffaf2;
+}
+.invite-send {
+  padding: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--invite-ink);
+  color: var(--invite-paper);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.invite-send:disabled {
+  opacity: 0.6;
+}
+.invite-error {
+  color: #a3361f;
+}
+.invite-vendors ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.invite-vendors li {
+  padding: 4px 0;
+}
+.invite-vendors li span {
+  color: var(--invite-soft);
+}
+.invite-footer {
+  padding-top: 28px;
+  font-size: 13px;
+}
+.invite-footer a {
+  color: var(--invite-soft);
+}
+.invite-missing {
+  padding-top: 96px;
+}
+
+/* The host's pages. */
+.moments-host {
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+.moments-main {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+.moments-main h1 {
+  margin: 0 0 8px;
+}
+.moments-sub {
+  margin: 0 0 20px;
+  color: var(--muted);
+}
+.moments-list {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 28px;
+  padding: 0;
+  list-style: none;
+}
+.moments-list a {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+  color: inherit;
+  text-decoration: none;
+}
+.moments-list span {
+  color: var(--muted);
+  font-size: 14px;
+}
+.moments-form {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+.moments-form h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.moments-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.moments-form input,
+.moments-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+.moments-form fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.moments-form legend {
+  padding: 0 4px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.moments-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.4fr) 1fr;
+  gap: 8px;
+}
+.moments-form fieldset button {
+  justify-self: start;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.moments-share {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+.moments-share code {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.moments-share div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.moments-share a:not(.primary),
+.moments-share button {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.moments-totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 20px;
+}
+.moments-totals div {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+.moments-totals dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.moments-totals dd {
+  margin: 4px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+.moments-guests {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.moments-guests th,
+.moments-guests td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.moments-guests small {
+  color: var(--muted);
+}
+@media (max-width: 560px) {
+  .moments-guests th:nth-child(4),
+  .moments-guests td:nth-child(4) {
+    display: none;
+  }
+}

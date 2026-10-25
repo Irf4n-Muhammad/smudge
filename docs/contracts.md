@@ -474,6 +474,20 @@ hasCover, author}]}` for an open public side, as the guest viewer sees it (`memb
   no `since`, the same people and post rules as for a stranger); `recent` are the side's public
   posts, newest first, at most twelve. Private sides and Everyday are `NOT_FOUND`. The web app
   serves it at `/s/<id>`; a signed-in person opening that page is sent to `/?side=<id>`.
+- Moments as gatherings (ADR 0036). `POST /api/gatherings` takes `GatheringInput` (`kind:
+"wedding"`, `title`, `hosts?`, `date` as `YYYY-MM-DD`, `place`, `address?`, `note?`,
+  `rundown?: [{time: "HH:MM", title}]` up to 20, `vendors?: [{role, name}]` up to 20) and answers
+  `201 GatheringInvite`; at most 50 per host (`TOO_MANY_GATHERINGS`). `GET /api/gatherings` answers
+  `GatheringSummary[]` (hosted and answered while signed in, soonest first).
+  `GET /api/gatherings/:id/guests` answers `GatheringGuestList` to the host only (`NOT_HOST`);
+  `DELETE /api/gatherings/:id` removes it and its answers.
+- `GET /api/public/gatherings/:id` answers `GatheringInvite` to anyone (guest rate limit), with no
+  answers in it. `POST /api/public/gatherings/:id/rsvp` takes `{name, phone, attending, guests?
+(1-10), message?}` and answers `{name, attending, guests}`; 30 per 10 minutes per address. The
+  phone is normalised (`0…` gets `62`) to 8-15 digits (`INVALID_PHONE`) and stored only as a hash
+  per gathering plus its last three digits; the same number again replaces its answer; past 3000
+  answers new ones are `GATHERING_FULL`. The web app serves the invite at `/m/<id>`, the host's
+  list at `/m/<id>/guests`, and your moments at `/m`.
 - The app reads `?side=<id>` on `/` and `/u/<handle>`: a signed-in member is switched to the
   side (joining first when it is open); a guest sees the side named on the public page.
 - Search (the Posts tab) lists the sides in `SidesView` (`mine` and `open`, never Everyday)

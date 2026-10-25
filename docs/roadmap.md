@@ -46,6 +46,11 @@
       **Invite** shares the side's link, and `/s/<id>` opens the home without an account
       (ADR 0035). Next: the same recap on a profile, an invite that is not guessable, chat on a
       plan. See ADR 0033.
+- [x] Moments as gatherings, first slice: a wedding invite from a template at `/m/<id>` that opens
+      without an account, an RSVP by phone number that never stores the number, and a guest list
+      only the host sees, with Send on WhatsApp. The ADR 0011 pages are now called milestones.
+      Next: the moment group (chat, album, small groups), a QR at the door, and closing into a
+      memory card. See ADR 0036.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

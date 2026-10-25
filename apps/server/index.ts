@@ -36,6 +36,8 @@ import { ThemeStudio } from "../../packages/core/src/themes.js";
 import { seedThemes } from "./seed-themes.js";
 import { SidesService } from "../../packages/core/src/sides.js";
 import { PlansService } from "../../packages/core/src/plans.js";
+import { GatheringsService } from "../../packages/core/src/gatherings.js";
+import { gatheringRoutes } from "./gathering-routes.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
 import { sideRoutes } from "./side-routes.js";
@@ -134,6 +136,9 @@ sidesService.planLister = (who, sideId) => plans.inSide(who, sideId);
 sidesService.regularLister = (who, sideId) => plans.regulars(who, sideId);
 // An organisation's invite or email opens that organisation's side along with the chapter.
 identity.chapterListeners.push((c) => sidesService.joinByChapter(c));
+// Moments as gatherings (ADR 0036): invites, RSVPs by phone, and only the host sees answers.
+const gatherings = new GatheringsService(service, clock);
+accounts.erasers.push((userId) => gatherings.erase(userId));
 const messages = new MessageService(service, community, clock);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
@@ -724,6 +729,8 @@ api.get("/api/public/posts/:id/cover", guestLimit, (req, res) => {
 api.get("/api/public/users/:handle", guestLimit, (req, res) =>
   res.json(sharing.profile(z.string().min(1).max(30).parse(req.params.handle))),
 );
+// An invite takes answers without an account, so its writes get their own tighter limit.
+gatheringRoutes(api, gatherings, guestLimit, rateLimit({ windowMs: 10 * 60_000, max: 30 }));
 api.post("/api/public/capability", guestLimit, (req, res) => {
   const { ticket: ticketId, request } = z
     .object({ ticket: z.string().length(64), request: profileRequestSchema })

@@ -47,7 +47,7 @@ live in the bottom bar and **More**. In production, set `FORMA_ADMIN_EMAILS` for
 everywhere (omit it for today's date). Leo's **Finally graduated.** moment opens full screen from
 the feed: a counter intro, decoding titles, chapters and a sticker wall where each visitor can
 leave one preset sticker. As Alex, open **Who you are**, enter `alex@student.lembayung.edu`, read
-the code from the **local demo inbox** (no email leaves this app), verify, then **Share a moment →
+the code from the **local demo inbox** (no email leaves this app), verify, then **Share a milestone →
 Graduation**. Locked templates show their rule: new job (work email `@kopinusantara.co`), birthday
 (only around the stored date), trip (a JPEG with GPS), together (partner confirms), club or event
 titles (invite code; Maya admins Teater Senja, Leo the film festival). **Themes** lists event,
@@ -56,6 +56,11 @@ around every post of yours in the feed (edges, frame ring, the face of your name
 **Paris**, opened by her proven trip to France; as Alex, prove a trip with a JPEG taken in France
 and **Paris** opens for you too (ADR 0022). **Create an account** at the bottom of the sidebar opens signup to anyone. Rules: ADR 0011;
 design brief: `docs/design-handoff.md`.
+
+**A wedding invite.** Open **More → Moments** (or `/m`), fill in **New wedding invite** and
+**Make the invite**. The guest list page has the link, **Send on WhatsApp** and the head count.
+Open the link in a private window: the invite and its RSVP work without an account, and only the
+host sees the answers (ADR 0036).
 
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
 **Use this combination** previews the actual published composition with your identity and posts;

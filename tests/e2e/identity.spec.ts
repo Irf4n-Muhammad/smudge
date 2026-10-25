@@ -36,7 +36,7 @@ test("signup, prove a campus email, publish a locked moment and receive one pres
   await openMore(page, "Who you are");
   await expect(page.getByRole("heading", { name: "Your chapters" })).toBeVisible();
 
-  await openMore(page, "Share a moment");
+  await openMore(page, "Share a milestone");
   const dialog = page.getByRole("dialog");
   // Templates that need proof are folded under the ones ready to use.
   await dialog.getByText(/more unlock with proof/).click();
@@ -53,12 +53,12 @@ test("signup, prove a campus email, publish a locked moment and receive one pres
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page.locator(".chapter")).toContainText("Graduate, Lembayung University");
 
-  await openMore(page, "Share a moment");
+  await openMore(page, "Share a milestone");
   await dialog.getByRole("button", { name: "Graduation", exact: true }).click();
   const title = "Done at last " + handle;
   await dialog.getByLabel("Title", { exact: true }).fill(title);
   await dialog.getByLabel("Who sees it").selectOption("public");
-  await dialog.getByRole("button", { name: "Publish moment" }).click();
+  await dialog.getByRole("button", { name: "Publish milestone" }).click();
   const card = page.locator(".post-card", { hasText: title });
   await expect(card).toContainText("Graduation · Graduate, Lembayung University");
   await expect(card.getByRole("button", { name: "Use format" })).toHaveCount(0);

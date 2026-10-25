@@ -396,6 +396,7 @@ export function FormaApp() {
     if (key === "card") navigate("sides");
     else if (key === "studio") void create();
     else if (key === "moment") setMomentOpen(true);
+    else if (key === "moments") window.location.assign("/m");
     else if (key === "import") setImportOpen(true);
     else if (key === "signup" || key === "login") setAuthDialog(key);
     else navigate(key);
@@ -1222,7 +1223,7 @@ export function FormaApp() {
             setMomentOpen(false);
             navigate("home");
             await refresh();
-            notify("Moment published. Visitors can leave one sticker each.");
+            notify("Milestone published. Visitors can leave one sticker each.");
           }}
         />
       )}

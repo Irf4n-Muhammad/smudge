@@ -15,6 +15,7 @@ import "./gallery.css";
 import "./themes.css";
 import "./sides.css";
 import "./nav.css";
+import "./gatherings.css";
 import { seasonScript } from "../components/season-script";
 
 export const metadata: Metadata = {
