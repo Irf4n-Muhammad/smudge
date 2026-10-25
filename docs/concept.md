@@ -131,6 +131,15 @@ fills it first, zero decisions on the first screen, access to Spotify/WA and the
   their page spreads it; more pages means more reach per work, so creators release here because
   distribution is built in. Spotify has no such thing, and Instagram cannot attach works to
   profiles.
+- What fills the place for yourself first: small one-purpose programs of the kind that already
+  went viral because their result is worth showing off (NGL and Sarahah, visited-places maps like
+  Been and Polarsteps, Spotify Wrapped, Receiptify, Letterboxd's four favourites, MySpace top 8,
+  "how well do you know me" quizzes, countdowns, guestbooks). These are examples of the kind,
+  not a list to copy as is. Each such app died because it had one function; here they are
+  ready-made programs on one page, permanent rather than a one-off screenshot, following the
+  page's theme and connected to each other. The visited map ties to proof of presence from QR
+  scans. Results must travel to Instagram stories easily; anonymous messages need filters and
+  reporting from the start.
 
 **Businesses:** they are opportunistic and need a way to sell, not just a place. They meet users
 naturally when a friend or creator chooses to display a product in their home: tap to buy, the
