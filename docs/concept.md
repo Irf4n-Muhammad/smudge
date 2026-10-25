@@ -145,6 +145,22 @@ fills it first, zero decisions on the first screen, access to Spotify/WA and the
   couple, a trip, a class), the next step after the shared pet and the link to moments; and a
   study-or-work-together room on the page (friends' small avatars, a 25-minute timer, the same
   music, no chat), which must stay usable alone. Proposed order: widget, shared pages, room.
+- Why HTML (Oct 25): users never feel HTML; they feel "this page can be anything and can be
+  used". HTML's advantage is on our side: supply of makers (anyone, including AI from one
+  sentence, can write it), distribution (opens anywhere without an account, embeds, searchable)
+  and unlimited form. It only pays off if programs are opened to other makers eventually;
+  otherwise Instagram matches most of the value with native widgets. Proposed: open in stages.
+  Now, pages are HTML but programs are ours and people customise through themes and options.
+  After there are users, selected makers with review, like Shopify. Later, everyone, including
+  AI-made programs, in a tested sandbox. Set a clear trigger for stage two.
+- What a social profile cannot do today and an HTML page can: a page that differs per visitor;
+  things that run while you are there; visitors changing the page permanently; many people on
+  the page at once; any form (zine, poster, room, game); things that grow or die; hidden parts
+  unlocked by puzzles, dates or proof; embedding anything (maps, 3D, games, forms, payment);
+  programs that connect to other pages; opening anywhere without an account. Each exists
+  somewhere (Notion, Carrd, Discord, Roblox); none on the social profile friends open daily.
+  Costs: live state and presence need real infrastructure; per-visitor pages are a phishing tool
+  without a strict sandbox; too many possibilities confuse, so our templates must show the way.
 
 **Businesses:** they are opportunistic and need a way to sell, not just a place. They meet users
 naturally when a friend or creator chooses to display a product in their home: tap to buy, the
