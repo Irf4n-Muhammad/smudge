@@ -10,7 +10,111 @@ There are two separate products. Keep their ideas apart.
 
 ## 1. Smudge
 
-### What it is
+### Direction: your online home (Oct 2026)
+
+This replaces the moments-first framing below as the center. Moments and weddings stay, as one
+kind of room in the home; the wedding entry door is replaced by young people.
+
+**Macro, in short:**
+
+- **Positioning:** "your online home". Vision: the place where everyone lives online, worldwide,
+  not Indonesia only.
+- **Problem it solves:** come and stay. Instagram compresses a person into nice photos and a
+  follower count; Smudge decompresses: visit a home and you understand who the person is.
+- **Two values:** (1) the home is worth it alone, long term, as a mirror of yourself and a reason to
+  open the app without wanting to socialise (like Notion or Spotify); (2) other people get curious
+  and envious, which pulls them in.
+- **Why Instagram can't copy:** the features can be copied, but Instagram cannot force 2 billion
+  people to switch from showing off photos to putting themselves together. Free to enter, zero
+  ads; success is time spent being there, not scroll time.
+- **Entry door:** young people. Money is not the constraint; spend it on creators' spotlight,
+  density and content, not install ads.
+- **Funnel:** wow → show off → visit → build your own → come back.
+- **Three groups:** ordinary users live there; creators bring crowds and earn by merit; businesses
+  sell where people naturally meet them. Ordinary users are the core: without them the other two
+  have no reason to come.
+- **Smudge's job is tools:** how creators run their community and economy is theirs, as on
+  YouTube. Ours: good tools, plus what the law requires (minors, illegal content).
+
+**The home:**
+
+- A metaphor, not a literal house: each profile is one full web page the owner designs. A literal
+  house (Animal Crossing style) can be one theme, not the base form.
+- Five parts: front (look), rooms (HTML programs to use, not just view), doors (who may enter
+  which room), presence (lights on, who is visiting now), traces (what visitors leave behind).
+- Front room is public; private rooms are the owner's own, and friends enter only when invited.
+- On the phone, the first screen is the friends' street.
+- Decorating options include theme, entry music, cursor, "what I'm up to" widget, collection
+  shelf, top friends, guest stickers and doodles, quizzes and mini games, rare event or gift items,
+  and a pet that grows with visits. Templates and guiding questions make a good home in about 60
+  seconds.
+- Why people return: the home changes because of others; traces pile up; friends live there;
+  weekly events.
+
+**Ordinary users:** they come because they are curious about a friend, stay because the home is
+comfortable for themselves (study, music, planning the day in a private room) and because friends
+are there. What matters is being more comfortable here than on Instagram; trying new viral things
+is the hook, not the reason to stay.
+
+**Creators:**
+
+- Target content creators, artists and public figures, mainly small, hungry creators who want to
+  become stars (as TikTok did), not paid celebrities.
+- Creators are people first. If the home wins for them as ordinary users, they move in as people
+  (like Lisa buying Labubu because she liked it); money is a layer on top. No creator program at
+  the start.
+- By merit, no guaranteed money. Gold rush: those who come first get the crowd.
+- The unserved space is depth, not reach. Instagram and TikTok serve reach; Smudge is where the
+  most loyal fans gather with the creator, monetised from the first fan (paid private room, live
+  hangouts, commission on products shown in the home). Instagram Subscriptions sells exclusive
+  content one way; Smudge sells a place to be together.
+- Fan interaction is where HTML wins: a feed shows media; HTML runs programs with memory, rules
+  and many people at once. Strongest: a home that remembers each fan, and a secret room the fans
+  unlock together. Others: shared wall, listening together, artist's game, locked letters,
+  "I was there" proof, interactive release stories.
+- Rituals of leaving a mark, moved from real life (restaurant drawing wall, museum pin map, love
+  locks, wishing tree, cast signatures, fountain coins, candles, time capsule, graffiti wall):
+  small effort, permanent, findable again, part of something bigger and shareable. A catalogue of
+  ready-made trace programs anyone can install. Check each ritual: who leaves it, for whom, and
+  is it normal in real life (a love lock for an idol is weird; a support lock "Rina, since 2026"
+  is not).
+- Being seen back: the idol can visit fans' homes, because fans have homes too. Other leftovers:
+  proof of being a true fan, a fan village of neighbouring homes, QR bridges to concerts and
+  merch, fans helping make the work.
+- Expectation sets value (satisfaction = what you get minus what you expected): a small, posted
+  promise plus surprises. Ways that don't exhaust the creator: automatic presence, one action
+  reaching many (a weekly walk through the village), five minutes of liking fan traces, the
+  community itself as the value, a posted rhythm ("drops by every Friday").
+- Roles: the creator keeps the promise; fan organisers (appointed by the creator) run daily life;
+  Smudge keeps safety. Whether organisers are paid is the creator's business.
+- Tools that strengthen creators: updates that reach the whole village with no algorithm cut
+  (hard for Instagram, whose ads depend on algorithm control), fan map by city, fan-funded
+  projects, creator neighbours for discovery, a living media kit. Strongest: the first and the
+  neighbours.
+- Packs per creator type, because closeness looks different: footballers (matchday ritual,
+  changing room, a brand that outlives their career), musicians (listening parties, setlist votes,
+  a song fans set as their home's music), anime creators and illustrators (fan-art wall, rooms per
+  character, official decorations), films and studios (an explorable world, puzzles that unlock
+  the trailer, "which city is most hyped" map, a cinema QR sticker). Studios paying for opt-in
+  campaign packs is money that is not ads. Start with one or two types; proposed: musicians.
+
+**Businesses:** they are opportunistic and need a way to sell, not just a place. They meet users
+naturally when a friend or creator chooses to display a product in their home: tap to buy, the
+one who displayed it earns a commission. Only the home owner can display; no paid slots, no
+boosting on the friends' street.
+
+**Open:**
+
+- What exactly people do alone in their private room, without becoming a notes app.
+- Which young people first (school, university, young workers) and which creator type first.
+- Moderation at scale for drawings and traces; finding your own mark among a million.
+- Fan mechanics must not become gambling: never tie surprises or rare items to payment; limit
+  trading.
+- A "this is really them" signal when managers or bots act for a creator.
+- Big studios asking for custom work (the agency trap); campaigns must stay opt-in in the
+  studio's own home.
+
+### What it was (earlier framing)
 
 - Center: "Smudge is where the moments of your life live, from the plan to the memory, and only the
   people who were there are in it."
@@ -250,6 +354,12 @@ There are two separate products. Keep their ideas apart.
   under agenda item 7.
 - "Don't compete with Discord" as a reason to close off an idea.
 - Deep research reports for these questions: no meaningful information.
+- Guaranteed money for creators up front: it rents loyalty that leaves when the money stops, and
+  the burn has no ceiling. Creators earn by merit instead.
+- Selling themes as creators' main income: not how creators or public figures make money.
+- Smudge solving creators' community problems for them (paying moderators, running their
+  economy): Smudge gives tools; the rest is the creator's job.
+- Weddings in Indonesia as the entry door: replaced by young people, worldwide.
 - Mixing Smudge and Bubble into one product.
 - Pay if it works (money held until a result is proven), for gurus and as its own product: results
   depend on too many things outside the provider's control (the student's effort, injury, time),
@@ -257,14 +367,14 @@ There are two separate products. Keep their ideas apart.
 
 ## Agenda
 
-| #   | Question                                                | Status |
-| --- | ------------------------------------------------------- | ------ |
-| 1   | What is social media? The core point, from human desire | open   |
-| 2   | Its general form (feed, timeline, profile, DM) and why  | open   |
-| 3   | Smudge's core and where it differs                      | open   |
-| 4   | Does the difference matter: stay, or only viral?        | open   |
-| 5   | How to make people stay, judged against item 1          | open   |
-| 6   | Truly new or different? Switch, or one more app?        | open   |
-| 7   | Reaching people: niche, open for all, or both           | open   |
-| 8   | Features: which, why they matter, which are radical     | open   |
-| 9   | At maximum potential, do people still use other apps?   | open   |
+| #   | Question                                                | Status                          |
+| --- | ------------------------------------------------------- | ------------------------------- |
+| 1   | What is social media? The core point, from human desire | open                            |
+| 2   | Its general form (feed, timeline, profile, DM) and why  | open                            |
+| 3   | Smudge's core and where it differs                      | open                            |
+| 4   | Does the difference matter: stay, or only viral?        | open                            |
+| 5   | How to make people stay, judged against item 1          | direction set: your online home |
+| 6   | Truly new or different? Switch, or one more app?        | open                            |
+| 7   | Reaching people: niche, open for all, or both           | young people first, worldwide   |
+| 8   | Features: which, why they matter, which are radical     | open                            |
+| 9   | At maximum potential, do people still use other apps?   | open                            |
