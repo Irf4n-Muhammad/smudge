@@ -48,147 +48,134 @@ an internal word; to users it is their page.
     bad content, bullying) need moderation and process, as on Instagram.
 18. **What matters now:** design and execution.
 
-**The home:**
+**Your page:**
 
-- A metaphor, not a literal house: each profile is one full web page the owner designs. A literal
-  house (Animal Crossing style) can be one theme, not the base form.
-- Five parts: front (look), rooms (HTML programs to use, not just view), doors (who may enter
-  which room), presence (lights on, who is visiting now), traces (what visitors leave behind).
-- Front room is public; private rooms are the owner's own, and friends enter only when invited.
-- On the phone, the first screen is the friends' street.
-- Decorating options include theme, entry music, cursor, "what I'm up to" widget, collection
-  shelf, top friends, guest stickers and doodles, quizzes and mini games, rare event or gift items,
-  and a pet that grows with visits. Templates and guiding questions make a good home in about 60
-  seconds.
-- Why people return: the home changes because of others; traces pile up; friends live there;
-  weekly events.
+- One full web page per person, designed by the owner. Not a photo grid, not a literal house
+  (a house can be one theme, never the base form). To users it is "your page"; "home" and
+  "rooms" are internal words only, because the metaphor means nothing to normies.
+- The page has a public part (what anyone sees) and private parts (the owner's own, where
+  friends enter only when invited). Access per part is on by default, not an extra feature.
+- The page is built in about 60 seconds from a template plus guiding questions; nobody writes
+  code. Programs on it follow the page's theme like themed widgets, never clip art on top.
+- Things on a page: a theme (colours, type, texture, motion), entry music, a "what I'm up to"
+  line, a player, collections, top friends, a guestbook and wall for visitors' stickers and
+  doodles, quizzes and small games, rare items from events or gifts, a pet that grows with
+  visits. The page changes because of other people, traces pile up, and that is why it is hard
+  to leave.
+- The page opens anywhere without an account, can be the link in a bio, and can be embedded
+  outside Smudge. Pages are also the distribution channel: whatever people attach to their page
+  (a song, a comic, a program) spreads from page to page.
 
-**Ordinary users:** they come because they are curious about a friend, stay because the home is
-comfortable for themselves and because friends are there. What matters is being more comfortable
-here than on Instagram; trying new viral things is the hook, not the reason to stay.
+**The place for yourself (the strongest value):**
 
-**The place for yourself (Oct 25):** the need is that people open the phone without a purpose and
-want something to catch that; today reels catch it because they ask for no decision. Smudge's own
-place is the first thing you open when you don't know what to do: everything you usually do is
-already there, arranged by you (your music one tap away, friends' feed, chat, more to define). No
-thinking, no switching apps. The rival is the reflex of opening reels, not Instagram. Open: what
-fills it first, zero decisions on the first screen, access to Spotify/WA and the like.
+- The need: people open the phone without a purpose and want something to catch that moment.
+  Today reels catch it because they ask for no decision.
+- Smudge is the first thing you open when you don't know what to do. Everything you usually do
+  is already there, arranged by you: your music one tap away, what you are doing noted in one
+  tap and piling up into an archive, friends' feed, chat, more to define. No thinking, no
+  switching apps. The rival is the reflex of opening reels, not Instagram.
+- What fills it first: small one-purpose programs of the kind that already went viral because
+  the result is worth showing off (NGL, visited-places maps like Been and Polarsteps, Spotify
+  Wrapped, Receiptify, Letterboxd's four favourites, MySpace top 8, "how well do you know me"
+  quizzes, countdowns, guestbooks). These are examples of the kind, not a list to copy. Each
+  such app died because it had one function; here they are ready-made programs on one page,
+  permanent, themed, connected to each other. Results must travel to Instagram stories easily.
+- Also in: a home-screen widget showing one friend's page live, tapped before reels can open;
+  shared pages owned by two or more people (a couple, a trip, a class); a study-or-work-together
+  part of the page (friends' small avatars, a 25-minute timer, the same music, no chat) that
+  stays usable alone. Order: widget, shared pages, study room.
+- Open: what exactly people do alone there without it becoming a notes app; zero decisions on
+  the first screen; access to Spotify, WhatsApp and the like.
+
+**Friends (the rest):**
+
+- Seeing what friends are up to, through a normal feed and scroll, and tapping in to join
+  (listen along, play their quiz, feed the shared pet).
+- Programs that span pages are what pull friends in, because their value is zero unless friends
+  are here. Reference that passed the visual filter: Rina's page as a designed zine (cream, big
+  serif, taped photo), a small player with her song, and in the corner a pixel cat "owned by
+  Rina & Dika, 23 days old" that lives on both pages, fed by either, runs away if both forget.
+  People care because it is about them and one specific person, visible to everyone, and can
+  die (Widgetable and Locket prove it).
+- Ordinary users come because they are curious about a friend and stay because the page is
+  comfortable for themselves and friends are there. Being more comfortable here than on
+  Instagram is what matters; trying new viral things is the hook, not the reason to stay.
 
 **Creators:**
 
-- Target content creators, artists and public figures, mainly small, hungry creators who want to
-  become stars (as TikTok did), not paid celebrities.
-- Creators are people first. If the home wins for them as ordinary users, they move in as people
-  (like Lisa buying Labubu because she liked it); money is a layer on top. No creator program at
-  the start.
-- By merit, no guaranteed money. Gold rush: those who come first get the crowd.
+- Who: content creators, artists and public figures. Mainly small, hungry creators who want to
+  become stars (as TikTok did), not paid celebrities. Famous people are welcome and bring the
+  crowd, but they are not bought.
+- People first, money second. If the page wins for them as ordinary users, they move in as
+  people (Lisa buying Labubu because she liked it); money is a layer on top. No creator program
+  at the start, no guaranteed money, no selling themes as their income. By merit: those who come
+  first get the crowd.
 - The unserved space is depth, not reach. Instagram and TikTok serve reach; Smudge is where the
-  most loyal fans gather with the creator, monetised from the first fan (paid private room, live
-  hangouts, commission on products shown in the home). Instagram Subscriptions sells exclusive
-  content one way; Smudge sells a place to be together.
-- Fan interaction is where HTML wins: a feed shows media; HTML runs programs with memory, rules
-  and many people at once. Strongest: a home that remembers each fan, and a secret room the fans
-  unlock together. Others: shared wall, listening together, artist's game, locked letters,
-  "I was there" proof, interactive release stories.
-- Rituals of leaving a mark, moved from real life (restaurant drawing wall, museum pin map, love
-  locks, wishing tree, cast signatures, fountain coins, candles, time capsule, graffiti wall):
-  small effort, permanent, findable again, part of something bigger and shareable. A catalogue of
-  ready-made trace programs anyone can install. Check each ritual: who leaves it, for whom, and
-  is it normal in real life (a love lock for an idol is weird; a support lock "Rina, since 2026"
-  is not).
-- Being seen back: the idol can visit fans' homes, because fans have homes too. Other leftovers:
-  proof of being a true fan, a fan village of neighbouring homes, QR bridges to concerts and
-  merch, fans helping make the work.
-- Expectation sets value (satisfaction = what you get minus what you expected): a small, posted
-  promise plus surprises. Ways that don't exhaust the creator: automatic presence, one action
-  reaching many (a weekly walk through the village), five minutes of liking fan traces, the
-  community itself as the value, a posted rhythm ("drops by every Friday").
-- Roles: the creator keeps the promise; fan organisers (appointed by the creator) run daily life;
-  Smudge keeps safety. Whether organisers are paid is the creator's business.
-- Tools that strengthen creators: updates that reach the whole village with no algorithm cut
-  (hard for Instagram, whose ads depend on algorithm control), fan map by city, fan-funded
-  projects, creator neighbours for discovery, a living media kit. Strongest: the first and the
-  neighbours.
-- Packs per creator type, because closeness looks different: footballers (matchday ritual,
-  changing room, a brand that outlives their career), musicians (listening parties, setlist votes,
-  a song fans set as their home's music), anime creators and illustrators (fan-art wall, rooms per
-  character, official decorations), films and studios (an explorable world, puzzles that unlock
-  the trailer, "which city is most hyped" map, a cinema QR sticker). Studios paying for opt-in
-  campaign packs is money that is not ads. Start with one or two types; proposed: musicians.
-- Pay for listening (Oct 25): an artist releases a song on Smudge first; listeners pay as members,
-  the song stays exclusive about 3 months, then goes fully public. The song can be attached to any
-  page, like an embed in Notion, so friends' pages play and spread it. Aimed at artists who are
-  already fairly known, since they bring the crowd; independent artists are the fallback where
-  label contracts block an early window. Spotify pays about $3-5 per 1,000 streams; 300 paying
-  fans beat that. What is sold is the membership (early, "fan since", closeness), not the file,
-  because exclusive audio leaks within a day. Discovery stays free (a snippet), paying is for the
-  full song. Candidate for the first core activity only possible here.
-- The same pattern for any digital work, not only songs: release here first, members pay for
-  early access, public a few months later, and the work can be attached to people's pages.
-  Fits comics and manga by chapter, podcasts and video episodes, short films and series, serial
-  books, small HTML games and demos, presets and templates, lessons, photo sets. Strongest:
-  comics, games and songs, because they show and play inside pages rather than being downloaded.
-  Start with one or two kinds; the difference from Patreon is that the work lives on people's
-  pages and spreads from there, not only behind a paywall.
-- Product moat, in one line (Oct 25): pages that run programs, and programs that connect people.
-  Archive, proof, early release and embeds are derived from it. Programs that span pages (their
-  value is zero unless friends are here) are what pull friends in. Visual reference that passed
-  the filter: Rina's page as a designed zine (cream, big serif, taped photo), a small player with
-  her song, and in the corner a pixel cat "owned by Rina & Dika, 23 days old" that lives on both
-  pages, fed by either, runs away if both forget. People care because it is about them and one
-  specific person, visible to everyone, and can die (Widgetable and Locket prove it). Whether it
-  looks cheap is a design matter: programs must follow the page's theme like themed widgets, never
-  clip art on top. What matters now is design and execution.
-- People's pages are the distribution channel: every member who attaches a song (or any work) to
-  their page spreads it; more pages means more reach per work, so creators release here because
-  distribution is built in. Spotify has no such thing, and Instagram cannot attach works to
-  profiles.
-- What fills the place for yourself first: small one-purpose programs of the kind that already
-  went viral because their result is worth showing off (NGL and Sarahah, visited-places maps like
-  Been and Polarsteps, Spotify Wrapped, Receiptify, Letterboxd's four favourites, MySpace top 8,
-  "how well do you know me" quizzes, countdowns, guestbooks). These are examples of the kind,
-  not a list to copy as is. Each such app died because it had one function; here they are
-  ready-made programs on one page, permanent rather than a one-off screenshot, following the
-  page's theme and connected to each other. The visited map ties to proof of presence from QR
-  scans. Results must travel to Instagram stories easily; anonymous messages need filters and
-  reporting from the start.
-- Also in (Oct 25): a home-screen widget showing one friend's page live (new photo, playing song,
-  the shared pet), tapped before reels can open; shared pages owned by two or more people (a
-  couple, a trip, a class), the next step after the shared pet and the link to moments; and a
-  study-or-work-together room on the page (friends' small avatars, a 25-minute timer, the same
-  music, no chat), which must stay usable alone. Proposed order: widget, shared pages, room.
-- Why HTML (Oct 25): users never feel HTML; they feel "this page can be anything and can be
-  used". HTML's advantage is on our side: supply of makers (anyone, including AI from one
-  sentence, can write it), distribution (opens anywhere without an account, embeds, searchable)
-  and unlimited form. It only pays off if programs are opened to other makers eventually;
-  otherwise Instagram matches most of the value with native widgets. Proposed: open in stages.
-  Now, pages are HTML but programs are ours and people customise through themes and options.
-  After there are users, selected makers with review, like Shopify. Later, everyone, including
-  AI-made programs, in a tested sandbox. Set a clear trigger for stage two.
-- What a social profile cannot do today and an HTML page can: a page that differs per visitor;
-  things that run while you are there; visitors changing the page permanently; many people on
-  the page at once; any form (zine, poster, room, game); things that grow or die; hidden parts
-  unlocked by puzzles, dates or proof; embedding anything (maps, 3D, games, forms, payment);
-  programs that connect to other pages; opening anywhere without an account. Each exists
-  somewhere (Notion, Carrd, Discord, Roblox); none on the social profile friends open daily.
-  Costs: live state and presence need real infrastructure; per-visitor pages are a phishing tool
-  without a strict sandbox; too many possibilities confuse, so our templates must show the way.
+  most loyal fans gather with the creator, monetised from the first fan. Instagram Subscriptions
+  sells exclusive content one way; Smudge sells a place to be together.
+- Pay for early access, for any digital work: release here first, members pay, exclusive about
+  3 months, then public, and the work can be attached to members' pages so it spreads. Songs
+  first (Spotify pays about $3-5 per 1,000 streams; 300 paying fans beat that), then comics by
+  chapter, small HTML games, episodes, serial books, presets, lessons. What is sold is the
+  membership (early, "fan since", closeness), not the file, because files leak within a day.
+  Discovery stays free. Label contracts limit known artists; independents are the fallback.
+- Fan interaction is where HTML wins: a page that remembers each fan, a secret part the fans
+  unlock together, shared walls, listening together, locked letters, "I was there" proof,
+  interactive release stories, and rituals of leaving a mark moved from real life (drawing
+  walls, pin maps, wishing trees, candles, time capsules). Check each ritual: who leaves it, for
+  whom, and is it normal in real life (a love lock for an idol is weird; a support lock "Rina,
+  since 2026" is not). Being seen back: the idol can visit fans' pages, because fans have pages.
+- Expectation sets value (satisfaction = what you get minus what you expected): a small posted
+  promise plus surprises. Low-effort delivery: automatic presence, one action reaching many, five
+  minutes of liking fan traces, a posted rhythm ("drops by every Friday"), the community itself.
+- Roles: the creator keeps the promise; fan organisers appointed by the creator run daily life;
+  Smudge keeps safety. Whether organisers are paid is the creator's business, as on YouTube.
+- Tools that strengthen creators: updates that reach the whole fan group with no algorithm cut
+  (hard for Instagram, whose ads depend on algorithm control), a fan map by city, fan-funded
+  projects, creator neighbours for discovery, a living media kit.
+- Packs per creator type, because closeness looks different: footballers, musicians, anime
+  creators and illustrators, films and studios (an explorable world, puzzles that unlock the
+  trailer, a cinema QR sticker; studios paying for opt-in campaign packs is money that is not
+  ads). Start with one or two types; proposed: musicians.
 
-**Businesses:** they are opportunistic and need a way to sell, not just a place. They meet users
-naturally when a friend or creator chooses to display a product in their home: tap to buy, the
-one who displayed it earns a commission. Only the home owner can display; no paid slots, no
-boosting on the friends' street.
+**Businesses:** opportunistic; they need a way to sell, not just a place. They meet users
+naturally when a friend or creator chooses to display a product on their page: tap to buy, the
+one who displayed it earns a commission. Only the page owner can display; no paid slots, no
+boosting in the friends' feed. Feed, scroll and ads exist as on any social network.
+
+**Moat and HTML:**
+
+- Moat in the direction: counter-positioning. Instagram cannot force 2 billion people to switch
+  from showing off photos to putting themselves together.
+- Product moat, one line: pages that run programs, and programs that connect people. Archive,
+  proof, early release, embeds and distribution derive from it. Until the core activity that is
+  only possible here exists in the product, this is a good idea, not a moat.
+- Why HTML: users never feel it; they feel "this page can be anything and can be used". HTML's
+  advantage is on our side: supply of makers (anyone, including AI from one sentence), distribution
+  (opens anywhere, embeds, searchable) and unlimited form. It pays off only when programs open to
+  other makers. Open in stages: our programs first, people customise through themes and options;
+  then selected makers with review, like Shopify; then everyone, in a tested sandbox, with a clear
+  trigger for each stage.
+- What a social profile cannot do today and an HTML page can: differ per visitor; run while you
+  are there; be changed permanently by visitors; hold many people at once; take any form; hold
+  things that grow or die; hide parts unlocked by puzzles, dates or proof; embed anything;
+  connect to other pages; open anywhere without an account. Each exists somewhere (Notion,
+  Carrd, Discord, Roblox); none on the social profile friends open daily.
+- Security: most risks close by design from day one (no network from programs, identity and
+  payment only in the host, one origin per program, resource budgets, few visible permissions,
+  frozen program versions, report and delete in two taps, closed defaults). Human risks
+  (phishing by words, bad content, bullying) need moderation and process, as on Instagram.
 
 **Open:**
 
-- What exactly people do alone in their private room, without becoming a notes app.
-- Which young people first (school, university, young workers) and which creator type first.
+- Which young people first (school, university, young workers), which country first, web first
+  or native (the widget needs native), and which creator type first.
+- The one-line for normies. Last proposal: "Lagi ngapain, catet di sini."
 - Moderation at scale for drawings and traces; finding your own mark among a million.
 - Fan mechanics must not become gambling: never tie surprises or rare items to payment; limit
-  trading.
-- A "this is really them" signal when managers or bots act for a creator.
-- Big studios asking for custom work (the agency trap); campaigns must stay opt-in in the
-  studio's own home.
+  trading. A "this is really them" signal when managers or bots act for a creator.
+- Big studios asking for custom work (the agency trap); campaigns stay opt-in on the studio's
+  own page.
 
 ### What it was (earlier framing)
 
