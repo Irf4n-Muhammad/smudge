@@ -25,8 +25,8 @@ kind of room in the home; the wedding entry door is replaced by young people.
   open the app without wanting to socialise (like Notion or Spotify); (2) other people get curious
   and envious, which pulls them in.
 - **Why Instagram can't copy:** the features can be copied, but Instagram cannot force 2 billion
-  people to switch from showing off photos to putting themselves together. Free to enter; ads exist
-  like on any other social network. Success is time spent being there, not scroll time.
+  people to switch from showing off photos to putting themselves together. Free to enter; feed, scroll
+  and ads exist like on any other social network.
 - **Entry door:** young people. Money is not the constraint; spend it on creators' spotlight,
   density and content, not install ads.
 - **Funnel:** wow → show off → visit → build your own → come back.
@@ -52,9 +52,15 @@ kind of room in the home; the wedding entry door is replaced by young people.
   weekly events.
 
 **Ordinary users:** they come because they are curious about a friend, stay because the home is
-comfortable for themselves (study, music, planning the day in a private room) and because friends
-are there. What matters is being more comfortable here than on Instagram; trying new viral things
-is the hook, not the reason to stay.
+comfortable for themselves and because friends are there. What matters is being more comfortable
+here than on Instagram; trying new viral things is the hook, not the reason to stay.
+
+**The place for yourself (Oct 25):** the need is that people open the phone without a purpose and
+want something to catch that; today reels catch it because they ask for no decision. Smudge's own
+place is the first thing you open when you don't know what to do: everything you usually do is
+already there, arranged by you (your music one tap away, friends' feed, chat, more to define). No
+thinking, no switching apps. The rival is the reflex of opening reels, not Instagram. Open: what
+fills it first, zero decisions on the first screen, access to Spotify/WA and the like.
 
 **Creators:**
 
