@@ -7,6 +7,8 @@ import type {
   GatheringSpace,
   GatheringSummary,
 } from "../../../packages/contracts/src/gatherings";
+import { HostShell, SignInFirst, useSignedIn } from "./gathering-shell";
+import { Album, useDoorPass, DoorNotice } from "./moment-day";
 import { api } from "./runtime";
 
 // Guest-facing text is Indonesian: the wedding template is for Indonesian weddings first
@@ -43,7 +45,10 @@ function Missing() {
 /** The invite page (ADR 0036): what a guest opens from WhatsApp, with no account. */
 export function Invitation({ id }: { id: string }) {
   const [invite, setInvite] = useState<GatheringInvite | null | "missing">(null);
-  const signedIn = useSignedIn();
+  const fetched = useSignedIn();
+  // Signing in at the door happens on this page, without a reload.
+  const [justSignedIn, setJustSignedIn] = useState(false);
+  const signedIn = justSignedIn || fetched;
   // A member sees the moment group instead (ADR 0037); anyone else sees the invite.
   const [space, setSpace] = useState<GatheringSpace | null | "none">(null);
   const loadSpace = useCallback(
@@ -62,11 +67,21 @@ export function Invitation({ id }: { id: string }) {
     if (signedIn) void loadSpace();
     else if (signedIn === false) setSpace("none");
   }, [signedIn, loadSpace]);
+  const door = useDoorPass(id, signedIn, setSpace);
   if (invite === "missing") return <Missing />;
   if (!invite || space === null) return <main className="invite" aria-busy="true" />;
-  if (space !== "none") return <MomentSpace space={space} onChange={setSpace} />;
+  if (space !== "none")
+    return (
+      <MomentSpace
+        key={door === "welcome" ? "arrived" : "member"}
+        space={space}
+        onChange={setSpace}
+        arrived={door === "welcome"}
+      />
+    );
   return (
     <main className="invite">
+      <DoorNotice state={door} signedIn={signedIn} onSignedIn={() => setJustSignedIn(true)} />
       <InviteBody invite={invite}>
         <Rsvp id={invite.id} {...(signedIn ? { onDone: () => void loadSpace() } : {})} />
         {signedIn && (
@@ -159,17 +174,20 @@ const tabs: [Tab, string][] = [
   ["members", "Anggota"],
 ];
 /**
- * The moment group (ADR 0037): the invite pinned as the first tab, the chat, the album (on the
- * day, next stage) and who is in, with the small groups the viewer is in.
+ * The moment group (ADR 0037): the invite pinned as the first tab, the chat, the live album
+ * (ADR 0038) and who is in, with the small groups the viewer is in. Someone who just came in
+ * through the door lands on the album.
  */
 function MomentSpace({
   space,
   onChange,
+  arrived = false,
 }: {
   space: GatheringSpace;
   onChange: (space: GatheringSpace) => void;
+  arrived?: boolean;
 }) {
-  const [tab, setTab] = useState<Tab>("chat");
+  const [tab, setTab] = useState<Tab>(arrived ? "album" : "chat");
   const [groupId, setGroupId] = useState<string | null>(null);
   const { invite } = space;
   const group = space.groups.find((g) => g.id === groupId) ?? null;
@@ -187,11 +205,21 @@ function MomentSpace({
           </p>
         </div>
         {space.role === "host" && (
-          <a className="moment-host-link" href={`/m/${invite.id}/guests`}>
-            Daftar tamu
-          </a>
+          <nav className="moment-host-links">
+            <a className="moment-host-link" href={`/m/${invite.id}/door`}>
+              Layar pintu
+            </a>
+            <a className="moment-host-link" href={`/m/${invite.id}/guests`}>
+              Daftar tamu
+            </a>
+          </nav>
         )}
       </header>
+      {arrived && (
+        <p className="moment-welcome" role="status">
+          Selamat datang! Kehadiranmu sudah tercatat. Tambahkan fotomu ke album.
+        </p>
+      )}
       <nav className="moment-tabs" role="tablist" aria-label="Momen">
         {tabs.map(([key, label]) => (
           <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>
@@ -258,15 +286,7 @@ function MomentSpace({
           )}
         </section>
       )}
-      {tab === "album" && (
-        <section className="moment-panel moment-album" aria-label="Album">
-          <h2>Album dibuka di hari H</h2>
-          <p>
-            Foto dari semua tamu masuk ke sini dan diurutkan sesuai susunan acara. Scan QR di pintu
-            masuk untuk ikut mengisi.
-          </p>
-        </section>
-      )}
+      {tab === "album" && <Album base={base} space={space} />}
       {tab === "members" && (
         <Members
           space={space}
@@ -401,6 +421,7 @@ function Members({
               {m.initials}
             </span>
             {m.name}
+            {space.arrived.includes(m.id) && <span className="moment-arrived">Sudah datang</span>}
           </li>
         ))}
       </ul>
@@ -571,43 +592,6 @@ function Rsvp({ id, onDone }: { id: string; onDone?: () => void }) {
         </button>
       </form>
     </section>
-  );
-}
-
-/** Signed in or not, for the host pages. */
-function useSignedIn() {
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  useEffect(() => {
-    void fetch("/api/auth/state")
-      .then((r) => r.json())
-      .then((s: { signedIn?: boolean }) => setSignedIn(!!s.signedIn))
-      .catch(() => setSignedIn(false));
-  }, []);
-  return signedIn;
-}
-function HostShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="moments-host">
-      <header className="share-bar">
-        <a className="brand" href="/" aria-label="Smudge home">
-          smudge.
-        </a>
-        <nav>
-          <a href="/m">Your moments</a>
-        </nav>
-      </header>
-      <main className="moments-main">{children}</main>
-    </div>
-  );
-}
-function SignInFirst() {
-  return (
-    <HostShell>
-      <h1>Moments</h1>
-      <p>
-        Log in to host a moment. <a href="/">Go to Smudge</a>
-      </p>
-    </HostShell>
   );
 }
 
@@ -826,6 +810,7 @@ export function GuestList({ id }: { id: string }) {
             {copied ? "Copied" : "Copy link"}
           </button>
           <a href={`/m/${view.invite.id}`}>Open the invite</a>
+          <a href={`/m/${view.invite.id}/door`}>Door screen</a>
         </div>
       </section>
       <dl className="moments-totals">
@@ -840,6 +825,10 @@ export function GuestList({ id }: { id: string }) {
         <div>
           <dt>Can’t come</dt>
           <dd>{view.totals.declined}</dd>
+        </div>
+        <div>
+          <dt>Came in at the door</dt>
+          <dd>{view.totals.arrived}</dd>
         </div>
       </dl>
       {view.rsvps.length === 0 ? (

@@ -598,6 +598,185 @@
   gap: 8px;
   font-weight: 400;
 }
-.moment-album {
+/* The day itself (ADR 0038): the door screen and the live album. */
+.moment-host-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.moment-welcome {
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--invite-gold);
+  color: #fffaf2;
   text-align: center;
+}
+.moment-arrived {
+  margin-left: auto;
+  color: var(--invite-gold);
+  font-size: 12px;
+  font-weight: 600;
+}
+.door-notice {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid var(--invite-gold);
+  border-radius: 14px;
+}
+.door-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.door-actions .invite-send {
+  padding: 10px 22px;
+}
+.door-actions button:not(.invite-send):not(.invite-link),
+.door-actions select,
+.album-wishes button,
+.album-wishes select {
+  padding: 6px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-size: 14px;
+}
+.door-actions button[aria-pressed="true"] {
+  border-color: var(--invite-gold);
+  background: var(--invite-gold);
+  color: #fffaf2;
+}
+.door-screen {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  min-height: 100vh;
+  padding: 32px 16px;
+  background: #f6f0e6;
+  color: #3a3128;
+  font-family: var(--ui, system-ui, sans-serif);
+  text-align: center;
+}
+.door-screen h1 {
+  margin: 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 40px;
+  font-weight: 400;
+}
+.door-qr {
+  width: min(420px, 86vw);
+  aspect-ratio: 1;
+  margin: 0;
+  padding: 12px;
+  border-radius: 18px;
+  background: #fff;
+}
+.door-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.door-count strong {
+  font-size: 32px;
+}
+.door-screen a {
+  color: #a8834a;
+}
+.album-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.album-add {
+  padding: 10px 18px;
+  cursor: pointer;
+}
+.album-chapter h3,
+.album-wishes h3 {
+  margin: 20px 0 8px;
+  font-size: 15px;
+}
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.album-grid button {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  background: var(--invite-line);
+  cursor: pointer;
+}
+.album-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.album-badge {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgb(58 49 40 / 0.75);
+  color: #fffaf2;
+  font-size: 11px;
+}
+.album-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background: rgb(20 16 12 / 0.94);
+  color: #fffaf2;
+}
+.album-viewer img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+.album-viewer-info {
+  padding: 12px 16px 20px;
+  text-align: center;
+}
+.album-viewer-info p {
+  margin: 0 0 8px;
+}
+.album-wishes form {
+  display: grid;
+  gap: 8px;
+}
+.album-wishes textarea {
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+}
+.album-wishes ul {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.album-wishes li p {
+  margin: 2px 0 0;
 }

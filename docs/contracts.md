@@ -498,6 +498,21 @@ hasCover, author}]}` for an open public side, as the guest viewer sees it (`memb
 /api/gatherings/:id/groups` takes `{name, members}` of moment members (`NOT_A_MEMBER`) and answers
   the space; `POST /api/gatherings/:id/groups/:group/leave` leaves it, and the last one out removes
   it. Small groups are hidden from everyone outside them, the host included.
+- The day (ADR 0038). `GET /api/gatherings/:id/door` answers the host's `GatheringDoor` (`code`,
+  `path`, `rotatesInMs`, `arrived`); the code changes every 30 seconds and lasts 90.
+  `POST /api/public/gatherings/:id/door` takes `{code}` from anyone and answers `{pass}`
+  (`DOOR_CODE_EXPIRED`); `POST /api/gatherings/:id/checkin` takes `{pass}` (12 hours,
+  `DOOR_PASS_EXPIRED`), records the arrival, makes a member and answers `GatheringSpace`, which now
+  has `arrived`. `GatheringGuestList.totals` has `arrived`.
+- `GET /api/gatherings/:id/album` answers `GatheringAlbum` (`chapters` of `AlbumPhoto`, `wishes`,
+  `photographers`, `count`) to members. `POST /api/gatherings/:id/photos` takes the raw image
+  (`image/*`, 20 MB, optional `X-Taken-At: YYYY-MM-DDTHH:MM`) and answers `{id}` (`INVALID_IMAGE`,
+  `TOO_MANY_PHOTOS` past 300 each, `ALBUM_FULL` past 5000). `GET .../photos/:photo[?size=s]` serves
+  the JPEG to members; `DELETE` removes it (poster or host, `NOT_YOURS`). `POST .../photos/:photo/like`
+  takes `{on}`; `POST .../photos/:photo/tags` takes `{userId, on}`; `POST
+/api/gatherings/:id/photographers` takes `{userId, on}` from the host; `POST
+/api/gatherings/:id/wish` takes `{text}`. Each answers the album. `likes` is present only on the
+  viewer's own photos.
 - The app reads `?side=<id>` on `/` and `/u/<handle>`: a signed-in member is switched to the
   side (joining first when it is open); a guest sees the side named on the public page.
 - Search (the Posts tab) lists the sides in `SidesView` (`mine` and `open`, never Everyday)

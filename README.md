@@ -63,6 +63,9 @@ Open the link in a private window: the invite and its RSVP work without an accou
 host sees the answers (ADR 0036). Answer while signed in and the link opens the moment group
 instead: the chat (announcements only until the host ticks **Semua tamu boleh ngobrol**), the
 members, and small groups only their members see (ADR 0037).
+On the day, the host opens **Layar pintu** for a QR that changes every 30 seconds; scanning it
+records the guest's arrival and opens the **Album**, where every member adds photos that fall
+into chapters by the rundown (ADR 0038).
 
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
 **Use this combination** previews the actual published composition with your identity and posts;

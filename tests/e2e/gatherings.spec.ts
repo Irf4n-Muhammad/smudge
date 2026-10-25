@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import sharp from "sharp";
 import { openMore } from "./nav";
 
 test("a host makes a wedding invite, a guest answers without an account, only the host sees it", async ({
@@ -109,5 +110,84 @@ test("members see the moment group: announcements, open chat and a small group t
   await expect(maya.getByRole("button", { name: "Geng SMA", exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("button", { name: "Geng SMA", exact: true })).toHaveCount(0);
+  await other.close();
+});
+
+test("on the day: the door QR lets a guest in and counts them, and the album fills by chapter", async ({
+  page,
+  browser,
+}) => {
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  const made = await page.evaluate(async () => {
+    const r = await fetch("/api/gatherings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "wedding",
+        title: "Rina & Tomi",
+        date: "2030-06-01",
+        place: "Pendopo",
+        rundown: [{ time: "09:00", title: "Akad" }],
+      }),
+    });
+    return (await r.json()) as { id: string };
+  });
+  await page.goto(`/m/${made.id}/door`);
+  await expect(page.getByRole("heading", { name: "Scan untuk masuk" })).toBeVisible();
+  const qr = page.locator("figure.door-qr[data-door-path]");
+  await expect(qr.locator("svg")).toBeVisible();
+  const path = (await qr.getAttribute("data-door-path"))!;
+  await expect(page.locator(".door-count")).toHaveText("0 tamu sudah datang");
+
+  // Someone without an account scans: asked to sign up or log in to be counted.
+  const strangerContext = await browser.newContext();
+  const stranger = await strangerContext.newPage();
+  await stranger.goto(path);
+  await expect(stranger.getByRole("heading", { name: "Kamu sudah sampai" })).toBeVisible();
+  await expect(stranger.getByRole("button", { name: "Daftar" })).toBeVisible();
+  await strangerContext.close();
+
+  // Maya is signed in on her phone: the scan records her and opens the album.
+  const other = await browser.newContext();
+  const maya = await other.newPage();
+  await maya.goto("/");
+  await maya.locator(".post-card").first().waitFor();
+  await maya.evaluate(() =>
+    fetch("/api/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: "maya" }),
+    }),
+  );
+  await maya.goto(path);
+  await expect(maya.getByText("Kehadiranmu sudah tercatat")).toBeVisible();
+  await expect(maya.getByRole("tab", { name: "Album" })).toHaveAttribute("aria-selected", "true");
+  const png = await sharp({
+    create: { width: 40, height: 30, channels: 3, background: "#c9a26b" },
+  })
+    .png()
+    .toBuffer();
+  await maya
+    .locator('input[type="file"]')
+    .setInputFiles({ name: "akad.png", mimeType: "image/png", buffer: png });
+  // The wedding is years away, so a photo from today goes before the day.
+  const before = maya.getByRole("region", { name: "Sebelum hari H" });
+  await expect(before.getByRole("button", { name: "Foto dari Maya Chen" })).toBeVisible();
+  await before.getByRole("button", { name: "Foto dari Maya Chen" }).click();
+  await maya.getByRole("button", { name: "Suka", exact: true }).click();
+  await expect(maya.getByText("1 orang menyukai fotomu")).toBeVisible();
+  await maya.getByRole("button", { name: "Tutup" }).click();
+  await maya.getByLabel("Tulis ucapan").fill("Selamat ya!");
+  await maya.getByRole("button", { name: "Kirim ucapan" }).click();
+  await expect(maya.getByText("Selamat ya!")).toBeVisible();
+
+  // The host's door screen counts her, and the host sees her photo but not its likes.
+  await expect(page.locator(".door-count")).toHaveText("1 tamu sudah datang", { timeout: 20_000 });
+  await page.goto(`/m/${made.id}`);
+  await page.getByRole("tab", { name: "Album" }).click();
+  await page.getByRole("button", { name: "Foto dari Maya Chen" }).click();
+  await expect(page.getByText("Foto oleh Maya Chen")).toBeVisible();
+  await expect(page.getByText(/menyukai/)).toHaveCount(0);
   await other.close();
 });

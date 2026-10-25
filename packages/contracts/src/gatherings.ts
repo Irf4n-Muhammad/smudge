@@ -66,7 +66,8 @@ export interface GatheringRsvpView {
 /** The host's view: the invite plus every answer, newest first. */
 export interface GatheringGuestList {
   invite: GatheringInvite;
-  totals: { attending: number; declined: number; guests: number };
+  /** `arrived` counts the people who came in through the door QR (ADR 0038). */
+  totals: { attending: number; declined: number; guests: number; arrived: number };
   rsvps: GatheringRsvpView[];
 }
 export interface GatheringSummary {
@@ -113,10 +114,72 @@ export interface GatheringSpace {
   mode: GatheringMode;
   members: GatheringPerson[];
   groups: SmallGroupView[];
+  /** Members who came in through the door QR (ADR 0038). */
+  arrived: string[];
 }
 export interface GatheringMessageView {
   id: string;
   from: GatheringPerson;
   text: string;
   at: string;
+}
+
+/**
+ * The day itself (ADR 0038). The host's phone shows a QR that changes every 30 seconds; a guest
+ * who scans it trades the code for a pass, and signing in with the pass records that they came.
+ */
+export const doorCodeInputSchema = z.object({ code: z.string().trim().min(4).max(40) }).strict();
+export const checkinInputSchema = z.object({ pass: z.string().trim().min(10).max(200) }).strict();
+/** What the host's door screen shows: the current code, and how many people came in. */
+export interface GatheringDoor {
+  code: string;
+  /** The path the QR opens, without the origin, which only the browser knows. */
+  path: string;
+  rotatesInMs: number;
+  arrived: number;
+}
+
+/** The live album: photos sorted into chapters by the rundown, and the guests' wishes. */
+export const albumTagInputSchema = z
+  .object({ userId: z.string().min(1).max(64), on: z.boolean() })
+  .strict();
+export const photographerInputSchema = albumTagInputSchema;
+export const photoLikeInputSchema = z.object({ on: z.boolean() }).strict();
+export const wishInputSchema = z.object({ text: text(280).min(1) }).strict();
+/** A local time at the venue, "YYYY-MM-DDTHH:MM", as a camera writes it. */
+export const localTimeSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/);
+export interface AlbumPhoto {
+  id: string;
+  by: GatheringPerson;
+  takenAt: string;
+  width: number;
+  height: number;
+  /** Taken by someone the host named as a photographer: credited and shown first. */
+  photographer: boolean;
+  tagged: string[];
+  liked: boolean;
+  /** Only the person who posted the photo sees how many liked it. */
+  likes?: number;
+  /** Yours, of you, or from someone in one of your small groups. */
+  forYou: boolean;
+  mine: boolean;
+}
+export interface AlbumChapter {
+  /** Before the day, one rundown item (or the whole day when there is no rundown), after it. */
+  kind: "before" | "day" | "after";
+  /** The rundown item's title and time; empty for before and after. */
+  title: string;
+  time?: string;
+  photos: AlbumPhoto[];
+}
+export interface GatheringWishView {
+  from: GatheringPerson;
+  text: string;
+  at: string;
+}
+export interface GatheringAlbum {
+  chapters: AlbumChapter[];
+  wishes: GatheringWishView[];
+  photographers: string[];
+  count: number;
 }

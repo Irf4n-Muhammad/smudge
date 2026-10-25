@@ -82,7 +82,7 @@ test("a guest answers without an account, and the same number answering again re
   });
   const list = gatherings.guests(dina, invite.id);
   assert.equal(list.rsvps.length, 2);
-  assert.deepEqual(list.totals, { attending: 1, declined: 1, guests: 4 });
+  assert.deepEqual(list.totals, { attending: 1, declined: 1, guests: 4, arrived: 0 });
   const sri = list.rsvps.find((r) => r.name === "Tante Sri")!;
   assert.equal(sri.message, "Selamat!");
   assert.equal(sri.phoneEnd, "890");

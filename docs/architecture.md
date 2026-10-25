@@ -63,6 +63,10 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   by a salted phone hash, and the host-only guest list; HTTP in `apps/server/gathering-routes.ts`,
   pages in `components/gatherings.tsx` (`/m`, `/m/<id>`, `/m/<id>/guests`). The same service holds
   the moment group (ADR 0037): members, the announce/open chat and small groups.
+- `packages/core/src/gathering-day.ts`: the day (ADR 0038): the rotating door code, passes and
+  arrivals, and the live album, whose files live in `moments/` in the data directory. Photos are
+  resized and stripped of metadata in `apps/server/gathering-routes.ts`; pages in
+  `components/moment-day.tsx` (`/m/<id>/door`, the Album tab).
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same

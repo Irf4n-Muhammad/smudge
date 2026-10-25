@@ -53,7 +53,12 @@
 - [x] The moment group: signed-in guests who answer (or join from the link) are members of a
       space with the invite pinned, a chat that is announcements only until the host opens it,
       a member list, and small groups members make themselves that even the host cannot see.
-      Next: a QR at the door with a live album, and closing into a memory card. See ADR 0037.
+      See ADR 0037.
+- [x] The day: a door QR on the host's phone that changes every 30 seconds and records who came
+      in, and a live album every member fills, sorted into chapters by the rundown, with
+      photographers first, likes only their poster sees, "Foto kamu" and wishes. Photos are
+      resized and lose their GPS position. Next: locking the album after the day and closing
+      into a memory card. See ADR 0038.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

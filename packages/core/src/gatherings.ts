@@ -19,12 +19,14 @@ import type { Actor } from "./index.js";
 import { AppError, GUEST } from "./social.js";
 import type { SocialService } from "./social.js";
 
-interface Gathering extends GatheringInput {
+export interface Gathering extends GatheringInput {
   id: string;
   ownerId: string;
   createdAt: string;
   /** Absent on gatherings made before ADR 0037; they read as `announce`. */
   mode?: GatheringMode;
+  /** Members the host named as photographers (ADR 0038). */
+  photographers?: string[];
 }
 interface GatheringMember {
   gatheringId: string;
@@ -100,7 +102,9 @@ export class GatheringsService {
   private get store() {
     return this.social.store;
   }
-  private find(id: string) {
+  /** Run inside the transaction that removes a gathering, so the day's records go with it. */
+  readonly onDrop: ((gatheringId: string) => void)[] = [];
+  find(id: string) {
     const gathering = this.store.get<Gathering>("gathering", id);
     if (!gathering) throw new AppError("NOT_FOUND", 404);
     return gathering;
@@ -112,7 +116,7 @@ export class GatheringsService {
       .sort((a, b) => b.at.localeCompare(a.at));
   }
   private inviteOf(g: Gathering): GatheringInvite {
-    const { ownerId: _owner, mode: _mode, ...rest } = g;
+    const { ownerId: _owner, mode: _mode, photographers: _photographers, ...rest } = g;
     const host = this.store.get<User>("user", g.ownerId);
     return { ...rest, hostName: host?.name ?? "" };
   }
@@ -180,6 +184,7 @@ export class GatheringsService {
         attending: rsvps.filter((r) => r.attending).length,
         declined: rsvps.filter((r) => !r.attending).length,
         guests: rsvps.reduce((sum, r) => sum + r.guests, 0),
+        arrived: this.arrived(gathering).length,
       },
       rsvps,
     };
@@ -226,6 +231,7 @@ export class GatheringsService {
     return { ok: true };
   }
   private drop(id: string) {
+    for (const hook of this.onDrop) hook(id);
     for (const kind of ["gathering-rsvp", "gathering-member"])
       for (const key of this.store.ids(kind))
         if (key.startsWith(`${id}:`)) this.store.remove(kind, key);
@@ -262,7 +268,8 @@ export class GatheringsService {
   }
 
   // The moment group (ADR 0037) -----------------------------------------------------------
-  private addMember(gathering: Gathering, userId: string) {
+  // These are shared with the day itself (gathering-day.ts).
+  addMember(gathering: Gathering, userId: string) {
     if (userId === gathering.ownerId) return;
     const key = `${gathering.id}:${userId}`;
     if (!this.store.get("gathering-member", key))
@@ -272,7 +279,7 @@ export class GatheringsService {
         at: this.now().toISOString(),
       } satisfies GatheringMember);
   }
-  private isMember(gathering: Gathering, userId: string) {
+  isMember(gathering: Gathering, userId: string) {
     return (
       gathering.ownerId === userId ||
       !!this.store.get("gathering-member", `${gathering.id}:${userId}`)
@@ -282,13 +289,13 @@ export class GatheringsService {
    * The gathering for one of its members. Anyone else, signed in or not, gets the same
    * `NOT_FOUND` as for a gathering that does not exist: the invite is public, the group is not.
    */
-  private memberOf(actor: Actor, id: string) {
+  memberOf(actor: Actor, id: string) {
     const me = this.social.actor(actor);
     const gathering = this.store.get<Gathering>("gathering", id);
     if (!gathering || !this.isMember(gathering, me)) throw new AppError("NOT_FOUND", 404);
     return { me, gathering };
   }
-  private memberIds(gathering: Gathering) {
+  memberIds(gathering: Gathering) {
     return [
       gathering.ownerId,
       ...this.store
@@ -297,13 +304,13 @@ export class GatheringsService {
         .map((m) => m.userId),
     ];
   }
-  private person(userId: string): GatheringPerson | undefined {
+  person(userId: string): GatheringPerson | undefined {
     const u = this.store.get<User>("user", userId);
     if (!u) return undefined;
     const { id, name, handle, initials, color, avatarAssetId } = u;
     return { id, name, handle, initials, color, ...(avatarAssetId ? { avatarAssetId } : {}) };
   }
-  private groupFor(gathering: Gathering, me: string, groupId: string) {
+  groupFor(gathering: Gathering, me: string, groupId: string) {
     const group = this.store.get<SmallGroup>("gathering-group", groupId);
     // A small group is hidden from the rest of the moment, the host included.
     if (!group || group.gatheringId !== gathering.id || !group.members.includes(me))
@@ -327,7 +334,16 @@ export class GatheringsService {
       mode: gathering.mode ?? "announce",
       members,
       groups,
+      arrived: this.arrived(gathering).filter((userId) => this.peopleFilter(me, userId)),
     };
+  }
+  /** Who came in through the door QR, in the order they arrived. */
+  arrived(gathering: Gathering) {
+    return this.store
+      .all<{ gatheringId: string; userId: string; at: string }>("gathering-checkin")
+      .filter((c) => c.gatheringId === gathering.id)
+      .sort((a, b) => a.at.localeCompare(b.at))
+      .map((c) => c.userId);
   }
   /** Signed in and holding the link: join the group without answering the RSVP again. */
   join(actor: Actor, id: string) {

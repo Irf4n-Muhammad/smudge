@@ -37,6 +37,7 @@ import { seedThemes } from "./seed-themes.js";
 import { SidesService } from "../../packages/core/src/sides.js";
 import { PlansService } from "../../packages/core/src/plans.js";
 import { GatheringsService } from "../../packages/core/src/gatherings.js";
+import { MomentDayService } from "../../packages/core/src/gathering-day.js";
 import { gatheringRoutes } from "./gathering-routes.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
@@ -140,6 +141,8 @@ identity.chapterListeners.push((c) => sidesService.joinByChapter(c));
 const gatherings = new GatheringsService(service, clock);
 accounts.erasers.push((userId) => gatherings.erase(userId));
 gatherings.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
+const momentDay = new MomentDayService(service, gatherings, resolve(dataDir, "moments"), clock);
+accounts.erasers.push((userId) => momentDay.erase(userId));
 const messages = new MessageService(service, community, clock);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
@@ -734,9 +737,13 @@ api.get("/api/public/users/:handle", guestLimit, (req, res) =>
 gatheringRoutes(
   api,
   gatherings,
+  momentDay,
   guestLimit,
   rateLimit({ windowMs: 10 * 60_000, max: 30 }),
   rateLimit({ windowMs: 60_000, max: 60 }),
+  // A whole wedding can share the venue's Wi-Fi, so photos and door scans allow a crowd.
+  rateLimit({ windowMs: 10 * 60_000, max: 600 }),
+  rateLimit({ windowMs: 10 * 60_000, max: 600 }),
 );
 api.post("/api/public/capability", guestLimit, (req, res) => {
   const { ticket: ticketId, request } = z
