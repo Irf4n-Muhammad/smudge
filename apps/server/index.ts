@@ -139,6 +139,7 @@ identity.chapterListeners.push((c) => sidesService.joinByChapter(c));
 // Moments as gatherings (ADR 0036): invites, RSVPs by phone, and only the host sees answers.
 const gatherings = new GatheringsService(service, clock);
 accounts.erasers.push((userId) => gatherings.erase(userId));
+gatherings.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
 const messages = new MessageService(service, community, clock);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
@@ -730,7 +731,13 @@ api.get("/api/public/users/:handle", guestLimit, (req, res) =>
   res.json(sharing.profile(z.string().min(1).max(30).parse(req.params.handle))),
 );
 // An invite takes answers without an account, so its writes get their own tighter limit.
-gatheringRoutes(api, gatherings, guestLimit, rateLimit({ windowMs: 10 * 60_000, max: 30 }));
+gatheringRoutes(
+  api,
+  gatherings,
+  guestLimit,
+  rateLimit({ windowMs: 10 * 60_000, max: 30 }),
+  rateLimit({ windowMs: 60_000, max: 60 }),
+);
 api.post("/api/public/capability", guestLimit, (req, res) => {
   const { ticket: ticketId, request } = z
     .object({ ticket: z.string().length(64), request: profileRequestSchema })

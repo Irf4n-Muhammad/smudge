@@ -49,8 +49,11 @@
 - [x] Moments as gatherings, first slice: a wedding invite from a template at `/m/<id>` that opens
       without an account, an RSVP by phone number that never stores the number, and a guest list
       only the host sees, with Send on WhatsApp. The ADR 0011 pages are now called milestones.
-      Next: the moment group (chat, album, small groups), a QR at the door, and closing into a
-      memory card. See ADR 0036.
+      See ADR 0036.
+- [x] The moment group: signed-in guests who answer (or join from the link) are members of a
+      space with the invite pinned, a chat that is announcements only until the host opens it,
+      a member list, and small groups members make themselves that even the host cannot see.
+      Next: a QR at the door with a live album, and closing into a memory card. See ADR 0037.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

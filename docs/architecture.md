@@ -61,7 +61,8 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   post and person; `packages/core/src/easy-post.ts` generates the Plan style and its `plan.js`.
 - `packages/core/src/gatherings.ts`: moments as gatherings (ADR 0036): the invite, RSVPs keyed
   by a salted phone hash, and the host-only guest list; HTTP in `apps/server/gathering-routes.ts`,
-  pages in `components/gatherings.tsx` (`/m`, `/m/<id>`, `/m/<id>/guests`).
+  pages in `components/gatherings.tsx` (`/m`, `/m/<id>`, `/m/<id>/guests`). The same service holds
+  the moment group (ADR 0037): members, the announce/open chat and small groups.
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same

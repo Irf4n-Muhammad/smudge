@@ -14,6 +14,7 @@ export function gatheringRoutes(
   gatherings: GatheringsService,
   guestLimit: RequestHandler,
   answerLimit: RequestHandler,
+  messageLimit: RequestHandler,
 ) {
   const actor = (res: Response) => res.locals.actor as Actor;
   const id = (value: unknown) => z.string().uuid().parse(value);
@@ -26,6 +27,30 @@ export function gatheringRoutes(
   );
   api.delete("/api/gatherings/:id", (req, res) =>
     res.json(gatherings.remove(actor(res), id(req.params.id))),
+  );
+  // The moment group (ADR 0037): members only; everyone else gets NOT_FOUND.
+  const group = (value: unknown) =>
+    value === undefined || value === "" ? undefined : z.string().uuid().parse(value);
+  api.get("/api/gatherings/:id/space", (req, res) =>
+    res.json(gatherings.space(actor(res), id(req.params.id))),
+  );
+  api.post("/api/gatherings/:id/join", (req, res) =>
+    res.json(gatherings.join(actor(res), id(req.params.id))),
+  );
+  api.post("/api/gatherings/:id/mode", (req, res) =>
+    res.json(gatherings.setMode(actor(res), id(req.params.id), req.body)),
+  );
+  api.get("/api/gatherings/:id/messages", (req, res) =>
+    res.json(gatherings.messages(actor(res), id(req.params.id), group(req.query.group))),
+  );
+  api.post("/api/gatherings/:id/messages", messageLimit, (req, res) =>
+    res.json(gatherings.send(actor(res), id(req.params.id), req.body)),
+  );
+  api.post("/api/gatherings/:id/groups", (req, res) =>
+    res.json(gatherings.createGroup(actor(res), id(req.params.id), req.body)),
+  );
+  api.post("/api/gatherings/:id/groups/:group/leave", (req, res) =>
+    res.json(gatherings.leaveGroup(actor(res), id(req.params.id), id(req.params.group))),
   );
   api.get("/api/public/gatherings/:id", guestLimit, (req, res) =>
     res.json(gatherings.invite(id(req.params.id))),

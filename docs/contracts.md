@@ -488,6 +488,16 @@ hasCover, author}]}` for an open public side, as the guest viewer sees it (`memb
   per gathering plus its last three digits; the same number again replaces its answer; past 3000
   answers new ones are `GATHERING_FULL`. The web app serves the invite at `/m/<id>`, the host's
   list at `/m/<id>/guests`, and your moments at `/m`.
+- The moment group (ADR 0037), members only (`NOT_FOUND` to anyone else). `GET
+/api/gatherings/:id/space` answers `GatheringSpace` (`invite`, `me`, `role`, `mode`, `members`,
+  the viewer's `groups`); `POST /api/gatherings/:id/join` joins from the link. `POST
+/api/gatherings/:id/mode` takes `{mode: "announce" | "open"}` from the host (`NOT_HOST`). `GET
+/api/gatherings/:id/messages?group=` answers the last 200 `GatheringMessageView`s of the main chat
+  or a small group; `POST` the same path takes `{text, group?}` (60 a minute per address;
+  `ANNOUNCEMENTS_ONLY` for a member in announce mode; small groups always free). `POST
+/api/gatherings/:id/groups` takes `{name, members}` of moment members (`NOT_A_MEMBER`) and answers
+  the space; `POST /api/gatherings/:id/groups/:group/leave` leaves it, and the last one out removes
+  it. Small groups are hidden from everyone outside them, the host included.
 - The app reads `?side=<id>` on `/` and `/u/<handle>`: a signed-in member is switched to the
   side (joining first when it is open); a guest sees the side named on the public page.
 - Search (the Posts tab) lists the sides in `SidesView` (`mine` and `open`, never Everyday)

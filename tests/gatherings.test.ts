@@ -138,3 +138,101 @@ test("invites are validated, and hosts and deleted accounts take their gathering
   rejects(() => gatherings.invite(invite.id), "NOT_FOUND");
   assert.equal(store.all("gathering-rsvp").length, 0);
 });
+
+// The moment group (ADR 0037) ------------------------------------------------------------------
+async function withMembers() {
+  const ctx = await setup();
+  ctx.store.transaction(() =>
+    ctx.store.put("user", "cara", {
+      id: "cara",
+      name: "Cara",
+      handle: "cara",
+      initials: "C",
+      color: "#eee",
+    }),
+  );
+  ctx.gatherings.respond(bob, ctx.invite.id, { ...answer, name: "Bob", phone: "0811 0000 0001" });
+  return ctx;
+}
+const cara = { userId: "cara" };
+
+test("answering while signed in, or joining from the link, makes you a member; others see nothing", async () => {
+  const { gatherings, invite } = await withMembers();
+  const space = gatherings.space(bob, invite.id);
+  assert.equal(space.role, "member");
+  assert.equal(space.mode, "announce");
+  assert.deepEqual(
+    space.members.map((m) => m.id),
+    ["dina", "bob"],
+  );
+  assert.equal(gatherings.space(dina, invite.id).role, "host");
+  // Cara has the link but has not joined: the group answers as if it did not exist.
+  rejects(() => gatherings.space(cara, invite.id), "NOT_FOUND");
+  rejects(() => gatherings.messages(cara, invite.id), "NOT_FOUND");
+  rejects(() => gatherings.space(guest, invite.id), "UNAUTHENTICATED");
+  gatherings.join(cara, invite.id);
+  assert.equal(gatherings.space(cara, invite.id).members.length, 3);
+  assert.equal(gatherings.mine(cara)[0]!.title, "Dina & Raka");
+});
+
+test("in announcement mode only the host writes; in open mode everyone does", async () => {
+  const { gatherings, invite } = await withMembers();
+  gatherings.send(dina, invite.id, { text: "Dress code: batik" });
+  rejects(() => gatherings.send(bob, invite.id, { text: "Hi" }), "ANNOUNCEMENTS_ONLY");
+  rejects(() => gatherings.setMode(bob, invite.id, { mode: "open" }), "NOT_HOST");
+  gatherings.setMode(dina, invite.id, { mode: "open" });
+  gatherings.send(bob, invite.id, { text: "Siap!" });
+  assert.deepEqual(
+    gatherings.messages(bob, invite.id).map((m) => [m.from.name, m.text]),
+    [
+      ["Dina", "Dress code: batik"],
+      ["Bob", "Siap!"],
+    ],
+  );
+});
+
+test("a small group is only for its members, drawn from the moment, hidden even from the host", async () => {
+  const { gatherings, invite } = await withMembers();
+  gatherings.join(cara, invite.id);
+  rejects(
+    () => gatherings.createGroup(bob, invite.id, { name: "Geng SMA", members: ["stranger"] }),
+    "NOT_A_MEMBER",
+  );
+  const space = gatherings.createGroup(bob, invite.id, { name: "Geng SMA", members: ["cara"] });
+  const group = space.groups[0]!;
+  assert.deepEqual(group.memberIds, ["bob", "cara"]);
+  // Small groups chat freely, even while the main chat is announcements only.
+  gatherings.send(cara, invite.id, { text: "Ketemu di parkiran", group: group.id });
+  assert.equal(gatherings.messages(bob, invite.id, group.id).length, 1);
+  assert.equal(gatherings.messages(bob, invite.id).length, 0);
+  assert.deepEqual(gatherings.space(dina, invite.id).groups, []);
+  rejects(() => gatherings.messages(dina, invite.id, group.id), "NOT_FOUND");
+  rejects(() => gatherings.send(dina, invite.id, { text: "?", group: group.id }), "NOT_FOUND");
+  // The last one out takes the group and its messages with them.
+  gatherings.leaveGroup(bob, invite.id, group.id);
+  gatherings.leaveGroup(cara, invite.id, group.id);
+  assert.deepEqual(gatherings.space(cara, invite.id).groups, []);
+});
+
+test("blocked people drop out of members and messages, and removing a moment removes its group", async () => {
+  const { store, gatherings, invite } = await withMembers();
+  gatherings.setMode(dina, invite.id, { mode: "open" });
+  gatherings.send(bob, invite.id, { text: "Halo" });
+  gatherings.peopleFilter = (viewer, user) => !(viewer === "dina" && user === "bob");
+  assert.deepEqual(
+    gatherings.space(dina, invite.id).members.map((m) => m.id),
+    ["dina"],
+  );
+  assert.equal(gatherings.messages(dina, invite.id).length, 0);
+  // Bob's account goes: his seat and his messages go with it.
+  gatherings.peopleFilter = () => true;
+  store.transaction(() => gatherings.erase("bob"));
+  assert.equal(gatherings.messages(dina, invite.id).length, 0);
+  assert.deepEqual(
+    gatherings.space(dina, invite.id).members.map((m) => m.id),
+    ["dina"],
+  );
+  gatherings.remove(dina, invite.id);
+  for (const kind of ["gathering", "gathering-member", "gathering-message", "gathering-group"])
+    assert.equal(store.all(kind).length, 0, kind);
+});

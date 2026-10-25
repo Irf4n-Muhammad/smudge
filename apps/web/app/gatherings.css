@@ -364,3 +364,240 @@
     display: none;
   }
 }
+
+/* The moment group (ADR 0037). */
+.moment-space {
+  --invite-paper: #f6f0e6;
+  --invite-ink: #3a3128;
+  --invite-soft: #8a7b69;
+  --invite-gold: #a8834a;
+  --invite-line: #e3d8c6;
+  min-height: 100vh;
+  background: var(--invite-paper);
+  color: var(--invite-ink);
+  font-family: var(--ui, system-ui, sans-serif);
+}
+.moment-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--invite-line);
+}
+.moment-head .brand {
+  font-family: var(--wordmark);
+  font-size: 22px;
+  color: var(--invite-ink);
+  text-decoration: none;
+}
+.moment-head div {
+  flex: 1;
+  min-width: 0;
+}
+.moment-head h1 {
+  margin: 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 24px;
+  font-weight: 400;
+}
+.moment-head p {
+  margin: 0;
+  color: var(--invite-soft);
+  font-size: 13px;
+}
+.moment-host-link {
+  padding: 8px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  color: var(--invite-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.moment-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--invite-line);
+}
+.moment-tabs button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--invite-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.moment-tabs button[aria-selected="true"] {
+  background: var(--invite-ink);
+  color: var(--invite-paper);
+}
+.moment-invite {
+  min-height: 0;
+}
+.moment-panel {
+  width: min(640px, 100%);
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+}
+.moment-panel h2 {
+  margin: 16px 0 10px;
+  font-size: 15px;
+}
+.moment-rooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.moment-rooms button,
+.moment-groups button,
+.moment-leave {
+  padding: 6px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.moment-rooms button[aria-pressed="true"] {
+  border-color: var(--invite-gold);
+  background: var(--invite-gold);
+  color: #fffaf2;
+}
+.moment-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+.moment-chat ol {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.moment-chat li {
+  justify-self: start;
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: #fffaf2;
+  border: 1px solid var(--invite-line);
+}
+.moment-chat li.mine {
+  justify-self: end;
+  background: var(--invite-ink);
+  border-color: var(--invite-ink);
+  color: var(--invite-paper);
+}
+.moment-chat li strong {
+  display: block;
+  font-size: 13px;
+  color: var(--invite-gold);
+}
+.moment-chat li p {
+  margin: 2px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.moment-chat li time {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.moment-chat form {
+  display: flex;
+  gap: 8px;
+}
+.moment-chat input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+}
+.moment-chat form button {
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--invite-ink);
+  color: var(--invite-paper);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.moment-empty {
+  color: var(--invite-soft);
+}
+.moment-leave {
+  margin-top: 16px;
+}
+.moment-members,
+.moment-groups {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.moment-members li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.moment-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #3a3128;
+  font-size: 13px;
+  font-weight: 700;
+}
+.moment-group-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.moment-group-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.moment-group-form input:not([type="checkbox"]) {
+  padding: 10px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+}
+.moment-group-form fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+}
+.moment-group-form fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+.moment-album {
+  text-align: center;
+}

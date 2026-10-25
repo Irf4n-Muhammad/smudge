@@ -77,3 +77,46 @@ export interface GatheringSummary {
   place: string;
   host: boolean;
 }
+
+/**
+ * The moment group (ADR 0037). In `announce` mode only the host writes in the main chat, as for
+ * a big wedding; in `open` mode every member does. Small groups always chat freely.
+ */
+export const gatheringModes = ["announce", "open"] as const;
+export type GatheringMode = (typeof gatheringModes)[number];
+export const gatheringModeInputSchema = z.object({ mode: z.enum(gatheringModes) }).strict();
+export const gatheringMessageInputSchema = z
+  .object({ text: text(2000).min(1), group: z.string().uuid().optional() })
+  .strict();
+export const smallGroupInputSchema = z
+  .object({ name: text(60).min(1), members: z.array(z.string().min(1).max(64)).max(49) })
+  .strict();
+export interface GatheringPerson {
+  id: string;
+  name: string;
+  handle: string;
+  initials: string;
+  color: string;
+  avatarAssetId?: string;
+}
+export interface SmallGroupView {
+  id: string;
+  name: string;
+  memberIds: string[];
+}
+/** What a member sees: the invite pinned on top, who is in, and the small groups they are in. */
+export interface GatheringSpace {
+  invite: GatheringInvite;
+  /** The viewer's own id, so a chat can tell their messages apart. */
+  me: string;
+  role: "host" | "member";
+  mode: GatheringMode;
+  members: GatheringPerson[];
+  groups: SmallGroupView[];
+}
+export interface GatheringMessageView {
+  id: string;
+  from: GatheringPerson;
+  text: string;
+  at: string;
+}

@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   GatheringGuestList,
   GatheringInvite,
+  GatheringMessageView,
+  GatheringSpace,
   GatheringSummary,
 } from "../../../packages/contracts/src/gatherings";
 import { api } from "./runtime";
@@ -41,15 +43,55 @@ function Missing() {
 /** The invite page (ADR 0036): what a guest opens from WhatsApp, with no account. */
 export function Invitation({ id }: { id: string }) {
   const [invite, setInvite] = useState<GatheringInvite | null | "missing">(null);
+  const signedIn = useSignedIn();
+  // A member sees the moment group instead (ADR 0037); anyone else sees the invite.
+  const [space, setSpace] = useState<GatheringSpace | null | "none">(null);
+  const loadSpace = useCallback(
+    () =>
+      api<GatheringSpace>(`/gatherings/${encodeURIComponent(id)}/space`).then(setSpace, () =>
+        setSpace("none"),
+      ),
+    [id],
+  );
   useEffect(() => {
     api<GatheringInvite>(`/public/gatherings/${encodeURIComponent(id)}`)
       .then(setInvite)
       .catch(() => setInvite("missing"));
   }, [id]);
+  useEffect(() => {
+    if (signedIn) void loadSpace();
+    else if (signedIn === false) setSpace("none");
+  }, [signedIn, loadSpace]);
   if (invite === "missing") return <Missing />;
-  if (!invite) return <main className="invite" aria-busy="true" />;
+  if (!invite || space === null) return <main className="invite" aria-busy="true" />;
+  if (space !== "none") return <MomentSpace space={space} onChange={setSpace} />;
   return (
     <main className="invite">
+      <InviteBody invite={invite}>
+        <Rsvp id={invite.id} {...(signedIn ? { onDone: () => void loadSpace() } : {})} />
+        {signedIn && (
+          <section className="invite-block">
+            <p>Sudah konfirmasi lewat WhatsApp keluarga? Masuk langsung ke grup momennya.</p>
+            <button
+              className="invite-link"
+              onClick={() =>
+                void api<GatheringSpace>(`/gatherings/${encodeURIComponent(id)}/join`, {}).then(
+                  setSpace,
+                )
+              }
+            >
+              Gabung ke grup momen
+            </button>
+          </section>
+        )}
+      </InviteBody>
+    </main>
+  );
+}
+
+function InviteBody({ invite, children }: { invite: GatheringInvite; children?: React.ReactNode }) {
+  return (
+    <>
       <header className="invite-cover">
         <p className="invite-kicker">Undangan Pernikahan</p>
         <h1>{invite.title}</h1>
@@ -89,7 +131,7 @@ export function Invitation({ id }: { id: string }) {
           </ol>
         </section>
       )}
-      <Rsvp id={invite.id} />
+      {children}
       {invite.vendors.length > 0 && (
         <section className="invite-block invite-vendors" aria-label="Didukung oleh">
           <h2>Didukung oleh</h2>
@@ -105,11 +147,314 @@ export function Invitation({ id }: { id: string }) {
       <footer className="invite-footer">
         <a href="/">Dibuat dengan Smudge</a>
       </footer>
-    </main>
+    </>
   );
 }
 
-function Rsvp({ id }: { id: string }) {
+type Tab = "invite" | "chat" | "album" | "members";
+const tabs: [Tab, string][] = [
+  ["invite", "Undangan"],
+  ["chat", "Obrolan"],
+  ["album", "Album"],
+  ["members", "Anggota"],
+];
+/**
+ * The moment group (ADR 0037): the invite pinned as the first tab, the chat, the album (on the
+ * day, next stage) and who is in, with the small groups the viewer is in.
+ */
+function MomentSpace({
+  space,
+  onChange,
+}: {
+  space: GatheringSpace;
+  onChange: (space: GatheringSpace) => void;
+}) {
+  const [tab, setTab] = useState<Tab>("chat");
+  const [groupId, setGroupId] = useState<string | null>(null);
+  const { invite } = space;
+  const group = space.groups.find((g) => g.id === groupId) ?? null;
+  const base = `/gatherings/${encodeURIComponent(invite.id)}`;
+  return (
+    <div className="moment-space">
+      <header className="moment-head">
+        <a className="brand" href="/" aria-label="Smudge home">
+          smudge.
+        </a>
+        <div>
+          <h1>{invite.title}</h1>
+          <p>
+            {longDate(invite.date, "id-ID")} · {invite.place}
+          </p>
+        </div>
+        {space.role === "host" && (
+          <a className="moment-host-link" href={`/m/${invite.id}/guests`}>
+            Daftar tamu
+          </a>
+        )}
+      </header>
+      <nav className="moment-tabs" role="tablist" aria-label="Momen">
+        {tabs.map(([key, label]) => (
+          <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>
+            {label}
+          </button>
+        ))}
+      </nav>
+      {tab === "invite" && (
+        <main className="invite moment-invite">
+          <InviteBody invite={invite} />
+        </main>
+      )}
+      {tab === "chat" && (
+        <section className="moment-panel" aria-label="Obrolan">
+          {space.groups.length > 0 && (
+            <div className="moment-rooms" role="group" aria-label="Ruang obrolan">
+              <button aria-pressed={!group} onClick={() => setGroupId(null)}>
+                Semua tamu
+              </button>
+              {space.groups.map((g) => (
+                <button
+                  key={g.id}
+                  aria-pressed={group?.id === g.id}
+                  onClick={() => setGroupId(g.id)}
+                >
+                  {g.name}
+                </button>
+              ))}
+            </div>
+          )}
+          {!group && space.role === "host" && (
+            <label className="moment-mode">
+              <input
+                type="checkbox"
+                checked={space.mode === "open"}
+                onChange={(e) =>
+                  void api<GatheringSpace>(`${base}/mode`, {
+                    mode: e.target.checked ? "open" : "announce",
+                  }).then(onChange)
+                }
+              />
+              Semua tamu boleh ngobrol
+            </label>
+          )}
+          <Chat
+            key={group?.id ?? "main"}
+            base={base}
+            me={space.me}
+            group={group?.id ?? null}
+            canWrite={!!group || space.mode === "open" || space.role === "host"}
+          />
+          {group && (
+            <button
+              className="moment-leave"
+              onClick={() =>
+                void api<GatheringSpace>(`${base}/groups/${group.id}/leave`, {}).then((s) => {
+                  setGroupId(null);
+                  onChange(s);
+                })
+              }
+            >
+              Keluar dari {group.name}
+            </button>
+          )}
+        </section>
+      )}
+      {tab === "album" && (
+        <section className="moment-panel moment-album" aria-label="Album">
+          <h2>Album dibuka di hari H</h2>
+          <p>
+            Foto dari semua tamu masuk ke sini dan diurutkan sesuai susunan acara. Scan QR di pintu
+            masuk untuk ikut mengisi.
+          </p>
+        </section>
+      )}
+      {tab === "members" && (
+        <Members
+          space={space}
+          base={base}
+          onChange={onChange}
+          onOpen={(id) => {
+            setGroupId(id);
+            setTab("chat");
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function Chat({
+  base,
+  me,
+  group,
+  canWrite,
+}: {
+  base: string;
+  me: string;
+  group: string | null;
+  canWrite: boolean;
+}) {
+  const [messages, setMessages] = useState<GatheringMessageView[]>([]);
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const path = `${base}/messages${group ? `?group=${group}` : ""}`;
+  useEffect(() => {
+    let live = true;
+    const load = () =>
+      api<GatheringMessageView[]>(path).then(
+        (m) => live && setMessages(m),
+        () => {},
+      );
+    void load();
+    // Polling, like the other chats (ADR 0021); real-time delivery is the next step.
+    const timer = setInterval(load, 4000);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [path]);
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setError("");
+    try {
+      setMessages(
+        await api<GatheringMessageView[]>(`${base}/messages`, {
+          text,
+          ...(group ? { group } : {}),
+        }),
+      );
+      setText("");
+    } catch {
+      setError("Pesan belum terkirim. Coba lagi.");
+    }
+  }
+  return (
+    <div className="moment-chat">
+      {messages.length === 0 ? (
+        <p className="moment-empty">Belum ada pesan.</p>
+      ) : (
+        <ol aria-label="Pesan">
+          {messages.map((m) => (
+            <li key={m.id} className={m.from.id === me ? "mine" : ""}>
+              {m.from.id !== me && <strong>{m.from.name}</strong>}
+              <p>{m.text}</p>
+              <time>
+                {new Date(m.at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+              </time>
+            </li>
+          ))}
+        </ol>
+      )}
+      {canWrite ? (
+        <form onSubmit={send}>
+          <input
+            aria-label="Tulis pesan"
+            placeholder="Tulis pesan"
+            value={text}
+            maxLength={2000}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <button>Kirim</button>
+        </form>
+      ) : (
+        <p className="moment-empty">Hanya tuan rumah yang mengirim pengumuman di sini.</p>
+      )}
+      {error && (
+        <p className="invite-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Members({
+  space,
+  base,
+  onChange,
+  onOpen,
+}: {
+  space: GatheringSpace;
+  base: string;
+  onChange: (space: GatheringSpace) => void;
+  onOpen: (groupId: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
+  const others = space.members.filter((m) => m.id !== space.me);
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    const next = await api<GatheringSpace>(`${base}/groups`, { name, members: picked });
+    const made = next.groups.find((g) => !space.groups.some((old) => old.id === g.id));
+    onChange(next);
+    setName("");
+    setPicked([]);
+    if (made) onOpen(made.id);
+  }
+  return (
+    <section className="moment-panel" aria-label="Anggota">
+      <h2>{space.members.length} orang di momen ini</h2>
+      <ul className="moment-members">
+        {space.members.map((m) => (
+          <li key={m.id}>
+            <span className="moment-avatar" style={{ background: m.color }}>
+              {m.initials}
+            </span>
+            {m.name}
+          </li>
+        ))}
+      </ul>
+      <h2>Grup kecil</h2>
+      {space.groups.length > 0 && (
+        <ul className="moment-groups">
+          {space.groups.map((g) => (
+            <li key={g.id}>
+              <button onClick={() => onOpen(g.id)}>
+                {g.name} · {g.memberIds.length} orang
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {others.length === 0 ? (
+        <p className="moment-empty">Grup kecil bisa dibuat setelah ada tamu lain yang bergabung.</p>
+      ) : (
+        <form className="moment-group-form" onSubmit={create} aria-label="Grup kecil baru">
+          <label>
+            Nama grup
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Geng SMA"
+              maxLength={60}
+              required
+            />
+          </label>
+          <fieldset>
+            <legend>Ajak siapa</legend>
+            {others.map((m) => (
+              <label key={m.id}>
+                <input
+                  type="checkbox"
+                  checked={picked.includes(m.id)}
+                  onChange={(e) =>
+                    setPicked(
+                      e.target.checked ? [...picked, m.id] : picked.filter((id) => id !== m.id),
+                    )
+                  }
+                />
+                {m.name}
+              </label>
+            ))}
+          </fieldset>
+          <button className="invite-send">Buat grup kecil</button>
+        </form>
+      )}
+    </section>
+  );
+}
+
+function Rsvp({ id, onDone }: { id: string; onDone?: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [attending, setAttending] = useState<boolean | null>(null);
@@ -133,6 +478,8 @@ function Rsvp({ id }: { id: string }) {
           message: note,
         }),
       );
+      // A signed-in guest is now a member: the page turns into the moment group.
+      onDone?.();
     } catch (err) {
       setError(message((err as Error).message));
     } finally {

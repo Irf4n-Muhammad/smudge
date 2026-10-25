@@ -60,7 +60,9 @@ design brief: `docs/design-handoff.md`.
 **A wedding invite.** Open **More → Moments** (or `/m`), fill in **New wedding invite** and
 **Make the invite**. The guest list page has the link, **Send on WhatsApp** and the head count.
 Open the link in a private window: the invite and its RSVP work without an account, and only the
-host sees the answers (ADR 0036).
+host sees the answers (ADR 0036). Answer while signed in and the link opens the moment group
+instead: the chat (announcements only until the host ticks **Semua tamu boleh ngobrol**), the
+members, and small groups only their members see (ADR 0037).
 
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
 **Use this combination** previews the actual published composition with your identity and posts;
