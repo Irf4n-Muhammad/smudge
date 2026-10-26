@@ -94,7 +94,8 @@ html[data-theme="dark"] .sm {
 .sm .hero {
   position: relative;
   z-index: 5;
-  padding: 18px 16px 0;
+  /* Room at the top for the app's floating back and menu buttons (ADR 0047). */
+  padding: 62px 16px 0;
   cursor: crosshair;
 }
 .sm .giant {
@@ -129,7 +130,7 @@ html[data-theme="dark"] .sm {
 .sm .tapnote {
   position: absolute;
   right: 12px;
-  top: 34px;
+  top: 78px;
   width: 112px;
   margin: 0;
   text-align: right;

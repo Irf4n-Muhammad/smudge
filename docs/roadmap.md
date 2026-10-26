@@ -80,6 +80,8 @@
 - [x] The Paint wall as a landing page (ADR 0046): the song and "right now" under the name,
       no counts, no post grid; the easy editor and the sign-up setup fill the hero.
       Next: the other looks on the same frame, one by one.
+- [x] One header (ADR 0047): over a page of its own the app keeps only back, edit and ☰
+      floating; one follow button, the page's own when it has one.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.

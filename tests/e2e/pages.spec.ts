@@ -42,7 +42,8 @@ test("every page has a strip to its Posts and Stories, inside the app and on the
     "page",
   );
   await guestStrip.getByRole("link", { name: "Stories" }).click();
-  await expect(guest).toHaveURL(/\/u\/alex\/stories$/);
+  // In development the route compiles on its first visit, which can take a while.
+  await expect(guest).toHaveURL(/\/u\/alex\/stories$/, { timeout: 60000 });
   await expect(guest.getByRole("list", { name: "Stories" })).toBeVisible();
   await guestStrip.getByRole("link", { name: "Page" }).click();
   await expect(guest).toHaveURL(/\/u\/alex$/);

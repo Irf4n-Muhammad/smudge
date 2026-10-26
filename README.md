@@ -304,7 +304,8 @@ Demo photography credits are in [assets/demo/CREDITS.md](assets/demo/CREDITS.md)
 
 ## Your page, then Posts and Stories
 
-A profile is two layers (ADR 0045). The landing page is yours: a template you make your own.
+A profile is two layers (ADR 0045), and over a page of its own the app shows only back, edit and
+☰ as floating buttons (ADR 0047); everything else waits in the menu. The landing page is yours: a template you make your own.
 Posts and Stories are Smudge's fixed pages, the same under every look: a collage of your posts
 (`?page=posts`, `/u/<handle>/posts` for guests) and your days read from what happened, never
 typed (`?page=stories`, `/u/<handle>/stories`): posts, what was playing, where you were, the

@@ -857,3 +857,80 @@ html[data-theme="dark"] .profile-brand svg {
     min-height: 44px;
   }
 }
+
+/* Illustrated pages (ADR 0047): the page says who it is, so the app keeps only back, edit and
+   ☰, floating over the top of the page; the rest waits in the menu. */
+.profile-page.profile-illustrated .profile-controls {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 30;
+  height: auto;
+  min-height: 0;
+  padding: 10px 14px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+.profile-page.profile-illustrated .profile-controls > * {
+  pointer-events: auto;
+}
+.profile-page.profile-illustrated .profile-brand,
+.profile-page.profile-illustrated .profile-controls > .profile-identity {
+  display: none;
+}
+.profile-chrome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.profile-page.profile-illustrated .profile-controls .profile-back,
+.profile-page.profile-illustrated .profile-controls .profile-edit,
+.profile-page.profile-illustrated .profile-options summary {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: rgb(16 16 20 / 55%) !important;
+  color: #fff !important;
+  font-size: 0;
+  line-height: 1;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 20%);
+}
+.profile-page.profile-illustrated .profile-back::before {
+  content: none;
+}
+.profile-page.profile-illustrated .profile-options summary {
+  font-size: 20px;
+}
+.profile-page.profile-illustrated .profile-options {
+  margin: 0;
+}
+.profile-page.profile-illustrated .profile-options[open] .profile-control-actions {
+  right: 14px;
+  top: 54px;
+}
+.profile-page.profile-illustrated .profile-control-actions > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-page.profile-illustrated .profile-control-actions > .profile-theme-chip {
+  justify-self: start;
+}
+@media (min-width: 701px) {
+  .profile-page.has-side-nav.profile-illustrated .profile-controls {
+    left: var(--profile-rail, 0px);
+    padding-inline: 20px;
+  }
+}
