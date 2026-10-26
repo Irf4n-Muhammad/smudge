@@ -28,19 +28,48 @@ export class NowService {
   ) {}
   /** Who may read someone's entries besides the owner; the server installs the privacy rules. */
   viewFilter: (viewerId: string, ownerId: string) => boolean = () => true;
+  /**
+   * Entries read rather than typed (ADR 0044): the server installs one source per signal (a
+   * song playing, a post, a quiz taken, a cat fed). Each returns what it knows about one person.
+   */
+  sources: ((ownerId: string) => NowView[])[] = [];
   private get store() {
     return this.social.store;
   }
   private view({ userId: _u, ...rest }: NowEntry): NowView {
     return rest;
   }
-  private mine(userId: string) {
+  private typed(userId: string) {
     // Reversed before the stable sort, so two taps in the same second keep the later one first.
     return this.store
       .all<NowEntry>("now")
       .filter((e) => e.userId === userId)
       .reverse()
       .sort((a, b) => b.at.localeCompare(a.at));
+  }
+  /** Typed entries and read ones together, newest first. */
+  private mine(userId: string): NowView[] {
+    const read = this.sources.flatMap((source) => source(userId));
+    return [...this.typed(userId).map((e) => this.view(e)), ...read].sort((a, b) =>
+      b.at.localeCompare(a.at),
+    );
+  }
+  /** Songs a person can note again with one tap: their own, then what people they follow had on. */
+  songs(actor: Actor, limit = 6): { text: string; by?: string }[] {
+    const me = this.social.actor(actor);
+    const people = [me, ...this.social.following(actor)];
+    const seen = new Set<string>();
+    const picks: { text: string; by?: string }[] = [];
+    for (const id of people)
+      for (const e of this.mine(id)) {
+        if (e.kind !== "listening") continue;
+        const key = `${e.text.toLowerCase()}|${(e.by ?? "").toLowerCase()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        picks.push({ text: e.text, ...(e.by ? { by: e.by } : {}) });
+        if (picks.length >= limit) return picks;
+      }
+    return picks;
   }
   add(actor: Actor, input: unknown): NowView {
     const me = this.social.actor(actor);
@@ -56,7 +85,7 @@ export class NowService {
     this.store.transaction(() => {
       this.store.put("now", entry.id, entry);
       // The archive is long, not endless.
-      for (const old of this.mine(me).slice(keep)) this.store.remove("now", old.id);
+      for (const old of this.typed(me).slice(keep)) this.store.remove("now", old.id);
     });
     return this.view(entry);
   }
@@ -73,7 +102,7 @@ export class NowService {
   /** Someone's archive as this viewer may see it; a closed account reads as an empty one. */
   archive(viewerId: string, ownerId: string): NowArchive {
     if (!this.canSee(viewerId, ownerId)) return { current: null, entries: [], total: 0 };
-    const entries = this.mine(ownerId).map((e) => this.view(e));
+    const entries = this.mine(ownerId);
     return { current: entries[0] ?? null, entries, total: entries.length };
   }
   /** What the owner's page program may read (profile.read), for its "now" and "on repeat". */
@@ -96,7 +125,7 @@ export class NowService {
       const user = publicUser(users.get(target));
       if (!user || !this.canSee(me, target)) continue;
       const entry = this.mine(target)[0];
-      if (entry) rows.push({ user, entry: this.view(entry) });
+      if (entry) rows.push({ user, entry });
     }
     return rows.sort((a, b) => b.entry.at.localeCompare(a.entry.at)).slice(0, limit);
   }
@@ -113,6 +142,6 @@ export class NowService {
     };
   }
   erase(userId: string) {
-    for (const e of this.mine(userId)) this.store.remove("now", e.id);
+    for (const e of this.typed(userId)) this.store.remove("now", e.id);
   }
 }

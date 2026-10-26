@@ -72,6 +72,9 @@
       page; one tap notes what you are listening to, doing, where you are or what you are
       thinking, and piles into an archive that friends and guests see under your privacy rules.
       Next: the widget and the friends' row (stage 2). See ADR 0041.
+- [x] After the first test: a sign-up form with room, username, repeat password and a strength
+      meter; "Right now" read rather than typed (Spotify once, posts and programs by themselves,
+      a song in one tap, typing behind a +). See ADR 0044.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.

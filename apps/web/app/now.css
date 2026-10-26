@@ -357,3 +357,39 @@
   place-items: center;
   color: var(--muted);
 }
+
+/* Right now, reworked (ADR 0044): one row of taps, a small + for a typed note. */
+.now-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.now-source {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #1db954;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+a.now-chip {
+  text-decoration: none;
+}
+.now-spotify {
+  border-color: #1db954;
+}
+.now-spotify.on {
+  background: #e7f8ec;
+  cursor: default;
+}
+.now-spotify .text-button {
+  margin-left: 4px;
+  font-size: 12px;
+}
+.now-more {
+  color: var(--muted);
+}

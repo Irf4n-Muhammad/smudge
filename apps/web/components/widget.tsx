@@ -1,18 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Disc3, MapPin, MessageCircle, Sparkles } from "lucide-react";
+import { Disc3, Sparkles } from "lucide-react";
 import type { NowWidget } from "../../../packages/contracts/src/now";
 import type { User } from "../../../packages/contracts/src/experience";
-import { ago } from "./now";
+import { ago, nowIcons } from "./now";
 import { api } from "./runtime";
 import { Avatar } from "./ui";
-
-const icons = {
-  listening: Disc3,
-  doing: Sparkles,
-  place: MapPin,
-  thinking: MessageCircle,
-} as const;
 
 /**
  * One friend's page, live, the size of a home-screen widget (ADR 0042). It is the web face of
@@ -42,7 +35,7 @@ export function Widget({ handle }: { handle: string }) {
         <p>This page is not here.</p>
       </div>
     );
-  const Icon = view.current ? icons[view.current.kind] : Sparkles;
+  const Icon = view.current ? nowIcons[view.current.kind] : Sparkles;
   return (
     <a className="widget" href={`/u/${encodeURIComponent(view.user.handle)}`}>
       <header>

@@ -1,11 +1,16 @@
 import { z } from "zod";
 
-/** One tap on your own page: what you are doing right now, kept as your archive (ADR 0041). */
-export const nowKinds = ["listening", "doing", "place", "thinking"] as const;
+/**
+ * What you are doing right now, kept as your archive (ADR 0041). Most of it is read, not typed
+ * (ADR 0044): a song from Spotify, a post, a quiz taken, a cat fed. The first four kinds are the
+ * ones a person may still note by hand.
+ */
+export const manualKinds = ["listening", "doing", "place", "thinking"] as const;
+export const nowKinds = [...manualKinds, "posted", "quiz", "fed", "page"] as const;
 export type NowKind = (typeof nowKinds)[number];
 export const nowInputSchema = z
   .object({
-    kind: z.enum(nowKinds),
+    kind: z.enum(manualKinds),
     text: z.string().trim().min(1).max(80),
     /** The artist, for a song. */
     by: z.string().trim().max(50).optional(),
@@ -18,6 +23,18 @@ export interface NowView {
   text: string;
   by?: string;
   at: string;
+  /** Read from somewhere ("spotify", "smudge") rather than typed; cannot be removed by hand. */
+  source?: string;
+}
+/** The songs a person can note with one tap: their own again, and what friends had on. */
+export interface SongPick {
+  text: string;
+  by?: string;
+}
+/** Where the owner's song comes from, for the owner's own page controls. */
+export interface NowSources {
+  spotify: { configured: boolean; connected: boolean };
+  songs: SongPick[];
 }
 export interface NowArchive {
   /** The newest entry, whatever its age; the viewer sees how old it is. */

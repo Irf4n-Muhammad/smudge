@@ -40,6 +40,7 @@ unread ones. **Messages** works between people when one follows the other. A pos
 **Moderation** lists open reports with Remove post, Dismiss and Suspend account. On phones these
 live in the bottom bar and **More**. In production, set `FORMA_ADMIN_EMAILS` for moderators and
 `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for "Continue with Google" (see docs/deploy.md).
+`SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` make the page show the song you are playing (ADR 0044).
 
 ## Try these paths
 
@@ -74,9 +75,10 @@ own, labelled with the moment (ADR 0040).
 For the test wedding, `npm run moment-report -- <id> --invited N` prints its numbers
 (`docs/runbooks/test-wedding.md`).
 
-**Your page.** A new account answers five questions (photo, one line, look, colour, what is
-playing or going on) and has a page. On it, **Listening / Doing / Somewhere / Thinking** notes
-what you are up to in one tap; the newest shows on top and the rest pile up under **Archive**.
+**Your page.** A new account answers five questions (photo, one line, look, colour, a song)
+and has a page. On it, **Right now** mostly fills itself: the song from Spotify once connected,
+your posts, the quiz you took or the cat you fed on a friend's page; a song is one tap, and a
+typed note sits behind **Note**. The newest shows on top and the rest pile up under **Archive**.
 Friends see it on your profile, anyone at `/u/<handle>` without an account, and the Paint wall
 page shows it live in its "now" and "on repeat" sections (ADR 0041).
 Above the feed, **Friends right now** shows what the people you follow last noted; a tap opens

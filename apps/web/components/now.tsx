@@ -1,21 +1,46 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Disc3, MapPin, MessageCircle, Sparkles, X } from "lucide-react";
-import type { NowArchive, NowKind, NowView } from "../../../packages/contracts/src/now";
+import {
+  Cat,
+  Disc3,
+  HelpCircle,
+  Image as ImageIcon,
+  MapPin,
+  MessageCircle,
+  Paintbrush,
+  Plus,
+  Sparkles,
+  X,
+} from "lucide-react";
+import type { NowArchive, NowKind, NowSources, NowView } from "../../../packages/contracts/src/now";
 import { api } from "./runtime";
 
-const kinds: { kind: NowKind; label: string; lead: string; hint: string }[] = [
-  { kind: "listening", label: "Listening", lead: "Listening to", hint: "Song" },
-  { kind: "doing", label: "Doing", lead: "Doing", hint: "What are you up to?" },
-  { kind: "place", label: "Somewhere", lead: "At", hint: "Where are you?" },
-  { kind: "thinking", label: "Thinking", lead: "Thinking", hint: "What's on your mind?" },
-];
-const icons = {
+export const nowIcons: Record<NowKind, typeof Disc3> = {
   listening: Disc3,
   doing: Sparkles,
   place: MapPin,
   thinking: MessageCircle,
-} as const;
+  posted: ImageIcon,
+  quiz: HelpCircle,
+  fed: Cat,
+  page: Paintbrush,
+};
+const leads: Record<NowKind, string> = {
+  listening: "Listening to",
+  doing: "",
+  place: "At",
+  thinking: "Thinking",
+  posted: "Posted",
+  quiz: "",
+  fed: "",
+  page: "",
+};
+const manual: { kind: NowKind; label: string; hint: string }[] = [
+  { kind: "doing", label: "Doing", hint: "What are you up to?" },
+  { kind: "place", label: "Somewhere", hint: "Where are you?" },
+  { kind: "thinking", label: "Thinking", hint: "What's on your mind?" },
+  { kind: "listening", label: "A song", hint: "Song" },
+];
 
 export function ago(iso: string, now = Date.now()) {
   const mins = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000));
@@ -28,15 +53,16 @@ export function ago(iso: string, now = Date.now()) {
 const dayOf = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 
-function Entry({ entry, onRemove }: { entry: NowView; onRemove?: () => void }) {
-  const Icon = icons[entry.kind];
-  const lead = kinds.find((k) => k.kind === entry.kind)!.lead;
+export function Entry({ entry, onRemove }: { entry: NowView; onRemove?: () => void }) {
+  const Icon = nowIcons[entry.kind];
+  const lead = leads[entry.kind];
   return (
     <>
       <Icon size={15} aria-hidden="true" />
       <span className="now-text">
-        <small>{lead}</small> <strong>{entry.text}</strong>
+        {lead && <small>{lead}</small>} <strong>{entry.text}</strong>
         {entry.by && <span className="now-by"> · {entry.by}</span>}
+        {entry.source === "spotify" && <span className="now-source">Spotify</span>}
       </span>
       <time dateTime={entry.at}>{ago(entry.at)}</time>
       {onRemove && (
@@ -49,9 +75,9 @@ function Entry({ entry, onRemove }: { entry: NowView; onRemove?: () => void }) {
 }
 
 /**
- * "Lagi ngapain" (ADR 0041): on your own page, one tap notes what you are listening to, doing,
- * where you are or what you are thinking. The newest shows on top; everything stays as your
- * archive. Visitors see what the owner's privacy allows; guests through the public route.
+ * "Right now" (ADR 0041, reworked in ADR 0044): one line that mostly fills itself. The song comes
+ * from Spotify once connected, posts and programs come from Smudge, and the owner can still note
+ * a song with one tap or, behind a small +, type a line. Everything piles into the archive.
  */
 export function NowBar({
   ownerId,
@@ -66,6 +92,8 @@ export function NowBar({
   onChanged?: () => void;
 }) {
   const [archive, setArchive] = useState<NowArchive | null>(null);
+  const [sources, setSources] = useState<NowSources | null>(null);
+  const [adding, setAdding] = useState(false);
   const [picking, setPicking] = useState<NowKind | null>(null);
   const [text, setText] = useState("");
   const [by, setBy] = useState("");
@@ -83,18 +111,21 @@ export function NowBar({
   );
   useEffect(() => {
     void load();
-  }, [load]);
-  async function save() {
-    if (!picking || !text.trim()) return;
+    if (!mine) return;
+    api<NowSources>("/me/now-sources").then(setSources, () => setSources(null));
+  }, [load, mine]);
+  useEffect(() => {
+    if (!mine) return;
+    const flag = new URLSearchParams(window.location.search).get("spotify");
+    if (flag === "failed") setError("Spotify did not connect. Try again.");
+  }, [mine]);
+  async function add(input: { kind: NowKind; text: string; by?: string }) {
     setBusy(true);
     setError("");
     try {
-      await api("/me/now", {
-        kind: picking,
-        text: text.trim(),
-        ...(picking === "listening" && by.trim() ? { by: by.trim() } : {}),
-      });
+      await api("/me/now", input);
       setPicking(null);
+      setAdding(false);
       setText("");
       setBy("");
       await load();
@@ -114,9 +145,20 @@ export function NowBar({
       setError((e as Error).message);
     }
   }
+  async function disconnect() {
+    try {
+      await api("/spotify", undefined, "DELETE");
+      setSources((s) => (s ? { ...s, spotify: { ...s.spotify, connected: false } } : s));
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
   if (!archive) return null;
   if (!mine && !archive.current) return null;
   const current = archive.current;
+  const spotify = sources?.spotify;
+  const songs = sources?.songs ?? [];
   return (
     <section className="now-bar" aria-label={mine ? "Right now" : "What they're up to"}>
       {current ? (
@@ -127,37 +169,85 @@ export function NowBar({
         <p className="now-current now-empty">
           <Sparkles size={15} aria-hidden="true" />
           <span className="now-text">
-            <small>Right now</small> <strong>What are you up to? One tap.</strong>
+            <small>Right now</small>{" "}
+            <strong>
+              {spotify?.configured
+                ? "Nothing yet. Connect Spotify and your song shows up by itself."
+                : "Nothing yet. Post something, or tap a song below."}
+            </strong>
           </span>
         </p>
       )}
-      {mine && !picking && (
-        <div className="now-chips" role="group" aria-label="Add to your now">
-          {kinds.map((k) => {
-            const Icon = icons[k.kind];
+      {mine && !adding && (
+        <div className="now-row">
+          {spotify?.configured && !spotify.connected && (
+            <a className="now-chip now-spotify" href="/api/spotify/start">
+              <Disc3 size={14} aria-hidden="true" /> Connect Spotify
+            </a>
+          )}
+          {spotify?.connected && (
+            <span className="now-chip now-spotify on">
+              <Disc3 size={14} aria-hidden="true" /> Spotify on
+              <button className="text-button" onClick={() => void disconnect()}>
+                off
+              </button>
+            </span>
+          )}
+          {!spotify?.connected &&
+            songs.map((song) => (
+              <button
+                key={`${song.text}|${song.by ?? ""}`}
+                className="now-chip"
+                title={song.by ? `${song.text} · ${song.by}` : song.text}
+                onClick={() => void add({ kind: "listening", ...song })}
+              >
+                <Disc3 size={14} aria-hidden="true" /> {song.text}
+              </button>
+            ))}
+          <button
+            className="now-chip now-more"
+            aria-label="Add a note"
+            onClick={() => setAdding(true)}
+          >
+            <Plus size={14} aria-hidden="true" /> Note
+          </button>
+        </div>
+      )}
+      {mine && adding && !picking && (
+        <div className="now-row" role="group" aria-label="Add to your now">
+          {manual.map((k) => {
+            const Icon = nowIcons[k.kind];
             return (
               <button key={k.kind} className="now-chip" onClick={() => setPicking(k.kind)}>
                 <Icon size={14} aria-hidden="true" /> {k.label}
               </button>
             );
           })}
+          <button type="button" className="text-button" onClick={() => setAdding(false)}>
+            Cancel
+          </button>
         </div>
       )}
-      {mine && picking && (
+      {mine && adding && picking && (
         <form
           className="now-form"
-          aria-label={kinds.find((k) => k.kind === picking)!.label}
+          aria-label={manual.find((k) => k.kind === picking)!.label}
           onSubmit={(e) => {
             e.preventDefault();
-            void save();
+            if (!text.trim()) return;
+            void add({
+              kind: picking,
+              text: text.trim(),
+              ...(picking === "listening" && by.trim() ? { by: by.trim() } : {}),
+            });
           }}
         >
           <input
             autoFocus
             maxLength={80}
             value={text}
-            placeholder={kinds.find((k) => k.kind === picking)!.hint}
-            aria-label={kinds.find((k) => k.kind === picking)!.hint}
+            placeholder={manual.find((k) => k.kind === picking)!.hint}
+            aria-label={manual.find((k) => k.kind === picking)!.hint}
             onChange={(e) => setText(e.target.value)}
           />
           {picking === "listening" && (
@@ -181,7 +271,7 @@ export function NowBar({
               setBy("");
             }}
           >
-            Cancel
+            Back
           </button>
         </form>
       )}
@@ -208,7 +298,10 @@ export function NowBar({
               <li key={entry.id}>
                 {first && <h3>{day}</h3>}
                 <p>
-                  <Entry entry={entry} onRemove={mine ? () => void remove(entry.id) : undefined} />
+                  <Entry
+                    entry={entry}
+                    onRemove={mine && !entry.source ? () => void remove(entry.id) : undefined}
+                  />
                 </p>
               </li>
             );

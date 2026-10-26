@@ -1,18 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Disc3, MapPin, MessageCircle, Sparkles } from "lucide-react";
+import { Disc3, Sparkles } from "lucide-react";
 import type { FriendNow } from "../../../packages/contracts/src/now";
 import type { User } from "../../../packages/contracts/src/experience";
-import { ago } from "./now";
+import { ago, nowIcons } from "./now";
 import { api } from "./runtime";
 import { Avatar } from "./ui";
-
-const icons = {
-  listening: Disc3,
-  doing: Sparkles,
-  place: MapPin,
-  thinking: MessageCircle,
-} as const;
 
 /**
  * The first screen (ADR 0042): what the people you follow are up to, one tile each, newest
@@ -40,7 +33,7 @@ export function FriendsNow({ onOpenUser }: { onOpenUser: (userId: string) => voi
     <section className="friends-now" aria-label="Friends right now">
       <ul>
         {rows.map(({ user, entry }) => {
-          const Icon = icons[entry.kind];
+          const Icon = nowIcons[entry.kind];
           return (
             <li key={user.id}>
               <button

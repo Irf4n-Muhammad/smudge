@@ -58,6 +58,9 @@ import { PrivacyService } from "../../packages/core/src/privacy.js";
 import { reportInputSchema } from "../../packages/contracts/src/community.js";
 import { communityRoutes } from "./community-routes.js";
 import { googleFinish, googleStart } from "./google.js";
+import { SpotifyService, spotifyStart } from "./spotify.js";
+import type { NowView } from "../../packages/contracts/src/now.js";
+import type { Publication } from "../../packages/core/src/social.js";
 import { importSite } from "./site-import.js";
 import { SharingService } from "../../packages/core/src/sharing.js";
 import { MediaService, maxVideoBytes } from "../../packages/core/src/media.js";
@@ -178,6 +181,57 @@ nowService.viewFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 accounts.erasers.push((userId) => nowService.erase(userId));
 profiles.extras = (viewerId, ownerId) => ({ now: nowService.live(viewerId, ownerId) });
+// Read, not typed (ADR 0044): the song from Spotify, and what you did on Smudge itself.
+const spotify = new SpotifyService(
+  store,
+  config.spotify && {
+    ...config.spotify,
+    redirectUri: new URL("/api/spotify/callback", config.publicUrl).href,
+  },
+);
+accounts.erasers.push((userId) => store.remove("spotify", userId));
+nowService.sources.push(spotify.source);
+const users = () => new Map(service.users().map((u) => [u.id, u.name]));
+nowService.sources.push((ownerId) =>
+  store
+    .all<Publication>("post")
+    .filter((p) => p.ownerId === ownerId && !identity.isMoment(p.id))
+    .slice(-20)
+    .map((p) => ({
+      id: `post:${p.id}`,
+      kind: "posted" as const,
+      text: p.metadata.title || "a new post",
+      at: p.createdAt,
+      source: "smudge",
+    })),
+);
+nowService.sources.push((ownerId) => {
+  const names = users();
+  const rows: NowView[] = [];
+  for (const key of store.ids("cat"))
+    for (const f of store.get<{ userId: string; at: string }[]>("cat", key) ?? [])
+      if (f.userId === ownerId && key !== ownerId)
+        rows.push({
+          id: `fed:${key}:${f.at}`,
+          kind: "fed",
+          text: `fed ${names.get(key) ?? "a friend"}'s cat`,
+          at: f.at,
+          source: "smudge",
+        });
+  for (const key of store.ids("quiz-score")) {
+    const [owner, taker] = key.split(":");
+    if (taker !== ownerId || !owner) continue;
+    const s = store.get<{ score: number; total: number; at: string }>("quiz-score", key)!;
+    rows.push({
+      id: `quiz:${key}`,
+      kind: "quiz",
+      text: `took ${names.get(owner) ?? "a friend"}'s quiz: ${s.score}/${s.total}`,
+      at: s.at,
+      source: "smudge",
+    });
+  }
+  return rows.slice(-40);
+});
 // Programs between people (ADR 0043): the quiz and the cat, read by whoever may see your posts.
 const programs = new ProgramService(service, clock);
 programs.viewFilter = (viewerId, userId) =>
@@ -562,10 +616,50 @@ api.delete("/api/me/now/:id", (req, res) =>
 );
 api.get("/api/me/quiz", (_req, res) => res.json(programs.quiz(actor(res))));
 api.put("/api/me/quiz", (req, res) => res.json(programs.setQuiz(actor(res), req.body)));
-api.get("/api/me/friends-now", (_req, res) => res.json(nowService.friends(actor(res))));
-api.get("/api/users/:id/now", (req, res) =>
-  res.json(nowService.archive(actor(res).userId, String(req.params.id))),
+api.get("/api/me/friends-now", async (_req, res) => {
+  await Promise.all(service.following(actor(res)).map((id) => spotify.poll(id)));
+  res.json(nowService.friends(actor(res)));
+});
+api.get("/api/me/now-sources", (_req, res) =>
+  res.json({
+    spotify: { configured: spotify.configured, connected: spotify.connected(actor(res).userId) },
+    songs: nowService.songs(actor(res)),
+  }),
 );
+api.get("/api/users/:id/now", async (req, res) => {
+  await spotify.poll(String(req.params.id));
+  res.json(nowService.archive(actor(res).userId, String(req.params.id)));
+});
+const spotifyCookie = { ...cookie, sameSite: "lax" as const, path: "/api/spotify" };
+api.get("/api/spotify/start", authLimit, (_req, res) => {
+  if (!spotify.config) throw new AppError("NOT_FOUND", 404);
+  const { url, state, verifier } = spotifyStart(spotify.config);
+  res.cookie("forma_spotify", `${state}.${verifier}`, { ...spotifyCookie, maxAge: 600_000 });
+  res.redirect(url);
+});
+api.get("/api/spotify/callback", authLimit, async (req, res) => {
+  if (!spotify.config) throw new AppError("NOT_FOUND", 404);
+  const raw = req.headers.cookie
+    ?.split(";")
+    .map((s) => s.trim())
+    .find((s) => s.startsWith("forma_spotify="))
+    ?.slice(14);
+  res.clearCookie("forma_spotify", spotifyCookie);
+  const [state, verifier] = (raw ?? "").split(".");
+  const back = `/?profile=${encodeURIComponent(actor(res).userId)}`;
+  if (!state || !verifier || req.query.state !== state || typeof req.query.code !== "string")
+    return res.redirect(`${back}&spotify=failed`);
+  try {
+    await spotify.connect(actor(res).userId, req.query.code, verifier);
+    res.redirect(`${back}&spotify=connected`);
+  } catch {
+    res.redirect(`${back}&spotify=failed`);
+  }
+});
+api.delete("/api/spotify", (_req, res) => {
+  spotify.disconnect(actor(res).userId);
+  res.json({ connected: false });
+});
 api.get("/api/profiles/:ownerId", (req, res) => {
   community.assertVisibleUser(actor(res), String(req.params.ownerId));
   res.json(profiles.public(String(req.params.ownerId)));
@@ -774,23 +868,17 @@ api.get("/api/public/posts/:id/cover", guestLimit, (req, res) => {
 api.get("/api/public/users/:handle", guestLimit, (req, res) =>
   res.json(sharing.profile(z.string().min(1).max(30).parse(req.params.handle))),
 );
-api.get("/api/public/users/:handle/now", guestLimit, (req, res) =>
-  res.json(
-    nowService.archive(
-      GUEST,
-      sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id,
-    ),
-  ),
-);
+api.get("/api/public/users/:handle/now", guestLimit, async (req, res) => {
+  const id = sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id;
+  await spotify.poll(id);
+  res.json(nowService.archive(GUEST, id));
+});
 // A friend's page for the home-screen widget (ADR 0042): guest view, polled, no account needed.
-api.get("/api/public/users/:handle/widget", guestLimit, (req, res) =>
-  res.json(
-    nowService.widget(
-      GUEST,
-      sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id,
-    ),
-  ),
-);
+api.get("/api/public/users/:handle/widget", guestLimit, async (req, res) => {
+  const id = sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id;
+  await spotify.poll(id);
+  res.json(nowService.widget(GUEST, id));
+});
 // An invite takes answers without an account, so its writes get their own tighter limit.
 gatheringRoutes(
   api,

@@ -53,7 +53,7 @@ test("programs between people: the owner adds a quiz and a cat, a friend takes t
     await page.getByRole("button", { name: "Section", exact: true }).click();
     await page.getByRole("button", { name: /The Cat/ }).click();
     await expect(frame.locator(".sx-cat-card")).toBeVisible();
-    await page.getByLabel("Name").fill("Mochi");
+    await page.getByLabel("Name", { exact: true }).fill("Mochi");
     await expect(page.getByText("Draft saved · only you see it")).toBeVisible();
     await page.getByRole("button", { name: "Done" }).click();
     await page.getByRole("button", { name: "Publish", exact: true }).click();

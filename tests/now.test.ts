@@ -151,3 +151,35 @@ test("the first screen lists what the people you follow are up to; a widget read
   assert.equal(now.widget(GUEST, "rina").current, null);
   rejects(() => now.widget(GUEST, "nobody"), "NOT_FOUND");
 });
+
+test("entries read from a source sit in the archive with the typed ones and cannot be removed", async () => {
+  const { now, tick } = await setup();
+  now.add(rina, { kind: "doing", text: "on the train" });
+  tick(10);
+  const at = new Date(+new Date("2026-10-25T10:00:00Z") + 5 * 60_000).toISOString();
+  now.sources.push((ownerId) =>
+    ownerId === "rina"
+      ? [
+          {
+            id: "spotify:rina",
+            kind: "listening",
+            text: "Velvet Static",
+            by: "After Hours",
+            at,
+            source: "spotify",
+          },
+        ]
+      : [],
+  );
+  const mine = now.archive("rina", "rina");
+  assert.deepEqual(
+    mine.entries.map((e) => e.kind),
+    ["listening", "doing"],
+  );
+  assert.equal(now.live("rina", "rina").listening?.source, "spotify");
+  rejects(() => now.remove(rina, "spotify:rina"), "NOT_FOUND");
+  assert.deepEqual(now.songs(rina), [{ text: "Velvet Static", by: "After Hours" }]);
+  assert.deepEqual(now.songs(dika), []);
+  now.erase("rina");
+  assert.equal(now.archive("rina", "rina").total, 1);
+});

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Camera, Check, Disc3, Sparkles } from "lucide-react";
+import { Camera, Check, Disc3 } from "lucide-react";
 import type { User } from "../../../packages/contracts/src/experience";
 import { api } from "./runtime";
 import { Avatar, Dialog } from "./ui";
@@ -69,7 +69,6 @@ export function Setup({
     [colour, setColour] = useState(""),
     [song, setSong] = useState(""),
     [artist, setArtist] = useState(""),
-    [doing, setDoing] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
@@ -105,7 +104,6 @@ export function Setup({
         vibe,
         ...(colour ? { colour } : {}),
         ...(song.trim() ? { song: { title: song.trim(), artist: artist.trim() } } : {}),
-        ...(doing.trim() ? { doing: doing.trim() } : {}),
       });
       await onDone(publicationId);
     } catch (e) {
@@ -215,12 +213,13 @@ export function Setup({
         )}
         {stepName === "Right now" && (
           <section className="setup-now">
-            <h3>Right now</h3>
+            <h3>A song on repeat</h3>
             <p className="fineprint">
-              One tap a day keeps it alive. These two become the first entries of your archive.
+              Optional. It goes on your page as the first thing you are listening to. Later your
+              page fills this by itself.
             </p>
             <label>
-              <Disc3 size={15} aria-hidden="true" /> A song on repeat
+              <Disc3 size={15} aria-hidden="true" /> Song
               <input
                 autoFocus
                 maxLength={50}
@@ -235,16 +234,6 @@ export function Setup({
                 placeholder="Artist"
                 aria-label="Artist"
                 onChange={(e) => setArtist(e.target.value)}
-              />
-            </label>
-            <label>
-              <Sparkles size={15} aria-hidden="true" /> What are you up to?
-              <input
-                maxLength={80}
-                value={doing}
-                placeholder="on the train"
-                aria-label="What are you up to?"
-                onChange={(e) => setDoing(e.target.value)}
               />
             </label>
           </section>

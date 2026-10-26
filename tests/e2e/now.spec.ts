@@ -6,16 +6,19 @@ test("one tap on your own page notes what you are up to, piles into an archive, 
 }) => {
   await page.goto("/?profile=you");
   const bar = page.getByRole("region", { name: "Right now" });
-  await expect(bar.getByRole("button", { name: "Listening" })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Add a note" })).toBeVisible();
   const stamp = Date.now().toString(36);
   const song = "Velvet Static " + stamp,
     doing = "on the train " + stamp;
-  await bar.getByRole("button", { name: "Listening" }).click();
-  await bar.getByLabel("Song").fill(song);
+  // Typing is behind a small +; a song noted once becomes a one-tap chip afterwards.
+  await bar.getByRole("button", { name: "Add a note" }).click();
+  await bar.getByRole("button", { name: "A song" }).click();
+  await bar.getByLabel("Song", { exact: true }).fill(song);
   await bar.getByLabel("Artist").fill("After Hours");
   await bar.getByRole("button", { name: "Save" }).click();
   await expect(bar.locator(".now-current")).toContainText(song);
   await expect(bar.locator(".now-current")).toContainText("After Hours");
+  await bar.getByRole("button", { name: "Add a note" }).click();
   await bar.getByRole("button", { name: "Doing" }).click();
   await bar.getByLabel("What are you up to?").fill(doing);
   await bar.getByRole("button", { name: "Save" }).click();
@@ -49,10 +52,11 @@ test("five answers after signing up become a published page", async ({ page }) =
   const handle = "setup" + Date.now().toString(36);
   await page.getByRole("button", { name: "Create an account" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Name").fill("Setup Tester");
-  await dialog.getByLabel("Handle").fill(handle);
+  await dialog.getByLabel("Name", { exact: true }).fill("Setup Tester");
+  await dialog.getByLabel("Username").fill(handle);
   await dialog.getByLabel("Email", { exact: true }).fill(`${handle}@mail.example`);
-  await dialog.getByLabel("Password").fill("a long enough phrase");
+  await dialog.getByLabel("Password", { exact: true }).fill("a long enough phrase");
+  await dialog.getByLabel("Repeat password").fill("a long enough phrase");
   await dialog.getByRole("button", { name: "Create account", exact: true }).click();
   const setup = page.getByRole("dialog", { name: /^Welcome/ });
   await setup.getByRole("button", { name: "Next" }).click();
@@ -64,14 +68,12 @@ test("five answers after signing up become a published page", async ({ page }) =
   await setup.getByRole("button", { name: "Next" }).click();
   await setup.getByLabel("Song").fill("Velvet Static");
   await setup.getByLabel("Artist").fill("After Hours");
-  await setup.getByLabel("What are you up to?").fill("on the train");
   await setup.getByRole("button", { name: "Make my page" }).click();
   await expect(setup).toHaveCount(0);
 
-  // The page is up, with the line and the first two entries, and it opens without an account.
+  // The page is up, with the line and the song, and it opens without an account.
   const bar = page.getByRole("region", { name: "Right now" });
-  await expect(bar.locator(".now-current")).toContainText("on the train");
-  await expect(bar.getByRole("button", { name: "Archive · 2" })).toBeVisible();
+  await expect(bar.locator(".now-current")).toContainText("Velvet Static");
   await expect(page.locator(".profile-page.profile-illustrated")).toBeVisible();
   const frame = page.locator(".profile-page iframe").first().contentFrame();
   await expect(frame.locator("#giant-line")).toHaveText("Drawing people on trains");
