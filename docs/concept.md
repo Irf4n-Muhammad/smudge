@@ -236,6 +236,17 @@ counts, no grid on the landing. Decided from the mockup (Oct 26):
   screen-time API; Strava's 2024 terms show a user's data only to that user, so running comes
   through uploads or Apple Health / Google Fit, not Strava. Order: Spotify or Last.fm and Steam
   first, running later. Two weeks per source; never depend on one.
+- Words: **page** is the whole thing, the three tabs; **landing** is the free first tab. No
+  "profile", no "home" in product text.
+- **A page type is a template, never a second kind of page.** Every page keeps the same tabs,
+  strip, Posts and Stories; a type only sets the look and the starting blocks. A cafe's "menu
+  today" is a story like anyone else's, which is why business pages stay inside the same
+  mechanics instead of becoming ads; a business template may display a few products, never a
+  catalogue (Smudge is not a store); and every template must follow each change to the strip
+  or the fixed pages, so start with few. Templates by priority: Person; Musician / creator
+  (early release, members, schedule, a place for fan traces); Place (opening hours, menu, stamps
+  from proven visitors, tied to Moments); Together (a couple, a trip, a class, owned by more
+  than one); Brand (displayed products, the people behind). Launch with Person and Musician.
 - Candidates, each with its main problem: import past data from Spotify, Instagram and Google
   exports so the archive is full on day one (parsing changing formats; first to build, needs no
   API); "one year ago today" (needs the archive); "you and Raka both listened to X today" (both
