@@ -247,6 +247,22 @@ counts, no grid on the landing. Decided from the mockup (Oct 26):
   (early release, members, schedule, a place for fan traces); Place (opening hours, menu, stamps
   from proven visitors, tied to Moments); Together (a couple, a trip, a class, owned by more
   than one); Brand (displayed products, the people behind). Launch with Person and Musician.
+- **The strip: three tabs for everyone, at most one more from the template.** A fixed tab is a
+  promise that holds on every page, so only Page, Posts and Stories qualify. A template may add
+  one fourth tab that Smudge builds and the app draws (Musician: Members; Place: Menu; Brand:
+  Products; Person: none), after Stories so the first three never move; four is the limit at
+  phone width. Everything else (map, guestbook, yearly recap, quizzes) is a landing block the
+  owner places when they have the content.
+- **A post is a small page that can run, not a photo with a caption.** It has a title, a cover
+  and a body of any shape (long writing, a photo series, a program); the collage shows only the
+  cover, cropped to the tile, so the body stays free. Posts marked by the owner are the
+  landing's "selected", with no separate pin mechanic. A post can change after publishing
+  (a countdown, a quiz collecting answers, content that differs for returning visitors), can be
+  attached to other people's landings (a song, a comic, a program: the distribution path), is a
+  signal in that day's Stories without posting twice, and can be locked for members first (about
+  three months) for creators. Not on posts: like counts shown to others, and a forced uniform
+  format (1:1 or 4:5 grids). Open: comments kept, or replaced by traces (stickers, doodles) as on
+  the landing; likes hidden, or removed.
 - Candidates, each with its main problem: import past data from Spotify, Instagram and Google
   exports so the archive is full on day one (parsing changing formats; first to build, needs no
   API); "one year ago today" (needs the archive); "you and Raka both listened to X today" (both
