@@ -3,17 +3,16 @@ import { profilePackageSchema, type ProfilePackage } from "../../contracts/src/p
 import { programCapabilities } from "../../contracts/src/programs.js";
 
 /**
- * Easy-editor settings for the Smudge Paint wall profile. Like the Ink & Paper controls, they are
+ * Easy-editor settings for the Smudge Paint wall landing page (ADR 0046): the name, the line,
+ * the song and what's going on sit in the hero; posts live on the fixed Posts page; sections
+ * are optional extras below. Like the Ink & Paper controls, they are
  * written as an ordinary source file (`smudge/settings.js`), so the advanced editor, MCP and mods
  * keep working on the same package.
  */
 export const smudgeSectionKinds = [
   "latest",
   "selected",
-  "posts",
   "quote",
-  "now",
-  "repeat",
   "countdown",
   "wall",
   "quiz",
@@ -62,7 +61,7 @@ export const defaultSmudgeSettings: SmudgeSettings = {
   place: "",
   marquee: "",
   palette: "paint",
-  sections: ["latest", "selected", "posts"],
+  sections: [],
   quote: { text: "" },
   now: { text: "", place: "", progress: 40 },
   repeat: { song: "", artist: "" },
@@ -78,7 +77,7 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v5";
+export const smudgeVersionMarker = "smudge:v6";
 
 export function supportsSmudgeDesign(pkg: ProfilePackage) {
   return (
@@ -93,7 +92,11 @@ export function readSmudgeSettings(pkg: ProfilePackage): SmudgeSettings {
   if (!match) return structuredClone(defaultSmudgeSettings);
   try {
     const value = JSON.parse(match[1]!) as Partial<SmudgeSettings>;
-    return smudgeSettingsSchema.parse({ ...defaultSmudgeSettings, ...value });
+    // Sections that moved into the hero or the fixed pages (ADR 0046) are dropped quietly.
+    const sections = (value.sections ?? []).filter((k) =>
+      (smudgeSectionKinds as readonly string[]).includes(k),
+    );
+    return smudgeSettingsSchema.parse({ ...defaultSmudgeSettings, ...value, sections });
   } catch {
     return structuredClone(defaultSmudgeSettings);
   }

@@ -128,6 +128,6 @@ test("the capability path answers reads for guests and refuses the rest; section
   });
   for (const cap of ["quiz.read", "quiz.answer", "cat.read", "cat.feed", "profile.wall.add"])
     assert.ok(pkg.manifest.capabilities.includes(cap as never), cap);
-  const off = applySmudgeSettings(pkg, { ...defaultSmudgeSettings, sections: ["posts"] });
+  const off = applySmudgeSettings(pkg, { ...defaultSmudgeSettings, sections: ["latest"] });
   assert.ok(!off.manifest.capabilities.some((c) => c.startsWith("quiz.") || c.startsWith("cat.")));
 });

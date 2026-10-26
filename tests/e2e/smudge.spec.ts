@@ -127,6 +127,12 @@ test("the easy editor: pick a vibe, tap to edit, add The Wall, publish, a friend
     await expect(page.getByText("Draft saved · only you see it")).toBeVisible();
     await expect(frame.locator("#giant-line")).toHaveText("draws on everything.");
     await expect(frame.locator("#giant-line em")).toHaveText("draws");
+    // The song under the name is typed here until the page reads one from the archive.
+    await frame.locator("#hero-now").click();
+    await page.getByRole("textbox", { name: "Song", exact: true }).fill("Velvet Static");
+    await page.getByRole("textbox", { name: "Artist" }).fill("After Hours");
+    await expect(frame.locator("#song-title")).toHaveText("Velvet Static");
+    await expect(frame.locator("#song-by")).toHaveText("After Hours");
 
     // Add The Wall from the section sheet; it shows in the draft straight away.
     await page.getByRole("button", { name: "Section", exact: true }).click();

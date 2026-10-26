@@ -30,23 +30,23 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
     ...defaultSmudgeSettings,
     tagline: "*rolls* wherever it's flat.",
     palette: "electric" as const,
-    sections: ["now", "latest", "wall", "posts"] as const,
+    sections: ["quote", "latest", "wall", "selected"] as const,
     now: { text: "Filming a skate part", place: "Osaka", progress: 60 },
   };
   const pkg = applySmudgeSettings(smudgeProfilePackage, {
     ...settings,
     sections: [...settings.sections],
   });
-  assert.deepEqual(readSmudgeSettings(pkg).sections, ["now", "latest", "wall", "posts"]);
+  assert.deepEqual(readSmudgeSettings(pkg).sections, ["quote", "latest", "wall", "selected"]);
   assert.equal(readSmudgeSettings(pkg).tagline, "*rolls* wherever it's flat.");
   assert.match(pkg.files["smudge/settings.js"]!, /^window\.smudgeSettings = /);
   for (const cap of ["profile.wall.read", "profile.wall.add", "profile.wall.remove"])
     assert.ok((pkg.manifest.capabilities as string[]).includes(cap));
-  const off = applySmudgeSettings(pkg, { ...readSmudgeSettings(pkg), sections: ["posts"] });
+  const off = applySmudgeSettings(pkg, { ...readSmudgeSettings(pkg), sections: ["latest"] });
   assert.ok(!(off.manifest.capabilities as string[]).some((c) => c.startsWith("profile.wall.")));
   // Bad input is refused instead of written into the page.
   assert.throws(() => applySmudgeSettings(pkg, { ...settings, tagline: "x".repeat(61) }));
-  assert.throws(() => applySmudgeSettings(pkg, { ...settings, sections: ["posts", "posts"] }));
+  assert.throws(() => applySmudgeSettings(pkg, { ...settings, sections: ["latest", "latest"] }));
   assert.throws(() => applySmudgeSettings(rakaPackage, defaultSmudgeSettings));
   assert.equal(supportsSmudgeDesign(rakaPackage), false);
   // A broken settings file falls back to defaults rather than breaking the editor.
@@ -63,7 +63,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
   ).replace('<div class="sm-sections" id="sm-sections"></div>\n  ', "");
   delete old.files["smudge/sections.js"];
   old.files["smudge/profile.html"] = "<p>old hero</p>";
-  old.files["smudge/post.html"] = "<!-- smudge:v5 --><p>my own grid</p>";
+  old.files["smudge/post.html"] = "<!-- smudge:v6 --><p>my own grid</p>";
   const next = applySmudgeSettings(
     profilePackageSchema.parse(old),
     defaultSmudgeSettings,
@@ -73,7 +73,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
     next.files["smudge/profile.html"],
     smudgeProfilePackage.files["smudge/profile.html"],
   );
-  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v5 --><p>my own grid</p>");
+  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v6 --><p>my own grid</p>");
   assert.ok(next.files["smudge/sections.js"]);
   const shell = next.files["index.html"]!;
   assert.match(shell, /src="smudge\/settings\.js"/);
@@ -112,7 +112,7 @@ test("the Wall: visitors add notes, authors and owners remove them, limits, bloc
     budi = { userId: "budi" };
   const pkg = applySmudgeSettings(smudgeProfilePackage, {
     ...defaultSmudgeSettings,
-    sections: ["wall", "posts"],
+    sections: ["wall", "latest"],
   });
   const draft = profiles.create(owner, pkg);
   const live = profiles.publish(owner, draft.id, 1, 0).publicationId!;
@@ -160,7 +160,7 @@ test("the Wall: visitors add notes, authors and owners remove them, limits, bloc
   // Turning the Wall off in a later publication closes the old one too.
   const off = profiles.create(
     owner,
-    applySmudgeSettings(pkg, { ...defaultSmudgeSettings, sections: ["posts"] }),
+    applySmudgeSettings(pkg, { ...defaultSmudgeSettings, sections: ["latest"] }),
   );
   profiles.publish(owner, off.id, 1, 1);
   rejects(

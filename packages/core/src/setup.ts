@@ -48,14 +48,11 @@ export function setupPage(
   const song = value.song?.title ? value.song : undefined;
   let pkg: ProfilePackage;
   if (supportsSmudgeDesign(template)) {
-    const sections = [...defaultSmudgeSettings.sections];
-    if (value.doing) sections.push("now");
-    if (song) sections.push("repeat");
+    // The song and what you are doing sit in the hero (ADR 0046), under the name.
     pkg = applySmudgeSettings(template, {
       ...defaultSmudgeSettings,
       tagline: value.bio.slice(0, 60),
       ...(value.colour ? { palette: value.colour } : {}),
-      sections,
       now: { ...defaultSmudgeSettings.now, text: value.doing ?? "" },
       repeat: song ? { song: song.title, artist: song.artist } : defaultSmudgeSettings.repeat,
     });

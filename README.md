@@ -313,18 +313,21 @@ app outside the page, so no page can lose it.
 
 ## Paint wall profile
 
-New profiles start from **Smudge · Paint wall** (ADR 0015): a giant painted first name filled with
-your newest photo, tap anywhere to throw paint, your latest post, a sideways strip of picks and a
-tabbed grid. It follows the Paint/Halloween season, and post buttons open in the in-app page
-sheet. Open `/?profile=ines` to see it. Its parts mix with Ink & Paper in the mod library.
+New profiles start from **Smudge · Paint wall** (ADR 0015, a landing page since ADR 0046): a
+giant painted first name filled with your newest photo, your line, and right under the name the
+song you are playing and what you are up to, read from your archive. Tap anywhere to throw paint.
+No counts, no grid: all posts are on the fixed Posts page. Optional sections (Latest, Gallery,
+Big quote, Countdown, The Wall, Quiz, The Cat) go below. It follows the Paint/Halloween season,
+and post buttons open in the in-app page sheet. Open `/?profile=ines` to see it.
 
 ## Easy profile editor
 
 On your own profile, **Edit profile** opens the easy editor (ADR 0016). Pick a vibe from
 pictures, then tap any outlined part of your Paint wall to change it: your big name, the italic
-line (`*stars*` make words italic), the top corner, the ribbon, your name, bio and photo. The
-bottom bar changes colours, adds sections (Now doing, Gallery, The Wall, Big quote, On repeat,
-Countdown), reorders or hides them, and previews the result. Edits save to a private draft;
+line (`*stars*` make words italic), the song and what you are up to under the name, the top
+corner, the ribbon, your name, bio and photo. The bottom bar changes colours, adds sections
+(Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat), reorders or hides them, and
+previews the result. Edits save to a private draft;
 **Publish** makes them public. **The Wall** lets visitors stick short notes on your profile; you
 can take any of them down, and anyone else can report one. **Advanced editor** opens the same
 draft in the source editor.

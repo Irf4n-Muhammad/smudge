@@ -1,4 +1,4 @@
-<!-- smudge:v5 -->
+<!-- smudge:v6 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm">
@@ -22,15 +22,32 @@
       >tap anywhere to throw paint
     </p>
     <div class="role" data-edit="about">
-      <p><b id="owner-name"></b> <span id="owner-count"></span></p>
+      <p><b id="owner-name"></b></p>
       <div class="avatar" id="avatar" data-edit="photo">
         <span class="sticker" id="sticker"></span>
       </div>
     </div>
+    <!-- The song and what's going on, right under the name (ADR 0046): read from the owner's
+         archive when there is one, else what they typed in the editor. -->
+    <div class="hero-now" id="hero-now" data-edit="now">
+      <div class="song" id="song" hidden>
+        <span class="song-disc" aria-hidden="true"></span>
+        <span class="song-text">
+          <small id="song-kind">ON REPEAT</small>
+          <strong id="song-title"></strong>
+          <span id="song-by"></span>
+        </span>
+        <span class="song-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      </div>
+      <p class="doing" id="doing" hidden>
+        <span class="doing-dot" aria-hidden="true"></span>
+        <span id="doing-text"></span>
+        <time id="doing-when"></time>
+      </p>
+    </div>
   </section>
   <div class="actions">
     <button class="btn main" id="profile-follow" disabled>Follow</button>
-    <button class="btn" id="see-posts">See posts</button>
   </div>
   <p class="follow-status" id="follow-status" role="status"></p>
   <div class="marq" aria-hidden="true" data-edit="marquee">
@@ -46,19 +63,14 @@
     const $ = (id) => document.getElementById(id);
     // Easy-editor settings (smudge/settings.js); every field falls back to the profile's own data.
     const settings = window.smudgeSettings || {};
-    let stats = { followers: null, posts: 0, stories: 0 };
+    let handle = "";
+    // The ribbon says what the owner wrote, or their handle; never a count of anything.
     function marquee() {
-      const parts = [];
-      const custom = (settings.marquee || "")
+      const parts = (settings.marquee || "")
         .split(/[&,]/)
         .map((t) => t.trim().toUpperCase())
         .filter(Boolean);
-      if (custom.length) parts.push(...custom);
-      else if (stats.followers !== null)
-        parts.push(stats.followers + (stats.followers === 1 ? " FOLLOWER" : " FOLLOWERS"));
-      if (!custom.length) parts.push(stats.posts + (stats.posts === 1 ? " POST" : " POSTS"));
-      if (!custom.length && stats.stories)
-        parts.push(stats.stories + (stats.stories === 1 ? " STORY" : " STORIES"));
+      if (!parts.length && handle) parts.push("@" + handle.toUpperCase());
       const track = $("marq");
       track.textContent = "";
       // Two copies so the loop never shows a gap.
@@ -95,8 +107,6 @@
             : "Follow";
       b.disabled = !s.writable || s.ownProfile;
       b.setAttribute("aria-pressed", String(s.following));
-      stats.followers = s.followers;
-      marquee();
     });
     $("profile-follow").onclick = async function () {
       this.disabled = true;
@@ -111,8 +121,47 @@
         this.disabled = false;
       }
     };
-    $("see-posts").onclick = () =>
-      document.getElementById("posts")?.scrollIntoView({ block: "start" });
+    const ago = (iso) => {
+      const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+      if (mins < 60) return mins <= 1 ? "just now" : mins + " min ago";
+      const hours = Math.round(mins / 60);
+      if (hours < 24) return hours + " h ago";
+      const days = Math.round(hours / 24);
+      return days === 1 ? "yesterday" : days + " days ago";
+    };
+    // The song and what's going on: live entries first (ADR 0044), the editor's words otherwise.
+    // While the owner edits, what they type wins, so the preview shows their words.
+    let liveNow = null;
+    window.addEventListener("forma:editing", () => heroNow(liveNow));
+    function heroNow(live) {
+      liveNow = live;
+      const editing = document.documentElement.dataset.editing === "on";
+      const typed =
+        settings.repeat && settings.repeat.song
+          ? { text: settings.repeat.song, by: settings.repeat.artist }
+          : null;
+      const heard = live && live.listening;
+      const song = editing ? typed || heard : heard || typed;
+      $("song").hidden = !song;
+      if (song) {
+        $("song").hidden = false;
+        $("song-kind").textContent = song.source === "spotify" ? "SPOTIFY · PLAYING" : "ON REPEAT";
+        $("song-title").textContent = song.text;
+        $("song-by").textContent = song.by || "";
+        $("song").classList.toggle("live", song.source === "spotify");
+      }
+      const typedDoing =
+        settings.now && settings.now.text ? { text: settings.now.text, at: "" } : null;
+      const seen = live && live.current;
+      const doing = editing ? typedDoing || seen : seen || typedDoing;
+      $("doing").hidden = !doing;
+      if (doing) {
+        $("doing").hidden = false;
+        $("doing-text").textContent = doing.text;
+        $("doing-when").textContent = doing.at ? ago(doing.at) : "";
+        if (doing.at) $("doing-when").dateTime = doing.at;
+      }
+    }
     refreshSocial();
     profileData
       .then(async (d) => {
@@ -135,12 +184,8 @@
           $("giant-line").append(node);
         });
         $("owner-name").textContent = d.owner.name + ".";
-        stats.posts = d.posts.length;
-        stats.stories = d.posts.filter((p) => p.format === "story").length;
-        $("owner-count").textContent =
-          d.posts.length === 0
-            ? "Nothing posted yet."
-            : d.posts.length + (d.posts.length === 1 ? " post" : " posts") + " so far.";
+        handle = d.owner.handle || "";
+        heroNow(d.now);
         const avatar = $("avatar");
         if (d.owner.avatarSrc) {
           const img = document.createElement("img");
@@ -153,7 +198,7 @@
           initials.textContent = d.owner.initials || first.slice(0, 1);
           avatar.prepend(initials);
         }
-        $("sticker").textContent = d.posts.length ? "✦ " + d.posts.length : "✦ NEW";
+        $("sticker").textContent = settings.place ? "✦ " + settings.place.split(",")[0] : "✦ HI";
         if (d.owner.bio) {
           $("quote").hidden = false;
           $("quote-text").textContent = "“" + d.owner.bio + "”";

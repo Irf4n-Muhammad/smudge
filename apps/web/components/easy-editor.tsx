@@ -118,29 +118,25 @@ const paletteNames: Record<SmudgePalette, string> = {
   ocean: "Ocean",
   mono: "Mono",
 };
+// The landing page's extras (ADR 0046). The song and what's going on sit in the hero, and all
+// posts live on the fixed Posts page, so neither is a section any more.
 const sectionInfo: Record<SmudgeSection, { name: string; note: string }> = {
-  now: { name: "Now doing", note: "What you're up to, with progress" },
-  selected: { name: "Gallery", note: "Swipe through your best posts" },
   wall: { name: "The Wall", note: "Friends leave notes" },
   quiz: { name: "Quiz", note: "How well do friends know you?" },
   cat: { name: "The Cat", note: "Friends keep it fed" },
   quote: { name: "Big quote", note: "One line, huge" },
-  repeat: { name: "On repeat", note: "Your song right now" },
   countdown: { name: "Countdown", note: "For drops and events" },
   latest: { name: "Latest", note: "Your newest post, big" },
-  posts: { name: "All posts", note: "Grid with tabs" },
+  selected: { name: "Gallery", note: "Swipe through your best posts" },
 };
 const addable: SmudgeSection[] = [
-  "now",
-  "selected",
   "wall",
   "quiz",
   "cat",
   "quote",
-  "repeat",
   "countdown",
   "latest",
-  "posts",
+  "selected",
 ];
 /** Fields the profile frame can report when its outlined parts are tapped. */
 const fieldTitles: Record<string, string> = {
@@ -150,6 +146,7 @@ const fieldTitles: Record<string, string> = {
   about: "Name & bio",
   photo: "Your photo",
   marquee: "The ribbon",
+  now: "Song & right now",
   story: "Highlights",
   post: "Posts",
   feature: "Drawing wall",
@@ -164,9 +161,6 @@ function inTwoWeeks() {
 function withStarter(s: SmudgeSettings, kind: SmudgeSection): SmudgeSettings {
   const next = { ...s, sections: [...s.sections, kind] };
   if (kind === "quote" && !s.quote.text) next.quote = { text: "Say it in *one* line." };
-  if (kind === "now" && !s.now.text)
-    next.now = { text: "Working on something new", place: s.place, progress: 30 };
-  if (kind === "repeat" && !s.repeat.song) next.repeat = { song: "Song title", artist: "Artist" };
   if (kind === "countdown" && !s.countdown.date)
     next.countdown = { label: "Something's coming", date: inTwoWeeks() };
   if (kind === "cat" && !s.cat.name) next.cat = { name: "Mochi" };
@@ -791,6 +785,36 @@ export function EasyEditor({
               onChange={(v) => changeLook({ ...look, line: v })}
             />
           )}
+          {sheet === "field" && smudge && field === "now" && (
+            <div className="easy-field">
+              <h2>Song &amp; right now</h2>
+              <p className="easy-note">
+                Under your name. Once your page reads a song or a note from your archive, that takes
+                over; this is what shows until then.
+              </p>
+              <TextField
+                title=""
+                label="Song"
+                value={settings.repeat.song}
+                max={50}
+                onChange={(v) => change({ ...settings, repeat: { ...settings.repeat, song: v } })}
+              />
+              <TextField
+                title=""
+                label="Artist"
+                value={settings.repeat.artist}
+                max={50}
+                onChange={(v) => change({ ...settings, repeat: { ...settings.repeat, artist: v } })}
+              />
+              <TextField
+                title=""
+                label="What are you up to?"
+                value={settings.now.text}
+                max={60}
+                onChange={(v) => change({ ...settings, now: { ...settings.now, text: v } })}
+              />
+            </div>
+          )}
           {sheet === "field" && smudge && sectionField && (
             <div className="easy-field">
               <h2>{sectionInfo[sectionField].name}</h2>
@@ -804,62 +828,6 @@ export function EasyEditor({
                   area
                   onChange={(v) => change({ ...settings, quote: { text: v } })}
                 />
-              )}
-              {sectionField === "now" && (
-                <>
-                  <TextField
-                    title=""
-                    label="What are you doing?"
-                    value={settings.now.text}
-                    max={60}
-                    onChange={(v) => change({ ...settings, now: { ...settings.now, text: v } })}
-                  />
-                  <TextField
-                    title=""
-                    label="Where"
-                    value={settings.now.place}
-                    max={30}
-                    onChange={(v) => change({ ...settings, now: { ...settings.now, place: v } })}
-                  />
-                  <label className="easy-range">
-                    How far along · {settings.now.progress}%
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={5}
-                      value={settings.now.progress}
-                      onChange={(e) =>
-                        change({
-                          ...settings,
-                          now: { ...settings.now, progress: Number(e.target.value) },
-                        })
-                      }
-                    />
-                  </label>
-                </>
-              )}
-              {sectionField === "repeat" && (
-                <>
-                  <TextField
-                    title=""
-                    label="Song"
-                    value={settings.repeat.song}
-                    max={50}
-                    onChange={(v) =>
-                      change({ ...settings, repeat: { ...settings.repeat, song: v } })
-                    }
-                  />
-                  <TextField
-                    title=""
-                    label="Artist"
-                    value={settings.repeat.artist}
-                    max={50}
-                    onChange={(v) =>
-                      change({ ...settings, repeat: { ...settings.repeat, artist: v } })
-                    }
-                  />
-                </>
               )}
               {sectionField === "countdown" && (
                 <>

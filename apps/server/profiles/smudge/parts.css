@@ -569,3 +569,139 @@ html[data-motion="reduce"] .sm .marq-track {
     margin-inline: 40px;
   }
 }
+
+/* smudge:v6 — the song and what's going on, right under the name (ADR 0046). */
+.sm .hero-now {
+  position: relative;
+  z-index: 6;
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.sm .hero-now:empty,
+.sm .hero-now:not(:has(:not([hidden]))) {
+  display: none;
+}
+.sm .song {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 5px 5px 0 var(--p1);
+  transform: rotate(0.6deg);
+}
+.sm .song-disc {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  background: conic-gradient(from 90deg, var(--p1), var(--p3), var(--p4), var(--p1));
+  position: relative;
+}
+.sm .song-disc::after {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.sm .song-text {
+  min-width: 0;
+  display: grid;
+  line-height: 1.1;
+}
+.sm .song-text small {
+  font: 800 10px var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--p4);
+}
+.sm .song.live .song-text small {
+  color: #1db954;
+}
+.sm .song-text strong {
+  font: 800 16px var(--big);
+  letter-spacing: -0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sm .song-text > span {
+  font: 500 13px var(--ui);
+  opacity: 0.7;
+}
+.sm .song-bars {
+  margin-left: auto;
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 22px;
+}
+.sm .song-bars i {
+  width: 4px;
+  border-radius: 2px;
+  background: var(--ink);
+  height: 10px;
+}
+.sm .song-bars i:nth-child(2) {
+  height: 20px;
+}
+.sm .song-bars i:nth-child(3) {
+  height: 14px;
+}
+.sm .song-bars i:nth-child(4) {
+  height: 22px;
+}
+.sm .song.live .song-bars i {
+  animation: sm-bar 0.9s ease-in-out infinite alternate;
+}
+.sm .song.live .song-bars i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.sm .song.live .song-bars i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+.sm .song.live .song-bars i:nth-child(4) {
+  animation-delay: 0.1s;
+}
+@keyframes sm-bar {
+  to {
+    height: 6px;
+  }
+}
+.sm .doing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding-left: 4px;
+  font: italic 400 24px/1 var(--serif);
+  color: var(--p3);
+  transform: rotate(-0.8deg);
+}
+.sm .doing-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--p4);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--p4) 25%, transparent);
+}
+.sm .doing time {
+  margin-left: auto;
+  font: 500 12px var(--ui);
+  color: var(--muted);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sm .song.live .song-bars i {
+    animation: none;
+  }
+}
+/* While editing, the block stays tappable even before anything is in it. */
+html[data-editing="on"] .sm .hero-now {
+  display: grid;
+  min-height: 28px;
+}

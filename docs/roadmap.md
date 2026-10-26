@@ -77,6 +77,9 @@
       a song in one tap, typing behind a +). See ADR 0044.
 - [x] Two layers (ADR 0045): the landing page is yours, Posts (a collage) and Stories (the days,
       read) are fixed pages with a strip drawn outside the page, in the app and on share links.
+- [x] The Paint wall as a landing page (ADR 0046): the song and "right now" under the name,
+      no counts, no post grid; the easy editor and the sign-up setup fill the hero.
+      Next: the other looks on the same frame, one by one.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.

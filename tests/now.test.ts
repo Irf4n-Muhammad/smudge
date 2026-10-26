@@ -106,7 +106,8 @@ test("five answers publish a page with the line, colour, song and first entries"
   assert.equal(settings.palette, "ocean");
   assert.equal(settings.tagline, "Drawing people on trains");
   assert.equal(settings.repeat.song, "Velvet Static");
-  assert.ok(settings.sections.includes("now") && settings.sections.includes("repeat"));
+  assert.equal(settings.now.text, "on the train");
+  assert.deepEqual(settings.sections, []);
   assert.equal(social.users().find((u) => u.id === "rina")!.bio, "Drawing people on trains");
   const archive = now.archive("rina", "rina");
   assert.deepEqual(

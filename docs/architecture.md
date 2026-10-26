@@ -80,6 +80,10 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
 - `packages/core/src/programs.ts`: programs between people (ADR 0043): the quiz and the cat,
   kept by owner, reached through the page's `quiz.*` and `cat.*` grants (`ProfileService.programs`
   for members, `SharingService` for guest reads) and drawn by the Paint wall's `sections.js`.
+- `apps/server/profiles/smudge/`: the Paint wall, a landing page (ADR 0046): `profile.html` is
+  the hero with the song and "right now" read from `profile.read().now`, `story.html` and
+  `post.html` the optional Latest and Gallery, `sections.js` the other extras;
+  `packages/core/src/smudge-design.ts` holds the settings the easy editor writes.
 - `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
   stories as a timeline of posts, now entries and moments, by the feed's audience rules.
   `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage

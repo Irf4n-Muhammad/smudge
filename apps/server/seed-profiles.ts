@@ -77,7 +77,7 @@ export function seedProfiles(profiles: ProfileService) {
   for (const [ownerId, template, marker] of [
     ["maya", "room", "profile-v1:maya"],
     ["leo", "comic", "profile-v1:leo"],
-    ["ines", "smudge", "profile-smudge-v1:ines"],
+    ["ines", "smudge", "profile-smudge-v2:ines"],
   ] as const) {
     if (store.get("seed", marker)) continue;
     // Never replace a profile a user has already published, including after interrupted seeding.
@@ -106,7 +106,7 @@ function inesPaintWall() {
     ...defaultSmudgeSettings,
     tagline: "*paints* the city, *slowly.*",
     place: "LISBON, PT",
-    sections: ["now", "latest", "selected", "quote", "wall", "posts"],
+    sections: ["latest", "selected", "quote", "wall"],
     now: { text: "Finishing the Rua das Flores mural", place: "Lisbon", progress: 70 },
     quote: { text: "Walls are just *slow* conversations." },
   });
