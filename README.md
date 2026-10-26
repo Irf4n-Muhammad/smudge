@@ -318,7 +318,8 @@ giant painted first name filled with your newest photo, your line, and right und
 song you are playing and what you are up to, read from your archive. Tap anywhere to throw paint.
 No counts, no grid: all posts are on the fixed Posts page. Optional sections (Latest, Gallery,
 Big quote, Countdown, The Wall, Quiz, The Cat) go below. It follows the Paint/Halloween season,
-and post buttons open in the in-app page sheet. Open `/?profile=ines` to see it.
+and post buttons open in the in-app page sheet. Open `/?profile=ines` to see it. Pages
+published on an older Paint wall are brought up to the template when the server starts.
 
 ## Easy profile editor
 

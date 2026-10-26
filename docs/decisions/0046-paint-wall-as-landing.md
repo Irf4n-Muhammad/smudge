@@ -37,8 +37,10 @@ details.
 
 ## Consequences
 
-- A page made before this keeps working until its owner edits it; then it is upgraded and its
-  post grid disappears, with the Posts page one tap away on the strip.
+- Pages made before this are brought up to the template when the server starts
+  (`upgradeSmudgePages`): a new version is published for each stale Paint wall, with the
+  owner's settings kept, so no landing page keeps the old post grid. A page that cannot be
+  rebuilt is left as it is.
 - Other looks (Ink & Paper, Essentials, Room, Comic) still carry their own post lists on the
   landing page; they are rebuilt one by one on the same frame.
 - The hero's Spotify mark is a label, not a logo; connecting Spotify is the owner's own step

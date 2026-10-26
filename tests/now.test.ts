@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { Store } from "../packages/core/src/database.js";
 import { NowService } from "../packages/core/src/now.js";
 import { ProfileService } from "../packages/core/src/profiles.js";
-import { setupColours, setupPage } from "../packages/core/src/setup.js";
-import { readSmudgeSettings } from "../packages/core/src/smudge-design.js";
+import { setupColours, setupPage, upgradeSmudgePages } from "../packages/core/src/setup.js";
+import { defaultSmudgeSettings, readSmudgeSettings } from "../packages/core/src/smudge-design.js";
 import { GUEST, SocialService } from "../packages/core/src/social.js";
 import { profileTemplates } from "../apps/server/seed-profiles.js";
 import { seedSmudge } from "../apps/server/seed-smudge.js";
@@ -183,4 +183,28 @@ test("entries read from a source sit in the archive with the typed ones and cann
   assert.deepEqual(now.songs(dika), []);
   now.erase("rina");
   assert.equal(now.archive("rina", "rina").total, 1);
+});
+
+test("published Paint walls from an older template are brought up to date at start, settings kept", async () => {
+  const { profiles } = await setup();
+  const template = profileTemplates.smudge;
+  // Rina published on the previous template version, with her own line and a section.
+  const old = structuredClone(template);
+  for (const path of Object.keys(old.files))
+    if (path.startsWith("smudge/"))
+      old.files[path] = old.files[path]!.replaceAll("smudge:v6", "smudge:v5");
+  const settings = { ...defaultSmudgeSettings, tagline: "*draws* on trains", sections: ["wall"] };
+  old.files["smudge/settings.js"] = `window.smudgeSettings = ${JSON.stringify(settings)};`;
+  const draft = profiles.create(rina, old);
+  profiles.publish(rina, draft.id, draft.revision, 0);
+  assert.deepEqual(upgradeSmudgePages(profiles, template), ["rina"]);
+  const state = profiles.state("rina");
+  assert.equal(state.version, 2);
+  const pkg = profiles.publication(state.publicationId!).package;
+  assert.ok(pkg.files["smudge/profile.html"]!.includes("smudge:v6"));
+  assert.equal(readSmudgeSettings(pkg).tagline, "*draws* on trains");
+  assert.deepEqual(readSmudgeSettings(pkg).sections, ["wall"]);
+  // Already current: nothing to do, no new version.
+  assert.deepEqual(upgradeSmudgePages(profiles, template), []);
+  assert.equal(profiles.state("rina").version, 2);
 });

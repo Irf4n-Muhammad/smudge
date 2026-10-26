@@ -41,7 +41,7 @@ import { MomentDayService } from "../../packages/core/src/gathering-day.js";
 import { ProgramService } from "../../packages/core/src/programs.js";
 import { NowService } from "../../packages/core/src/now.js";
 import { PagesService } from "../../packages/core/src/pages.js";
-import { setupColours, setupPage } from "../../packages/core/src/setup.js";
+import { setupColours, setupPage, upgradeSmudgePages } from "../../packages/core/src/setup.js";
 import { gatheringRoutes } from "./gathering-routes.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
@@ -173,6 +173,11 @@ if (config.demoContent) {
   seedPlan(service);
   seedGamers(service, sidesService);
   seedGift(service);
+}
+// Pages made on an older Paint wall are brought up to the template at start (ADR 0046).
+{
+  const upgraded = upgradeSmudgePages(profiles, profileTemplates.smudge).length;
+  if (upgraded) console.log(`${upgraded} Paint wall page(s) brought up to the template`);
 }
 const sharing = new SharingService(service, community, identity, profiles);
 // Your now (ADR 0041): one-tap entries, read by the same people who may see your posts, and by
