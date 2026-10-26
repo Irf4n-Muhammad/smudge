@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { profilePackageSchema, type ProfilePackage } from "../../contracts/src/profile.js";
+import {
+  profilePackageSchema,
+  type PageLook,
+  type ProfilePackage,
+} from "../../contracts/src/profile.js";
 import { programCapabilities } from "../../contracts/src/programs.js";
 
 /**
@@ -27,6 +31,19 @@ export const smudgePalettes = {
   mono: ["#101010", "#bdbdbd", "#5b5b5b", "#e8e8e8"],
 } as const;
 export type SmudgePalette = keyof typeof smudgePalettes;
+/**
+ * What the Paint wall tells the app about itself (ADR 0049): the dark ground, the ink, and the
+ * palette's second colour as the accent, so Posts, Stories and the strip read as the same page.
+ */
+export const smudgeLook = (palette: SmudgePalette): PageLook => ({
+  ground: "#0e0d0b",
+  ink: "#f3efe6",
+  muted: "#9a948a",
+  card: "#1a1816",
+  accent: smudgePalettes[palette][1],
+  display: "serif",
+  label: "mono",
+});
 const text = (max: number) => z.string().trim().max(max);
 export const chapterKinds = ["run", "work", "music", "custom"] as const;
 export type ChapterKind = (typeof chapterKinds)[number];
@@ -187,5 +204,6 @@ export function applySmudgeSettings(
     throw new Error("This profile already uses too many features to add this section.");
   pkg.manifest.capabilities = caps as typeof pkg.manifest.capabilities;
   pkg.manifest.autoHeight = true;
+  pkg.manifest.look = smudgeLook(s.palette);
   return profilePackageSchema.parse(pkg);
 }

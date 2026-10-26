@@ -64,6 +64,22 @@ test("the Paint wall profile shows real posts, follows the season and opens post
   });
   await expect(frame.locator("html")).not.toHaveAttribute("data-season", season!);
 
+  // Posts and Stories take the look's colours (ADR 0049): the ground and the accent on the strip.
+  await page
+    .getByRole("navigation", { name: "Pages" })
+    .getByRole("button", { name: /^Posts/ })
+    .click();
+  const posts = page.locator(".profile-page.has-look");
+  await expect(posts).toHaveCSS("background-color", "rgb(14, 13, 11)");
+  await expect(page.getByRole("button", { name: "Follow" })).toHaveCSS(
+    "background-color",
+    "rgb(216, 255, 61)",
+  );
+  await page
+    .getByRole("navigation", { name: "Pages" })
+    .getByRole("button", { name: "Page" })
+    .click();
+
   // Posts open in the host dialog, which keeps the post's button.
   await frame.getByRole("button", { name: "Open The wall on Rua das Flores" }).first().click();
   const dialog = page.getByRole("dialog", { name: "The wall on Rua das Flores" });

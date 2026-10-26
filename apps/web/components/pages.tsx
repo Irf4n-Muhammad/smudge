@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Image as ImageIcon, Layers, PanelTop, Pencil } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { User } from "../../../packages/contracts/src/experience";
+import type { PageLook, ProfilePackage } from "../../../packages/contracts/src/profile";
 import type {
   PageTab,
   PostTile,
@@ -23,6 +25,44 @@ const tabs: { tab: PageTab; label: string; icon: typeof PanelTop }[] = [
   { tab: "posts", label: "Posts", icon: ImageIcon },
   { tab: "stories", label: "Stories", icon: Layers },
 ];
+const displayFonts: Record<PageLook["display"], string> = {
+  serif: '"Instrument Serif", Georgia, "Times New Roman", serif',
+  hand: "var(--hand, inherit)",
+  sans: "var(--ui, inherit)",
+};
+const labelFonts: Record<PageLook["label"], string> = {
+  mono: "ui-monospace, Menlo, Consolas, monospace",
+  sans: "var(--ui, inherit)",
+};
+/**
+ * A look's tokens as CSS variables (ADR 0049): the fixed pages and the strip read them, so the
+ * three pages feel like one. A page without a look leaves the app's own colours in place.
+ */
+export function lookStyle(manifest: ProfilePackage["manifest"] | null | undefined): {
+  className: string;
+  style: CSSProperties | undefined;
+} {
+  const look = manifest?.schemaVersion === 2 ? manifest.look : undefined;
+  if (!look) return { className: "", style: undefined };
+  return {
+    className: "has-look",
+    style: {
+      "--page-ground": look.ground,
+      "--page-ink": look.ink,
+      "--page-muted": look.muted,
+      "--page-card": look.card,
+      "--page-accent": look.accent,
+      "--page-display": displayFonts[look.display],
+      "--page-label": labelFonts[look.label],
+      "--strip-bg": look.ink,
+      "--strip-ink": look.ground,
+      "--strip-on": look.ground,
+      "--strip-on-ink": look.ink,
+      "--strip-action-bg": look.accent,
+      "--strip-action-ink": look.ground,
+    } as CSSProperties,
+  };
+}
 /**
  * The one action next to the tabs (ADR 0048): Edit for the owner, Follow for everyone else. It
  * sits in the thumb zone with the strip, so no page needs a button of its own for it.
@@ -95,16 +135,26 @@ export function PageStrip({
   );
 }
 
-/** The head of a fixed page: who this is, with no counts of followers. */
-export function PageHead({ user, page }: { user: User; page: "posts" | "stories" }) {
+/**
+ * The head of a fixed page: who this is, with no counts of followers. Under a look (ADR 0049)
+ * the page's own name is the big word and the person is the line under it, as on their landing.
+ */
+export function PageHead({
+  user,
+  page,
+  look,
+}: {
+  user: User;
+  page: "posts" | "stories";
+  look?: boolean;
+}) {
+  const name = page === "posts" ? "Posts" : "Stories";
   return (
     <header className="page-head">
-      <Avatar user={user} />
+      {!look && <Avatar user={user} />}
       <div>
-        <h1>{user.name}</h1>
-        <small>
-          @{user.handle} · {page === "posts" ? "Posts" : "Stories"}
-        </small>
+        <h1>{look ? name : user.name}</h1>
+        <small>{look ? `${user.name} · @${user.handle}` : `@${user.handle} · ${name}`}</small>
         {user.bio && <p>{user.bio}</p>}
       </div>
     </header>

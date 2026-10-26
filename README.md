@@ -311,7 +311,8 @@ Posts and Stories are Smudge's fixed pages, the same under every look: a collage
 (`?page=posts`, `/u/<handle>/posts` for guests) and your days read from what happened, never
 typed (`?page=stories`, `/u/<handle>/stories`): posts, what was playing, where you were, the
 moments you came to. A strip with Page · Posts · Stories floats over every profile, drawn by the
-app outside the page, so no page can lose it.
+app outside the page, so no page can lose it. A look may colour the two fixed pages and the strip
+with five colours and two font roles (ADR 0049); it cannot reshape them.
 
 ## Paint wall profile
 

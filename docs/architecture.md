@@ -85,11 +85,13 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   `profile.read().now` and the chapters drawn from the settings, `story.html` and `post.html`
   the optional Latest and Gallery, `sections.js` the other extras;
   `packages/core/src/smudge-design.ts` holds the settings the easy editor writes, chapters
-  included, and strips the page's follow grant (the strip's action follows instead).
+  included, strips the page's follow grant (the strip's action follows instead) and writes the
+  manifest's `look` from the palette (ADR 0049).
 - `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
   stories as a timeline of posts, now entries and moments, by the feed's audience rules.
   `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage
-  (`PostsCollage`) and the days (`Stories`), inside the app (`?page=`) and on `/u/<handle>/posts`
+  (`PostsCollage`) and the days (`Stories`) in the look's tokens (`lookStyle`, the manifest's
+  `look` as `--page-*` and `--strip-*` variables, ADR 0049), inside the app (`?page=`) and on `/u/<handle>/posts`
   and `/u/<handle>/stories`.
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.

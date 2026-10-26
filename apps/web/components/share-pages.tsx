@@ -10,7 +10,7 @@ import { CommentList } from "./comments";
 import type { CommentItem } from "./comments";
 import { MentionText } from "./mention-text";
 import { NowBar } from "./now";
-import { PageHead, PageStrip, PostsCollage, Stories } from "./pages";
+import { PageHead, PageStrip, PostsCollage, Stories, lookStyle } from "./pages";
 import type { FixedPage, PostTile } from "../../../packages/contracts/src/pages";
 
 interface Person {
@@ -207,6 +207,7 @@ export function SharedProfile({
   if (view === "missing") return <Missing what="profile" />;
   if (!view || !guest) return <div className="share-page" aria-busy="true" />;
   const manifest = view.profile?.manifest;
+  const look = lookStyle(manifest);
   const base = `/u/${encodeURIComponent(handle)}`;
   const strip = (
     <PageStrip
@@ -221,10 +222,14 @@ export function SharedProfile({
   const postHref = (p: PostTile) => `/p/${encodeURIComponent(p.id)}`;
   if (page !== "page")
     return (
-      <div className="share-page">
+      <div className={`share-page ${look.className}`} style={look.style}>
         <ShareBar />
         <main className="share-main page-fixed" aria-label={`${view.user.name}'s ${page}`}>
-          <PageHead user={{ ...view.user, bio: view.user.bio }} page={page} />
+          <PageHead
+            user={{ ...view.user, bio: view.user.bio }}
+            page={page}
+            look={Boolean(look.className)}
+          />
           {page === "posts" ? (
             <PostsCollage posts={view.posts} cover={cover} href={postHref} empty="No posts yet." />
           ) : (
@@ -245,7 +250,7 @@ export function SharedProfile({
     );
   // The landing page says who this is; the plain head only stands in when there is no page yet.
   return (
-    <div className="share-page">
+    <div className={`share-page ${look.className}`} style={look.style}>
       <ShareBar />
       <main className="share-main">
         {!(view.profile && manifest) && (

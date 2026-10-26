@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { NowBar } from "./now";
-import { PageHead, PageStrip, PostsCollage, Stories } from "./pages";
+import { PageHead, PageStrip, PostsCollage, Stories, lookStyle } from "./pages";
 import type { PageTab, PostTile } from "../../../packages/contracts/src/pages";
 import type { ReactNode } from "react";
 import type { PostView, User } from "../../../packages/contracts/src/experience";
@@ -106,6 +106,8 @@ export function ProfilePage({
   };
   const [query, setQuery] = useState("");
   const v2 = profile?.manifest?.schemaVersion === 2;
+  // The look's tokens colour the fixed pages and the strip (ADR 0049), never the editor.
+  const look = lookStyle(profile?.manifest);
   // A page with its own follow button keeps it; the app's menu offers Follow only otherwise.
   const pageFollows =
     v2 && (profile!.manifest!.capabilities as readonly string[]).includes("profile.social.toggle");
@@ -203,7 +205,8 @@ export function ProfilePage({
   );
   return (
     <main
-      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${!editing ? "has-side-nav" : ""}`}
+      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${!editing ? "has-side-nav" : ""} ${editing ? "" : look.className}`}
+      style={editing ? undefined : look.style}
     >
       <header className="profile-controls">
         <button className="profile-back" aria-label="Back to feed" onClick={onBack}>
@@ -535,7 +538,7 @@ export function ProfilePage({
           className="page-fixed"
           aria-label={page === "posts" ? "Posts page" : "Stories page"}
         >
-          <PageHead user={owner} page={page} />
+          <PageHead user={owner} page={page} look={Boolean(look.className)} />
           {page === "posts" ? (
             <PostsCollage
               posts={ownPosts}

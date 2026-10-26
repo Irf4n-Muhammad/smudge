@@ -41,6 +41,16 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
   assert.deepEqual(readSmudgeSettings(pkg).sections, ["quote", "latest", "wall", "selected"]);
   assert.equal(readSmudgeSettings(pkg).tagline, "*rolls* wherever it's flat.");
   assert.match(pkg.files["smudge/settings.js"]!, /^window\.smudgeSettings = /);
+  // The look tells the app its colours (ADR 0049): the palette's second colour is the accent.
+  const look = pkg.manifest.schemaVersion === 2 ? pkg.manifest.look : undefined;
+  assert.equal(look?.accent, "#d8ff3d");
+  assert.equal(look?.ground, "#0e0d0b");
+  assert.throws(() =>
+    profilePackageSchema.parse({
+      ...pkg,
+      manifest: { ...pkg.manifest, look: { ...look, accent: "lime" } },
+    }),
+  );
   // The page carries no follow button of its own (ADR 0048): the app's strip has it.
   const caps = (list: readonly string[] | undefined) => list ?? [];
   assert.ok(!caps(pkg.manifest.capabilities).includes("profile.social.toggle"));
