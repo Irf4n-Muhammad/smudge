@@ -226,12 +226,15 @@ export function SharedProfile({
           {page === "posts" ? (
             <PostsCollage posts={view.posts} cover={cover} href={postHref} empty="No posts yet." />
           ) : (
-            <Stories
-              path={`/public/users/${encodeURIComponent(handle)}/timeline`}
-              cover={cover}
-              postHref={postHref}
-              empty="Nothing yet."
-            />
+            <>
+              <NowBar ownerId={view.user.id} mine={false} guestHandle={handle} />
+              <Stories
+                path={`/public/users/${encodeURIComponent(handle)}/timeline`}
+                cover={cover}
+                postHref={postHref}
+                empty="Nothing yet."
+              />
+            </>
           )}
           <Invite name={view.user.name} side={side} />
         </main>
@@ -253,7 +256,9 @@ export function SharedProfile({
             </div>
           </section>
         )}
-        <NowBar ownerId={view.user.id} mine={false} guestHandle={handle} />
+        {!(view.profile && manifest) && (
+          <NowBar ownerId={view.user.id} mine={false} guestHandle={handle} />
+        )}
         {view.profile && manifest && (
           <section className="share-profile-world" aria-label={`${view.user.name}'s page`}>
             <Runtime

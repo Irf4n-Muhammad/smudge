@@ -71,10 +71,14 @@ test("five answers after signing up become a published page", async ({ page }) =
   await setup.getByRole("button", { name: "Make my page" }).click();
   await expect(setup).toHaveCount(0);
 
-  // The page is up, with the line and the song, and it opens without an account.
+  // The page is up, with the line and the song, and it opens without an account. The page
+  // itself says the song; the "Right now" bar with its archive lives on Stories (ADR 0047).
+  await expect(page.locator(".profile-page.profile-illustrated")).toBeVisible();
+  const strip = page.getByRole("navigation", { name: "Pages" });
+  await strip.getByRole("button", { name: "Stories" }).click();
   const bar = page.getByRole("region", { name: "Right now" });
   await expect(bar.locator(".now-current")).toContainText("Velvet Static");
-  await expect(page.locator(".profile-page.profile-illustrated")).toBeVisible();
+  await strip.getByRole("button", { name: "Page" }).click();
   const frame = page.locator(".profile-page iframe").first().contentFrame();
   await expect(frame.locator("#giant-line")).toHaveText("Drawing people on trains");
   await expect(frame.getByText("Velvet Static")).toBeVisible();

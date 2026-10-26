@@ -41,9 +41,11 @@ test("every page has a strip to its Posts and Stories, inside the app and on the
     "aria-current",
     "page",
   );
+  // In development the first visit to a route compiles it and reloads open pages, which would
+  // abort the click below; a plain request first warms it up.
+  await guest.request.get("/u/alex/stories");
   await guestStrip.getByRole("link", { name: "Stories" }).click();
-  // In development the route compiles on its first visit, which can take a while.
-  await expect(guest).toHaveURL(/\/u\/alex\/stories$/, { timeout: 60000 });
+  await expect(guest).toHaveURL(/\/u\/alex\/stories$/);
   await expect(guest.getByRole("list", { name: "Stories" })).toBeVisible();
   await guestStrip.getByRole("link", { name: "Page" }).click();
   await expect(guest).toHaveURL(/\/u\/alex$/);

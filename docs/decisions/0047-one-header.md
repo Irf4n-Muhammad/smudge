@@ -19,6 +19,9 @@ once on the page.
 - **One follow button.** A page that carries `profile.social.toggle` (the Paint wall, Ink &
   Paper) draws its own; the app's menu then offers no Follow. A page without it keeps Follow in
   the menu. Plain profiles (Room, Comic, the default) keep their old header.
+- **"Right now" moves to Stories.** On a page of its own the bar no longer sits between the
+  header and the page: the hero says the song and the line, and the bar, with its archive and
+  the owner's controls, opens the Stories page. A profile without a page keeps it on top.
 - **The Paint wall leaves room.** Its hero starts 62px down so the floating buttons never
   cover the index line or the name.
 

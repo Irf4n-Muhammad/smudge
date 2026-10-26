@@ -534,7 +534,9 @@ export function ProfilePage({
           {error}
         </p>
       )}
-      {!editing && page === "page" && (
+      {/* "Right now" sits on the landing only when there is no page to say it (ADR 0047); a page
+          of its own carries the song and the line, and the bar moves to Stories. */}
+      {!editing && page === "page" && !v2 && (
         <NowBar key={ownerId} ownerId={ownerId} mine={mine} onChanged={() => void refresh()} />
       )}
       {!editing && page !== "page" ? (
@@ -551,12 +553,20 @@ export function ProfilePage({
               empty={mine ? "Your posts will show up here." : "No posts yet."}
             />
           ) : (
-            <Stories
-              path={`/users/${encodeURIComponent(ownerId)}/timeline`}
-              cover={(p) => `/api/assets/${p.coverAssetId}`}
-              onOpenPost={(p) => openPost(p.id)}
-              empty={mine ? "Your days will show up here." : "Nothing yet."}
-            />
+            <>
+              <NowBar
+                key={ownerId}
+                ownerId={ownerId}
+                mine={mine}
+                onChanged={() => void refresh()}
+              />
+              <Stories
+                path={`/users/${encodeURIComponent(ownerId)}/timeline`}
+                cover={(p) => `/api/assets/${p.coverAssetId}`}
+                onOpenPost={(p) => openPost(p.id)}
+                empty={mine ? "Your days will show up here." : "Nothing yet."}
+              />
+            </>
           )}
         </section>
       ) : editing && mine ? (

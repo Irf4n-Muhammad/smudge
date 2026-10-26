@@ -95,7 +95,7 @@ html[data-theme="dark"] .sm {
   position: relative;
   z-index: 5;
   /* Room at the top for the app's floating back and menu buttons (ADR 0047). */
-  padding: 62px 16px 0;
+  padding: 56px 16px 0;
   cursor: crosshair;
 }
 .sm .giant {
