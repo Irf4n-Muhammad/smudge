@@ -1,14 +1,14 @@
-/* smudge:v6 */
+/* smudge:v7 */
 /* Smudge / Paint wall page shell. */
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  background: #f2efe8;
+  background: #0e0d0b;
 }
 html[data-theme="dark"] body {
-  background: #17121f;
+  background: #0e0d0b;
 }
 .wall {
   position: relative;

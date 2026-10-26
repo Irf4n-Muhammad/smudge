@@ -245,15 +245,6 @@ export function ProfilePage({
           // The page says who it is (ADR 0047): the app keeps only back, edit and ☰ floating
           // over it, and everything else waits in the menu.
           <div className="profile-chrome">
-            {mine && !editing && (
-              <button
-                className="profile-edit"
-                aria-label="Edit profile"
-                onClick={() => setEasy(true)}
-              >
-                <Pencil size={18} aria-hidden="true" />
-              </button>
-            )}
             <details className="profile-options">
               <summary aria-label="Profile options">☰</summary>
               <div className="profile-control-actions">
@@ -342,7 +333,7 @@ export function ProfilePage({
                   >
                     {editing ? "View published profile" : "Customize profile"}
                   </button>
-                ) : pageFollows ? null : (
+                ) : pageFollows || v2 ? null : (
                   <button disabled={busy} className="profile-primary" onClick={() => void follow()}>
                     {boot.following.includes(ownerId)
                       ? "Unfollow"
@@ -668,7 +659,30 @@ export function ProfilePage({
       ) : (
         <p className="profile-message">Opening profile…</p>
       )}
-      {!editing && <PageStrip current={page} posts={ownPosts.length} onPick={setPage} />}
+      {!editing && (
+        <PageStrip
+          current={page}
+          posts={ownPosts.length}
+          onPick={setPage}
+          // The one action beside the tabs (ADR 0048): the owner edits, everyone else follows.
+          action={
+            !v2
+              ? undefined
+              : mine
+                ? { label: "Edit profile", icon: "edit", onClick: () => setEasy(true) }
+                : {
+                    label: boot.following.includes(ownerId)
+                      ? "Following"
+                      : boot.requested.includes(ownerId)
+                        ? "Requested"
+                        : "Follow",
+                    pressed: boot.following.includes(ownerId),
+                    disabled: busy,
+                    onClick: () => void follow(),
+                  }
+          }
+        />
+      )}
       {!editing && profile && (
         <ProfileDiscovery
           ownerId={ownerId}

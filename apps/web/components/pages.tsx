@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, Layers, PanelTop } from "lucide-react";
+import type { ReactNode } from "react";
+import { Image as ImageIcon, Layers, PanelTop, Pencil } from "lucide-react";
 import type { User } from "../../../packages/contracts/src/experience";
 import type {
   PageTab,
@@ -22,40 +23,75 @@ const tabs: { tab: PageTab; label: string; icon: typeof PanelTop }[] = [
   { tab: "posts", label: "Posts", icon: ImageIcon },
   { tab: "stories", label: "Stories", icon: Layers },
 ];
+/**
+ * The one action next to the tabs (ADR 0048): Edit for the owner, Follow for everyone else. It
+ * sits in the thumb zone with the strip, so no page needs a button of its own for it.
+ */
+export type StripAction = {
+  label: string;
+  /** Only the pencil is drawn as an icon; a worded action shows its label. */
+  icon?: "edit";
+  href?: string;
+  onClick?: () => void;
+  pressed?: boolean;
+  disabled?: boolean;
+};
 export function PageStrip({
   current,
   posts,
   href,
   onPick,
+  action,
 }: {
   current: PageTab;
   posts?: number;
   /** Guests get links (the share pages); members switch in place. */
   href?: (tab: PageTab) => string;
   onPick?: (tab: PageTab) => void;
+  action?: StripAction;
 }) {
+  const body: ReactNode =
+    action?.icon === "edit" ? <Pencil size={20} aria-hidden="true" /> : action?.label;
   return (
-    <nav className="page-strip" aria-label="Pages">
-      {tabs.map(({ tab, label, icon: Icon }) => {
-        const on = tab === current;
-        const body = (
-          <>
-            <Icon size={15} aria-hidden="true" />
-            {label}
-            {tab === "posts" && posts !== undefined && posts > 0 && <small>{posts}</small>}
-          </>
-        );
-        return href ? (
-          <a key={tab} href={href(tab)} aria-current={on ? "page" : undefined}>
+    <div className="page-strip">
+      <nav className="page-strip-tabs" aria-label="Pages">
+        {tabs.map(({ tab, label, icon: Icon }) => {
+          const on = tab === current;
+          const inner = (
+            <>
+              <Icon size={15} aria-hidden="true" />
+              {label}
+              {tab === "posts" && posts !== undefined && posts > 0 && <small>{posts}</small>}
+            </>
+          );
+          return href ? (
+            <a key={tab} href={href(tab)} aria-current={on ? "page" : undefined}>
+              {inner}
+            </a>
+          ) : (
+            <button key={tab} aria-current={on ? "page" : undefined} onClick={() => onPick?.(tab)}>
+              {inner}
+            </button>
+          );
+        })}
+      </nav>
+      {action &&
+        (action.href ? (
+          <a className="page-strip-action" href={action.href} aria-label={action.label}>
             {body}
           </a>
         ) : (
-          <button key={tab} aria-current={on ? "page" : undefined} onClick={() => onPick?.(tab)}>
+          <button
+            className="page-strip-action"
+            aria-label={action.label}
+            aria-pressed={action.pressed}
+            disabled={action.disabled}
+            onClick={action.onClick}
+          >
             {body}
           </button>
-        );
-      })}
-    </nav>
+        ))}
+    </div>
   );
 }
 

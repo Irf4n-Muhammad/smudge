@@ -304,8 +304,9 @@ Demo photography credits are in [assets/demo/CREDITS.md](assets/demo/CREDITS.md)
 
 ## Your page, then Posts and Stories
 
-A profile is two layers (ADR 0045), and over a page of its own the app shows only back, edit and
-☰ as floating buttons (ADR 0047); everything else waits in the menu. The landing page is yours: a template you make your own.
+A profile is two layers (ADR 0045), and over a page of its own the app shows only back and ☰
+as floating buttons (ADR 0047); everything else waits in the menu, and the one action (Edit,
+or Follow) sits in the strip (ADR 0048). The landing page is yours: a template you make your own.
 Posts and Stories are Smudge's fixed pages, the same under every look: a collage of your posts
 (`?page=posts`, `/u/<handle>/posts` for guests) and your days read from what happened, never
 typed (`?page=stories`, `/u/<handle>/stories`): posts, what was playing, where you were, the
@@ -314,13 +315,15 @@ app outside the page, so no page can lose it.
 
 ## Paint wall profile
 
-New profiles start from **Smudge · Paint wall** (ADR 0015, a landing page since ADR 0046): a
-giant painted first name filled with your newest photo, your line, and right under the name the
-song you are playing and what you are up to, read from your archive. Tap anywhere to throw paint.
-No counts, no grid: all posts are on the fixed Posts page. Optional sections (Latest, Gallery,
-Big quote, Countdown, The Wall, Quiz, The Cat) go below. It follows the Paint/Halloween season,
-and post buttons open in the in-app page sheet. Open `/?profile=ines` to see it. Pages
-published on an older Paint wall are brought up to the template when the server starts.
+New profiles start from **Smudge · Paint wall** (ADR 0015, a landing page since ADR 0046, a
+poster since ADR 0048): your first name as big as the page, your line under it, your photo
+tilted into the name, and the song you are playing and what you are up to, read from your
+archive. Below, up to three **chapters** say who you are with one measurable thing each (a
+record, years somewhere, hours of one band), typed in the easy editor. No counts, no grid, no
+follow button of its own: the strip's one action is Edit for you and Follow for everyone else.
+Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
+Open `/?profile=ines` to see it. Pages published on an older Paint wall are brought up to the
+template when the server starts.
 
 ## Easy profile editor
 

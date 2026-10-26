@@ -107,6 +107,32 @@ function inesPaintWall() {
     tagline: "*paints* the city, *slowly.*",
     place: "LISBON, PT",
     sections: ["latest", "selected", "quote", "wall"],
+    chapters: [
+      {
+        kind: "work",
+        label: "Since 2019",
+        title: "Walls, *slowly*.",
+        big: "31",
+        unit: "murals",
+        note: "Six years of painting other people's walls, one city at a time.",
+        stats: [
+          { value: "4", label: "cities" },
+          { value: "2", label: "collectives" },
+          { value: "1", label: "cat" },
+        ],
+        lines: [],
+      },
+      {
+        kind: "music",
+        label: "This year",
+        title: "Paint to *this*.",
+        big: "212",
+        unit: "hours",
+        note: "Cigarettes After Sex, every mural.",
+        stats: [],
+        lines: ["Apocalypse", "Sunsetz", "K."],
+      },
+    ],
     now: { text: "Finishing the Rua das Flores mural", place: "Lisbon", progress: 70 },
     quote: { text: "Walls are just *slow* conversations." },
   });

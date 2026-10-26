@@ -31,12 +31,12 @@ export const smudgeProfilePackage: ProfilePackage = profilePackageSchema.parse({
     mobileHeight: 1900,
     autoHeight: true,
     assets: [],
-    capabilities: [...social, "profile.social.read", "profile.social.toggle"],
+    capabilities: [...social, "profile.social.read"],
     parts: {
       profile: {
         name: "Smudge / Paint wall",
         entrypoint: "smudge/profile.html",
-        capabilities: [...social, "profile.social.read", "profile.social.toggle"],
+        capabilities: [...social, "profile.social.read"],
       },
       story: {
         name: "Smudge / Latest",

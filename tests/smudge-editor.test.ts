@@ -13,6 +13,7 @@ import { profileDocument, profilePackageSchema } from "../packages/contracts/src
 import {
   applySmudgeSettings,
   defaultSmudgeSettings,
+  emptyChapter as defaultChapter,
   readSmudgeSettings,
   supportsSmudgeDesign,
 } from "../packages/core/src/smudge-design.js";
@@ -40,6 +41,22 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
   assert.deepEqual(readSmudgeSettings(pkg).sections, ["quote", "latest", "wall", "selected"]);
   assert.equal(readSmudgeSettings(pkg).tagline, "*rolls* wherever it's flat.");
   assert.match(pkg.files["smudge/settings.js"]!, /^window\.smudgeSettings = /);
+  // The page carries no follow button of its own (ADR 0048): the app's strip has it.
+  const caps = (list: readonly string[] | undefined) => list ?? [];
+  assert.ok(!caps(pkg.manifest.capabilities).includes("profile.social.toggle"));
+  const profilePart = pkg.manifest.schemaVersion === 2 ? pkg.manifest.parts.profile : undefined;
+  assert.ok(!caps(profilePart?.capabilities).includes("profile.social.toggle"));
+  // A ribbon from an older version is ignored; chapters are kept and checked.
+  const withRibbon = structuredClone(pkg);
+  withRibbon.files["smudge/settings.js"] = `window.smudgeSettings = ${JSON.stringify({
+    ...readSmudgeSettings(pkg),
+    marquee: "old & gone",
+    chapters: [{ ...defaultChapter, kind: "run", title: "Slow, but *far*.", big: "1:52:10" }],
+  })};`;
+  assert.equal(readSmudgeSettings(withRibbon).chapters[0]?.big, "1:52:10");
+  assert.throws(() =>
+    applySmudgeSettings(pkg, { ...settings, chapters: [1, 2, 3, 4].map(() => defaultChapter) }),
+  );
   for (const cap of ["profile.wall.read", "profile.wall.add", "profile.wall.remove"])
     assert.ok((pkg.manifest.capabilities as string[]).includes(cap));
   const off = applySmudgeSettings(pkg, { ...readSmudgeSettings(pkg), sections: ["latest"] });
@@ -63,7 +80,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
   ).replace('<div class="sm-sections" id="sm-sections"></div>\n  ', "");
   delete old.files["smudge/sections.js"];
   old.files["smudge/profile.html"] = "<p>old hero</p>";
-  old.files["smudge/post.html"] = "<!-- smudge:v6 --><p>my own grid</p>";
+  old.files["smudge/post.html"] = "<!-- smudge:v7 --><p>my own grid</p>";
   const next = applySmudgeSettings(
     profilePackageSchema.parse(old),
     defaultSmudgeSettings,
@@ -73,7 +90,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
     next.files["smudge/profile.html"],
     smudgeProfilePackage.files["smudge/profile.html"],
   );
-  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v6 --><p>my own grid</p>");
+  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v7 --><p>my own grid</p>");
   assert.ok(next.files["smudge/sections.js"]);
   const shell = next.files["index.html"]!;
   assert.match(shell, /src="smudge\/settings\.js"/);

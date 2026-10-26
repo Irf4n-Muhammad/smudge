@@ -1,13 +1,13 @@
-/* smudge:v3 */
+/* smudge:v7 */
 /* Smudge / Paint wall parts. One file so a mixed profile stays within the package file limit;
    every part links it, and everything is scoped to .sm. */
 /* Smudge / Paint wall, shared by every part. Scoped to .sm so a part mixed into another
    profile keeps its own colours without restyling the rest of that page. */
 .sm {
-  --wall: #f2efe8;
-  --ink: #101010;
-  --muted: #6d6a63;
-  --card: #ffffff;
+  --wall: #0e0d0b;
+  --ink: #f3efe6;
+  --muted: #9a948a;
+  --card: #1a1816;
   --p1: #ff4f9a;
   --p2: #d8ff3d;
   --p3: #2b3cff;
@@ -24,10 +24,10 @@ html[data-season="halloween"] .sm {
   --p4: #ff7a1a;
 }
 html[data-theme="dark"] .sm {
-  --wall: #17121f;
-  --ink: #f4efe6;
-  --muted: #a49cb0;
-  --card: #221b2c;
+  --wall: #0e0d0b;
+  --ink: #f3efe6;
+  --muted: #9a948a;
+  --card: #1a1816;
 }
 .sm {
   color: var(--ink);
@@ -82,240 +82,326 @@ html[data-theme="dark"] .sm {
   outline: 3px solid var(--p3);
   outline-offset: 3px;
 }
-/* Smudge / Paint wall: the introduction. */
-/* Hero */
-.sm .thrown-paint {
-  position: absolute;
-  inset: 0;
-  z-index: 8;
-  overflow: visible;
-  pointer-events: none;
-}
+/* Smudge / Paint wall: the poster hero and the chapters (ADR 0048). One type scale (the giant
+   name, 26px lines, 11px mono labels), spacing in eights, one accent for what matters. */
 .sm .hero {
   position: relative;
   z-index: 5;
   /* Room at the top for the app's floating back and menu buttons (ADR 0047). */
-  padding: 56px 16px 0;
-  cursor: crosshair;
+  padding: 72px 16px 0;
+}
+.sm .idx {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 .sm .giant {
-  margin: 14px -4px 0;
-  font: 800 168px/0.8 var(--big);
-  letter-spacing: -0.07em;
+  margin: 16px -6px 0;
+  font: 800 164px/0.82 var(--big);
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
-  overflow-wrap: normal;
 }
 .sm .giant > span {
   display: inline-block;
-  /* A full name breaks onto one line per word. */
   white-space: pre-line;
-  padding: 0 0.06em 0.04em 0;
-  background: linear-gradient(100deg, var(--p1), var(--p2) 45%, var(--p3) 80%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.sm .giant.photo-fill > span {
-  background-size: cover;
-  background-position: 40% 30%;
+  padding-right: 0.06em;
 }
 .sm .giant2 {
-  margin: -2px 0 0;
-  font: italic 400 52px/0.95 var(--serif);
-  letter-spacing: -0.03em;
-  color: var(--p3);
+  position: relative;
+  z-index: 2;
+  margin: -0.22em 0 0 34%;
+  font: italic 400 clamp(56px, 24vw, 112px) / 0.9 var(--serif);
+  letter-spacing: -0.02em;
+  color: var(--p2);
   overflow-wrap: anywhere;
 }
-.sm .tapnote {
-  position: absolute;
-  right: 12px;
-  top: 78px;
-  width: 112px;
-  margin: 0;
-  text-align: right;
-  font: italic 400 19px/1 var(--serif);
-  color: var(--p1);
-  transform: rotate(-8deg);
-  pointer-events: none;
+.sm .giant2 em {
+  font-style: normal;
+  color: var(--ink);
 }
-.sm .tapnote svg {
-  display: block;
-  margin: 0 0 2px auto;
-  stroke: currentColor;
+.sm .giant2.long {
+  margin: 16px 0 0;
+  font-size: 32px;
+  line-height: 1.05;
+  max-width: 18ch;
 }
-.sm .role {
+.sm .giant2.long + .poster {
+  margin-top: 24px;
+}
+.sm .poster {
+  position: relative;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px;
-  margin-top: 16px;
-}
-.sm .role p {
-  margin: 0;
-  max-width: 34ch;
-  font: 500 15px/1.35 var(--ui);
-}
-.sm .role b {
-  font-weight: 700;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: -40px;
 }
 .sm .avatar {
   position: relative;
   flex: none;
-  width: 84px;
-  height: 84px;
+  width: 214px;
+  height: 286px;
   display: grid;
   place-items: center;
-  border: 3px solid var(--ink);
-  border-radius: 50%;
-  transform: rotate(6deg);
+  overflow: hidden;
   color: #101010;
-  font: 800 30px var(--big);
+  font: 800 96px var(--big);
+  transform: rotate(-3deg);
 }
 .sm .avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 50%;
+  object-position: 55% 30%;
 }
-.sm .sticker {
+.sm .mark {
   position: absolute;
-  right: -10px;
-  top: -10px;
-  padding: 3px 6px;
-  border: 2px solid var(--ink);
-  border-radius: 6px;
-  background: var(--p1);
-  color: #fff;
-  font: 700 9px var(--mono);
-  transform: rotate(-6deg);
-  white-space: nowrap;
+  left: 154px;
+  bottom: -22px;
+  width: 118px;
+  height: 88px;
+  background: var(--p4);
+  border-radius: 45% 55% 40% 60% / 58% 42% 58% 42%;
+  transform: rotate(16deg);
 }
-.sm .actions {
-  position: relative;
-  z-index: 5;
-  display: flex;
-  gap: 8px;
-  padding: 18px 16px 0;
-}
-.sm .btn {
+.sm .meta {
   flex: 1;
-  padding: 13px 0;
-  border: 0;
-  border-radius: 14px;
-  background: var(--card);
-  box-shadow: inset 0 0 0 1.5px var(--ink);
-  font: 700 14px var(--ui);
-  cursor: pointer;
-}
-.sm .btn.main {
-  background: var(--ink);
-  color: var(--wall);
-  box-shadow: none;
-}
-.sm .btn:disabled {
-  cursor: default;
-  opacity: 0.85;
-}
-.sm .follow-status {
-  display: block;
-  margin: 6px 16px 0;
-  font: 500 12px var(--ui);
+  min-width: 0;
+  margin: 88px 0 0;
+  padding: 0;
+  list-style: none;
+  font: 500 11px/1.5 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--muted);
 }
-
-/* Stats marquee */
-.sm .marq {
-  position: relative;
-  z-index: 5;
-  margin: 26px -10px 0;
-  padding: 10px 0;
+.sm .meta li {
   overflow: hidden;
-  background: var(--p3);
-  color: #fff;
-  transform: rotate(-3deg);
-  font: 800 26px var(--big);
-  letter-spacing: -0.03em;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
-.sm .marq-track {
-  display: inline-flex;
-  animation: marq 22s linear infinite;
+.sm .hero-now {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 40px;
 }
-.sm .marq span {
-  padding: 0 12px;
+.sm .song,
+.sm .doing {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
 }
-.sm .marq i {
-  font: italic 400 26px var(--serif);
-  color: var(--p2);
+.sm .song[hidden],
+.sm .doing[hidden] {
+  display: none;
 }
-@keyframes marq {
+.sm .song small,
+.sm .doing small {
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sm .song strong,
+.sm .doing strong {
+  font: italic 400 26px/1.1 var(--serif);
+}
+.sm .song span,
+.sm .doing time {
+  font: 400 12px var(--ui);
+  color: var(--muted);
+}
+.sm .song-bars {
+  position: absolute;
+  right: 0;
+  top: 14px;
+  display: none;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+.sm .song.live .song-bars {
+  display: flex;
+}
+.sm .song-bars i {
+  width: 3px;
+  height: 100%;
+  background: var(--p2);
+  transform-origin: bottom;
+  animation: bars 0.9s ease-in-out infinite alternate;
+}
+.sm .song-bars i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.sm .song-bars i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.sm .song-bars i:nth-child(4) {
+  animation-delay: 0.45s;
+}
+@keyframes bars {
+  from {
+    transform: scaleY(0.3);
+  }
   to {
-    transform: translateX(-50%);
+    transform: scaleY(1);
   }
 }
-html[data-motion="reduce"] .sm .marq-track {
+html[data-motion="reduce"] .sm .song-bars i {
   animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .sm .marq-track {
+  .sm .song-bars i {
     animation: none;
   }
 }
+html[data-editing="on"] .sm .hero-now {
+  min-height: 48px;
+}
 
-/* Bio as a quote */
-.sm .quote {
+/* Chapters */
+.sm .chapters {
   position: relative;
   z-index: 5;
-  margin: 44px 0 0;
-  padding: 40px 18px 36px;
-  background: var(--ink);
-  color: var(--wall);
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+  padding: 64px 16px 0;
 }
-.sm .quote p {
+html[data-editing="on"] .sm .chapters[hidden] {
+  display: block;
+  min-height: 48px;
+}
+.sm .chapter {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.sm .chapter h2 {
   margin: 0;
-  max-width: 22ch;
-  font: 400 40px/1 var(--serif);
+  font: italic 400 56px/1 var(--serif);
   letter-spacing: -0.02em;
 }
-.sm .quote small {
+.sm .chapter h2 em {
+  font-style: normal;
+  color: var(--p2);
+}
+.sm .route {
   display: block;
-  margin-top: 18px;
-  font: 700 10px var(--mono);
-  letter-spacing: 0.14em;
-  opacity: 0.6;
+  width: 100%;
+  height: auto;
+  max-width: 318px;
+}
+.sm .route path {
+  fill: none;
+  stroke: var(--p2);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.sm .big {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+}
+.sm .big strong {
+  font: 800 clamp(56px, 28vw, 120px) / 0.85 var(--big);
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+.sm .big em {
+  font: italic 400 56px/1 var(--serif);
+}
+.sm .note {
+  margin: 0;
+  max-width: 320px;
+  font: 400 16px/1.4 var(--ui);
+  color: color-mix(in srgb, var(--ink) 80%, var(--wall));
+}
+.sm .stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 15%, transparent);
+}
+.sm .stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sm .stats dd {
+  margin: 0;
+  font: 500 20px/1.2 var(--ui);
+}
+.sm .stats dt {
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sm .lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sm .lines li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.sm .lines li:last-child {
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.sm .lines span {
+  width: 20px;
+  font: 400 11px var(--mono);
+  color: var(--muted);
+}
+.sm .lines b {
+  font: italic 400 22px/1.1 var(--serif);
 }
 @media (min-width: 720px) {
   .sm .hero {
-    padding: 34px 40px 0;
-  }
-  .sm .tapnote {
-    right: 40px;
-    top: 70px;
+    padding: 72px 40px 0;
   }
   .sm .giant2 {
-    font-size: 84px;
-  }
-  .sm .role p {
-    font-size: 18px;
+    margin-left: 30%;
   }
   .sm .avatar {
-    width: 120px;
-    height: 120px;
+    width: 300px;
+    height: 400px;
   }
-  .sm .actions {
-    max-width: 520px;
-    padding: 22px 40px 0;
+  .sm .mark {
+    left: 230px;
   }
-  .sm .follow-status,
-  .sm .part-status {
-    margin-inline: 40px;
+  .sm .meta {
+    margin-top: 120px;
+    font-size: 12px;
   }
-  .sm .quote {
-    padding: 64px 40px;
+  .sm .hero-now {
+    flex-direction: row;
+    gap: 40px;
   }
-  .sm .quote p {
-    font-size: 64px;
+  .sm .song,
+  .sm .doing {
+    flex: 1;
+  }
+  .sm .chapters {
+    padding: 96px 40px 0;
+    gap: 96px;
+  }
+  .sm .chapter h2 {
+    font-size: 80px;
   }
 }
 /* Smudge / Latest. */
@@ -569,140 +655,4 @@ html[data-motion="reduce"] .sm .marq-track {
   .sm .wall-foot {
     margin-inline: 40px;
   }
-}
-
-/* smudge:v6 — the song and what's going on, right under the name (ADR 0046). */
-.sm .hero-now {
-  position: relative;
-  z-index: 6;
-  display: grid;
-  gap: 10px;
-  margin-top: 18px;
-}
-.sm .hero-now:empty,
-.sm .hero-now:not(:has(:not([hidden]))) {
-  display: none;
-}
-.sm .song {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 16px;
-  background: var(--card);
-  color: var(--ink);
-  box-shadow: 5px 5px 0 var(--p1);
-  transform: rotate(0.6deg);
-}
-.sm .song-disc {
-  flex: none;
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  background: conic-gradient(from 90deg, var(--p1), var(--p3), var(--p4), var(--p1));
-  position: relative;
-}
-.sm .song-disc::after {
-  content: "";
-  position: absolute;
-  inset: 16px;
-  border-radius: 50%;
-  background: var(--ink);
-}
-.sm .song-text {
-  min-width: 0;
-  display: grid;
-  line-height: 1.1;
-}
-.sm .song-text small {
-  font: 800 10px var(--mono);
-  letter-spacing: 0.12em;
-  color: var(--p4);
-}
-.sm .song.live .song-text small {
-  color: #1db954;
-}
-.sm .song-text strong {
-  font: 800 16px var(--big);
-  letter-spacing: -0.02em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sm .song-text > span {
-  font: 500 13px var(--ui);
-  opacity: 0.7;
-}
-.sm .song-bars {
-  margin-left: auto;
-  display: flex;
-  gap: 3px;
-  align-items: flex-end;
-  height: 22px;
-}
-.sm .song-bars i {
-  width: 4px;
-  border-radius: 2px;
-  background: var(--ink);
-  height: 10px;
-}
-.sm .song-bars i:nth-child(2) {
-  height: 20px;
-}
-.sm .song-bars i:nth-child(3) {
-  height: 14px;
-}
-.sm .song-bars i:nth-child(4) {
-  height: 22px;
-}
-.sm .song.live .song-bars i {
-  animation: sm-bar 0.9s ease-in-out infinite alternate;
-}
-.sm .song.live .song-bars i:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.sm .song.live .song-bars i:nth-child(3) {
-  animation-delay: 0.4s;
-}
-.sm .song.live .song-bars i:nth-child(4) {
-  animation-delay: 0.1s;
-}
-@keyframes sm-bar {
-  to {
-    height: 6px;
-  }
-}
-.sm .doing {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding-left: 4px;
-  font: italic 400 24px/1 var(--serif);
-  color: var(--p3);
-  transform: rotate(-0.8deg);
-}
-.sm .doing-dot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--p4);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--p4) 25%, transparent);
-}
-.sm .doing time {
-  margin-left: auto;
-  font: 500 12px var(--ui);
-  color: var(--muted);
-  white-space: nowrap;
-}
-@media (prefers-reduced-motion: reduce) {
-  .sm .song.live .song-bars i {
-    animation: none;
-  }
-}
-/* While editing, the block stays tappable even before anything is in it. */
-html[data-editing="on"] .sm .hero-now {
-  display: grid;
-  min-height: 28px;
 }

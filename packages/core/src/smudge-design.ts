@@ -3,9 +3,9 @@ import { profilePackageSchema, type ProfilePackage } from "../../contracts/src/p
 import { programCapabilities } from "../../contracts/src/programs.js";
 
 /**
- * Easy-editor settings for the Smudge Paint wall landing page (ADR 0046): the name, the line,
- * the song and what's going on sit in the hero; posts live on the fixed Posts page; sections
- * are optional extras below. Like the Ink & Paper controls, they are
+ * Easy-editor settings for the Smudge Paint wall landing page (ADR 0048): the name, the line,
+ * the song and what's going on sit in the poster hero; chapters below say who this is with one
+ * measurable thing each; posts live on the fixed Posts page; sections are optional extras. Like the Ink & Paper controls, they are
  * written as an ordinary source file (`smudge/settings.js`), so the advanced editor, MCP and mods
  * keep working on the same package.
  */
@@ -28,13 +28,39 @@ export const smudgePalettes = {
 } as const;
 export type SmudgePalette = keyof typeof smudgePalettes;
 const text = (max: number) => z.string().trim().max(max);
+export const chapterKinds = ["run", "work", "music", "custom"] as const;
+export type ChapterKind = (typeof chapterKinds)[number];
+/** One chapter of the landing: a kind, a title, one big number, a note, up to three stats and lines. */
+export const chapterSchema = z
+  .object({
+    kind: z.enum(chapterKinds),
+    label: text(24),
+    title: text(40),
+    big: text(16),
+    unit: text(12),
+    note: text(120),
+    stats: z.array(z.object({ value: text(12), label: text(16) }).strict()).max(3),
+    lines: z.array(text(40)).max(3),
+  })
+  .strict();
+export type Chapter = z.infer<typeof chapterSchema>;
+export const emptyChapter: Chapter = {
+  kind: "custom",
+  label: "",
+  title: "",
+  big: "",
+  unit: "",
+  note: "",
+  stats: [],
+  lines: [],
+};
 export const smudgeSettingsSchema = z
   .object({
     bigName: z.enum(["first", "full", "nickname"]),
     nickname: text(24),
     tagline: text(60),
     place: text(30),
-    marquee: text(80),
+    chapters: z.array(chapterSchema).max(3),
     palette: z.enum(Object.keys(smudgePalettes) as [SmudgePalette, ...SmudgePalette[]]),
     sections: z
       .array(z.enum(smudgeSectionKinds))
@@ -59,7 +85,7 @@ export const defaultSmudgeSettings: SmudgeSettings = {
   nickname: "",
   tagline: "",
   place: "",
-  marquee: "",
+  chapters: [],
   palette: "paint",
   sections: [],
   quote: { text: "" },
@@ -77,7 +103,7 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v6";
+export const smudgeVersionMarker = "smudge:v7";
 
 export function supportsSmudgeDesign(pkg: ProfilePackage) {
   return (
@@ -91,8 +117,12 @@ export function readSmudgeSettings(pkg: ProfilePackage): SmudgeSettings {
   const match = source ? /^window\.smudgeSettings = (.+);\s*$/s.exec(source) : null;
   if (!match) return structuredClone(defaultSmudgeSettings);
   try {
-    const value = JSON.parse(match[1]!) as Partial<SmudgeSettings>;
-    // Sections that moved into the hero or the fixed pages (ADR 0046) are dropped quietly.
+    const parsed = JSON.parse(match[1]!) as Record<string, unknown>;
+    // Settings a past version wrote and this one dropped (the ribbon) are ignored quietly, and so
+    // are sections that moved into the hero or the fixed pages (ADR 0046).
+    const value: Partial<SmudgeSettings> = {};
+    for (const key of Object.keys(defaultSmudgeSettings) as (keyof SmudgeSettings)[])
+      if (key in parsed) (value as Record<string, unknown>)[key] = parsed[key];
     const sections = (value.sections ?? []).filter((k) =>
       (smudgeSectionKinds as readonly string[]).includes(k),
     );
@@ -143,8 +173,14 @@ export function applySmudgeSettings(
     quiz: programCapabilities.quiz,
     cat: programCapabilities.cat,
   };
-  const all = Object.values(granted).flat();
+  // The page has no follow button of its own any more (ADR 0048): the app's strip carries it.
+  const all = [...Object.values(granted).flat(), "profile.social.toggle"];
   const caps: string[] = pkg.manifest.capabilities.filter((c) => !all.includes(c));
+  const profilePart = pkg.manifest.parts?.profile;
+  if (profilePart)
+    profilePart.capabilities = profilePart.capabilities.filter(
+      (c) => c !== "profile.social.toggle",
+    ) as typeof profilePart.capabilities;
   for (const [kind, list] of Object.entries(granted))
     if (s.sections.includes(kind as SmudgeSection)) caps.push(...list);
   if (caps.length > 12)

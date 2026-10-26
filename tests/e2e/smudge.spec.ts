@@ -52,7 +52,9 @@ test("the Paint wall profile shows real posts, follows the season and opens post
   await page.goto("/?profile=ines");
   const frame = page.locator(".profile-page .runtime iframe").first().contentFrame();
   await expect(frame.getByRole("heading", { name: "Inès", exact: true })).toBeVisible();
-  await expect(frame.getByText("Inès Laurent.")).toBeVisible();
+  await expect(frame.locator("#giant-line")).toContainText("paints the city");
+  // Chapters under the hero: one measurable thing each (ADR 0048).
+  await expect(frame.locator(".chapter-music .big strong")).toHaveText("212");
   // The host's season reaches the profile frame and follows a change.
   const season = await page.evaluate(() => document.documentElement.dataset.season);
   await expect(frame.locator("html")).toHaveAttribute("data-season", season!);
@@ -61,11 +63,6 @@ test("the Paint wall profile shows real posts, follows the season and opens post
       document.documentElement.dataset.season === "halloween" ? "paint" : "halloween";
   });
   await expect(frame.locator("html")).not.toHaveAttribute("data-season", season!);
-
-  // Tapping the hero throws paint; it is local to this visit.
-  const before = await frame.locator("#thrown-paint g").count();
-  await frame.locator(".hero .role").click({ position: { x: 20, y: 10 } });
-  await expect(frame.locator("#thrown-paint g")).toHaveCount(before + 1);
 
   // Posts open in the host dialog, which keeps the post's button.
   await frame.getByRole("button", { name: "Open The wall on Rua das Flores" }).first().click();
@@ -118,11 +115,8 @@ test("the easy editor: pick a vibe, tap to edit, add The Wall, publish, a friend
     const frame = page.locator(".easy-layer.shown iframe").contentFrame();
 
     // Tapping an outlined part opens its field instead of using the page.
-    // The wall starts with two marks; a tap while editing adds none.
-    await expect(frame.locator("#thrown-paint g")).toHaveCount(2);
     await frame.locator("#giant-line").click();
     await expect(page.getByRole("textbox", { name: "Your line" })).toBeVisible();
-    await expect(frame.locator("#thrown-paint g")).toHaveCount(2);
     await page.getByRole("textbox", { name: "Your line" }).fill("*draws* on everything.");
     await expect(page.getByText("Draft saved · only you see it")).toBeVisible();
     await expect(frame.locator("#giant-line")).toHaveText("draws on everything.");
@@ -133,6 +127,15 @@ test("the easy editor: pick a vibe, tap to edit, add The Wall, publish, a friend
     await page.getByRole("textbox", { name: "Artist" }).fill("After Hours");
     await expect(frame.locator("#song-title")).toHaveText("Velvet Static");
     await expect(frame.locator("#song-by")).toHaveText("After Hours");
+    // A chapter: one measurable thing, drawn by the page (ADR 0048).
+    await page.getByRole("button", { name: "Chapters", exact: true }).click();
+    await page.getByRole("button", { name: "Add a chapter" }).click();
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.getByRole("textbox", { name: "Title" }).fill("Slow, but *far*.");
+    await page.getByRole("textbox", { name: "Big number" }).fill("1:52:10");
+    await expect(frame.locator(".chapter-run h2")).toHaveText("Slow, but far.");
+    await expect(frame.locator(".chapter-run .big strong")).toHaveText("1:52:10");
+    await expect(frame.locator(".chapter-run .route")).toBeVisible();
 
     // Add The Wall from the section sheet; it shows in the draft straight away.
     await page.getByRole("button", { name: "Section", exact: true }).click();

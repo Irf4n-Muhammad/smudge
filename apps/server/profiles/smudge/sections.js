@@ -1,4 +1,4 @@
-// smudge:v6
+// smudge:v7
 // Paint wall page sections. Reads the easy-editor settings (smudge/settings.js), applies colours and
 // section order, draws the sections the owner added, and turns taps into edits while editing.
 (() => {

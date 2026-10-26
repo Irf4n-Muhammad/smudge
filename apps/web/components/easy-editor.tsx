@@ -10,10 +10,13 @@ import type {
 } from "../../../packages/contracts/src/profile";
 import {
   applySmudgeSettings,
+  chapterKinds,
+  emptyChapter,
   readSmudgeSettings,
   smudgePalettes,
   supportsSmudgeDesign,
   defaultSmudgeSettings,
+  type Chapter,
   type SmudgePalette,
   type SmudgeSection,
   type SmudgeSettings,
@@ -49,6 +52,8 @@ import {
   Plus,
   Smartphone,
   X,
+  BookOpen,
+  Trash2,
 } from "lucide-react";
 import { api, Runtime } from "./runtime";
 
@@ -145,7 +150,7 @@ const fieldTitles: Record<string, string> = {
   place: "Top corner",
   about: "Name & bio",
   photo: "Your photo",
-  marquee: "The ribbon",
+  chapters: "Chapters",
   now: "Song & right now",
   story: "Highlights",
   post: "Posts",
@@ -671,14 +676,10 @@ export function EasyEditor({
               onChange={(v) => change({ ...settings, place: v })}
             />
           )}
-          {sheet === "field" && smudge && field === "marquee" && (
-            <TextField
-              title="The ribbon"
-              hint="Separate words with &. Empty shows your followers and posts."
-              value={settings.marquee}
-              max={80}
-              placeholder="Skater & film nerd & bad tapes"
-              onChange={(v) => change({ ...settings, marquee: v })}
+          {sheet === "field" && smudge && field === "chapters" && (
+            <ChapterFields
+              chapters={settings.chapters}
+              onChange={(chapters) => change({ ...settings, chapters })}
             />
           )}
           {sheet === "field" && easy && (field === "about" || field === "photo") && (
@@ -1090,6 +1091,15 @@ export function EasyEditor({
         </button>
         {smudge && (
           <button
+            aria-pressed={sheet === "field" && field === "chapters"}
+            onClick={() => pick("chapters")}
+          >
+            <BookOpen />
+            <span>Chapters</span>
+          </button>
+        )}
+        {smudge && (
+          <button
             className="easy-add"
             aria-pressed={sheet === "section"}
             onClick={() => setSheet(sheet === "section" ? null : "section")}
@@ -1361,6 +1371,160 @@ function QuizFields() {
         <p className="easy-note" role="status">
           {message}
         </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The chapters of a landing (ADR 0048): up to three, each one measurable thing. A kind picks the
+ * drawing (a route for a run) and the label; the rest is the owner's words and numbers.
+ */
+const chapterNames: Record<Chapter["kind"], string> = {
+  run: "Run",
+  work: "Work",
+  music: "Music",
+  custom: "Anything",
+};
+function ChapterFields({
+  chapters,
+  onChange,
+}: {
+  chapters: Chapter[];
+  onChange: (chapters: Chapter[]) => void;
+}) {
+  const [which, setWhich] = useState(0);
+  const at = Math.min(which, Math.max(0, chapters.length - 1));
+  const chapter = chapters[at];
+  const set = (patch: Partial<Chapter>) =>
+    onChange(chapters.map((c, i) => (i === at ? { ...c, ...patch } : c)));
+  const stat = (i: number, patch: Partial<Chapter["stats"][number]>) => {
+    const stats = [0, 1, 2].map((n) => chapter!.stats[n] ?? { value: "", label: "" });
+    stats[i] = { ...stats[i]!, ...patch };
+    set({ stats: stats.filter((x, n) => x.value || x.label || n < stats.length - 1) });
+  };
+  const line = (i: number, value: string) => {
+    const lines = [0, 1, 2].map((n) => chapter!.lines[n] ?? "");
+    lines[i] = value;
+    while (lines.length && !lines[lines.length - 1]) lines.pop();
+    set({ lines });
+  };
+  return (
+    <div className="easy-field easy-chapters">
+      <h2>Chapters</h2>
+      <p className="easy-note">
+        Who you are, shown with one thing that can be measured: a record, years somewhere, hours of
+        one band. Up to three.
+      </p>
+      <div className="easy-chips-row" role="group" aria-label="Which chapter">
+        {chapters.map((c, i) => (
+          <button key={i} aria-pressed={i === at} onClick={() => setWhich(i)}>
+            {i + 1}. {c.title || chapterNames[c.kind]}
+          </button>
+        ))}
+        {chapters.length < 3 && (
+          <button
+            onClick={() => {
+              onChange([...chapters, { ...emptyChapter, stats: [], lines: [] }]);
+              setWhich(chapters.length);
+            }}
+          >
+            <Plus /> Add a chapter
+          </button>
+        )}
+      </div>
+      {chapter && (
+        <>
+          <div className="easy-chips-row" role="group" aria-label="Kind">
+            {chapterKinds.map((kind) => (
+              <button key={kind} aria-pressed={chapter.kind === kind} onClick={() => set({ kind })}>
+                {chapterNames[kind]}
+              </button>
+            ))}
+          </div>
+          <TextField
+            title=""
+            label="Title"
+            hint="Wrap words in *stars* to colour them."
+            value={chapter.title}
+            max={40}
+            placeholder={chapter.kind === "run" ? "Slow, but *far*." : "What this chapter is"}
+            onChange={(title) => set({ title })}
+          />
+          <TextField
+            title=""
+            label="Top corner"
+            value={chapter.label}
+            max={24}
+            placeholder="Strava · 2025"
+            onChange={(label) => set({ label })}
+          />
+          <div className="easy-row">
+            <TextField
+              title=""
+              label="Big number"
+              value={chapter.big}
+              max={16}
+              placeholder={chapter.kind === "music" ? "412" : "1:52:10"}
+              onChange={(big) => set({ big })}
+            />
+            <TextField
+              title=""
+              label="Unit"
+              value={chapter.unit}
+              max={12}
+              placeholder={chapter.kind === "music" ? "hours" : ""}
+              onChange={(unit) => set({ unit })}
+            />
+          </div>
+          <TextField
+            title=""
+            label="A line about it"
+            value={chapter.note}
+            max={120}
+            area
+            onChange={(note) => set({ note })}
+          />
+          <p className="easy-note">
+            Three small numbers, and up to three lines (top songs, places, years).
+          </p>
+          {[0, 1, 2].map((i) => (
+            <div className="easy-row" key={"s" + i}>
+              <TextField
+                title=""
+                label={`Number ${i + 1}`}
+                value={chapter.stats[i]?.value ?? ""}
+                max={12}
+                onChange={(value) => stat(i, { value })}
+              />
+              <TextField
+                title=""
+                label={`Its label`}
+                value={chapter.stats[i]?.label ?? ""}
+                max={16}
+                onChange={(label) => stat(i, { label })}
+              />
+            </div>
+          ))}
+          {[0, 1, 2].map((i) => (
+            <TextField
+              key={"l" + i}
+              title=""
+              label={`Line ${i + 1}`}
+              value={chapter.lines[i] ?? ""}
+              max={40}
+              onChange={(v) => line(i, v)}
+            />
+          ))}
+          <div className="easy-row">
+            <button
+              className="danger"
+              onClick={() => onChange(chapters.filter((_, i) => i !== at))}
+            >
+              <Trash2 /> Remove this chapter
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

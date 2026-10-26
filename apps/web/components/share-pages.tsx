@@ -213,6 +213,8 @@ export function SharedProfile({
       current={page}
       posts={view.posts.length}
       href={(tab) => (tab === "page" ? base : `${base}/${tab}`)}
+      // Following needs an account; the action leads there (ADR 0048).
+      action={{ label: "Follow", href: side ? `/?side=${encodeURIComponent(side.id)}` : "/" }}
     />
   );
   const cover = (p: PostTile) => `/api/public/posts/${encodeURIComponent(p.id)}/cover`;
