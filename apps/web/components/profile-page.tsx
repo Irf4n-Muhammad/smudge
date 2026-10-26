@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { MemoryCards } from "./moment-day";
 import { NowBar } from "./now";
+import { PageHead, PageStrip, PostsCollage, Stories } from "./pages";
+import type { PageTab, PostTile } from "../../../packages/contracts/src/pages";
 import type { ReactNode } from "react";
 import type { PostView, User } from "../../../packages/contracts/src/experience";
 import type {
@@ -76,9 +77,32 @@ export function ProfilePage({
 }) {
   const owner = boot.users.find((u) => u.id === ownerId),
     mine = ownerId === boot.actor.userId;
+  const ownPosts: PostTile[] = posts
+    .filter((p) => p.ownerId === ownerId)
+    .map((p) => ({
+      id: p.id,
+      title: p.metadata.title,
+      caption: p.metadata.caption,
+      hasCover: !!p.metadata.coverAssetId,
+      ...(p.metadata.coverAssetId ? { coverAssetId: p.metadata.coverAssetId } : {}),
+      createdAt: p.createdAt,
+    }));
   const [profile, setProfile] = useState<PublicProfile | null>(null),
     [error, setError] = useState("");
   const [panel, setPanel] = useState<"search" | null>(null);
+  // The fixed pages (ADR 0045): ?page=posts or ?page=stories; anything else is the landing page.
+  const [page, setPageState] = useState<PageTab>(() => {
+    const p = new URLSearchParams(location.search).get("page");
+    return p === "posts" || p === "stories" ? p : "page";
+  });
+  const setPage = (next: PageTab) => {
+    setPageState(next);
+    const url = new URL(location.href);
+    if (next === "page") url.searchParams.delete("page");
+    else url.searchParams.set("page", next);
+    history.replaceState(null, "", url);
+    window.scrollTo(0, 0);
+  };
   const [query, setQuery] = useState("");
   const v2 = profile?.manifest?.schemaVersion === 2;
   const [editing, setEditing] = useState(false),
@@ -478,10 +502,32 @@ export function ProfilePage({
           {error}
         </p>
       )}
-      {!editing && (
+      {!editing && page === "page" && (
         <NowBar key={ownerId} ownerId={ownerId} mine={mine} onChanged={() => void refresh()} />
       )}
-      {editing && mine ? (
+      {!editing && page !== "page" ? (
+        <section
+          className="page-fixed"
+          aria-label={page === "posts" ? "Posts page" : "Stories page"}
+        >
+          <PageHead user={owner} page={page} />
+          {page === "posts" ? (
+            <PostsCollage
+              posts={ownPosts}
+              cover={(p) => `/api/assets/${p.coverAssetId}`}
+              onOpen={(p) => openPost(p.id)}
+              empty={mine ? "Your posts will show up here." : "No posts yet."}
+            />
+          ) : (
+            <Stories
+              path={`/users/${encodeURIComponent(ownerId)}/timeline`}
+              cover={(p) => `/api/assets/${p.coverAssetId}`}
+              onOpenPost={(p) => openPost(p.id)}
+              empty={mine ? "Your days will show up here." : "Nothing yet."}
+            />
+          )}
+        </section>
+      ) : editing && mine ? (
         <ProfileEditor
           key={ownerId}
           draftId={draftLink}
@@ -580,7 +626,7 @@ export function ProfilePage({
       ) : (
         <p className="profile-message">Opening profile…</p>
       )}
-      {!editing && profile && <MemoryCards ownerId={ownerId} mine={mine} />}
+      {!editing && <PageStrip current={page} posts={ownPosts.length} onPick={setPage} />}
       {!editing && profile && (
         <ProfileDiscovery
           ownerId={ownerId}

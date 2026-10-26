@@ -302,6 +302,15 @@ desktop/mobile screenshots go in `artifacts/`. GitHub Actions (`.github/workflow
 
 Demo photography credits are in [assets/demo/CREDITS.md](assets/demo/CREDITS.md).
 
+## Your page, then Posts and Stories
+
+A profile is two layers (ADR 0045). The landing page is yours: a template you make your own.
+Posts and Stories are Smudge's fixed pages, the same under every look: a collage of your posts
+(`?page=posts`, `/u/<handle>/posts` for guests) and your days read from what happened, never
+typed (`?page=stories`, `/u/<handle>/stories`): posts, what was playing, where you were, the
+moments you came to. A strip with Page · Posts · Stories floats over every profile, drawn by the
+app outside the page, so no page can lose it.
+
 ## Paint wall profile
 
 New profiles start from **Smudge · Paint wall** (ADR 0015): a giant painted first name filled with

@@ -68,7 +68,7 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   resized and stripped of metadata in `apps/server/gathering-routes.ts`; pages in
   `components/moment-day.tsx` (`/m/<id>/door`, the Album tab).
   The same service closes a moment (ADR 0039): the lock, the thank-you, the cover, the host's
-  order and the memory cards shown by `MemoryCards` on the profile page.
+  order and the memory cards, which the Stories page lists among the days (ADR 0045).
   It also turns picked album photos into a draft post and guards the post's moment label
   (ADR 0040).
 - `packages/core/src/now.ts` and `packages/core/src/setup.ts`: the one-tap "now" archive and the
@@ -80,6 +80,11 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
 - `packages/core/src/programs.ts`: programs between people (ADR 0043): the quiz and the cat,
   kept by owner, reached through the page's `quiz.*` and `cat.*` grants (`ProfileService.programs`
   for members, `SharingService` for guest reads) and drawn by the Paint wall's `sections.js`.
+- `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
+  stories as a timeline of posts, now entries and moments, by the feed's audience rules.
+  `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage
+  (`PostsCollage`) and the days (`Stories`), inside the app (`?page=`) and on `/u/<handle>/posts`
+  and `/u/<handle>/stories`.
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same

@@ -40,6 +40,7 @@ import { GatheringsService } from "../../packages/core/src/gatherings.js";
 import { MomentDayService } from "../../packages/core/src/gathering-day.js";
 import { ProgramService } from "../../packages/core/src/programs.js";
 import { NowService } from "../../packages/core/src/now.js";
+import { PagesService } from "../../packages/core/src/pages.js";
 import { setupColours, setupPage } from "../../packages/core/src/setup.js";
 import { gatheringRoutes } from "./gathering-routes.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
@@ -239,6 +240,11 @@ programs.viewFilter = (viewerId, userId) =>
 accounts.erasers.push((userId) => programs.erase(userId));
 profiles.programs = (who, ownerId, method, payload) =>
   programs.capability(who, ownerId, method, payload);
+// The fixed pages (ADR 0045): everyone's Posts and Stories, read by the feed's audience rules.
+const pages = new PagesService(store, service, nowService);
+pages.isMoment = (postId) => identity.isMoment(postId);
+pages.cards = (viewerId, ownerId) =>
+  viewerId === GUEST ? [] : momentDay.cards({ userId: viewerId }, ownerId);
 // A side's link (ADR 0035) shows its home to guests, asked about the guest viewer.
 sharing.sideHome = (sideId) => sidesService.home({ userId: GUEST }, sideId);
 const media = new MediaService(service, resolve(dataDir, "media"));
@@ -630,6 +636,13 @@ api.get("/api/users/:id/now", async (req, res) => {
   await spotify.poll(String(req.params.id));
   res.json(nowService.archive(actor(res).userId, String(req.params.id)));
 });
+api.get("/api/users/:id/posts", (req, res) =>
+  res.json(pages.posts(actor(res).userId, String(req.params.id))),
+);
+api.get("/api/users/:id/timeline", async (req, res) => {
+  await spotify.poll(String(req.params.id));
+  res.json(pages.timeline(actor(res).userId, String(req.params.id)));
+});
 const spotifyCookie = { ...cookie, sameSite: "lax" as const, path: "/api/spotify" };
 api.get("/api/spotify/start", authLimit, (_req, res) => {
   if (!spotify.config) throw new AppError("NOT_FOUND", 404);
@@ -872,6 +885,15 @@ api.get("/api/public/users/:handle/now", guestLimit, async (req, res) => {
   const id = sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id;
   await spotify.poll(id);
   res.json(nowService.archive(GUEST, id));
+});
+api.get("/api/public/users/:handle/posts", guestLimit, (req, res) => {
+  const id = sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id;
+  res.json(pages.posts(GUEST, id));
+});
+api.get("/api/public/users/:handle/timeline", guestLimit, async (req, res) => {
+  const id = sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id;
+  await spotify.poll(id);
+  res.json(pages.timeline(GUEST, id));
 });
 // A friend's page for the home-screen widget (ADR 0042): guest view, polled, no account needed.
 api.get("/api/public/users/:handle/widget", guestLimit, async (req, res) => {

@@ -267,8 +267,9 @@ test("after the day: the host thanks and locks the album, and guests who came ge
   await expect(maya.getByText("Terima kasih sudah datang!")).toBeVisible();
   await expect(maya.getByText("Tambah foto")).toHaveCount(0);
   await expect(maya.getByLabel("Tampilkan kartu kenangan di profilku")).toBeChecked();
-  await page.goto("/?profile=maya");
-  const cards = page.getByRole("region", { name: "Moments" });
+  // The memory card is a day on Maya's Stories page (ADR 0045).
+  await page.goto("/?profile=maya&page=stories");
+  const cards = page.getByRole("list", { name: "Stories" });
   await expect(cards.getByRole("link", { name: /Lala & Bayu/ })).toBeVisible();
   await expect(cards.getByText("1 came")).toBeVisible();
   await other.close();
