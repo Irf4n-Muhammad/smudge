@@ -31,6 +31,11 @@ Profile capabilities are independent of post capabilities:
   user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`; `now` is the
   owner's latest one-tap entries (`current`, `listening`, `recent`) as the viewer may see them
   (ADR 0041). No draft, bookmark, session, or viewer identity is supplied, including in visitor preview.
+- `quiz.read` / `quiz.answer`: `await forma.quiz.read()` returns the owner's questions without
+  answers, the viewer's last result, the best ten and the number of takers;
+  `await forma.quiz.answer([i, …])` scores one pick per question. `cat.read` / `cat.feed`:
+  `await forma.cat.read()` returns the cat's mood, who fed it today and whether the viewer did;
+  `await forma.cat.feed()` feeds it once a day. Guests may read; writes need an account (ADR 0043).
 - `profile.openPost`: `await forma.profile.openPost(postId)` asks the host to open a published
   post. The server checks that it belongs to this profile owner before the host opens it.
 

@@ -76,6 +76,10 @@
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.
       See ADR 0042.
+- [x] Programs between people (stage 3, first two): a quiz the owner writes and friends take,
+      with a board, and a cat friends keep fed once a day; each section grants only its own
+      capabilities while it is on the page. Next: one sandbox per program with budgets, and
+      shared pages. See ADR 0043.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

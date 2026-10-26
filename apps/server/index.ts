@@ -38,6 +38,7 @@ import { SidesService } from "../../packages/core/src/sides.js";
 import { PlansService } from "../../packages/core/src/plans.js";
 import { GatheringsService } from "../../packages/core/src/gatherings.js";
 import { MomentDayService } from "../../packages/core/src/gathering-day.js";
+import { ProgramService } from "../../packages/core/src/programs.js";
 import { NowService } from "../../packages/core/src/now.js";
 import { setupColours, setupPage } from "../../packages/core/src/setup.js";
 import { gatheringRoutes } from "./gathering-routes.js";
@@ -177,6 +178,13 @@ nowService.viewFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 accounts.erasers.push((userId) => nowService.erase(userId));
 profiles.extras = (viewerId, ownerId) => ({ now: nowService.live(viewerId, ownerId) });
+// Programs between people (ADR 0043): the quiz and the cat, read by whoever may see your posts.
+const programs = new ProgramService(service, clock);
+programs.viewFilter = (viewerId, userId) =>
+  community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
+accounts.erasers.push((userId) => programs.erase(userId));
+profiles.programs = (who, ownerId, method, payload) =>
+  programs.capability(who, ownerId, method, payload);
 // A side's link (ADR 0035) shows its home to guests, asked about the guest viewer.
 sharing.sideHome = (sideId) => sidesService.home({ userId: GUEST }, sideId);
 const media = new MediaService(service, resolve(dataDir, "media"));
@@ -552,6 +560,8 @@ api.post("/api/me/now", (req, res) => res.json(nowService.add(actor(res), req.bo
 api.delete("/api/me/now/:id", (req, res) =>
   res.json(nowService.remove(actor(res), String(req.params.id))),
 );
+api.get("/api/me/quiz", (_req, res) => res.json(programs.quiz(actor(res))));
+api.put("/api/me/quiz", (req, res) => res.json(programs.setQuiz(actor(res), req.body)));
 api.get("/api/me/friends-now", (_req, res) => res.json(nowService.friends(actor(res))));
 api.get("/api/users/:id/now", (req, res) =>
   res.json(nowService.archive(actor(res).userId, String(req.params.id))),

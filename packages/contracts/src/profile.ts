@@ -16,6 +16,10 @@ export const profileMethod = z.enum([
   "profile.wall.add",
   "profile.wall.remove",
   "profile.wall.report",
+  "quiz.read",
+  "quiz.answer",
+  "cat.read",
+  "cat.feed",
 ]);
 export const partSlots = ["profile", "post", "story", "feature"] as const;
 // Public presentation fields only. Account ID, handle and authorization are never draft input.
@@ -31,7 +35,7 @@ export const profilePartSchema = z
   .object({
     name: z.string().min(1).max(80),
     entrypoint: z.string().regex(/^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*\.html$/),
-    capabilities: z.array(profileMethod).max(9),
+    capabilities: z.array(profileMethod).max(12),
   })
   .strict();
 export const profilePollSchema = z
@@ -74,7 +78,7 @@ const manifest = z.discriminatedUnion("schemaVersion", [
       mobileHeight: z.number().int().min(600).max(4000).optional(),
       headerOverlay: z.boolean().optional(),
       autoHeight: z.boolean().optional(),
-      capabilities: z.array(profileMethod).max(9),
+      capabilities: z.array(profileMethod).max(12),
       poll: profilePollSchema.optional(),
       parts: z
         .object({

@@ -58,6 +58,8 @@ export function sdkSource(nonce: string) {
       profile:{poll:{read:()=>request('profile.poll.read'),vote:option=>request('profile.poll.vote',{option})},read:()=>request('profile.read'),cover:postId=>request('profile.cover',{postId}),openPost:postId=>request('profile.openPost',{postId}),social:{read:()=>request('profile.social.read'),toggle:input=>request('profile.social.toggle',input)},wall:{read:()=>request('profile.wall.read'),add:value=>request('profile.wall.add',value),remove:noteId=>request('profile.wall.remove',{noteId}),report:(noteId,reason)=>request('profile.wall.report',reason===undefined?{noteId}:{noteId,reason})}},
       edit:{get active(){return document.documentElement.dataset.editing==='on'},select:field=>{if(document.documentElement.dataset.editing==='on'&&/^[a-z][a-z0-9-]{0,30}$/.test(String(field)))parent.postMessage({type:'forma:edit',nonce,field:String(field)},'*')}},
       relay:{read:()=>request('relay.read'),add:value=>request('relay.add',value)},
+      quiz:{read:()=>request('quiz.read'),answer:answers=>request('quiz.answer',{answers})},
+      cat:{read:()=>request('cat.read'),feed:()=>request('cat.feed')},
       progress:{read:()=>request('viewer.progress.read'),write:value=>request('viewer.progress.write',value)},
       contributions:{list:()=>request('contributions.read'),add:value=>request('contributions.create',value)},
       poll:{read:()=>request('polls.read'),vote:option=>request('polls.vote',{option})},

@@ -21,6 +21,10 @@ export class ProfileService {
   constructor(public readonly social: SocialService) {}
   /** More about the owner for `profile.read`, as this viewer may see it; the server installs it. */
   extras: (viewerId: string, ownerId: string) => Record<string, unknown> = () => ({});
+  /** Installed by the server: the programs between people a page may run (ADR 0043). */
+  programs: (actor: Actor, ownerId: string, method: string, payload: unknown) => unknown = () => {
+    throw new AppError("CAPABILITY_DENIED", 403);
+  };
   private identity(actor: Actor, input: unknown): ProfileIdentity {
     const value = profileIdentitySchema.parse(input);
     if (value.avatarAssetId) {
@@ -375,6 +379,18 @@ export class ProfileService {
         this.social.store.put("profile-relay", key, [...entries, entry]),
       );
       return entry;
+    }
+    if (method.startsWith("quiz.") || method.startsWith("cat.")) {
+      // Programs between people (ADR 0043): the owner's current page decides whether they are on.
+      if (!preview) {
+        const active = this.state(item.ownerId).publicationId;
+        if (
+          !active ||
+          !(this.publication(active).package.manifest.capabilities as string[]).includes(method)
+        )
+          throw new AppError("CAPABILITY_DENIED", 403);
+      }
+      return this.programs(actor, item.ownerId, method, payload);
     }
     if (method.startsWith("profile.wall.")) {
       // Same rule as the relay: the owner's current publication decides whether the Wall is on.

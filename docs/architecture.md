@@ -77,6 +77,9 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   The same service lists what the people you follow are up to (`friends`) and one friend's page
   for the widget (`widget`), shown by `components/friends-now.tsx` above the feed and
   `components/widget.tsx` at `/w/<handle>` (ADR 0042).
+- `packages/core/src/programs.ts`: programs between people (ADR 0043): the quiz and the cat,
+  kept by owner, reached through the page's `quiz.*` and `cat.*` grants (`ProfileService.programs`
+  for members, `SharingService` for guest reads) and drawn by the Paint wall's `sections.js`.
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same

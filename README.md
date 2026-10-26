@@ -82,6 +82,9 @@ page shows it live in its "now" and "on repeat" sections (ADR 0041).
 Above the feed, **Friends right now** shows what the people you follow last noted; a tap opens
 their page. `/w/<handle>` is one friend's page the size of a widget, for a bookmark or a
 home-screen shortcut until the native app wraps it (ADR 0042).
+In the easy editor's **Section** sheet, **Quiz** asks friends how well they know you (you write
+the questions, they get a score and a board) and **The Cat** gives your page a cat friends feed
+once a day; its mood follows the attention (ADR 0043).
 
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
 **Use this combination** previews the actual published composition with your identity and posts;

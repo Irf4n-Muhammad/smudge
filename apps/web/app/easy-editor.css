@@ -768,3 +768,33 @@
     transform: none;
   }
 }
+
+/* The quiz's questions (ADR 0043). */
+.easy-quiz {
+  display: grid;
+  gap: 12px;
+}
+.easy-quiz-q {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.easy-quiz-q legend {
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.easy-quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.easy-quiz-option input[type="text"],
+.easy-quiz-option input:not([type]) {
+  flex: 1;
+  min-width: 0;
+}

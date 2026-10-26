@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { profilePackageSchema, type ProfilePackage } from "../../contracts/src/profile.js";
+import { programCapabilities } from "../../contracts/src/programs.js";
 
 /**
  * Easy-editor settings for the Smudge Paint wall profile. Like the Ink & Paper controls, they are
@@ -15,6 +16,8 @@ export const smudgeSectionKinds = [
   "repeat",
   "countdown",
   "wall",
+  "quiz",
+  "cat",
 ] as const;
 export type SmudgeSection = (typeof smudgeSectionKinds)[number];
 export const smudgePalettes = {
@@ -47,6 +50,8 @@ export const smudgeSettingsSchema = z
       .object({ label: text(40), date: z.union([z.literal(""), z.string().date()]) })
       .strict(),
     wall: z.object({ title: text(40) }).strict(),
+    quiz: z.object({ title: text(40) }).strict(),
+    cat: z.object({ name: text(20) }).strict(),
   })
   .strict();
 export type SmudgeSettings = z.infer<typeof smudgeSettingsSchema>;
@@ -63,6 +68,8 @@ export const defaultSmudgeSettings: SmudgeSettings = {
   repeat: { song: "", artist: "" },
   countdown: { label: "", date: "" },
   wall: { title: "The Wall" },
+  quiz: { title: "" },
+  cat: { name: "" },
 };
 export const wallCapabilities = [
   "profile.wall.read",
@@ -71,7 +78,7 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v4";
+export const smudgeVersionMarker = "smudge:v5";
 
 export function supportsSmudgeDesign(pkg: ProfilePackage) {
   return (
@@ -126,14 +133,20 @@ export function applySmudgeSettings(
       : shell.replace("</main>", '<div class="sm-sections" id="sm-sections"></div>\n</main>');
   pkg.files["index.html"] = shell;
   pkg.files[settingsFile] = `window.smudgeSettings = ${JSON.stringify(s)};`;
-  // The Wall is the only section that needs grants; it gets them only while it is on the page.
-  const caps = pkg.manifest.capabilities.filter(
-    (c) => !(wallCapabilities as readonly string[]).includes(c),
-  );
-  if (s.sections.includes("wall")) caps.push(...wallCapabilities);
-  if (caps.length > 9)
-    throw new Error("This profile already uses too many features to add The Wall.");
-  pkg.manifest.capabilities = caps;
+  // Sections between people need grants; each gets them only while it is on the page, so the
+  // permission list always says what the page can do (ADR 0043).
+  const granted: Record<string, readonly string[]> = {
+    wall: wallCapabilities,
+    quiz: programCapabilities.quiz,
+    cat: programCapabilities.cat,
+  };
+  const all = Object.values(granted).flat();
+  const caps: string[] = pkg.manifest.capabilities.filter((c) => !all.includes(c));
+  for (const [kind, list] of Object.entries(granted))
+    if (s.sections.includes(kind as SmudgeSection)) caps.push(...list);
+  if (caps.length > 12)
+    throw new Error("This profile already uses too many features to add this section.");
+  pkg.manifest.capabilities = caps as typeof pkg.manifest.capabilities;
   pkg.manifest.autoHeight = true;
   return profilePackageSchema.parse(pkg);
 }

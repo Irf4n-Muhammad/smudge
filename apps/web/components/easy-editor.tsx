@@ -122,6 +122,8 @@ const sectionInfo: Record<SmudgeSection, { name: string; note: string }> = {
   now: { name: "Now doing", note: "What you're up to, with progress" },
   selected: { name: "Gallery", note: "Swipe through your best posts" },
   wall: { name: "The Wall", note: "Friends leave notes" },
+  quiz: { name: "Quiz", note: "How well do friends know you?" },
+  cat: { name: "The Cat", note: "Friends keep it fed" },
   quote: { name: "Big quote", note: "One line, huge" },
   repeat: { name: "On repeat", note: "Your song right now" },
   countdown: { name: "Countdown", note: "For drops and events" },
@@ -132,6 +134,8 @@ const addable: SmudgeSection[] = [
   "now",
   "selected",
   "wall",
+  "quiz",
+  "cat",
   "quote",
   "repeat",
   "countdown",
@@ -165,6 +169,7 @@ function withStarter(s: SmudgeSettings, kind: SmudgeSection): SmudgeSettings {
   if (kind === "repeat" && !s.repeat.song) next.repeat = { song: "Song title", artist: "Artist" };
   if (kind === "countdown" && !s.countdown.date)
     next.countdown = { label: "Something's coming", date: inTwoWeeks() };
+  if (kind === "cat" && !s.cat.name) next.cat = { name: "Mochi" };
   return next;
 }
 
@@ -897,6 +902,35 @@ export function EasyEditor({
                   </p>
                 </>
               )}
+              {sectionField === "quiz" && (
+                <>
+                  <TextField
+                    title=""
+                    label="Title"
+                    value={settings.quiz.title}
+                    max={40}
+                    placeholder="How well do you *know* me?"
+                    onChange={(v) => change({ ...settings, quiz: { title: v } })}
+                  />
+                  <QuizFields />
+                </>
+              )}
+              {sectionField === "cat" && (
+                <>
+                  <TextField
+                    title=""
+                    label="Name"
+                    value={settings.cat.name}
+                    max={20}
+                    placeholder="Mochi"
+                    onChange={(v) => change({ ...settings, cat: { name: v } })}
+                  />
+                  <p className="easy-note">
+                    Friends feed the cat once a day each. Three feeds and it purrs; none and it
+                    sleeps hungry.
+                  </p>
+                </>
+              )}
               {["latest", "selected", "posts"].includes(sectionField) && (
                 <p className="easy-note">
                   This fills itself from your posts. Move it or hide it below.
@@ -1004,7 +1038,7 @@ export function EasyEditor({
                     >
                       <strong>{sectionInfo[kind].name}</strong>
                       <small>{added ? "On your profile ✓" : sectionInfo[kind].note}</small>
-                      {kind === "wall" && !added && <b className="easy-new">NEW</b>}
+                      {["quiz", "cat"].includes(kind) && !added && <b className="easy-new">NEW</b>}
                       <span className="easy-mini" aria-hidden="true" />
                     </button>
                   );
@@ -1232,6 +1266,134 @@ export function ChipRow<T extends string>({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+type QuizDraft = { text: string; options: string[]; answer: number }[];
+const blankQuestion = () => ({ text: "", options: ["", ""], answer: 0 });
+/**
+ * The quiz's questions (ADR 0043) live with the owner, not in the page, so the answers never
+ * reach a visitor. Saved as a whole; saving again starts the scores over.
+ */
+function QuizFields() {
+  const [questions, setQuestions] = useState<QuizDraft>([]);
+  const [state, setState] = useState<"loading" | "idle" | "saving" | "saved" | "error">("loading");
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    api<{ questions: QuizDraft }>("/me/quiz")
+      .then((q) => {
+        setQuestions(q.questions.length ? q.questions : [blankQuestion()]);
+        setState("idle");
+      })
+      .catch(() => {
+        setQuestions([blankQuestion()]);
+        setState("idle");
+      });
+  }, []);
+  const update = (i: number, next: QuizDraft[number]) =>
+    setQuestions((qs) => qs.map((q, k) => (k === i ? next : q)));
+  const complete = questions.filter(
+    (q) => q.text.trim() && q.options.filter((o) => o.trim()).length >= 2,
+  );
+  async function save() {
+    setState("saving");
+    setMessage("");
+    try {
+      const clean = complete.map((q) => {
+        const options = q.options.filter((o) => o.trim());
+        return { text: q.text.trim(), options, answer: Math.min(q.answer, options.length - 1) };
+      });
+      await api("/me/quiz", { questions: clean }, "PUT");
+      setState("saved");
+      setMessage("Questions saved. Scores start over.");
+    } catch (e) {
+      setState("error");
+      setMessage((e as Error).message);
+    }
+  }
+  if (state === "loading") return null;
+  return (
+    <div className="easy-quiz">
+      <p className="easy-note">
+        Up to 10 questions, 2 to 4 options each. Tick the right one. Only you see the answers.
+      </p>
+      {questions.map((q, i) => (
+        <fieldset key={i} className="easy-quiz-q">
+          <legend>Question {i + 1}</legend>
+          <label className="easy-input">
+            <span className="sr-only">Question {i + 1}</span>
+            <input
+              maxLength={120}
+              value={q.text}
+              placeholder="My go-to order at the warung?"
+              aria-label={`Question ${i + 1}`}
+              onChange={(e) => update(i, { ...q, text: e.target.value })}
+            />
+          </label>
+          {q.options.map((o, k) => (
+            <label key={k} className="easy-quiz-option">
+              <input
+                type="radio"
+                name={`quiz-answer-${i}`}
+                checked={q.answer === k}
+                aria-label={`Question ${i + 1} right answer ${k + 1}`}
+                onChange={() => update(i, { ...q, answer: k })}
+              />
+              <input
+                maxLength={40}
+                value={o}
+                placeholder={`Option ${k + 1}`}
+                aria-label={`Question ${i + 1} option ${k + 1}`}
+                onChange={(e) =>
+                  update(i, {
+                    ...q,
+                    options: q.options.map((x, j) => (j === k ? e.target.value : x)),
+                  })
+                }
+              />
+            </label>
+          ))}
+          <div className="easy-row">
+            {q.options.length < 4 && (
+              <button
+                type="button"
+                onClick={() => update(i, { ...q, options: [...q.options, ""] })}
+              >
+                Add option
+              </button>
+            )}
+            {questions.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setQuestions((qs) => qs.filter((_, k) => k !== i))}
+              >
+                Remove question
+              </button>
+            )}
+          </div>
+        </fieldset>
+      ))}
+      <div className="easy-row">
+        {questions.length < 10 && (
+          <button type="button" onClick={() => setQuestions((qs) => [...qs, blankQuestion()])}>
+            Add question
+          </button>
+        )}
+        <button
+          type="button"
+          className="primary"
+          disabled={state === "saving" || !complete.length}
+          onClick={() => void save()}
+        >
+          {state === "saving" ? "Saving…" : "Save questions"}
+        </button>
+      </div>
+      {message && (
+        <p className="easy-note" role="status">
+          {message}
+        </p>
+      )}
     </div>
   );
 }

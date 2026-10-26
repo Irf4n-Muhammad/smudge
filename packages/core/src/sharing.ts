@@ -246,6 +246,8 @@ export class SharingService {
         })),
       };
     }
+    if (method === "quiz.read" || method === "cat.read")
+      return this.profiles.programs({ userId: GUEST }, ownerId, method, payload);
     if (method === "relay.read")
       return this.store.get<RelayContribution[]>("profile-relay", `owner:${ownerId}`) ?? [];
     if (method === "profile.wall.read") {
