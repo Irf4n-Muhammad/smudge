@@ -86,8 +86,9 @@
       with one number each, and the strip's one action (Edit or Follow) instead of a button on
       the page.
 - [x] The fixed pages in the look's colours (ADR 0049): a look declares five colours and two
-      font roles, and the app draws Posts, Stories and the strip with them. Next: chapter
-      photos, the desktop landing, the share page's bar.
+      font roles, and the app draws Posts, Stories and the strip with them.
+- [x] Chapter photos, the poster on a wide screen, the share page in the look (ADR 0050).
+      Next: sources (music, games, running) filling chapters by themselves.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.

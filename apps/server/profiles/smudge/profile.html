@@ -127,6 +127,16 @@
           marked(c.title, h);
           sec.append(h);
         }
+        // The photo is one of the page's own pictures, handed in by the runtime (ADR 0050).
+        const src = c.photo && (window.smudgePhotos || {})[c.photo];
+        if (src) {
+          const fig = el("figure", "photo");
+          const img = document.createElement("img");
+          img.src = src;
+          img.alt = "";
+          fig.append(img);
+          sec.append(fig);
+        }
         if (c.kind === "run") {
           const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
           svg.setAttribute("viewBox", "0 0 318 120");

@@ -152,6 +152,9 @@ test("the easy editor: pick a vibe, tap to edit, add The Wall, publish, a friend
     await expect(frame.locator(".chapter-run h2")).toHaveText("Slow, but far.");
     await expect(frame.locator(".chapter-run .big strong")).toHaveText("1:52:10");
     await expect(frame.locator(".chapter-run .route")).toBeVisible();
+    // A photo of the owner's own goes into the chapter (ADR 0050).
+    await page.getByLabel("Upload a chapter photo").setInputFiles("assets/demo/spray.jpg");
+    await expect(frame.locator(".chapter-run .photo img")).toHaveAttribute("src", /^data:image/);
 
     // Add The Wall from the section sheet; it shows in the draft straight away.
     await page.getByRole("button", { name: "Section", exact: true }).click();

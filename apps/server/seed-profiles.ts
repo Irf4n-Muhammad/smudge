@@ -121,6 +121,8 @@ function inesPaintWall() {
           { value: "1", label: "cat" },
         ],
         lines: [],
+        // A shared demo photo, seeded before the pages (seed.ts).
+        photo: "10000000-0000-4000-8000-000000000001",
       },
       {
         kind: "music",

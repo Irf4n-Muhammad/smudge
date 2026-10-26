@@ -367,3 +367,38 @@
 .has-look .page-fixed .now-bar a {
   color: var(--page-accent);
 }
+
+/* A guest's share page under a look (ADR 0050): the bar, the page's frame and the invitation
+   take the look's ground, ink and accent, so the link looks like the page it opens. */
+.share-page.has-look .share-bar {
+  background: color-mix(in srgb, var(--page-ground) 92%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--page-ink) 15%, transparent);
+}
+.share-page.has-look .share-bar .brand,
+.share-page.has-look .share-bar a {
+  color: var(--page-ink);
+  border-color: color-mix(in srgb, var(--page-ink) 25%, transparent);
+}
+.share-page.has-look .share-bar a.join {
+  background: var(--page-accent);
+  border-color: var(--page-accent);
+  color: var(--page-ground);
+}
+.share-page.has-look .share-main:not(.page-fixed) {
+  width: min(1024px, 100%);
+  padding: 0 0 120px;
+}
+.share-page.has-look .share-profile-world {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.share-page.has-look .share-cta {
+  margin: 24px 16px 0;
+  background: var(--page-card);
+  color: var(--page-ink);
+}
+.share-page.has-look .share-cta a {
+  background: var(--page-accent);
+  color: var(--page-ground);
+}

@@ -64,6 +64,29 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
     chapters: [{ ...defaultChapter, kind: "run", title: "Slow, but *far*.", big: "1:52:10" }],
   })};`;
   assert.equal(readSmudgeSettings(withRibbon).chapters[0]?.big, "1:52:10");
+  // A chapter's photo becomes one of the page's assets, and leaves with the chapter (ADR 0050).
+  const photo = "10000000-0000-4000-8000-000000000001";
+  const withPhoto = applySmudgeSettings(pkg, {
+    ...readSmudgeSettings(pkg),
+    chapters: [{ ...defaultChapter, kind: "work", title: "Walls", photo }],
+  });
+  assert.ok(withPhoto.manifest.assets.includes(photo));
+  assert.match(
+    withPhoto.files["smudge/settings.js"]!,
+    /window\.smudgePhotos = \{"1000.*asset:1000/,
+  );
+  assert.equal(readSmudgeSettings(withPhoto).chapters[0]?.photo, photo);
+  const without = applySmudgeSettings(withPhoto, {
+    ...readSmudgeSettings(withPhoto),
+    chapters: [],
+  });
+  assert.ok(!without.manifest.assets.includes(photo));
+  assert.throws(() =>
+    applySmudgeSettings(pkg, {
+      ...readSmudgeSettings(pkg),
+      chapters: [{ ...defaultChapter, photo: "not-an-id" }],
+    }),
+  );
   assert.throws(() =>
     applySmudgeSettings(pkg, { ...settings, chapters: [1, 2, 3, 4].map(() => defaultChapter) }),
   );

@@ -58,6 +58,8 @@ export const chapterSchema = z
     note: text(120),
     stats: z.array(z.object({ value: text(12), label: text(16) }).strict()).max(3),
     lines: z.array(text(40)).max(3),
+    /** One of the owner's uploaded photos (ADR 0050), or none. */
+    photo: z.union([z.literal(""), z.string().uuid()]).default(""),
   })
   .strict();
 export type Chapter = z.infer<typeof chapterSchema>;
@@ -70,6 +72,7 @@ export const emptyChapter: Chapter = {
   note: "",
   stats: [],
   lines: [],
+  photo: "",
 };
 export const smudgeSettingsSchema = z
   .object({
@@ -131,7 +134,7 @@ export function supportsSmudgeDesign(pkg: ProfilePackage) {
 }
 export function readSmudgeSettings(pkg: ProfilePackage): SmudgeSettings {
   const source = pkg.files[settingsFile];
-  const match = source ? /^window\.smudgeSettings = (.+);\s*$/s.exec(source) : null;
+  const match = source ? /^window\.smudgeSettings = ([^\n]+);/.exec(source) : null;
   if (!match) return structuredClone(defaultSmudgeSettings);
   try {
     const parsed = JSON.parse(match[1]!) as Record<string, unknown>;
@@ -182,7 +185,16 @@ export function applySmudgeSettings(
         )
       : shell.replace("</main>", '<div class="sm-sections" id="sm-sections"></div>\n</main>');
   pkg.files["index.html"] = shell;
-  pkg.files[settingsFile] = `window.smudgeSettings = ${JSON.stringify(s)};`;
+  // Chapter photos are the page's assets (ADR 0050): the ones the last settings named make way
+  // for these, and the runtime fills `smudgePhotos` with their data URLs when it serves the page.
+  const before = new Set(readSmudgeSettings(pkg).chapters.map((c) => c.photo));
+  const photos = s.chapters.map((c) => c.photo).filter(Boolean);
+  const assets = [...new Set([...pkg.manifest.assets.filter((id) => !before.has(id)), ...photos])];
+  if (assets.length > 12) throw new Error("This page already carries too many pictures.");
+  pkg.manifest.assets = assets;
+  pkg.files[settingsFile] =
+    `window.smudgeSettings = ${JSON.stringify(s)};\n` +
+    `window.smudgePhotos = ${JSON.stringify(Object.fromEntries(photos.map((id) => [id, `asset:${id}`])))};`;
   // Sections between people need grants; each gets them only while it is on the page, so the
   // permission list always says what the page can do (ADR 0043).
   const granted: Record<string, readonly string[]> = {

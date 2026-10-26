@@ -85,8 +85,9 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   `profile.read().now` and the chapters drawn from the settings, `story.html` and `post.html`
   the optional Latest and Gallery, `sections.js` the other extras;
   `packages/core/src/smudge-design.ts` holds the settings the easy editor writes, chapters
-  included, strips the page's follow grant (the strip's action follows instead) and writes the
-  manifest's `look` from the palette (ADR 0049).
+  included, strips the page's follow grant (the strip's action follows instead), writes the
+  manifest's `look` from the palette (ADR 0049) and keeps chapter photos as the page's assets
+  (ADR 0050).
 - `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
   stories as a timeline of posts, now entries and moments, by the feed's audience rules.
   `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage

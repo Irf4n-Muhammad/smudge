@@ -389,7 +389,8 @@ export function EasyEditor({
       setBusy(false);
     }
   }
-  async function upload(file: File) {
+  /** Uploads one photo and returns its asset id, or null with the reason shown. */
+  async function uploadPhoto(file: File) {
     setMessage("");
     try {
       if (file.size > 3_000_000 || !["image/png", "image/jpeg", "image/webp"].includes(file.type))
@@ -405,10 +406,15 @@ export function EasyEditor({
         mime: file.type,
         base64,
       });
-      changeIdentity({ ...latest.current.identity, avatarAssetId: asset.id });
+      return asset.id;
     } catch (e) {
       setMessage(friendly((e as Error).message));
+      return null;
     }
+  }
+  async function upload(file: File) {
+    const id = await uploadPhoto(file);
+    if (id) changeIdentity({ ...latest.current.identity, avatarAssetId: id });
   }
   function pick(next: string) {
     setField(next);
@@ -679,6 +685,7 @@ export function EasyEditor({
           {sheet === "field" && smudge && field === "chapters" && (
             <ChapterFields
               chapters={settings.chapters}
+              onUpload={uploadPhoto}
               onChange={(chapters) => change({ ...settings, chapters })}
             />
           )}
@@ -1389,9 +1396,11 @@ const chapterNames: Record<Chapter["kind"], string> = {
 function ChapterFields({
   chapters,
   onChange,
+  onUpload,
 }: {
   chapters: Chapter[];
   onChange: (chapters: Chapter[]) => void;
+  onUpload: (file: File) => Promise<string | null>;
 }) {
   const [which, setWhich] = useState(0);
   const at = Math.min(which, Math.max(0, chapters.length - 1));
@@ -1476,6 +1485,22 @@ function ChapterFields({
               placeholder={chapter.kind === "music" ? "hours" : ""}
               onChange={(unit) => set({ unit })}
             />
+          </div>
+          <div className="easy-photo">
+            <label className="easy-upload">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                aria-label="Upload a chapter photo"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void onUpload(file).then((photo) => photo && set({ photo }));
+                }}
+              />
+              {chapter.photo ? "Change the photo" : "Add a photo"}
+            </label>
+            {chapter.photo && <button onClick={() => set({ photo: "" })}>No photo</button>}
           </div>
           <TextField
             title=""

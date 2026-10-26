@@ -320,7 +320,8 @@ New profiles start from **Smudge · Paint wall** (ADR 0015, a landing page since
 poster since ADR 0048): your first name as big as the page, your line under it, your photo
 tilted into the name, and the song you are playing and what you are up to, read from your
 archive. Below, up to three **chapters** say who you are with one measurable thing each (a
-record, years somewhere, hours of one band), typed in the easy editor. No counts, no grid, no
+record, years somewhere, hours of one band), typed in the easy editor, each with a photo of
+yours if you like (ADR 0050). On a wide screen the poster is two columns. No counts, no grid, no
 follow button of its own: the strip's one action is Edit for you and Follow for everyone else.
 Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
 Open `/?profile=ines` to see it. Pages published on an older Paint wall are brought up to the
