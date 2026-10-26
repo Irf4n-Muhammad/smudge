@@ -197,6 +197,52 @@ any gathering, never the only one and not the entry door.
 - WhatsApp can copy the planning but not the after: no pages, no timeline, and end-to-end
   encryption stops it arranging 300 guests' photos. Moments never ask anyone to leave WhatsApp.
 
+### The profile: landing, Posts, Stories (Oct 26)
+
+Two layers. The **landing** is the owner's free page, made from a template and tweaked
+(name, photo, line, colours); it can be anything. **Posts** and **Stories** are fixed pages made
+by Smudge, the same under every look, taking only the look's colours and type. The strip
+Page · Posts · Stories is drawn by the app outside the page, so no page can drop it. No follower
+counts, no grid on the landing. Decided from the mockup (Oct 26):
+
+- The landing scrolls and proves who the person is with evidence, not claims: chapters the owner
+  picks, each built on one measurable thing (a running record, years at a company with photos,
+  hours of one band, a game rank). Chapters come from sources, so a home-office-games person has
+  as strong a page as a runner: the arena is time, not place.
+- **Posts = what you keep. Stories = what you are living.** Stories is a life recap that writes
+  itself from sources (music, games, running, work), one card per day, grouped by day, never
+  expiring and never counted (no views, no reactions, no ring in a feed that counts). The owner
+  edits the day (delete a line, add one sentence, two taps) rather than writes it; hand-written
+  moments come later, only if days feel "not me enough". Daily writing as the backbone is the
+  BeReal trap.
+- From Instagram we take the format (two-tap posting, today's day as a full-screen tap-through
+  opened from the ring above the feed, one tap from a story to the person's page) and drop the
+  mechanics (24-hour expiry, view counts). The Stories page exists because nothing expires: it
+  is the archive by day, the only door for guests who arrive from a link without a feed, and
+  the owner's own journal. Weekly and yearly recaps, rendered in the owner's own look and
+  shareable, are the demand engine (Spotify Wrapped, Strava) and the reason to open an archive.
+- **Audience is one field per entry** (me, friends via Sides, everyone), with a default per
+  source set once (Spotify everyone, games Gamers, location me, written moments friends).
+  Location is never public. A **Semua** side, visible to the owner only, holds everything
+  regardless of side; it has no link and no members, and posting from it asks for a destination.
+  Everyday becomes one ordinary public side under it. One Stories page with an owner toggle
+  "everything / what others see", not two pages.
+- Recording place is an event the owner starts (a trip, a day out), like starting a run, never
+  ambient tracking: an ordinary week maps home and office and gives away the address. "Lewat
+  sini" check-ins fill the rest; a story's place shows only after leaving it. Home and a 500 m
+  radius never appear; strangers see district level at most.
+- Sources are free but policy-bound (check before building): Spotify (25 users until approved;
+  Last.fm as the open fallback), Steam (public profiles), GitHub; no official PlayStation, Xbox or
+  screen-time API; Strava's 2024 terms show a user's data only to that user, so running comes
+  through uploads or Apple Health / Google Fit, not Strava. Order: Spotify or Last.fm and Steam
+  first, running later. Two weeks per source; never depend on one.
+- Candidates, each with its main problem: import past data from Spotify, Instagram and Google
+  exports so the archive is full on day one (parsing changing formats; first to build, needs no
+  API); "one year ago today" (needs the archive); "you and Raka both listened to X today" (both
+  must consent; wrong matches are creepy); the yearly recap as a poster in the owner's look
+  (once a year, so a weekly version too); the one-friend home-screen widget (native; choosing
+  one friend is socially heavy).
+
 ### Not doing
 
 - Food delivery, being a bank or Stripe, store backend, pay-per-visit as the main billing.
@@ -360,6 +406,10 @@ any gathering, never the only one and not the entry door.
   young people, worldwide. Moments stay as one program.
 - "A complement to Instagram": Smudge replaces Instagram.
 - Mixing Smudge and Bubble into one product.
+- Two Stories pages (all vs public): one page, one audience field per entry, one owner toggle.
+- Ambient location tracking and real-time place on stories: maps the home, needs native
+  "always" permission, and is a stalking tool. Recording is an event; place shows late.
+- Stories that need daily writing to have content (BeReal): sources first, writing later.
 - Pay if it works (money held until a result is proven), for gurus and as its own product: results
   depend on too many things outside the provider's control (the student's effort, injury, time),
   unlike a delivered IT project, so good providers would leave.
