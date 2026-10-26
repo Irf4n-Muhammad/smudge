@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
 import {
   nowInputSchema,
+  type FriendNow,
   type NowArchive,
   type NowLive,
   type NowView,
+  type NowWidget,
 } from "../../contracts/src/now.js";
+import { publicUser } from "./community.js";
 import type { Actor } from "./index.js";
 import { AppError, GUEST, type SocialService } from "./social.js";
 
@@ -81,6 +84,34 @@ export class NowService {
     return { current, listening, recent: entries.slice(0, 5) };
   }
   /** Runs inside the account deletion's transaction. */
+  /**
+   * What the people you follow are up to, newest first (ADR 0042): each person's latest entry,
+   * only where they let you see it. The first screen is this row, then the feed as usual.
+   */
+  friends(actor: Actor, limit = 30): FriendNow[] {
+    const me = this.social.actor(actor);
+    const users = new Map(this.social.users().map((u) => [u.id, u]));
+    const rows: FriendNow[] = [];
+    for (const target of this.social.following(actor)) {
+      const user = publicUser(users.get(target));
+      if (!user || !this.canSee(me, target)) continue;
+      const entry = this.mine(target)[0];
+      if (entry) rows.push({ user, entry: this.view(entry) });
+    }
+    return rows.sort((a, b) => b.entry.at.localeCompare(a.entry.at)).slice(0, limit);
+  }
+  /** One friend's page as a widget sees it: who they are and their latest two entries. */
+  widget(viewerId: string, ownerId: string): NowWidget {
+    const owner = this.social.users().find((u) => u.id === ownerId);
+    if (!owner) throw new AppError("NOT_FOUND", 404);
+    const { current, listening } = this.live(viewerId, ownerId);
+    return {
+      user: { ...publicUser(owner)!, bio: owner.bio },
+      current,
+      listening,
+      total: this.archive(viewerId, ownerId).total,
+    };
+  }
   erase(userId: string) {
     for (const e of this.mine(userId)) this.store.remove("now", e.id);
   }

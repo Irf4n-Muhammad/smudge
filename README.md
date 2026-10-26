@@ -79,6 +79,9 @@ playing or going on) and has a page. On it, **Listening / Doing / Somewhere / Th
 what you are up to in one tap; the newest shows on top and the rest pile up under **Archive**.
 Friends see it on your profile, anyone at `/u/<handle>` without an account, and the Paint wall
 page shows it live in its "now" and "on repeat" sections (ADR 0041).
+Above the feed, **Friends right now** shows what the people you follow last noted; a tap opens
+their page. `/w/<handle>` is one friend's page the size of a widget, for a bookmark or a
+home-screen shortcut until the native app wraps it (ADR 0042).
 
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
 **Use this combination** previews the actual published composition with your identity and posts;

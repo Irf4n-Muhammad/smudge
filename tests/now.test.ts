@@ -127,3 +127,27 @@ test("five answers publish a page with the line, colour, song and first entries"
   assert.equal(profiles.state("dika").version, 1);
   assert.equal(now.archive("dika", "dika").total, 0);
 });
+
+test("the first screen lists what the people you follow are up to; a widget reads one friend", async () => {
+  const { now, social, tick } = await setup();
+  now.add(rina, { kind: "listening", text: "Velvet Static", by: "After Hours" });
+  tick(5);
+  now.add(rina, { kind: "place", text: "Bandung" });
+  // Nobody followed yet, so nothing to show.
+  assert.deepEqual(now.friends(dika), []);
+  social.follow(dika, "rina");
+  const row = now.friends(dika);
+  assert.equal(row.length, 1);
+  assert.equal(row[0]!.user.handle, "rina");
+  assert.equal(row[0]!.entry.text, "Bandung");
+  assert.equal("bio" in row[0]!.user, false);
+  const widget = now.widget(GUEST, "rina");
+  assert.equal(widget.current?.text, "Bandung");
+  assert.equal(widget.listening?.by, "After Hours");
+  assert.equal(widget.total, 2);
+  // The privacy rule hides both the row and the widget.
+  now.viewFilter = () => false;
+  assert.deepEqual(now.friends(dika), []);
+  assert.equal(now.widget(GUEST, "rina").current, null);
+  rejects(() => now.widget(GUEST, "nobody"), "NOT_FOUND");
+});

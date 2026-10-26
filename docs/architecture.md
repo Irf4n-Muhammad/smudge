@@ -74,6 +74,9 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
 - `packages/core/src/now.ts` and `packages/core/src/setup.ts`: the one-tap "now" archive and the
   five-answer setup that publishes a first page (ADR 0041); `components/now.tsx` (`NowBar`) and
   `components/setup.tsx` on the web; `ProfileService.extras` feeds `profile.read` the live entries.
+  The same service lists what the people you follow are up to (`friends`) and one friend's page
+  for the widget (`widget`), shown by `components/friends-now.tsx` above the feed and
+  `components/widget.tsx` at `/w/<handle>` (ADR 0042).
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same

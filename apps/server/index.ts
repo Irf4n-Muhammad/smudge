@@ -552,6 +552,7 @@ api.post("/api/me/now", (req, res) => res.json(nowService.add(actor(res), req.bo
 api.delete("/api/me/now/:id", (req, res) =>
   res.json(nowService.remove(actor(res), String(req.params.id))),
 );
+api.get("/api/me/friends-now", (_req, res) => res.json(nowService.friends(actor(res))));
 api.get("/api/users/:id/now", (req, res) =>
   res.json(nowService.archive(actor(res).userId, String(req.params.id))),
 );
@@ -766,6 +767,15 @@ api.get("/api/public/users/:handle", guestLimit, (req, res) =>
 api.get("/api/public/users/:handle/now", guestLimit, (req, res) =>
   res.json(
     nowService.archive(
+      GUEST,
+      sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id,
+    ),
+  ),
+);
+// A friend's page for the home-screen widget (ADR 0042): guest view, polled, no account needed.
+api.get("/api/public/users/:handle/widget", guestLimit, (req, res) =>
+  res.json(
+    nowService.widget(
       GUEST,
       sharing.profile(z.string().min(1).max(30).parse(req.params.handle)).user.id,
     ),

@@ -50,3 +50,30 @@ export const setupInputSchema = z
   })
   .strict();
 export type SetupInput = z.infer<typeof setupInputSchema>;
+/** One person you follow and the latest thing they noted, for the row above the feed. */
+export interface FriendNow {
+  user: {
+    id: string;
+    name: string;
+    handle: string;
+    initials: string;
+    color: string;
+    avatarAssetId?: string;
+  };
+  entry: NowView;
+}
+/** A friend's page, live, for the home-screen widget: who, what now, what is playing. */
+export interface NowWidget {
+  user: {
+    id: string;
+    name: string;
+    handle: string;
+    initials: string;
+    color: string;
+    avatarAssetId?: string;
+    bio: string;
+  };
+  current: NowView | null;
+  listening: NowView | null;
+  total: number;
+}

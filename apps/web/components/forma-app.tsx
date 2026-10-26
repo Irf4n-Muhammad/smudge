@@ -59,6 +59,7 @@ import type { DecoratedPost } from "./post-decor";
 import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
 import { Setup } from "./setup";
+import { FriendsNow } from "./friends-now";
 import { SideHome, SideResults, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
@@ -869,6 +870,7 @@ export function FormaApp() {
                     onLeft={refresh}
                   />
                 )}
+                {view === "home" && !inSide && <FriendsNow onOpenUser={openUser} />}
                 {view === "home" && (
                   <section className="composer">
                     <span className="composer-symbol">
