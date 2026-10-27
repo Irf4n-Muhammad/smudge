@@ -27,7 +27,7 @@
     if (!order.includes(k)) css += `[data-sm-section="${k}"]{display:none!important}`;
   // The owner's palette; Halloween only recolours the mark on the hero (parts.css).
   if (s.palette !== "night")
-    css += `.sm{${paints.map((c, i) => `--p${i + 1}:${c}`).join(";")}}html[data-season="halloween"] .sm{--p1:#ff7a1a}`;
+    css += `.sm{${paints.map((c, i) => `--p${i + 1}:${c}`).join(";")}}html[data-season="halloween"] .sm{--mark:#ff7a1a}`;
   const style = document.createElement("style");
   style.textContent = css;
   document.head.append(style);

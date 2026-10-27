@@ -149,6 +149,7 @@ const addable: SmudgeSection[] = [
 const fieldTitles: Record<string, string> = {
   name: "Your big name",
   tagline: "Your line",
+  manifesto: "Your words",
   place: "Top corner",
   about: "Name & bio",
   photo: "Your photo",
@@ -673,6 +674,17 @@ export function EasyEditor({
               max={60}
               placeholder={`*${owner.handle}* on Smudge`}
               onChange={(v) => change({ ...settings, tagline: v })}
+            />
+          )}
+          {sheet === "field" && smudge && field === "manifesto" && (
+            <TextField
+              title="Your words"
+              hint="A few sentences, set as big as the page. Wrap words in *stars* to colour them."
+              value={settings.manifesto}
+              max={140}
+              area
+              placeholder="Skate since *fourteen.* Film since *college.* Bandung, then Jakarta."
+              onChange={(v) => change({ ...settings, manifesto: v })}
             />
           )}
           {sheet === "field" && smudge && field === "place" && (

@@ -100,6 +100,15 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
   });
   assert.ok(withRoll.manifest.assets.includes(snap) && withRoll.manifest.assets.includes(rolled));
   assert.equal(readSmudgeSettings(withRoll).roll[0]?.caption, "Blok M, 2025");
+  // The owner's words (ADR 0054) are kept and bounded.
+  const words = applySmudgeSettings(pkg, {
+    ...readSmudgeSettings(pkg),
+    manifesto: "Skate since *fourteen.* Film since *college.*",
+  });
+  assert.match(readSmudgeSettings(words).manifesto, /^Skate since/);
+  assert.throws(() =>
+    applySmudgeSettings(pkg, { ...readSmudgeSettings(pkg), manifesto: "x".repeat(141) }),
+  );
   assert.equal(readSmudgeSettings(withRoll).chapters[0]?.snaps[0]?.caption, "Sentul, 05:40");
   assert.throws(() =>
     applySmudgeSettings(pkg, {
@@ -142,7 +151,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
   ).replace('<div class="sm-sections" id="sm-sections"></div>\n  ', "");
   delete old.files["smudge/sections.js"];
   old.files["smudge/profile.html"] = "<p>old hero</p>";
-  old.files["smudge/post.html"] = "<!-- smudge:v9 --><p>my own grid</p>";
+  old.files["smudge/post.html"] = "<!-- smudge:v10 --><p>my own grid</p>";
   const next = applySmudgeSettings(
     profilePackageSchema.parse(old),
     defaultSmudgeSettings,
@@ -152,7 +161,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
     next.files["smudge/profile.html"],
     smudgeProfilePackage.files["smudge/profile.html"],
   );
-  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v9 --><p>my own grid</p>");
+  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v10 --><p>my own grid</p>");
   assert.ok(next.files["smudge/sections.js"]);
   const shell = next.files["index.html"]!;
   assert.match(shell, /src="smudge\/settings\.js"/);

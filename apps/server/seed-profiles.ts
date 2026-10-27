@@ -121,11 +121,14 @@ const daniPhotos = [
 ] as const;
 export function seedDaniPage(profiles: ProfileService) {
   const store = profiles.social.store;
-  const marker = "profile-smudge-v3:dani";
+  const marker = "profile-smudge-v4:dani";
   if (store.get("seed", marker) || !store.get("user", "dani")) return;
   // A page this seed wrote in an earlier version is written again; one someone edited is kept.
   const state = profiles.state("dani");
-  if (state.version === 0 || store.get("seed", "profile-smudge-v2:dani")) {
+  const earlier = ["profile-smudge-v2:dani", "profile-smudge-v3:dani"].some((m) =>
+    store.get("seed", m),
+  );
+  if (state.version === 0 || earlier) {
     const actor = { userId: "dani" };
     // The photos on the page were added after the photo seed first ran, so a data dir from
     // before gets them here; the photo seed skips the ones that exist.
@@ -145,6 +148,8 @@ export function seedDaniPage(profiles: ProfileService) {
     const pkg = applySmudgeSettings(profileTemplates.smudge, {
       ...defaultSmudgeSettings,
       place: "Jakarta",
+      manifesto:
+        "Skate since *fourteen.* Film since *college.* Bandung, then Jakarta. A skate film nobody asked for, cut at night.",
       repeat: { song: "Nothing's Gonna Hurt You Baby", artist: "Cigarettes After Sex" },
       now: { text: "Cutting the skate film, night three", place: "Kemang", progress: 60 },
       chapters: [

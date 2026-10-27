@@ -18,9 +18,12 @@
   --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Menlo, Consolas, monospace;
 }
-/* Halloween touches only the mark on the hero (ADR 0052): the page keeps its own accent. */
+/* Halloween touches only the mark on the hero (ADR 0052): the page keeps its own paints. */
+.sm {
+  --mark: var(--p1);
+}
 html[data-season="halloween"] .sm {
-  --p1: #ff7a1a;
+  --mark: #ff7a1a;
 }
 html[data-theme="dark"] .sm {
   --wall: #0e0d0b;
@@ -182,7 +185,7 @@ html[data-owner="on"] .sm .avatar.blank .hint {
   bottom: -22px;
   width: 118px;
   height: 88px;
-  background: var(--p1);
+  background: var(--mark);
   border-radius: 45% 55% 40% 60% / 58% 42% 58% 42%;
   transform: rotate(16deg);
 }
@@ -286,6 +289,35 @@ html[data-editing="on"] .sm .hero-now {
   min-height: 48px;
 }
 
+/* The manifesto (ADR 0054): the owner's words in the big face, the starred words in the serif
+   and the palette, first the accent, then the first paint, in turn. */
+.sm .manifesto {
+  position: relative;
+  z-index: 5;
+  margin: 48px 16px 0;
+  font: 800 40px/0.95 var(--big);
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.sm .manifesto em {
+  font: italic 400 1.08em/1 var(--serif);
+  text-transform: none;
+  color: var(--p2);
+}
+.sm .manifesto em:nth-of-type(even) {
+  color: var(--p1);
+}
+.sm .manifesto.ghost {
+  display: none;
+  font: italic 400 26px/1.1 var(--serif);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+html[data-owner="on"] .sm .manifesto.ghost {
+  display: block;
+}
 /* Chapters, 48px apart (ADR 0053): the rule and the number separate them, not empty ground. */
 .sm .chapters {
   position: relative;
@@ -762,6 +794,11 @@ html[data-owner="on"] .sm .roll.ghost {
   .sm .song,
   .sm .doing {
     flex: 1;
+  }
+  .sm .manifesto {
+    margin: 88px 40px 0;
+    max-width: 1240px;
+    font-size: clamp(56px, 6.4vw, 92px);
   }
   .sm .chapters {
     padding: 88px 40px 0;

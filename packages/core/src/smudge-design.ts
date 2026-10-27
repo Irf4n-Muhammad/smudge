@@ -91,6 +91,8 @@ export const smudgeSettingsSchema = z
     bigName: z.enum(["first", "full", "nickname"]),
     nickname: text(24),
     tagline: text(60),
+    /** A few sentences in the owner's words, set huge under the hero (ADR 0054). */
+    manifesto: text(140),
     place: text(30),
     chapters: z.array(chapterSchema).max(3),
     /** A band of photos from the roll, laid freely under the chapters (ADR 0053). */
@@ -118,6 +120,7 @@ export const defaultSmudgeSettings: SmudgeSettings = {
   bigName: "first",
   nickname: "",
   tagline: "",
+  manifesto: "",
   place: "",
   chapters: [],
   roll: [],
@@ -138,7 +141,7 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v9";
+export const smudgeVersionMarker = "smudge:v10";
 /** Every photo the settings lay on the page: chapter photos and snaps, then the roll. */
 export const smudgePhotoIds = (s: SmudgeSettings) => [
   ...new Set(

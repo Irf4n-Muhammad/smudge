@@ -1,4 +1,4 @@
-<!-- smudge:v9 -->
+<!-- smudge:v10 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm">
@@ -31,6 +31,9 @@
       </div>
     </div>
   </section>
+  <!-- The owner's words (ADR 0054): a few sentences as big as the page, the starred words in
+       the serif and the palette, the way a manifesto reads on a poster. -->
+  <p class="manifesto" id="manifesto" data-edit="manifesto" hidden></p>
   <!-- Chapters: who this is, shown with one measurable thing each (ADR 0048, drawn as in the
        profile mock from ADR 0052: a Run in a card, Work as a note and tags, Music as hours). -->
   <div class="chapters" id="chapters" data-edit="chapters" hidden></div>
@@ -361,6 +364,17 @@
           avatar.classList.add("blank");
           avatar.prepend(el("b", "", d.owner.initials || first.slice(0, 1)));
           avatar.append(el("small", "hint", "Add a photo"));
+        }
+        // The manifesto: hidden without words; the owner sees where it goes while editing.
+        const manifesto = $("manifesto");
+        if (settings.manifesto) {
+          marked(settings.manifesto, manifesto);
+          manifesto.hidden = false;
+          manifesto.classList.remove("ghost");
+        } else {
+          manifesto.textContent = "A few sentences in your words, as big as the page.";
+          manifesto.hidden = false;
+          manifesto.classList.add("ghost");
         }
         chapters();
         roll();

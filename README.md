@@ -329,7 +329,9 @@ see only what is there. The page is drawn to the profile mock (ADR 0052): the Ni
 your two latest posts as Picks, and your name once more at the foot. Posts is a wall of
 coloured blocks in the look's tints, Stories a Now card and small day labels. Each chapter can
 carry two more photos with a place and a year, and a band **From the roll** lays up to eight
-more across the page (ADR 0053); the chapters sit close, the rule between them.
+more across the page (ADR 0053); the chapters sit close, the rule between them. Under the
+hero, a few sentences in your own words stand as big as the page, the starred words in the
+serif and the palette (ADR 0054).
 Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
 Open `/?profile=dani` to see it filled (Dani's three chapters with real photos, seeded once
 with the demo) or `/?profile=ines` for the optional sections. Pages published on an older

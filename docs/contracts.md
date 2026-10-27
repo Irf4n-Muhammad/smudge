@@ -602,7 +602,8 @@ The Smudge Paint wall stores easy-editor choices in an ordinary file, `smudge/se
 `packages/core/src/smudge-design.ts`. Writing it adds the Wall grants only while the Wall section
 is shown. A chapter's `photo`, `caption` and `snaps` (up to two `{photo, caption}`) and the
 settings' `roll` (up to eight) name the page's assets (ADR 0053); a profile manifest lists up to
-20 assets.
+20 assets. `manifesto` (up to 140 characters, `*stars*` for the coloured words) is the owner's
+line under the hero (ADR 0054).
 
 ## Website import (additive)
 
