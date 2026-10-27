@@ -17,6 +17,7 @@ import {
   supportsSmudgeDesign,
   defaultSmudgeSettings,
   type Chapter,
+  type Snap,
   type SmudgePalette,
   type SmudgeSection,
   type SmudgeSettings,
@@ -152,6 +153,7 @@ const fieldTitles: Record<string, string> = {
   about: "Name & bio",
   photo: "Your photo",
   chapters: "Chapters",
+  roll: "From the roll",
   now: "Song & right now",
   story: "Highlights",
   post: "Posts",
@@ -689,6 +691,21 @@ export function EasyEditor({
               onUpload={uploadPhoto}
               onChange={(chapters) => change({ ...settings, chapters })}
             />
+          )}
+          {sheet === "field" && smudge && field === "roll" && (
+            <div className="easy-field">
+              <h2>From the roll</h2>
+              <p className="easy-note">
+                Up to eight photos laid across the page, each with a place and a year.
+              </p>
+              <SnapFields
+                snaps={settings.roll}
+                max={8}
+                label="roll photo"
+                onUpload={uploadPhoto}
+                onChange={(roll) => change({ ...settings, roll })}
+              />
+            </div>
           )}
           {sheet === "field" && easy && (field === "about" || field === "photo") && (
             <AboutFields
@@ -1503,6 +1520,24 @@ function ChapterFields({
             </label>
             {chapter.photo && <button onClick={() => set({ photo: "" })}>No photo</button>}
           </div>
+          {chapter.photo && (
+            <TextField
+              title=""
+              label="Under the photo"
+              value={chapter.caption}
+              max={40}
+              placeholder="Jakarta, 2025"
+              onChange={(caption) => set({ caption })}
+            />
+          )}
+          <p className="easy-note">Two more photos, laid around the chapter.</p>
+          <SnapFields
+            snaps={chapter.snaps}
+            max={2}
+            label="chapter snap"
+            onUpload={onUpload}
+            onChange={(snaps) => set({ snaps })}
+          />
           <TextField
             title=""
             label="A line about it"
@@ -1551,6 +1586,64 @@ function ChapterFields({
             </button>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+/** Photos with a place and a year (ADR 0053): the snaps around a chapter, or the roll. */
+function SnapFields({
+  snaps,
+  max,
+  label,
+  onChange,
+  onUpload,
+}: {
+  snaps: Snap[];
+  max: number;
+  label: string;
+  onChange: (snaps: Snap[]) => void;
+  onUpload: (file: File) => Promise<string | null>;
+}) {
+  return (
+    <div className="easy-snaps">
+      {snaps.map((snap, i) => (
+        <div className="easy-row easy-snap" key={snap.photo + i}>
+          <TextField
+            title=""
+            label={`Photo ${i + 1} · place, year`}
+            value={snap.caption}
+            max={30}
+            placeholder="Bandung, 2022"
+            onChange={(caption) => onChange(snaps.map((p, n) => (n === i ? { ...p, caption } : p)))}
+          />
+          <button
+            aria-label={`Remove photo ${i + 1}`}
+            onClick={() => onChange(snaps.filter((_, n) => n !== i))}
+          >
+            <Trash2 />
+          </button>
+        </div>
+      ))}
+      {snaps.length < max && (
+        <div className="easy-photo">
+          <label className="easy-upload">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              aria-label={`Upload a ${label}`}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file)
+                  void onUpload(file).then(
+                    (photo) => photo && onChange([...snaps, { photo, caption: "" }]),
+                  );
+              }}
+            />
+            Add a photo
+          </label>
+        </div>
       )}
     </div>
   );

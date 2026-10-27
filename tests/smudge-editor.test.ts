@@ -88,6 +88,28 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
     chapters: [],
   });
   assert.ok(!without.manifest.assets.includes(photo));
+  // Snaps around a chapter and the roll are assets too, with their captions kept (ADR 0053).
+  const snap = "10000000-0000-4000-8000-000000000002",
+    rolled = "10000000-0000-4000-8000-000000000003";
+  const withRoll = applySmudgeSettings(pkg, {
+    ...readSmudgeSettings(pkg),
+    chapters: [
+      { ...defaultChapter, kind: "run", snaps: [{ photo: snap, caption: "Sentul, 05:40" }] },
+    ],
+    roll: [{ photo: rolled, caption: "Blok M, 2025" }],
+  });
+  assert.ok(withRoll.manifest.assets.includes(snap) && withRoll.manifest.assets.includes(rolled));
+  assert.equal(readSmudgeSettings(withRoll).roll[0]?.caption, "Blok M, 2025");
+  assert.equal(readSmudgeSettings(withRoll).chapters[0]?.snaps[0]?.caption, "Sentul, 05:40");
+  assert.throws(() =>
+    applySmudgeSettings(pkg, {
+      ...readSmudgeSettings(pkg),
+      roll: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
+        photo: `10000000-0000-4000-8000-00000000000${n}`,
+        caption: "",
+      })),
+    }),
+  );
   assert.throws(() =>
     applySmudgeSettings(pkg, {
       ...readSmudgeSettings(pkg),
@@ -120,7 +142,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
   ).replace('<div class="sm-sections" id="sm-sections"></div>\n  ', "");
   delete old.files["smudge/sections.js"];
   old.files["smudge/profile.html"] = "<p>old hero</p>";
-  old.files["smudge/post.html"] = "<!-- smudge:v8 --><p>my own grid</p>";
+  old.files["smudge/post.html"] = "<!-- smudge:v9 --><p>my own grid</p>";
   const next = applySmudgeSettings(
     profilePackageSchema.parse(old),
     defaultSmudgeSettings,
@@ -130,7 +152,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
     next.files["smudge/profile.html"],
     smudgeProfilePackage.files["smudge/profile.html"],
   );
-  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v8 --><p>my own grid</p>");
+  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v9 --><p>my own grid</p>");
   assert.ok(next.files["smudge/sections.js"]);
   const shell = next.files["index.html"]!;
   assert.match(shell, /src="smudge\/settings\.js"/);

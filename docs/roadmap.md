@@ -93,8 +93,11 @@
       the day with the clock.
 - [x] The page drawn to the mock (ADR 0052): the Night palette with a yellow accent, the Run
       as a card, Picks and a foot on the landing, Posts as a wall of coloured blocks, Stories
-      with a Now card and small day labels. Next: sources (music, games, running) filling
-      chapters by themselves.
+      with a Now card and small day labels.
+- [x] Photos laid freely (ADR 0053, stage one of the landing mock v3): captions and two snaps
+      per chapter, a band From the roll of up to eight, chapters closer together. Next: the
+      owner's line as a manifesto, a cassette for Music, Picks as four blocks; then sources
+      (music, games, running) filling chapters by themselves.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.

@@ -88,8 +88,10 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   `packages/core/src/smudge-design.ts` holds the settings the easy editor writes, chapters
   included, strips the page's follow grant (the strip's action follows instead), writes the
   manifest's `look` from the palette (ADR 0049), with the palette as the look's `tints`
-  (ADR 0052), and keeps chapter photos as the page's assets (ADR 0050). The chapters are drawn
-  by kind (a Run as a card), the two latest posts as Picks, the name again at the foot.
+  (ADR 0052), and keeps every photo the settings name as the page's assets (ADR 0050, 0053:
+  chapter photos, their snaps and the roll, up to twenty). The chapters are drawn by kind (a Run
+  as a card) with their snaps laid around them, a band of photos from the roll follows, then the
+  two latest posts as Picks and the name again at the foot.
 - `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
   stories as a timeline of posts, now entries and moments, by the feed's audience rules.
   `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage

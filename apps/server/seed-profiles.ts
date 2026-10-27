@@ -105,16 +105,32 @@ export function seedProfiles(profiles: ProfileService) {
  * Dani's page is the profile mock made real (ADR 0052): a Run as a card, Work with tags, Music
  * in hours, each with one of the demo photos. Seeded after the photos, which it needs.
  */
+const daniPhotos = [
+  "run-shoes",
+  "laptop-code",
+  "dj-hands",
+  "mountains",
+  "beach-sunset",
+  "city",
+  "coffee-cheers",
+  "gig",
+  "crowd-party",
+  "friends-hill",
+  "stage-lights",
+  "skate",
+] as const;
 export function seedDaniPage(profiles: ProfileService) {
   const store = profiles.social.store;
-  const marker = "profile-smudge-v2:dani";
+  const marker = "profile-smudge-v3:dani";
   if (store.get("seed", marker) || !store.get("user", "dani")) return;
-  if (profiles.state("dani").version === 0) {
+  // A page this seed wrote in an earlier version is written again; one someone edited is kept.
+  const state = profiles.state("dani");
+  if (state.version === 0 || store.get("seed", "profile-smudge-v2:dani")) {
     const actor = { userId: "dani" };
     // The photos on the page were added after the photo seed first ran, so a data dir from
     // before gets them here; the photo seed skips the ones that exist.
     store.transaction(() => {
-      for (const photo of ["run-shoes", "laptop-code", "dj-hands"] as const) {
+      for (const photo of daniPhotos) {
         const assetId = photoId(photo);
         if (store.get("asset", assetId)) continue;
         store.put("asset", assetId, {
@@ -146,6 +162,11 @@ export function seedDaniPage(profiles: ProfileService) {
           ],
           lines: [],
           photo: photoId("run-shoes"),
+          caption: "The pair that did it · Jakarta, 2025",
+          snaps: [
+            { photo: photoId("mountains"), caption: "Sentul, 05:40" },
+            { photo: photoId("beach-sunset"), caption: "Pangandaran, 2024" },
+          ],
         },
         {
           kind: "work",
@@ -157,6 +178,11 @@ export function seedDaniPage(profiles: ProfileService) {
           stats: [],
           lines: ["Bandung · 4 yrs", "Skate film · 2026", "Super 8 · always"],
           photo: photoId("laptop-code"),
+          caption: "",
+          snaps: [
+            { photo: photoId("city"), caption: "Bandung, 2022" },
+            { photo: photoId("coffee-cheers"), caption: "Kemang, 2025" },
+          ],
         },
         {
           kind: "music",
@@ -168,11 +194,22 @@ export function seedDaniPage(profiles: ProfileService) {
           stats: [],
           lines: ["Apocalypse", "Nothing's Gonna Hurt You Baby", "Cry"],
           photo: photoId("dj-hands"),
+          caption: "Rossi Musik, 2024",
+          snaps: [],
         },
+      ],
+      roll: [
+        { photo: photoId("gig"), caption: "Rossi, 2024" },
+        { photo: photoId("crowd-party"), caption: "Blok M, 2025" },
+        { photo: photoId("friends-hill"), caption: "Lembang, 2023" },
+        { photo: photoId("stage-lights"), caption: "Jakarta, 2024" },
+        { photo: photoId("coffee-cheers"), caption: "Kemang, 2025" },
+        { photo: photoId("skate"), caption: "Senayan, 2025" },
+        { photo: photoId("city"), caption: "Bandung, 2022" },
       ],
     });
     const draft = profiles.create(actor, pkg);
-    profiles.publish(actor, draft.id, 1, 0);
+    profiles.publish(actor, draft.id, 1, state.version);
   }
   store.transaction(() => store.put("seed", marker, { complete: true }));
 }

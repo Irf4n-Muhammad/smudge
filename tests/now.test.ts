@@ -192,7 +192,7 @@ test("published Paint walls from an older template are brought up to date at sta
   const old = structuredClone(template);
   for (const path of Object.keys(old.files))
     if (path.startsWith("smudge/"))
-      old.files[path] = old.files[path]!.replaceAll("smudge:v8", "smudge:v6");
+      old.files[path] = old.files[path]!.replaceAll("smudge:v9", "smudge:v6");
   const settings = { ...defaultSmudgeSettings, tagline: "*draws* on trains", sections: ["wall"] };
   old.files["smudge/settings.js"] = `window.smudgeSettings = ${JSON.stringify(settings)};`;
   const draft = profiles.create(rina, old);
@@ -201,7 +201,7 @@ test("published Paint walls from an older template are brought up to date at sta
   const state = profiles.state("rina");
   assert.equal(state.version, 2);
   const pkg = profiles.publication(state.publicationId!).package;
-  assert.ok(pkg.files["smudge/profile.html"]!.includes("smudge:v8"));
+  assert.ok(pkg.files["smudge/profile.html"]!.includes("smudge:v9"));
   assert.equal(readSmudgeSettings(pkg).tagline, "*draws* on trains");
   assert.deepEqual(readSmudgeSettings(pkg).sections, ["wall"]);
   // Already current: nothing to do, no new version.

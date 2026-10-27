@@ -84,7 +84,7 @@ const common = {
   name: z.string().trim().min(1).max(100),
   entrypoint: z.literal("index.html"),
   height: z.number().int().min(600).max(4000),
-  assets: z.array(z.string().uuid()).max(12).default([]),
+  assets: z.array(z.string().uuid()).max(20).default([]),
 };
 const manifest = z.discriminatedUnion("schemaVersion", [
   z

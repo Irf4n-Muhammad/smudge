@@ -327,7 +327,9 @@ Before you have a photo or chapters, the page shows you where they go (ADR 0051)
 see only what is there. The page is drawn to the profile mock (ADR 0052): the Night palette
 (teal, a yellow accent, clay, violet) by default, a Run as a card with its route and stats,
 your two latest posts as Picks, and your name once more at the foot. Posts is a wall of
-coloured blocks in the look's tints, Stories a Now card and small day labels.
+coloured blocks in the look's tints, Stories a Now card and small day labels. Each chapter can
+carry two more photos with a place and a year, and a band **From the roll** lays up to eight
+more across the page (ADR 0053); the chapters sit close, the rule between them.
 Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
 Open `/?profile=dani` to see it filled (Dani's three chapters with real photos, seeded once
 with the demo) or `/?profile=ines` for the optional sections. Pages published on an older
