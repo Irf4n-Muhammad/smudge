@@ -121,6 +121,7 @@ export class ProfileService {
           caption: p.metadata.caption,
           format: p.metadata.format,
           hasCover: Boolean(p.metadata.coverAssetId),
+          createdAt: p.createdAt,
         })),
     };
   }

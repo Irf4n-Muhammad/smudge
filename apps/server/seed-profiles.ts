@@ -106,7 +106,8 @@ function inesPaintWall() {
     ...defaultSmudgeSettings,
     tagline: "*paints* the city, *slowly.*",
     place: "LISBON, PT",
-    sections: ["latest", "selected", "quote", "wall"],
+    // Her posts live on the Posts page and in the landing's Picks (ADR 0052); the extras are hers.
+    sections: ["quote", "wall"],
     chapters: [
       {
         kind: "work",

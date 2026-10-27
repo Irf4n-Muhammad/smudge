@@ -24,6 +24,8 @@ export const smudgeSectionKinds = [
 ] as const;
 export type SmudgeSection = (typeof smudgeSectionKinds)[number];
 export const smudgePalettes = {
+  /** The default (ADR 0052): teal, a warm yellow accent, clay and violet on the dark ground. */
+  night: ["#2ba39a", "#f2c53d", "#e8613c", "#7a5af8"],
   paint: ["#ff4f9a", "#d8ff3d", "#2b3cff", "#19c37d"],
   electric: ["#2b3cff", "#d8ff3d", "#ff4f9a", "#00c2ff"],
   sunset: ["#ff6a3d", "#ffc93d", "#ff3d8b", "#8a5cff"],
@@ -34,6 +36,7 @@ export type SmudgePalette = keyof typeof smudgePalettes;
 /**
  * What the Paint wall tells the app about itself (ADR 0049): the dark ground, the ink, and the
  * palette's second colour as the accent, so Posts, Stories and the strip read as the same page.
+ * The whole palette goes along as tints (ADR 0052), for the blocks of the Posts page.
  */
 export const smudgeLook = (palette: SmudgePalette): PageLook => ({
   ground: "#0e0d0b",
@@ -41,6 +44,7 @@ export const smudgeLook = (palette: SmudgePalette): PageLook => ({
   muted: "#9a948a",
   card: "#1a1816",
   accent: smudgePalettes[palette][1],
+  tints: [...smudgePalettes[palette]],
   display: "serif",
   label: "mono",
 });
@@ -106,7 +110,7 @@ export const defaultSmudgeSettings: SmudgeSettings = {
   tagline: "",
   place: "",
   chapters: [],
-  palette: "paint",
+  palette: "night",
   sections: [],
   quote: { text: "" },
   now: { text: "", place: "", progress: 40 },
@@ -123,7 +127,7 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v7";
+export const smudgeVersionMarker = "smudge:v8";
 
 export function supportsSmudgeDesign(pkg: ProfilePackage) {
   return (

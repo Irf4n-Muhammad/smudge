@@ -45,6 +45,13 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
   const look = pkg.manifest.schemaVersion === 2 ? pkg.manifest.look : undefined;
   assert.equal(look?.accent, "#d8ff3d");
   assert.equal(look?.ground, "#0e0d0b");
+  // The whole palette goes along as tints (ADR 0052); the default palette is Night.
+  assert.deepEqual(look?.tints, ["#2b3cff", "#d8ff3d", "#ff4f9a", "#00c2ff"]);
+  const night = applySmudgeSettings(smudgeProfilePackage, defaultSmudgeSettings);
+  assert.equal(
+    night.manifest.schemaVersion === 2 ? night.manifest.look?.accent : undefined,
+    "#f2c53d",
+  );
   assert.throws(() =>
     profilePackageSchema.parse({
       ...pkg,
@@ -113,7 +120,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
   ).replace('<div class="sm-sections" id="sm-sections"></div>\n  ', "");
   delete old.files["smudge/sections.js"];
   old.files["smudge/profile.html"] = "<p>old hero</p>";
-  old.files["smudge/post.html"] = "<!-- smudge:v7 --><p>my own grid</p>";
+  old.files["smudge/post.html"] = "<!-- smudge:v8 --><p>my own grid</p>";
   const next = applySmudgeSettings(
     profilePackageSchema.parse(old),
     defaultSmudgeSettings,
@@ -123,7 +130,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
     next.files["smudge/profile.html"],
     smudgeProfilePackage.files["smudge/profile.html"],
   );
-  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v7 --><p>my own grid</p>");
+  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v8 --><p>my own grid</p>");
   assert.ok(next.files["smudge/sections.js"]);
   const shell = next.files["index.html"]!;
   assert.match(shell, /src="smudge\/settings\.js"/);

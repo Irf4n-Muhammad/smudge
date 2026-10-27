@@ -1,4 +1,4 @@
-// smudge:v7
+// smudge:v8
 // Shared by the Smudge parts. Each part loads this file, so a part mixed into another profile
 // still works; the guards keep one copy of each helper.
 window.profileData = window.profileData || forma.profile.read();

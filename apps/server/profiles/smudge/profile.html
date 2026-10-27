@@ -1,4 +1,4 @@
-<!-- smudge:v7 -->
+<!-- smudge:v8 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm">
@@ -31,8 +31,18 @@
       </div>
     </div>
   </section>
-  <!-- Chapters: who this is, shown with one measurable thing each (ADR 0048). -->
+  <!-- Chapters: who this is, shown with one measurable thing each (ADR 0048, drawn as in the
+       profile mock from ADR 0052: a Run in a card, Work as a note and tags, Music as hours). -->
   <div class="chapters" id="chapters" data-edit="chapters" hidden></div>
+  <!-- Picks (ADR 0052): the two latest posts as blocks, the way to the Posts page. -->
+  <section class="picks" id="picks" aria-label="Picks" hidden>
+    <div class="idx">
+      <span>Picks</span>
+      <span id="picks-count"></span>
+    </div>
+    <div class="picks-grid" id="picks-grid"></div>
+    <span class="part-status" id="picks-status" role="status"></span>
+  </section>
 </div>
 <script>
   (() => {
@@ -67,6 +77,8 @@
       const days = Math.round(hours / 24);
       return days === 1 ? "yesterday" : days + " days ago";
     };
+    const day = (iso) =>
+      new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
     let liveNow = null;
     window.addEventListener("forma:editing", () => heroNow(liveNow));
     function heroNow(live) {
@@ -109,6 +121,67 @@
     // The route drawn in a Run chapter: a loop, the same for everyone, a picture not a map.
     const route =
       "M14 96C40 92 52 60 78 54S120 70 142 48 180 14 214 22 262 60 286 44 306 20 304 30c-4 20-34 56-64 62s-50-12-80 6-60 20-100 16-40-4-46-12Z";
+    const routeSvg = () => {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 318 120");
+      svg.setAttribute("class", "route");
+      svg.setAttribute("aria-hidden", "true");
+      const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p.setAttribute("d", route);
+      svg.append(p);
+      for (const [cx, cy, cls] of [
+        [14, 96, "start"],
+        [304, 30, "end"],
+      ]) {
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", cx);
+        c.setAttribute("cy", cy);
+        c.setAttribute("r", 4);
+        c.setAttribute("class", cls);
+        svg.append(c);
+      }
+      return svg;
+    };
+    // The photo is one of the page's own pictures, handed in by the runtime (ADR 0050).
+    const photoOf = (c) => {
+      const src = c.photo && (window.smudgePhotos || {})[c.photo];
+      if (!src) return null;
+      const fig = el("figure", "photo");
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = "";
+      fig.append(img);
+      return fig;
+    };
+    const bigOf = (c) => {
+      const big = el("p", "big");
+      big.append(el("strong", "", c.big));
+      if (c.unit) big.append(el("em", "", c.unit));
+      return big;
+    };
+    const statsOf = (c) => {
+      const stats = (c.stats || []).filter((s) => s.value);
+      if (!stats.length) return null;
+      const row = el("dl", "stats");
+      for (const s of stats) {
+        const cell = el("div", "");
+        cell.append(el("dd", "", s.value), el("dt", "", s.label));
+        row.append(cell);
+      }
+      return row;
+    };
+    const linesOf = (c, cls) => {
+      const lines = (c.lines || []).filter(Boolean);
+      if (!lines.length) return null;
+      const ol = el("ol", cls);
+      lines.forEach((text, n) => {
+        const li = el("li", "");
+        if (cls === "lines") li.append(el("span", "", "0" + (n + 1)));
+        li.append(el("b", "", text));
+        ol.append(li);
+      });
+      return ol;
+    };
     function chapters() {
       const list = Array.isArray(settings.chapters) ? settings.chapters : [];
       const box = $("chapters");
@@ -140,59 +213,60 @@
           el("span", "", c.label || ""),
         );
         sec.append(head);
+        const add = (...nodes) => nodes.forEach((n) => n && sec.append(n));
         if (c.title) {
           const h = el("h2", "");
           marked(c.title, h);
           sec.append(h);
         }
-        // The photo is one of the page's own pictures, handed in by the runtime (ADR 0050).
-        const src = c.photo && (window.smudgePhotos || {})[c.photo];
-        if (src) {
-          const fig = el("figure", "photo");
-          const img = document.createElement("img");
-          img.src = src;
-          img.alt = "";
-          fig.append(img);
-          sec.append(fig);
-        }
+        const photo = photoOf(c);
         if (c.kind === "run") {
-          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-          svg.setAttribute("viewBox", "0 0 318 120");
-          svg.setAttribute("class", "route");
-          svg.setAttribute("aria-hidden", "true");
-          const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          p.setAttribute("d", route);
-          svg.append(p);
-          sec.append(svg);
-        }
-        if (c.big) {
-          const big = el("p", "big");
-          big.append(el("strong", "", c.big));
-          if (c.unit) big.append(el("em", "", c.unit));
-          sec.append(big);
-        }
-        if (c.note) sec.append(el("p", "note", c.note));
-        const stats = (c.stats || []).filter((s) => s.value);
-        if (stats.length) {
-          const row = el("dl", "stats");
-          for (const s of stats) {
-            const cell = el("div", "");
-            cell.append(el("dd", "", s.value), el("dt", "", s.label));
-            row.append(cell);
-          }
-          sec.append(row);
-        }
-        const lines = (c.lines || []).filter(Boolean);
-        if (lines.length) {
-          const ol = el("ol", "lines");
-          lines.forEach((text, n) => {
-            const li = el("li", "");
-            li.append(el("span", "", "0" + (n + 1)), el("b", "", text));
-            ol.append(li);
-          });
-          sec.append(ol);
+          // The run as a card: the route, the time, the note under it, the stats; the photo
+          // laid over the card's corner.
+          const card = el("div", "card");
+          card.append(routeSvg());
+          if (c.big) card.append(bigOf(c));
+          if (c.note) card.append(el("p", "caption", c.note));
+          const stats = statsOf(c);
+          if (stats) card.append(stats);
+          add(card, photo, linesOf(c, "lines"));
+        } else if (c.kind === "work") {
+          // Work as a note, the photo, and the lines as tags.
+          add(c.big ? bigOf(c) : null, c.note ? el("p", "note", c.note) : null, photo);
+          add(statsOf(c), linesOf(c, "pills"));
+        } else {
+          // Music and anything else: the big number first, the note, the lines, the photo last.
+          add(c.big ? bigOf(c) : null, c.note ? el("p", "note", c.note) : null);
+          add(statsOf(c), linesOf(c, "lines"), photo);
         }
         box.append(sec);
+      });
+    }
+    // The two latest posts as blocks (ADR 0052), each opening in the app's dialog.
+    function picks(posts) {
+      const list = (posts || []).slice(0, 2);
+      $("picks").hidden = !list.length;
+      if (!list.length) return;
+      $("picks-count").textContent = posts.length + (posts.length === 1 ? " post" : " posts");
+      const grid = $("picks-grid");
+      grid.textContent = "";
+      list.forEach((post) => {
+        const b = el("button", "pick");
+        b.type = "button";
+        b.setAttribute("aria-label", "Open " + post.title);
+        const cap = el("span", "pick-cap");
+        cap.append(el("strong", "", post.title), el("small", "", day(post.createdAt)));
+        b.append(cap);
+        b.addEventListener("click", () => window.openProfilePost(post.id, $("picks-status")));
+        grid.append(b);
+        window.coverFor(post).then((cover) => {
+          if (!cover) return;
+          const img = document.createElement("img");
+          img.src = cover.src;
+          img.alt = cover.alt || "";
+          b.prepend(img);
+          b.classList.add("has-cover");
+        });
       });
     }
     profileData
@@ -208,9 +282,11 @@
         $("hero-first").textContent = first;
         $("hero-place").textContent = settings.place || "@" + d.owner.handle;
         // The line under the name: the owner's words, else the rest of their name, else the handle.
-        // A word or two sits huge beside the name; a sentence takes the line size instead.
-        const line = settings.tagline || rest || "*@" + d.owner.handle + "*";
-        marked(line, $("giant-line"));
+        // A word or two sits huge beside the name; a sentence takes the line size instead. The
+        // rest of the name is all one voice, the italic in the accent (ADR 0052).
+        const line = settings.tagline || rest || "@" + d.owner.handle;
+        if (settings.tagline) marked(line, $("giant-line"));
+        else $("giant-line").textContent = line;
         $("giant-line").classList.toggle("long", line.replace(/\*/g, "").length > 14);
         const meta = $("hero-meta");
         meta.textContent = "";
@@ -237,6 +313,16 @@
           avatar.append(el("small", "hint", "Add a photo"));
         }
         chapters();
+        picks(d.posts);
+        // The foot of the page (ADR 0052): the whole name once more, and where this is.
+        const foot = document.querySelector(".wall-foot");
+        if (foot) {
+          foot.textContent = "";
+          foot.append(
+            el("strong", "", d.owner.name),
+            el("span", "", ["Made in Smudge", settings.place].filter(Boolean).join(" · ")),
+          );
+        }
         fit();
       })
       .catch(() => {

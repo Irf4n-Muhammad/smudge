@@ -31,7 +31,7 @@ export const smudgeProfilePackage: ProfilePackage = profilePackageSchema.parse({
     height: 1700,
     mobileHeight: 1900,
     autoHeight: true,
-    look: smudgeLook("paint"),
+    look: smudgeLook("night"),
     assets: [],
     capabilities: [...social, "profile.social.read"],
     parts: {

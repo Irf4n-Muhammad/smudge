@@ -117,6 +117,7 @@ const vibes = [
 ] as const;
 
 const paletteNames: Record<SmudgePalette, string> = {
+  night: "Night",
   paint: "Paint",
   electric: "Electric",
   sunset: "Sunset",

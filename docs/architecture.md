@@ -86,14 +86,16 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   the optional Latest and Gallery, `sections.js` the other extras;
   `packages/core/src/smudge-design.ts` holds the settings the easy editor writes, chapters
   included, strips the page's follow grant (the strip's action follows instead), writes the
-  manifest's `look` from the palette (ADR 0049) and keeps chapter photos as the page's assets
-  (ADR 0050).
+  manifest's `look` from the palette (ADR 0049), with the palette as the look's `tints`
+  (ADR 0052), and keeps chapter photos as the page's assets (ADR 0050). The chapters are drawn
+  by kind (a Run as a card), the two latest posts as Picks, the name again at the foot.
 - `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
   stories as a timeline of posts, now entries and moments, by the feed's audience rules.
   `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage
-  (`PostsCollage`, faint tiles and a way to the composer when empty) and the days (`Stories`,
-  one timed line per happening, ADR 0051) in the look's tokens (`lookStyle`, the manifest's
-  `look` as `--page-*` and `--strip-*` variables, ADR 0049), inside the app (`?page=`) and on `/u/<handle>/posts`
+  (`PostsCollage`, a wall of blocks in the look's tints, one dashed tile and a way to the
+  composer when empty) and the days (`Stories`, a Now card, then one timed line per happening,
+  ADR 0051 and 0052) in the look's tokens (`lookStyle`, the manifest's `look` as `--page-*`,
+  `--page-tint-*` and `--strip-*` variables, ADR 0049), inside the app (`?page=`) and on `/u/<handle>/posts`
   and `/u/<handle>/stories`.
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.

@@ -71,6 +71,8 @@ export const pageLookSchema = z
     muted: colour,
     card: colour,
     accent: colour,
+    /** Up to four more colours for blocks without a picture (ADR 0052); the accent alone otherwise. */
+    tints: z.array(colour).max(4).optional(),
     display: z.enum(["serif", "hand", "sans"]),
     label: z.enum(["mono", "sans"]),
   })

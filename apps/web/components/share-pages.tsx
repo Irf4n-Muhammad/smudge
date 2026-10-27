@@ -229,6 +229,7 @@ export function SharedProfile({
             user={{ ...view.user, bio: view.user.bio }}
             page={page}
             look={Boolean(look.className)}
+            posts={view.posts.length}
           />
           {page === "posts" ? (
             <PostsCollage posts={view.posts} cover={cover} href={postHref} empty="No posts yet." />

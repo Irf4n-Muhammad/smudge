@@ -28,7 +28,7 @@ Larger documents scroll inside the frame; automatic content sizing is not implem
 Profile capabilities are independent of post capabilities:
 
 - `profile.read`: `await forma.profile.read()` returns `{owner, posts, now}`. Owner is the public
-  user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`; `now` is the
+  user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`, `createdAt`; `now` is the
   owner's latest one-tap entries (`current`, `listening`, `recent`) as the viewer may see them
   (ADR 0041). No draft, bookmark, session, or viewer identity is supplied, including in visitor preview.
 - `quiz.read` / `quiz.answer`: `await forma.quiz.read()` returns the owner's questions without

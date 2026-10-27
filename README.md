@@ -324,7 +324,10 @@ record, years somewhere, hours of one band), typed in the easy editor, each with
 yours if you like (ADR 0050). On a wide screen the poster is two columns. No counts, no grid, no
 follow button of its own: the strip's one action is Edit for you and Follow for everyone else.
 Before you have a photo or chapters, the page shows you where they go (ADR 0051); visitors
-see only what is there.
+see only what is there. The page is drawn to the profile mock (ADR 0052): the Night palette
+(teal, a yellow accent, clay, violet) by default, a Run as a card with its route and stats,
+your two latest posts as Picks, and your name once more at the foot. Posts is a wall of
+coloured blocks in the look's tints, Stories a Now card and small day labels.
 Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
 Open `/?profile=ines` to see it. Pages published on an older Paint wall are brought up to the
 template when the server starts.

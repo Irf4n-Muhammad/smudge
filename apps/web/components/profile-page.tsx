@@ -541,7 +541,12 @@ export function ProfilePage({
           className="page-fixed"
           aria-label={page === "posts" ? "Posts page" : "Stories page"}
         >
-          <PageHead user={owner} page={page} look={Boolean(look.className)} />
+          <PageHead
+            user={owner}
+            page={page}
+            look={Boolean(look.className)}
+            posts={ownPosts.length}
+          />
           {page === "posts" ? (
             <PostsCollage
               posts={ownPosts}

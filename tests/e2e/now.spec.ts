@@ -88,7 +88,7 @@ test("five answers after signing up become a published page", async ({ page }) =
   await expect(frame.locator(".chapter.ghost").first()).toBeVisible();
   // Posts: the collage drawn faintly, with the way to the composer.
   await strip.getByRole("button", { name: /^Posts/ }).click();
-  await expect(page.getByRole("button", { name: "Make your first post" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Write your first post" })).toBeVisible();
   const status = await page.evaluate(
     (h) => fetch(`/api/public/users/${h}`).then((r) => r.json()),
     handle,
