@@ -97,8 +97,10 @@
 - [x] Photos laid freely (ADR 0053, stage one of the landing mock v3): captions and two snaps
       per chapter, a band From the roll of up to eight, chapters closer together.
 - [x] The owner's words (ADR 0054, stage two): a manifesto of up to 140 characters under the
-      hero, the starred words in the serif and the palette. Next: a cassette for Music, Picks
-      as four blocks; then sources (music, games, running) filling chapters by themselves.
+      hero, the starred words in the serif and the palette.
+- [x] The cassette (ADR 0055, stage three): a Music chapter drawn as a cassette from its title,
+      hours and corner line. Next: Picks as four blocks; then sources (music, games, running)
+      filling chapters by themselves.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.

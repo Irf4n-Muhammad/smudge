@@ -1,4 +1,4 @@
-<!-- smudge:v10 -->
+<!-- smudge:v11 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm">
@@ -180,6 +180,26 @@
       if (caption) fig.append(el("figcaption", "", caption));
       return fig;
     };
+    // A cassette drawn from a Music chapter (ADR 0055): the title on the label as the band, the
+    // big number under it, the corner line on the spine; nothing without a title or a number.
+    const tapeOf = (c) => {
+      const title = (c.title || "").replace(/\*/g, "").trim();
+      const hours = [c.big, c.unit].filter(Boolean).join(" ");
+      if (!title && !hours) return null;
+      const tape = el("div", "tape");
+      tape.setAttribute("role", "img");
+      tape.setAttribute("aria-label", [title, hours].filter(Boolean).join(", "));
+      for (let i = 0; i < 4; i++) tape.append(el("span", "screw"));
+      const label = el("div", "label");
+      label.append(el("b", "", title || hours), el("i", "", title ? hours : ""));
+      const foot = el("small", "");
+      foot.append(el("span", "", "Side A"), el("span", "", c.label || ""));
+      label.append(foot);
+      const win = el("div", "win");
+      win.append(el("span", "reel l"), el("span", "reel r"));
+      tape.append(label, win, el("div", "base"));
+      return tape;
+    };
     // The chapter's pictures: the photo, then up to two snaps laid around it.
     const picsOf = (c) => {
       const main = figureOf(c.photo, c.caption, "photo");
@@ -253,7 +273,9 @@
         );
         sec.append(head);
         const add = (...nodes) => nodes.forEach((n) => n && sec.append(n));
-        if (c.title) {
+        // On Music the title goes on the cassette's label (ADR 0055), not above it.
+        const tape = c.kind === "music" ? tapeOf(c) : null;
+        if (c.title && !tape) {
           const h = el("h2", "");
           marked(c.title, h);
           sec.append(h);
@@ -274,8 +296,9 @@
           add(c.big ? bigOf(c) : null, c.note ? el("p", "note", c.note) : null, photo);
           add(statsOf(c), linesOf(c, "pills"));
         } else {
-          // Music and anything else: the big number first, the note, the lines, the photo last.
-          add(c.big ? bigOf(c) : null, c.note ? el("p", "note", c.note) : null);
+          // Music and anything else: the big number first, the note, the cassette (ADR 0055),
+          // the lines, the photo last.
+          add(c.big ? bigOf(c) : null, c.note ? el("p", "note", c.note) : null, tape);
           add(statsOf(c), linesOf(c, "lines"), photo);
         }
         box.append(sec);

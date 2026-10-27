@@ -583,6 +583,131 @@ html[data-owner="on"] .sm .chapter.ghost {
 .sm .lines b {
   font: italic 400 22px/1.1 var(--serif);
 }
+/* The cassette (ADR 0055): a shell in the card colour, the label in the accent with the band
+   and the hours, two reels turning behind the window. */
+.sm .tape {
+  position: relative;
+  width: 300px;
+  max-width: 100%;
+  aspect-ratio: 16 / 10;
+  margin: 8px 0 8px 8px;
+  border-radius: 14px;
+  background: #23201c;
+  box-shadow:
+    inset 0 0 0 1px #3a352f,
+    0 24px 48px rgba(0, 0, 0, 0.5);
+  transform: rotate(-2deg);
+}
+.sm .tape .label {
+  position: absolute;
+  inset: 7% 7% auto;
+  height: 40%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 6px;
+  background: var(--p2);
+  color: var(--wall);
+}
+.sm .tape .label b {
+  font: 800 15px/1 var(--big);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sm .tape .label i {
+  font: italic 400 14px/1 var(--serif);
+}
+.sm .tape .label small {
+  display: flex;
+  justify-content: space-between;
+  font: 500 8px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.sm .tape .win {
+  position: absolute;
+  inset: 52% 22% auto;
+  height: 24%;
+  border-radius: 999px;
+  background: var(--wall);
+  box-shadow: inset 0 0 0 1px #3a352f;
+}
+.sm .tape .reel {
+  position: absolute;
+  top: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--wall) 30%,
+    #3a352f 31%,
+    #3a352f 36%,
+    var(--wall) 37%,
+    var(--wall) 56%,
+    #2b2824 57%
+  );
+}
+.sm .tape .reel.l {
+  left: 8%;
+}
+.sm .tape .reel.r {
+  right: 8%;
+}
+.sm .tape .reel::after {
+  content: "";
+  position: absolute;
+  inset: 42%;
+  border-radius: 50%;
+  background: var(--wall);
+  box-shadow: inset 0 0 0 2px #6b645a;
+}
+.sm .tape .base {
+  position: absolute;
+  inset: auto 18% 4%;
+  height: 12%;
+  border: 1px solid #3a352f;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+}
+.sm .tape .screw {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3a352f;
+}
+.sm .tape .screw:nth-child(1) {
+  left: 3%;
+  top: 5%;
+}
+.sm .tape .screw:nth-child(2) {
+  right: 3%;
+  top: 5%;
+}
+.sm .tape .screw:nth-child(3) {
+  left: 3%;
+  bottom: 5%;
+}
+.sm .tape .screw:nth-child(4) {
+  right: 3%;
+  bottom: 5%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sm .tape .reel {
+    animation: sm-reel 6s linear infinite;
+  }
+}
+@keyframes sm-reel {
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
 /* Work's lines as tags. */
 .sm .pills {
   display: flex;
@@ -897,6 +1022,29 @@ html[data-owner="on"] .sm .roll.ghost {
     right: auto;
     top: auto;
     bottom: -48px;
+  }
+  /* On Music the cassette takes the top of the picture column, the photo under it. */
+  .sm .chapter-music > .tape {
+    grid-column: 2;
+    grid-row: 2 / span 3;
+    width: 420px;
+    margin: 0 0 40px 24px;
+    justify-self: start;
+  }
+  .sm .chapter-music > .tape .label b {
+    font-size: 22px;
+  }
+  .sm .chapter-music > .tape .label i {
+    font-size: 20px;
+  }
+  .sm .chapter-music > .tape .label small {
+    font-size: 10px;
+  }
+  .sm .chapter-music > .tape .label {
+    padding: 14px 18px;
+  }
+  .sm .chapter-music > .pics {
+    grid-row: 5 / span 8;
   }
   .sm .roll {
     padding: 64px 40px 0;

@@ -121,13 +121,15 @@ const daniPhotos = [
 ] as const;
 export function seedDaniPage(profiles: ProfileService) {
   const store = profiles.social.store;
-  const marker = "profile-smudge-v4:dani";
+  const marker = "profile-smudge-v5:dani";
   if (store.get("seed", marker) || !store.get("user", "dani")) return;
   // A page this seed wrote in an earlier version is written again; one someone edited is kept.
   const state = profiles.state("dani");
-  const earlier = ["profile-smudge-v2:dani", "profile-smudge-v3:dani"].some((m) =>
-    store.get("seed", m),
-  );
+  const earlier = [
+    "profile-smudge-v2:dani",
+    "profile-smudge-v3:dani",
+    "profile-smudge-v4:dani",
+  ].some((m) => store.get("seed", m));
   if (state.version === 0 || earlier) {
     const actor = { userId: "dani" };
     // The photos on the page were added after the photo seed first ran, so a data dir from
@@ -192,7 +194,7 @@ export function seedDaniPage(profiles: ProfileService) {
         {
           kind: "music",
           label: "Spotify · 2026",
-          title: "",
+          title: "Cigarettes After Sex",
           big: "412",
           unit: "hours",
           note: "Cigarettes After Sex, this year alone. Top 0.1% of listeners.",
