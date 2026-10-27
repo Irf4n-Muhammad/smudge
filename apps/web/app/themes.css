@@ -120,6 +120,13 @@ html[data-theme="dark"] .post-card.themed.classic-post .moment-cover {
 .profile-theme-frame.has-decor {
   padding-top: 64px;
 }
+/* A page of its own starts at the top (ADR 0048): no band, no pieces over the poster. */
+.profile-illustrated .profile-theme-frame.has-decor {
+  padding-top: 0;
+}
+.profile-illustrated .profile-theme-frame .decor-piece {
+  display: none;
+}
 .profile-illustrated .profile-theme-frame .decor-frame {
   max-width: 1024px;
   margin-inline: auto;
@@ -491,4 +498,9 @@ html[data-theme="dark"] .post-card.themed.classic-post .moment-cover {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+/* A page of its own draws its own edge: no ring around it (ADR 0050). */
+.profile-illustrated .profile-theme-frame.has-decor .decor-frame > .profile-world {
+  box-shadow: none;
+  border-radius: 0;
 }

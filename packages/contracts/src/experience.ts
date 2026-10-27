@@ -107,6 +107,14 @@ export const metadataSchema = z
     link: postLinkSchema.optional(),
     /** The side this post lives in (ADR 0027); absent means Everyday. Membership is checked on publish. */
     side: sideIdSchema.optional(),
+    /**
+     * Set when the post was made from a moment's album (ADR 0040): which moment, shown as a label
+     * that opens it. Checked on publish: only a member of that moment may carry it.
+     */
+    gathering: z
+      .object({ id: z.string().uuid(), title: z.string().trim().min(1).max(80) })
+      .strict()
+      .optional(),
     /** Set by website import: the page this post was rebuilt from, shown as "Imported from". */
     source: z
       .object({

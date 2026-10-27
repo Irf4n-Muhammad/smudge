@@ -16,6 +16,10 @@ export const profileMethod = z.enum([
   "profile.wall.add",
   "profile.wall.remove",
   "profile.wall.report",
+  "quiz.read",
+  "quiz.answer",
+  "cat.read",
+  "cat.feed",
 ]);
 export const partSlots = ["profile", "post", "story", "feature"] as const;
 // Public presentation fields only. Account ID, handle and authorization are never draft input.
@@ -31,7 +35,7 @@ export const profilePartSchema = z
   .object({
     name: z.string().min(1).max(80),
     entrypoint: z.string().regex(/^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*\.html$/),
-    capabilities: z.array(profileMethod).max(9),
+    capabilities: z.array(profileMethod).max(12),
   })
   .strict();
 export const profilePollSchema = z
@@ -55,6 +59,23 @@ export const profilePollSchema = z
     (p) => new Set(p.options.map((o) => o.id)).size === p.options.length,
     "Duplicate poll option",
   );
+const colour = z.string().regex(/^#[0-9a-f]{6}$/i, "A colour is #rrggbb");
+/**
+ * The look's tokens for the fixed pages (ADR 0049): the app draws Posts, Stories and the strip
+ * itself, and a page may colour them, never reshape them. Fonts are roles the app already has.
+ */
+export const pageLookSchema = z
+  .object({
+    ground: colour,
+    ink: colour,
+    muted: colour,
+    card: colour,
+    accent: colour,
+    display: z.enum(["serif", "hand", "sans"]),
+    label: z.enum(["mono", "sans"]),
+  })
+  .strict();
+export type PageLook = z.infer<typeof pageLookSchema>;
 const common = {
   kind: z.literal("profile"),
   runtimeVersion: z.literal("web-v1"),
@@ -74,7 +95,8 @@ const manifest = z.discriminatedUnion("schemaVersion", [
       mobileHeight: z.number().int().min(600).max(4000).optional(),
       headerOverlay: z.boolean().optional(),
       autoHeight: z.boolean().optional(),
-      capabilities: z.array(profileMethod).max(9),
+      look: pageLookSchema.optional(),
+      capabilities: z.array(profileMethod).max(12),
       poll: profilePollSchema.optional(),
       parts: z
         .object({

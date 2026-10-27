@@ -77,7 +77,7 @@ export function seedProfiles(profiles: ProfileService) {
   for (const [ownerId, template, marker] of [
     ["maya", "room", "profile-v1:maya"],
     ["leo", "comic", "profile-v1:leo"],
-    ["ines", "smudge", "profile-smudge-v1:ines"],
+    ["ines", "smudge", "profile-smudge-v2:ines"],
   ] as const) {
     if (store.get("seed", marker)) continue;
     // Never replace a profile a user has already published, including after interrupted seeding.
@@ -106,7 +106,35 @@ function inesPaintWall() {
     ...defaultSmudgeSettings,
     tagline: "*paints* the city, *slowly.*",
     place: "LISBON, PT",
-    sections: ["now", "latest", "selected", "quote", "wall", "posts"],
+    sections: ["latest", "selected", "quote", "wall"],
+    chapters: [
+      {
+        kind: "work",
+        label: "Since 2019",
+        title: "Walls, *slowly*.",
+        big: "31",
+        unit: "murals",
+        note: "Six years of painting other people's walls, one city at a time.",
+        stats: [
+          { value: "4", label: "cities" },
+          { value: "2", label: "collectives" },
+          { value: "1", label: "cat" },
+        ],
+        lines: [],
+        // A shared demo photo, seeded before the pages (seed.ts).
+        photo: "10000000-0000-4000-8000-000000000001",
+      },
+      {
+        kind: "music",
+        label: "This year",
+        title: "Paint to *this*.",
+        big: "212",
+        unit: "hours",
+        note: "Cigarettes After Sex, every mural.",
+        stats: [],
+        lines: ["Apocalypse", "Sunsetz", "K."],
+      },
+    ],
     now: { text: "Finishing the Rua das Flores mural", place: "Lisbon", progress: 70 },
     quote: { text: "Walls are just *slow* conversations." },
   });

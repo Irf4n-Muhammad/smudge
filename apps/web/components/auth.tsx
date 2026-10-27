@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { KeyRound, Lock, LogOut, MailCheck, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Lock, LogOut, MailCheck, ShieldCheck } from "lucide-react";
 import { api } from "./runtime";
 import type { AuthState } from "../../../packages/contracts/src/accounts";
 import { Dialog } from "./ui";
@@ -14,7 +14,7 @@ const messages: Record<string, string> = {
   TOO_MANY_ATTEMPTS: "Too many tries. Wait a few minutes, or reset your password.",
   TOO_MANY_REQUESTS: "Too many requests from this connection. Try again a little later.",
   EMAIL_TAKEN: "There is already an account with this email. Log in instead.",
-  HANDLE_TAKEN: "That handle is taken. Try another one.",
+  HANDLE_TAKEN: "That username is taken. Try another one.",
   PASSWORD_TOO_SHORT: "Use at least 10 characters for your password.",
   PASSWORD_TOO_GUESSABLE: "That password is too easy to guess. Try a longer phrase.",
   LINK_INVALID_OR_EXPIRED: "This link has expired or was already used. Ask for a new one.",
@@ -24,6 +24,7 @@ const messages: Record<string, string> = {
     "An account with this email exists but its email is not confirmed. Log in with your password and confirm it first.",
   GOOGLE_EMAIL_UNVERIFIED: "Google has not verified that email address.",
   GOOGLE_STATE_MISMATCH: "Google sign-in expired. Please try again.",
+  PASSWORDS_DIFFER: "The two passwords are not the same.",
 };
 export class AuthError extends Error {
   constructor(
@@ -55,35 +56,131 @@ export async function authApi<T = unknown>(path: string, body?: unknown): Promis
           message: `Check ${issues.map((i) => i.path).join(", ") || "the form"}.`,
         },
       );
-    throw new AuthError(value.error ?? "INTERNAL_ERROR");
+    const byField: Record<string, string[]> = {
+      HANDLE_TAKEN: ["handle"],
+      EMAIL_TAKEN: ["email"],
+      LOGIN_INCORRECT: ["password"],
+    };
+    throw new AuthError(value.error ?? "INTERNAL_ERROR", byField[value.error] ?? []);
   }
   return value as T;
 }
 
 function useSubmit(action: () => Promise<void>) {
   const [error, setError] = useState(""),
+    [fieldError, setFieldError] = useState(""),
     [busy, setBusy] = useState(false);
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError("");
+    setFieldError("");
     try {
       await action();
     } catch (e) {
       setError((e as Error).message);
+      // One wrong field is said under that field; anything else under the form.
+      const fields = e instanceof AuthError ? e.fields : [];
+      setFieldError(fields.length === 1 ? fields[0]! : "");
     } finally {
       setBusy(false);
     }
   }
-  return { error, busy, submit };
+  return { error, fieldError, busy, submit };
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  id,
+  label,
+  hint,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  // The label names only the input; the hint and the error describe it, so screen readers and
+  // tests see "Password", not "Password Show password At least 10 characters".
   return (
-    <label>
-      {label}
+    <div className={`auth-field ${error ? "has-error" : ""}`}>
+      <label className="auth-label" htmlFor={id}>
+        {label}
+      </label>
       {children}
-    </label>
+      {error ? (
+        <span className="auth-field-error" id={`${id}-hint`} role="alert">
+          {error}
+        </span>
+      ) : (
+        hint && (
+          <span className="auth-hint" id={`${id}-hint`}>
+            {hint}
+          </span>
+        )
+      )}
+    </div>
+  );
+}
+
+/** Length first, then variety: a long plain phrase beats a short clever one. */
+export function passwordStrength(value: string): { level: 0 | 1 | 2 | 3; label: string } {
+  if (value.length < 10) return { level: 0, label: value ? "Too short" : "" };
+  const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^\w\s]/, /\s/].filter((re) => re.test(value)).length;
+  const level = value.length >= 16 && kinds >= 2 ? 3 : value.length >= 12 || kinds >= 3 ? 2 : 1;
+  return { level, label: ["", "Okay", "Good", "Strong"][level]! };
+}
+function Strength({ value }: { value: string }) {
+  const { level, label } = passwordStrength(value);
+  if (!value) return null;
+  return (
+    <span className="auth-strength" data-level={level} aria-live="polite">
+      <i />
+      <i />
+      <i />
+      <b>{label}</b>
+    </span>
+  );
+}
+function PasswordInput({
+  id,
+  value,
+  onChange,
+  autoComplete,
+  minLength = 1,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete: string;
+  minLength?: number;
+}) {
+  const [shown, setShown] = useState(false);
+  return (
+    <span className="auth-password">
+      <input
+        id={id}
+        aria-describedby={`${id}-hint`}
+        required
+        type={shown ? "text" : "password"}
+        minLength={minLength}
+        maxLength={200}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <button
+        type="button"
+        className="icon-button"
+        aria-label={shown ? "Hide password" : "Show password"}
+        aria-pressed={shown}
+        onClick={() => setShown((v) => !v)}
+      >
+        {shown ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </span>
   );
 }
 
@@ -106,9 +203,12 @@ export function AuthForms({
     [handle, setHandle] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
+    [repeat, setRepeat] = useState(""),
     [sent, setSent] = useState(false);
-  const { error, busy, submit } = useSubmit(async () => {
+  const mismatch = mode === "signup" && repeat.length > 0 && repeat !== password;
+  const { error, fieldError, busy, submit } = useSubmit(async () => {
     if (mode === "signup") {
+      if (repeat !== password) throw new AuthError("PASSWORDS_DIFFER", ["repeat"]);
       await authApi("/auth/signup", { name, handle, email, password });
       rememberAccount();
       await onSignedIn(true);
@@ -167,67 +267,109 @@ export function AuthForms({
           </button>
         </div>
       ) : (
-        <form className="identity-form auth-form" onSubmit={submit}>
+        <form className="auth-form" onSubmit={submit} noValidate={false}>
           {mode === "signup" && (
             <>
-              <Field label="Name">
+              <Field id="auth-name" label="Name" hint="What friends call you.">
                 <input
+                  id="auth-name"
+                  aria-describedby="auth-name-hint"
                   required
                   maxLength={60}
                   autoComplete="name"
+                  placeholder="Rina Putri"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </Field>
-              <Field label="Handle">
-                <input
-                  required
-                  pattern="[a-z0-9._]{3,24}"
-                  title="3 to 24 lowercase letters, numbers, dots or underscores"
-                  autoComplete="username"
-                  value={handle}
-                  onChange={(e) => setHandle(e.target.value.toLowerCase())}
-                />
+              <Field
+                id="auth-handle"
+                label="Username"
+                hint="Your page lives at smudge/<username>. Letters, numbers, dots."
+                error={fieldError === "handle" ? error : undefined}
+              >
+                <span className="auth-at">
+                  <b aria-hidden="true">@</b>
+                  <input
+                    id="auth-handle"
+                    aria-describedby="auth-handle-hint"
+                    required
+                    pattern="[a-z0-9._]{3,24}"
+                    title="3 to 24 lowercase letters, numbers, dots or underscores"
+                    autoComplete="username"
+                    placeholder="rina"
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/\s/g, ""))}
+                  />
+                </span>
               </Field>
             </>
           )}
-          <Field label={mode === "login" ? "Email or handle" : "Email"}>
+          <Field
+            id="auth-email"
+            label={mode === "login" ? "Email or username" : "Email"}
+            error={fieldError === "email" || fieldError === "login" ? error : undefined}
+          >
             <input
+              id="auth-email"
+              aria-describedby="auth-email-hint"
               required
               type={mode === "login" ? "text" : "email"}
               autoComplete={mode === "login" ? "username" : "email"}
+              placeholder={mode === "login" ? "you@example.com or rina" : "you@example.com"}
               value={email}
               onChange={(e) => setEmail(e.target.value.trim())}
             />
           </Field>
           {mode !== "forgot" && (
-            <Field label="Password">
-              <input
-                required
-                type="password"
-                minLength={mode === "signup" ? 10 : 1}
-                maxLength={200}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            <Field
+              id="auth-password"
+              label="Password"
+              hint={
+                mode === "signup"
+                  ? "At least 10 characters. A few words you will remember."
+                  : undefined
+              }
+              error={fieldError === "password" ? error : undefined}
+            >
+              <PasswordInput
+                id="auth-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={setPassword}
+                minLength={mode === "signup" ? 10 : 1}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
               />
+              {mode === "signup" && <Strength value={password} />}
             </Field>
           )}
           {mode === "signup" && (
-            <p className="fineprint">
-              At least 10 characters. Anyone can join; members-only decorations and moments unlock
-              later with proof.
-            </p>
+            <Field
+              id="auth-repeat"
+              label="Repeat password"
+              error={
+                mismatch || fieldError === "repeat"
+                  ? "The two passwords are not the same."
+                  : undefined
+              }
+            >
+              <PasswordInput
+                id="auth-repeat"
+                value={repeat}
+                onChange={setRepeat}
+                minLength={10}
+                autoComplete="new-password"
+              />
+            </Field>
           )}
           {mode === "forgot" && (
-            <p className="fineprint">We will email a link to choose a new password.</p>
+            <p className="auth-hint">We will email a link to choose a new password.</p>
           )}
-          {error && (
+          {error && !fieldError && (
             <p className="form-error" role="alert">
               {error}
             </p>
           )}
-          <button className="primary" disabled={busy}>
+          <button className="primary auth-submit" disabled={busy || mismatch}>
             {mode === "signup" ? "Create account" : mode === "login" ? "Log in" : "Send reset link"}
           </button>
           {mode === "login" && (
@@ -239,6 +381,11 @@ export function AuthForms({
             <button type="button" className="text-button" onClick={() => go("login")}>
               Back to log in
             </button>
+          )}
+          {mode === "signup" && (
+            <p className="auth-hint auth-foot">
+              Anyone can join. Members-only decorations and moments unlock later with proof.
+            </p>
           )}
         </form>
       )}

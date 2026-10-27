@@ -78,6 +78,10 @@
   letter-spacing: 0.04em;
   color: var(--muted);
 }
+.gathering-mark {
+  color: inherit;
+  text-decoration: none;
+}
 .moment-mark.verified {
   color: #1f7a4d;
 }
@@ -1081,5 +1085,125 @@
     font-size: 0;
     gap: 0;
     padding: 9px 12px;
+  }
+}
+
+/* Sign up and log in: one column, room to breathe, every field explained once. */
+.auth-forms {
+  display: grid;
+  gap: 16px;
+}
+.auth-form {
+  display: grid;
+  gap: 18px;
+}
+.auth-field {
+  display: grid;
+  gap: 6px;
+}
+.auth-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.auth-form input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+.auth-form input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.auth-field.has-error input {
+  border-color: #b3261e;
+}
+.auth-hint,
+.auth-field-error {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.auth-field-error {
+  color: #b3261e;
+}
+.auth-foot {
+  margin: 0;
+  text-align: center;
+}
+.auth-at {
+  position: relative;
+  display: block;
+}
+.auth-at b {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-weight: 600;
+}
+.auth-at input {
+  padding-left: 30px;
+}
+.auth-password {
+  position: relative;
+  display: block;
+}
+.auth-password input {
+  padding-right: 46px;
+}
+.auth-password .icon-button {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+}
+.auth-strength {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.auth-strength i {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--line);
+}
+.auth-strength b {
+  font-size: 12px;
+  color: var(--muted);
+}
+.auth-strength[data-level="1"] i:nth-child(-n + 1) {
+  background: #d9a300;
+}
+.auth-strength[data-level="2"] i:nth-child(-n + 2) {
+  background: #6aa84f;
+}
+.auth-strength[data-level="3"] i {
+  background: #2e8b57;
+}
+.auth-submit {
+  min-height: 48px;
+  margin-top: 4px;
+  font-size: 16px;
+}
+.auth-tabs {
+  margin-bottom: 4px;
+}
+.auth-card {
+  padding: 28px;
+}
+@media (max-width: 760px) {
+  .auth-card {
+    padding: 22px 18px;
   }
 }

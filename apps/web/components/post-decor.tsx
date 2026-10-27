@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { BadgeCheck, Maximize2 } from "lucide-react";
+import { BadgeCheck, CalendarDays, Maximize2 } from "lucide-react";
 import type { SideTag } from "./types";
 import type { PostView } from "../../../packages/contracts/src/experience";
 import type { OverlayPiece, PostDecor, Sticker } from "../../../packages/contracts/src/identity";
@@ -142,6 +142,17 @@ export function MomentMark({ post }: { post: DecoratedPost }) {
   );
 }
 
+/** A post made from a moment's album (ADR 0040) names the moment; members open it from here. */
+export function GatheringMark({ post }: { post: DecoratedPost }) {
+  const from = post.metadata.gathering;
+  if (!from) return null;
+  return (
+    <a className="moment-mark gathering-mark" href={`/m/${encodeURIComponent(from.id)}`}>
+      <CalendarDays size={13} /> From {from.title}
+    </a>
+  );
+}
+
 /** A moment shows as a cover in the feed and opens full screen, without leaving the app. */
 export function MomentCover({ post, onOpen }: { post: DecoratedPost; onOpen: () => void }) {
   const cover = post.metadata.coverAssetId;
@@ -188,6 +199,7 @@ export function FullScreenPost({
     >
       <div className="fullscreen-post">
         <MomentMark post={post} />
+        <GatheringMark post={post} />
         <Runtime target={post.id} height={source ? height - 40 : height} />
         {source && (
           // The person who imported it says where it came from; the link leaves Smudge in a new tab.

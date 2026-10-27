@@ -13,6 +13,8 @@ export interface Config {
   /** Confirmed emails of moderators. In demo mode Alex moderates too. */
   adminEmails: string[];
   google: { clientId: string; clientSecret: string } | null;
+  /** "Your song shows up by itself" needs a Spotify app (ADR 0044). */
+  spotify: { clientId: string; clientSecret: string } | null;
   mail:
     | { provider: "inbox" }
     | { provider: "file" }
@@ -69,6 +71,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const google = env.GOOGLE_CLIENT_ID
     ? { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET! }
     : null;
+  if (!!env.SPOTIFY_CLIENT_ID !== !!env.SPOTIFY_CLIENT_SECRET)
+    throw new Error("Spotify needs both SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET");
+  const spotify = env.SPOTIFY_CLIENT_ID
+    ? { clientId: env.SPOTIFY_CLIENT_ID, clientSecret: env.SPOTIFY_CLIENT_SECRET! }
+    : null;
   const adminEmails = (env.FORMA_ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
@@ -83,6 +90,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     demoContent,
     adminEmails,
     google,
+    spotify,
     mail,
   };
 }

@@ -10,14 +10,16 @@ test("sign up with email and password, confirm the email, log out and back in, c
   const email = `${handle}@mail.example`;
   await page.getByRole("button", { name: "Create an account" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Name").fill("Account Tester");
-  await dialog.getByLabel("Handle").fill(handle);
+  await dialog.getByLabel("Name", { exact: true }).fill("Account Tester");
+  await dialog.getByLabel("Username").fill(handle);
   await dialog.getByLabel("Email", { exact: true }).fill(email);
-  await dialog.getByLabel("Password").fill("short");
+  await dialog.getByLabel("Password", { exact: true }).fill("short");
+  await dialog.getByLabel("Repeat password").fill("short");
   await dialog.getByRole("button", { name: "Create account", exact: true }).click();
   // The browser blocks a too-short password before it reaches the server.
   await expect(dialog).toBeVisible();
-  await dialog.getByLabel("Password").fill("a long enough phrase");
+  await dialog.getByLabel("Password", { exact: true }).fill("a long enough phrase");
+  await dialog.getByLabel("Repeat password").fill("a long enough phrase");
   await dialog.getByRole("button", { name: "Create account", exact: true }).click();
   // New accounts land on the feed with a short welcome: a photo and a few people to follow.
   await page
@@ -50,11 +52,11 @@ test("sign up with email and password, confirm the email, log out and back in, c
   await expect(page.getByRole("status").filter({ hasText: "You are logged out" })).toBeVisible();
 
   await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await dialog.getByLabel("Email or handle").fill(handle);
-  await dialog.getByLabel("Password").fill("a long enough phrase");
+  await dialog.getByLabel("Email or username").fill(handle);
+  await dialog.getByLabel("Password", { exact: true }).fill("a long enough phrase");
   await dialog.getByRole("button", { name: "Log in", exact: true }).click();
   await expect(dialog.getByRole("alert")).toHaveText("That email or password is not right.");
-  await dialog.getByLabel("Password").fill("an even longer phrase");
+  await dialog.getByLabel("Password", { exact: true }).fill("an even longer phrase");
   await dialog.getByRole("button", { name: "Log in", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await openMore(page, "Account settings");

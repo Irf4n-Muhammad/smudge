@@ -33,19 +33,21 @@ every device. Delivered emails are kept only as envelopes; their links are erase
 
 Set these as environment variables or secrets on the host (template: `.env.example`):
 
-| Variable                 | Example                              | Notes                             |
-| ------------------------ | ------------------------------------ | --------------------------------- |
-| `FORMA_MODE`             | `production`                         | Set by the Docker image already   |
-| `FORMA_PUBLIC_URL`       | `https://forma.example.com`          | Exact origin, no path             |
-| `FORMA_RUNTIME_URL`      | `https://run.forma.example.com`      | Must differ from the public URL   |
-| `RESEND_API_KEY`         | `re_...`                             | Secret                            |
-| `FORMA_MAIL_FROM`        | `Forma <hello@forma.example.com>`    | Verified domain                   |
-| `FORMA_DATA_DIR`         | `/data`                              | Mount the persistent disk here    |
-| `PORT`                   | `8080`                               | Usually set by the host           |
-| `FORMA_CLIENT_IP_HEADER` | `fly-client-ip` / `cf-connecting-ip` | Only when behind the host's proxy |
-| `FORMA_ADMIN_EMAILS`     | `you@example.com,ops@example.com`    | Who sees Moderation (confirmed)   |
-| `GOOGLE_CLIENT_ID`       | `123-abc.apps.googleusercontent.com` | Optional, with the secret         |
-| `GOOGLE_CLIENT_SECRET`   | `GOCSPX-...`                         | Secret                            |
+| Variable                 | Example                              | Notes                                |
+| ------------------------ | ------------------------------------ | ------------------------------------ |
+| `FORMA_MODE`             | `production`                         | Set by the Docker image already      |
+| `FORMA_PUBLIC_URL`       | `https://forma.example.com`          | Exact origin, no path                |
+| `FORMA_RUNTIME_URL`      | `https://run.forma.example.com`      | Must differ from the public URL      |
+| `RESEND_API_KEY`         | `re_...`                             | Secret                               |
+| `FORMA_MAIL_FROM`        | `Forma <hello@forma.example.com>`    | Verified domain                      |
+| `FORMA_DATA_DIR`         | `/data`                              | Mount the persistent disk here       |
+| `PORT`                   | `8080`                               | Usually set by the host              |
+| `FORMA_CLIENT_IP_HEADER` | `fly-client-ip` / `cf-connecting-ip` | Only when behind the host's proxy    |
+| `FORMA_ADMIN_EMAILS`     | `you@example.com,ops@example.com`    | Who sees Moderation (confirmed)      |
+| `GOOGLE_CLIENT_ID`       | `123-abc.apps.googleusercontent.com` | Optional, with the secret            |
+| `GOOGLE_CLIENT_SECRET`   | `GOCSPX-...`                         | Secret                               |
+| `SPOTIFY_CLIENT_ID`      | `0123abcd...`                        | Optional, with the secret (ADR 0044) |
+| `SPOTIFY_CLIENT_SECRET`  | `...`                                | Secret                               |
 
 The server refuses to start in production if a URL is missing, not `https`, the two URLs share
 an origin, or email is not configured. That is deliberate.
@@ -144,3 +146,10 @@ start it again. Never run two instances against one data directory; the lock fil
 - Notifications and messages arrive by polling (every 20 and 5 seconds); there are no push or
   email notifications yet.
 - Organisation domains and admins for "Who you are" are still a fixed list in code.
+
+## Spotify (optional)
+
+"Your song shows up by itself" needs a Spotify app. Create one at developer.spotify.com, add
+`<FORMA_PUBLIC_URL>/api/spotify/callback` as a redirect URI, and put the client ID and secret
+into `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`. Without them the "Connect Spotify" button
+does not appear and people note a song with one tap instead (ADR 0044).

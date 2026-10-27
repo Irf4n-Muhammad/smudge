@@ -13,7 +13,7 @@ test("a designer sends an HTML/CSS theme, a moderator approves it, and it is wor
   await expect(page.getByRole("region", { name: "Make a theme" })).toHaveCount(0);
   await page.getByRole("button", { name: "Send your own theme" }).click();
   const studio = page.getByRole("region", { name: "Make a theme" });
-  await studio.getByLabel("Name").fill(name);
+  await studio.getByLabel("Name", { exact: true }).fill(name);
   // Code that cannot work in a theme is refused before it is sent.
   const html = studio.getByLabel("Piece 1 HTML");
   const starter = await html.inputValue();

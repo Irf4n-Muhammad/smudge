@@ -206,6 +206,7 @@ export class SharingService {
         ? this.store.get<Asset>("asset", owner.avatarAssetId)
         : undefined;
       return {
+        ...this.profiles.extras(GUEST, ownerId),
         owner: {
           ...owner,
           ...(avatar ? { avatarSrc: `data:${avatar.mime};base64,${avatar.base64}` } : {}),
@@ -245,6 +246,8 @@ export class SharingService {
         })),
       };
     }
+    if (method === "quiz.read" || method === "cat.read")
+      return this.profiles.programs({ userId: GUEST }, ownerId, method, payload);
     if (method === "relay.read")
       return this.store.get<RelayContribution[]>("profile-relay", `owner:${ownerId}`) ?? [];
     if (method === "profile.wall.read") {

@@ -59,6 +59,41 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   sides, `feedFilter` for listing, and the publish guard; HTTP in `apps/server/side-routes.ts`.
 - `packages/core/src/plans.ts`: `plan.read` / `plan.join` handlers (ADR 0029), one record per
   post and person; `packages/core/src/easy-post.ts` generates the Plan style and its `plan.js`.
+- `packages/core/src/gatherings.ts`: moments as gatherings (ADR 0036): the invite, RSVPs keyed
+  by a salted phone hash, and the host-only guest list; HTTP in `apps/server/gathering-routes.ts`,
+  pages in `components/gatherings.tsx` (`/m`, `/m/<id>`, `/m/<id>/guests`). The same service holds
+  the moment group (ADR 0037): members, the announce/open chat and small groups.
+- `packages/core/src/gathering-day.ts`: the day (ADR 0038): the rotating door code, passes and
+  arrivals, and the live album, whose files live in `moments/` in the data directory. Photos are
+  resized and stripped of metadata in `apps/server/gathering-routes.ts`; pages in
+  `components/moment-day.tsx` (`/m/<id>/door`, the Album tab).
+  The same service closes a moment (ADR 0039): the lock, the thank-you, the cover, the host's
+  order and the memory cards, which the Stories page lists among the days (ADR 0045).
+  It also turns picked album photos into a draft post and guards the post's moment label
+  (ADR 0040).
+- `packages/core/src/now.ts` and `packages/core/src/setup.ts`: the one-tap "now" archive and the
+  five-answer setup that publishes a first page (ADR 0041); `components/now.tsx` (`NowBar`) and
+  `components/setup.tsx` on the web; `ProfileService.extras` feeds `profile.read` the live entries.
+  The same service lists what the people you follow are up to (`friends`) and one friend's page
+  for the widget (`widget`), shown by `components/friends-now.tsx` above the feed and
+  `components/widget.tsx` at `/w/<handle>` (ADR 0042).
+- `packages/core/src/programs.ts`: programs between people (ADR 0043): the quiz and the cat,
+  kept by owner, reached through the page's `quiz.*` and `cat.*` grants (`ProfileService.programs`
+  for members, `SharingService` for guest reads) and drawn by the Paint wall's `sections.js`.
+- `apps/server/profiles/smudge/`: the Paint wall, a landing page (ADR 0046, a poster since
+  ADR 0048): `profile.html` is the hero with the song and "right now" read from
+  `profile.read().now` and the chapters drawn from the settings, `story.html` and `post.html`
+  the optional Latest and Gallery, `sections.js` the other extras;
+  `packages/core/src/smudge-design.ts` holds the settings the easy editor writes, chapters
+  included, strips the page's follow grant (the strip's action follows instead), writes the
+  manifest's `look` from the palette (ADR 0049) and keeps chapter photos as the page's assets
+  (ADR 0050).
+- `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
+  stories as a timeline of posts, now entries and moments, by the feed's audience rules.
+  `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage
+  (`PostsCollage`) and the days (`Stories`) in the look's tokens (`lookStyle`, the manifest's
+  `look` as `--page-*` and `--strip-*` variables, ADR 0049), inside the app (`?page=`) and on `/u/<handle>/posts`
+  and `/u/<handle>/stories`.
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
   and its SVG (ADR 0030); `sides.tsx` draws the PNG in the browser.
 - `cockpit.tsx`, `app/cockpit.css`: optional whole-screen spatial feed navigation. Uses the same

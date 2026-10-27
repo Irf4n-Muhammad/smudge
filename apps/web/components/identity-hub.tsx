@@ -219,7 +219,7 @@ export function IdentityHub({
           prove it. Nothing is posted automatically when you add one.
         </p>
         <button className="primary identity-moment" onClick={onMoment}>
-          Share a moment
+          Share a milestone
         </button>
       </header>
       <ChapterList chapters={me.chapters} editable onChange={load} notify={notify} />

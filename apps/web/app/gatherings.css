@@ -1,0 +1,844 @@
+/* Moments as gatherings (ADR 0036). The invite keeps its own palette in light and dark mode:
+   it is the couple's page, not the app's. */
+.invite {
+  --invite-paper: #f6f0e6;
+  --invite-ink: #3a3128;
+  --invite-soft: #8a7b69;
+  --invite-gold: #a8834a;
+  --invite-line: #e3d8c6;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+  background: var(--invite-paper);
+  color: var(--invite-ink);
+  font-family: var(--ui, system-ui, sans-serif);
+  text-align: center;
+}
+.invite > * {
+  width: min(560px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+.invite-cover {
+  padding: 72px 0 40px;
+  border-bottom: 1px solid var(--invite-line);
+}
+.invite-kicker {
+  margin: 0 0 18px;
+  color: var(--invite-gold);
+  font-size: 13px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+.invite-cover h1 {
+  margin: 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: clamp(44px, 12vw, 72px);
+  font-weight: 400;
+  line-height: 1.05;
+}
+.invite-hosts {
+  margin: 16px 0 0;
+  color: var(--invite-soft);
+}
+.invite-date {
+  margin: 24px 0 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 22px;
+}
+.invite-block {
+  padding: 32px 0;
+  border-bottom: 1px solid var(--invite-line);
+}
+.invite-block h2 {
+  margin: 0 0 14px;
+  color: var(--invite-gold);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.invite-block p {
+  margin: 0 0 8px;
+  line-height: 1.55;
+}
+.invite-place {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 24px;
+}
+.invite-link {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--invite-gold);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.invite-note {
+  color: var(--invite-soft);
+  font-style: italic;
+}
+.invite-rundown {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.invite-rundown li {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 6px 0;
+}
+.invite-rundown time {
+  min-width: 52px;
+  color: var(--invite-gold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.invite-rundown span {
+  min-width: 140px;
+  text-align: left;
+}
+.invite-rsvp form {
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+.invite-rsvp label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.invite-rsvp small {
+  color: var(--invite-soft);
+  font-weight: 400;
+}
+.invite-rsvp input,
+.invite-rsvp select,
+.invite-rsvp textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-weight: 400;
+}
+.invite-rsvp textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+.invite-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.invite-choice button {
+  padding: 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.invite-choice button[aria-checked="true"] {
+  border-color: var(--invite-gold);
+  background: var(--invite-gold);
+  color: #fffaf2;
+}
+.invite-send {
+  padding: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--invite-ink);
+  color: var(--invite-paper);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.invite-send:disabled {
+  opacity: 0.6;
+}
+.invite-error {
+  color: #a3361f;
+}
+.invite-vendors ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.invite-vendors li {
+  padding: 4px 0;
+}
+.invite-vendors li span {
+  color: var(--invite-soft);
+}
+.invite-footer {
+  padding-top: 28px;
+  font-size: 13px;
+}
+.invite-footer a {
+  color: var(--invite-soft);
+}
+.invite-missing {
+  padding-top: 96px;
+}
+
+/* The host's pages. */
+.moments-host {
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+.moments-main {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+.moments-main h1 {
+  margin: 0 0 8px;
+}
+.moments-sub {
+  margin: 0 0 20px;
+  color: var(--muted);
+}
+.moments-list {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 28px;
+  padding: 0;
+  list-style: none;
+}
+.moments-list a {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+  color: inherit;
+  text-decoration: none;
+}
+.moments-list span {
+  color: var(--muted);
+  font-size: 14px;
+}
+.moments-form {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+.moments-form h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.moments-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.moments-form input,
+.moments-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+.moments-form fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.moments-form legend {
+  padding: 0 4px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.moments-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.4fr) 1fr;
+  gap: 8px;
+}
+.moments-form fieldset button {
+  justify-self: start;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.moments-share {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+.moments-share code {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.moments-share div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.moments-share a:not(.primary),
+.moments-share button {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.moments-totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 20px;
+}
+.moments-totals div {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+.moments-totals dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.moments-totals dd {
+  margin: 4px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+.moments-guests {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.moments-guests th,
+.moments-guests td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.moments-guests small {
+  color: var(--muted);
+}
+@media (max-width: 560px) {
+  .moments-guests th:nth-child(4),
+  .moments-guests td:nth-child(4) {
+    display: none;
+  }
+}
+
+/* The moment group (ADR 0037). */
+.moment-space {
+  --invite-paper: #f6f0e6;
+  --invite-ink: #3a3128;
+  --invite-soft: #8a7b69;
+  --invite-gold: #a8834a;
+  --invite-line: #e3d8c6;
+  min-height: 100vh;
+  background: var(--invite-paper);
+  color: var(--invite-ink);
+  font-family: var(--ui, system-ui, sans-serif);
+}
+.moment-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--invite-line);
+}
+.moment-head .brand {
+  font-family: var(--wordmark);
+  font-size: 22px;
+  color: var(--invite-ink);
+  text-decoration: none;
+}
+.moment-head div {
+  flex: 1;
+  min-width: 0;
+}
+.moment-head h1 {
+  margin: 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 24px;
+  font-weight: 400;
+}
+.moment-head p {
+  margin: 0;
+  color: var(--invite-soft);
+  font-size: 13px;
+}
+.moment-host-link {
+  padding: 8px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  color: var(--invite-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.moment-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--invite-line);
+}
+.moment-tabs button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--invite-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.moment-tabs button[aria-selected="true"] {
+  background: var(--invite-ink);
+  color: var(--invite-paper);
+}
+.moment-invite {
+  min-height: 0;
+}
+.moment-panel {
+  width: min(640px, 100%);
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+}
+.moment-panel h2 {
+  margin: 16px 0 10px;
+  font-size: 15px;
+}
+.moment-rooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.moment-rooms button,
+.moment-groups button,
+.moment-leave {
+  padding: 6px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.moment-rooms button[aria-pressed="true"] {
+  border-color: var(--invite-gold);
+  background: var(--invite-gold);
+  color: #fffaf2;
+}
+.moment-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+.moment-chat ol {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.moment-chat li {
+  justify-self: start;
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: #fffaf2;
+  border: 1px solid var(--invite-line);
+}
+.moment-chat li.mine {
+  justify-self: end;
+  background: var(--invite-ink);
+  border-color: var(--invite-ink);
+  color: var(--invite-paper);
+}
+.moment-chat li strong {
+  display: block;
+  font-size: 13px;
+  color: var(--invite-gold);
+}
+.moment-chat li p {
+  margin: 2px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.moment-chat li time {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.moment-chat form {
+  display: flex;
+  gap: 8px;
+}
+.moment-chat input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+}
+.moment-chat form button {
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--invite-ink);
+  color: var(--invite-paper);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.moment-empty {
+  color: var(--invite-soft);
+}
+.moment-leave {
+  margin-top: 16px;
+}
+.moment-members,
+.moment-groups {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.moment-members li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.moment-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #3a3128;
+  font-size: 13px;
+  font-weight: 700;
+}
+.moment-group-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.moment-group-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.moment-group-form input:not([type="checkbox"]) {
+  padding: 10px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+}
+.moment-group-form fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+}
+.moment-group-form fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+/* The day itself (ADR 0038): the door screen and the live album. */
+.moment-host-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.moment-welcome {
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--invite-gold);
+  color: #fffaf2;
+  text-align: center;
+}
+.moment-arrived {
+  margin-left: auto;
+  color: var(--invite-gold);
+  font-size: 12px;
+  font-weight: 600;
+}
+.door-notice {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid var(--invite-gold);
+  border-radius: 14px;
+}
+.door-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.door-actions .invite-send {
+  padding: 10px 22px;
+}
+.door-actions button:not(.invite-send):not(.invite-link),
+.door-actions select,
+.album-wishes button,
+.album-wishes select {
+  padding: 6px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-size: 14px;
+}
+.door-actions button[aria-pressed="true"] {
+  border-color: var(--invite-gold);
+  background: var(--invite-gold);
+  color: #fffaf2;
+}
+.door-screen {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  min-height: 100vh;
+  padding: 32px 16px;
+  background: #f6f0e6;
+  color: #3a3128;
+  font-family: var(--ui, system-ui, sans-serif);
+  text-align: center;
+}
+.door-screen h1 {
+  margin: 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 40px;
+  font-weight: 400;
+}
+.door-qr {
+  width: min(420px, 86vw);
+  aspect-ratio: 1;
+  margin: 0;
+  padding: 12px;
+  border-radius: 18px;
+  background: #fff;
+}
+.door-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.door-count strong {
+  font-size: 32px;
+}
+.door-screen a {
+  color: #a8834a;
+}
+.album-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.album-add {
+  padding: 10px 18px;
+  cursor: pointer;
+}
+.album-chapter h3,
+.album-wishes h3 {
+  margin: 20px 0 8px;
+  font-size: 15px;
+}
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.album-grid button {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  background: var(--invite-line);
+  cursor: pointer;
+}
+.album-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.album-badge {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgb(58 49 40 / 0.75);
+  color: #fffaf2;
+  font-size: 11px;
+}
+.album-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background: rgb(20 16 12 / 0.94);
+  color: #fffaf2;
+}
+.album-viewer img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+.album-viewer-info {
+  padding: 12px 16px 20px;
+  text-align: center;
+}
+.album-viewer-info p {
+  margin: 0 0 8px;
+}
+.album-wishes form {
+  display: grid;
+  gap: 8px;
+}
+.album-wishes textarea {
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+}
+.album-wishes ul {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.album-wishes li p {
+  margin: 2px 0 0;
+}
+
+/* Closing the moment (ADR 0039). */
+.invite-thanks img {
+  width: 100%;
+  max-height: 360px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+.invite-soft {
+  color: var(--invite-soft);
+  font-size: 14px;
+}
+.album-status {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.album-closing {
+  display: grid;
+  gap: 8px;
+}
+.album-closing textarea {
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+}
+.album-closing button {
+  padding: 6px 12px;
+  border: 1px solid var(--invite-line);
+  border-radius: 999px;
+  background: #fffaf2;
+  color: var(--invite-ink);
+  font: inherit;
+  font-size: 14px;
+}
+.album-viewer .door-actions button {
+  color: var(--invite-ink, #3a3128);
+}
+
+/* Picking photos for a post (ADR 0040). */
+.album-picking {
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid var(--invite-gold);
+  border-radius: 12px;
+}
+.album-picking p {
+  margin: 0 0 8px;
+}
+.album-grid button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.album-grid button[aria-pressed="true"] {
+  outline: 3px solid var(--invite-gold);
+  outline-offset: -3px;
+}

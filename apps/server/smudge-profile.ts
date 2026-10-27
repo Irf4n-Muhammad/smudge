@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { profilePackageSchema, type ProfilePackage } from "../../packages/contracts/src/profile.js";
+import { smudgeLook } from "../../packages/core/src/smudge-design.js";
 
 const files = Object.fromEntries(
   [
@@ -30,13 +31,14 @@ export const smudgeProfilePackage: ProfilePackage = profilePackageSchema.parse({
     height: 1700,
     mobileHeight: 1900,
     autoHeight: true,
+    look: smudgeLook("paint"),
     assets: [],
-    capabilities: [...social, "profile.social.read", "profile.social.toggle"],
+    capabilities: [...social, "profile.social.read"],
     parts: {
       profile: {
         name: "Smudge / Paint wall",
         entrypoint: "smudge/profile.html",
-        capabilities: [...social, "profile.social.read", "profile.social.toggle"],
+        capabilities: [...social, "profile.social.read"],
       },
       story: {
         name: "Smudge / Latest",

@@ -58,7 +58,8 @@ import { DecorationsPanel } from "./decorations-panel";
 import type { DecoratedPost } from "./post-decor";
 import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
-import { Welcome } from "./welcome";
+import { Setup } from "./setup";
+import { FriendsNow } from "./friends-now";
 import { SideHome, SideResults, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
@@ -211,6 +212,10 @@ export function FormaApp() {
       setActiveDraft(id);
       setStudio(true);
     }
+    // A post started elsewhere, such as photos picked from a moment's album (ADR 0040), opens in
+    // the easy editor.
+    const easy = new URLSearchParams(window.location.search).get("postDraft");
+    if (easy) setPostEditor({ draftId: easy });
   }, [refresh]);
   const loadExplore = useCallback(async (q: string) => {
     try {
@@ -396,6 +401,7 @@ export function FormaApp() {
     if (key === "card") navigate("sides");
     else if (key === "studio") void create();
     else if (key === "moment") setMomentOpen(true);
+    else if (key === "moments") window.location.assign("/m");
     else if (key === "import") setImportOpen(true);
     else if (key === "signup" || key === "login") setAuthDialog(key);
     else navigate(key);
@@ -864,6 +870,7 @@ export function FormaApp() {
                     onLeft={refresh}
                   />
                 )}
+                {view === "home" && !inSide && <FriendsNow onOpenUser={openUser} />}
                 {view === "home" && (
                   <section className="composer">
                     <span className="composer-symbol">
@@ -1222,17 +1229,20 @@ export function FormaApp() {
             setMomentOpen(false);
             navigate("home");
             await refresh();
-            notify("Moment published. Visitors can leave one sticker each.");
+            notify("Milestone published. Visitors can leave one sticker each.");
           }}
         />
       )}
       {welcome && me && (
-        <Welcome
+        <Setup
           me={me}
-          onDone={async () => {
+          onDone={async (publicationId) => {
             setWelcome(false);
             await refresh();
-            notify("Welcome to Smudge. We sent you an email to confirm your address.");
+            if (publicationId) {
+              openUser(me.id);
+              notify("Your page is up. Tap it any time you open your phone.");
+            } else notify("Welcome to Smudge. We sent you an email to confirm your address.");
           }}
         />
       )}

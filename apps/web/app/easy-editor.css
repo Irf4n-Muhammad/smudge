@@ -628,12 +628,6 @@
   border-radius: 12px;
   background: var(--line);
 }
-.card-now .easy-mini {
-  background:
-    linear-gradient(90deg, var(--lime) 55%, transparent 55%) bottom 10px left 10px /
-      calc(100% - 20px) 6px no-repeat,
-    #fff;
-}
 .card-selected .easy-mini {
   background:
     linear-gradient(
@@ -664,11 +658,6 @@
   color: #fff;
   font: italic 400 22px var(--serif);
 }
-.card-repeat .easy-mini {
-  background:
-    radial-gradient(circle at 30px 50%, #fff 0 4px, #101010 5px 18px, transparent 19px),
-    linear-gradient(120deg, #2b3cff, #ff4f9a);
-}
 .card-countdown .easy-mini {
   background: var(--lime);
 }
@@ -682,19 +671,6 @@
 .card-latest .easy-mini {
   background:
     linear-gradient(transparent 60%, rgb(0 0 0 / 50%)), linear-gradient(135deg, #2b3cff, #19c37d);
-}
-.card-posts .easy-mini {
-  background:
-    linear-gradient(
-        90deg,
-        #101010 31%,
-        transparent 31% 34.5%,
-        #ff4f9a 34.5% 65.5%,
-        transparent 65.5% 69%,
-        #d8ff3d 69%
-      )
-      center / calc(100% - 16px) 40px no-repeat,
-    #fff;
 }
 .easy-order {
   display: grid;
@@ -767,4 +743,34 @@
     max-height: calc(100vh - 200px);
     transform: none;
   }
+}
+
+/* The quiz's questions (ADR 0043). */
+.easy-quiz {
+  display: grid;
+  gap: 12px;
+}
+.easy-quiz-q {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.easy-quiz-q legend {
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.easy-quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.easy-quiz-option input[type="text"],
+.easy-quiz-option input:not([type]) {
+  flex: 1;
+  min-width: 0;
 }

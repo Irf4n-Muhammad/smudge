@@ -13,6 +13,7 @@ import { profileDocument, profilePackageSchema } from "../packages/contracts/src
 import {
   applySmudgeSettings,
   defaultSmudgeSettings,
+  emptyChapter as defaultChapter,
   readSmudgeSettings,
   supportsSmudgeDesign,
 } from "../packages/core/src/smudge-design.js";
@@ -30,23 +31,72 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
     ...defaultSmudgeSettings,
     tagline: "*rolls* wherever it's flat.",
     palette: "electric" as const,
-    sections: ["now", "latest", "wall", "posts"] as const,
+    sections: ["quote", "latest", "wall", "selected"] as const,
     now: { text: "Filming a skate part", place: "Osaka", progress: 60 },
   };
   const pkg = applySmudgeSettings(smudgeProfilePackage, {
     ...settings,
     sections: [...settings.sections],
   });
-  assert.deepEqual(readSmudgeSettings(pkg).sections, ["now", "latest", "wall", "posts"]);
+  assert.deepEqual(readSmudgeSettings(pkg).sections, ["quote", "latest", "wall", "selected"]);
   assert.equal(readSmudgeSettings(pkg).tagline, "*rolls* wherever it's flat.");
   assert.match(pkg.files["smudge/settings.js"]!, /^window\.smudgeSettings = /);
+  // The look tells the app its colours (ADR 0049): the palette's second colour is the accent.
+  const look = pkg.manifest.schemaVersion === 2 ? pkg.manifest.look : undefined;
+  assert.equal(look?.accent, "#d8ff3d");
+  assert.equal(look?.ground, "#0e0d0b");
+  assert.throws(() =>
+    profilePackageSchema.parse({
+      ...pkg,
+      manifest: { ...pkg.manifest, look: { ...look, accent: "lime" } },
+    }),
+  );
+  // The page carries no follow button of its own (ADR 0048): the app's strip has it.
+  const caps = (list: readonly string[] | undefined) => list ?? [];
+  assert.ok(!caps(pkg.manifest.capabilities).includes("profile.social.toggle"));
+  const profilePart = pkg.manifest.schemaVersion === 2 ? pkg.manifest.parts.profile : undefined;
+  assert.ok(!caps(profilePart?.capabilities).includes("profile.social.toggle"));
+  // A ribbon from an older version is ignored; chapters are kept and checked.
+  const withRibbon = structuredClone(pkg);
+  withRibbon.files["smudge/settings.js"] = `window.smudgeSettings = ${JSON.stringify({
+    ...readSmudgeSettings(pkg),
+    marquee: "old & gone",
+    chapters: [{ ...defaultChapter, kind: "run", title: "Slow, but *far*.", big: "1:52:10" }],
+  })};`;
+  assert.equal(readSmudgeSettings(withRibbon).chapters[0]?.big, "1:52:10");
+  // A chapter's photo becomes one of the page's assets, and leaves with the chapter (ADR 0050).
+  const photo = "10000000-0000-4000-8000-000000000001";
+  const withPhoto = applySmudgeSettings(pkg, {
+    ...readSmudgeSettings(pkg),
+    chapters: [{ ...defaultChapter, kind: "work", title: "Walls", photo }],
+  });
+  assert.ok(withPhoto.manifest.assets.includes(photo));
+  assert.match(
+    withPhoto.files["smudge/settings.js"]!,
+    /window\.smudgePhotos = \{"1000.*asset:1000/,
+  );
+  assert.equal(readSmudgeSettings(withPhoto).chapters[0]?.photo, photo);
+  const without = applySmudgeSettings(withPhoto, {
+    ...readSmudgeSettings(withPhoto),
+    chapters: [],
+  });
+  assert.ok(!without.manifest.assets.includes(photo));
+  assert.throws(() =>
+    applySmudgeSettings(pkg, {
+      ...readSmudgeSettings(pkg),
+      chapters: [{ ...defaultChapter, photo: "not-an-id" }],
+    }),
+  );
+  assert.throws(() =>
+    applySmudgeSettings(pkg, { ...settings, chapters: [1, 2, 3, 4].map(() => defaultChapter) }),
+  );
   for (const cap of ["profile.wall.read", "profile.wall.add", "profile.wall.remove"])
     assert.ok((pkg.manifest.capabilities as string[]).includes(cap));
-  const off = applySmudgeSettings(pkg, { ...readSmudgeSettings(pkg), sections: ["posts"] });
+  const off = applySmudgeSettings(pkg, { ...readSmudgeSettings(pkg), sections: ["latest"] });
   assert.ok(!(off.manifest.capabilities as string[]).some((c) => c.startsWith("profile.wall.")));
   // Bad input is refused instead of written into the page.
   assert.throws(() => applySmudgeSettings(pkg, { ...settings, tagline: "x".repeat(61) }));
-  assert.throws(() => applySmudgeSettings(pkg, { ...settings, sections: ["posts", "posts"] }));
+  assert.throws(() => applySmudgeSettings(pkg, { ...settings, sections: ["latest", "latest"] }));
   assert.throws(() => applySmudgeSettings(rakaPackage, defaultSmudgeSettings));
   assert.equal(supportsSmudgeDesign(rakaPackage), false);
   // A broken settings file falls back to defaults rather than breaking the editor.
@@ -63,7 +113,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
   ).replace('<div class="sm-sections" id="sm-sections"></div>\n  ', "");
   delete old.files["smudge/sections.js"];
   old.files["smudge/profile.html"] = "<p>old hero</p>";
-  old.files["smudge/post.html"] = "<!-- smudge:v3 --><p>my own grid</p>";
+  old.files["smudge/post.html"] = "<!-- smudge:v7 --><p>my own grid</p>";
   const next = applySmudgeSettings(
     profilePackageSchema.parse(old),
     defaultSmudgeSettings,
@@ -73,7 +123,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
     next.files["smudge/profile.html"],
     smudgeProfilePackage.files["smudge/profile.html"],
   );
-  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v3 --><p>my own grid</p>");
+  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v7 --><p>my own grid</p>");
   assert.ok(next.files["smudge/sections.js"]);
   const shell = next.files["index.html"]!;
   assert.match(shell, /src="smudge\/settings\.js"/);
@@ -112,7 +162,7 @@ test("the Wall: visitors add notes, authors and owners remove them, limits, bloc
     budi = { userId: "budi" };
   const pkg = applySmudgeSettings(smudgeProfilePackage, {
     ...defaultSmudgeSettings,
-    sections: ["wall", "posts"],
+    sections: ["wall", "latest"],
   });
   const draft = profiles.create(owner, pkg);
   const live = profiles.publish(owner, draft.id, 1, 0).publicationId!;
@@ -160,7 +210,7 @@ test("the Wall: visitors add notes, authors and owners remove them, limits, bloc
   // Turning the Wall off in a later publication closes the old one too.
   const off = profiles.create(
     owner,
-    applySmudgeSettings(pkg, { ...defaultSmudgeSettings, sections: ["posts"] }),
+    applySmudgeSettings(pkg, { ...defaultSmudgeSettings, sections: ["latest"] }),
   );
   profiles.publish(owner, off.id, 1, 1);
   rejects(

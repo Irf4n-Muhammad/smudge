@@ -1,0 +1,404 @@
+/* The fixed pages (ADR 0045): the strip outside the page, the Posts collage and the Stories days. */
+.page-strip {
+  position: fixed;
+  left: 50%;
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 26;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(100% - 32px, 440px);
+}
+.page-strip-tabs {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--strip-bg, color-mix(in srgb, var(--ink) 88%, transparent));
+  color: var(--strip-ink, var(--paper));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+}
+/* The one action beside the tabs (ADR 0048): Edit for the owner, Follow for a visitor. */
+.page-strip-action {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 52px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--strip-action-bg, var(--strip-on, var(--paper)));
+  color: var(--strip-action-ink, var(--strip-on-ink, var(--ink)));
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.page-strip-action:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.page-strip-action[aria-pressed="true"] {
+  background: var(--strip-bg, color-mix(in srgb, var(--ink) 88%, transparent));
+  color: var(--strip-ink, var(--paper));
+  box-shadow: inset 0 0 0 1.5px var(--strip-action-bg, var(--strip-on, var(--paper)));
+}
+.page-strip-tabs a,
+.page-strip-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 0;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.page-strip-tabs [aria-current="page"] {
+  background: var(--strip-on, var(--paper));
+  color: var(--strip-on-ink, var(--ink));
+}
+.page-strip-tabs small {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.share-page .page-strip {
+  bottom: calc(16px + env(safe-area-inset-bottom));
+}
+@media (min-width: 701px) {
+  .profile-page .page-strip {
+    bottom: 20px;
+    left: calc(50% + var(--profile-rail, 0px) / 2);
+  }
+}
+
+.page-fixed {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 16px 140px;
+}
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 0 18px;
+}
+.page-head .avatar {
+  width: 56px;
+  height: 56px;
+}
+.page-head h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.1;
+}
+.page-head small {
+  display: block;
+  color: var(--muted);
+}
+.page-head p {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+.page-empty {
+  margin: 40px 0;
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--hand, inherit);
+  font-size: 22px;
+}
+
+.collage {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-auto-rows: 112px;
+  grid-auto-flow: dense;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.collage li {
+  min-width: 0;
+  transform: rotate(var(--tilt, 0deg));
+}
+.collage li:nth-child(5n + 1) {
+  --tilt: -1.2deg;
+}
+.collage li:nth-child(5n + 3) {
+  --tilt: 1.4deg;
+}
+.collage li:nth-child(5n + 5) {
+  --tilt: -0.8deg;
+}
+.collage a,
+.collage button,
+.story-post a,
+.story-post button {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: var(--white, #fff);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.collage img,
+.story-post img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.collage-blank {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  background: var(--accent-light, #e9e6ff);
+  font-family: var(--hand, inherit);
+  font-size: 20px;
+  text-align: center;
+}
+.collage-cap,
+.story-cap {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  overflow: hidden;
+  font-family: var(--hand, inherit);
+  font-size: 19px;
+  line-height: 1.05;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.collage-blank + .collage-cap,
+.collage-blank + .story-cap {
+  display: none;
+}
+@media (min-width: 560px) {
+  .collage {
+    grid-auto-rows: 150px;
+    gap: 14px;
+  }
+}
+
+.stories {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.story-day {
+  margin-bottom: 26px;
+}
+.story-day h2 {
+  margin: 0 0 10px;
+  font-family: var(--hand, inherit);
+  font-size: 26px;
+  line-height: 1;
+}
+.story-day ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.story-post {
+  width: calc(50% - 5px);
+  height: 190px;
+}
+.story-now {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 14px;
+}
+.story-now .now-text small {
+  color: var(--muted);
+}
+.story-now time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.story-moment a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+.story-moment img {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.story-moment strong {
+  display: block;
+}
+.story-moment small {
+  color: var(--muted);
+}
+
+/* A look's tokens (ADR 0049): the page sets the colours and two font roles, the app keeps the
+   shapes. Everything below reads a --page-* variable and falls back to the app's own. */
+.has-look {
+  background: var(--page-ground);
+}
+.has-look .page-fixed {
+  color: var(--page-ink);
+}
+.profile-illustrated .page-fixed {
+  /* The floating back and menu buttons (ADR 0047) sit over the top of the page. */
+  padding-top: 72px;
+}
+.has-look .page-head .avatar {
+  display: none;
+}
+.has-look .page-head h1 {
+  font: italic 400 48px/1 var(--page-display);
+  letter-spacing: -0.02em;
+}
+.has-look .page-head small,
+.has-look .story-day h2 {
+  font: 500 11px/1.4 var(--page-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--page-muted);
+}
+.has-look .page-head p {
+  color: var(--page-muted);
+}
+.has-look .page-empty {
+  font: italic 400 26px/1.2 var(--page-display);
+  color: var(--page-muted);
+}
+.has-look .collage li {
+  --tilt: 0deg;
+}
+.has-look .collage a,
+.has-look .collage button,
+.has-look .story-post a,
+.has-look .story-post button {
+  border-radius: 12px;
+  background: var(--page-card);
+  box-shadow: none;
+}
+.has-look .collage-blank {
+  background: var(--page-accent);
+  color: var(--page-ground);
+  font: 500 14px/1.3 var(--ui, inherit);
+}
+/* Blank tiles take turns: the accent, the card, the ink, so a page of words still has rhythm. */
+.has-look .collage li:nth-child(3n + 2) .collage-blank,
+.has-look .story-post:nth-child(3n + 2) .collage-blank {
+  background: var(--page-card);
+  color: var(--page-ink);
+}
+.has-look .collage li:nth-child(3n) .collage-blank,
+.has-look .story-post:nth-child(3n) .collage-blank {
+  background: var(--page-ink);
+  color: var(--page-ground);
+}
+.has-look .collage-cap,
+.has-look .story-cap {
+  font: 500 14px/1.3 var(--ui, inherit);
+}
+.has-look .story-day h2 {
+  margin-bottom: 8px;
+}
+.has-look .story-now,
+.has-look .story-moment a {
+  border: 0;
+  border-radius: 16px;
+  background: var(--page-card);
+  color: var(--page-ink);
+}
+.has-look .story-now .now-text small,
+.has-look .story-now time,
+.has-look .story-moment small {
+  color: var(--page-muted);
+}
+.has-look .page-fixed .now-bar {
+  border: 0;
+  border-radius: 16px;
+  background: var(--page-card);
+  color: var(--page-ink);
+}
+.has-look .page-fixed .now-more,
+.has-look .page-fixed .now-archive-toggle,
+.has-look .page-fixed .now-bar a {
+  color: var(--page-accent);
+}
+
+/* A guest's share page under a look (ADR 0050): the bar, the page's frame and the invitation
+   take the look's ground, ink and accent, so the link looks like the page it opens. */
+.share-page.has-look .share-bar {
+  background: color-mix(in srgb, var(--page-ground) 92%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--page-ink) 15%, transparent);
+}
+.share-page.has-look .share-bar .brand,
+.share-page.has-look .share-bar a {
+  color: var(--page-ink);
+  border-color: color-mix(in srgb, var(--page-ink) 25%, transparent);
+}
+.share-page.has-look .share-bar a.join {
+  background: var(--page-accent);
+  border-color: var(--page-accent);
+  color: var(--page-ground);
+}
+.share-page.has-look .share-main:not(.page-fixed) {
+  width: min(1024px, 100%);
+  padding: 0 0 120px;
+}
+.share-page.has-look .share-profile-world {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.share-page.has-look .share-cta {
+  margin: 24px 16px 0;
+  background: var(--page-card);
+  color: var(--page-ink);
+}
+.share-page.has-look .share-cta a {
+  background: var(--page-accent);
+  color: var(--page-ground);
+}

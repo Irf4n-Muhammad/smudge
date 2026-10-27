@@ -27,9 +27,15 @@ Height is an integer 600–4000 CSS pixels. The same post file/path and asset li
 Larger documents scroll inside the frame; automatic content sizing is not implemented.
 Profile capabilities are independent of post capabilities:
 
-- `profile.read`: `await forma.profile.read()` returns `{owner, posts}`. Owner is the public
-  user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`. No draft, bookmark, session,
-  or viewer identity is supplied, including in visitor preview.
+- `profile.read`: `await forma.profile.read()` returns `{owner, posts, now}`. Owner is the public
+  user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`; `now` is the
+  owner's latest one-tap entries (`current`, `listening`, `recent`) as the viewer may see them
+  (ADR 0041). No draft, bookmark, session, or viewer identity is supplied, including in visitor preview.
+- `quiz.read` / `quiz.answer`: `await forma.quiz.read()` returns the owner's questions without
+  answers, the viewer's last result, the best ten and the number of takers;
+  `await forma.quiz.answer([i, …])` scores one pick per question. `cat.read` / `cat.feed`:
+  `await forma.cat.read()` returns the cat's mood, who fed it today and whether the viewer did;
+  `await forma.cat.feed()` feeds it once a day. Guests may read; writes need an account (ADR 0043).
 - `profile.openPost`: `await forma.profile.openPost(postId)` asks the host to open a published
   post. The server checks that it belongs to this profile owner before the host opens it.
 
@@ -474,6 +480,59 @@ hasCover, author}]}` for an open public side, as the guest viewer sees it (`memb
   no `since`, the same people and post rules as for a stranger); `recent` are the side's public
   posts, newest first, at most twelve. Private sides and Everyday are `NOT_FOUND`. The web app
   serves it at `/s/<id>`; a signed-in person opening that page is sent to `/?side=<id>`.
+- Moments as gatherings (ADR 0036). `POST /api/gatherings` takes `GatheringInput` (`kind:
+"wedding"`, `title`, `hosts?`, `date` as `YYYY-MM-DD`, `place`, `address?`, `note?`,
+  `rundown?: [{time: "HH:MM", title}]` up to 20, `vendors?: [{role, name}]` up to 20) and answers
+  `201 GatheringInvite`; at most 50 per host (`TOO_MANY_GATHERINGS`). `GET /api/gatherings` answers
+  `GatheringSummary[]` (hosted and answered while signed in, soonest first).
+  `GET /api/gatherings/:id/guests` answers `GatheringGuestList` to the host only (`NOT_HOST`);
+  `DELETE /api/gatherings/:id` removes it and its answers.
+- `GET /api/public/gatherings/:id` answers `GatheringInvite` to anyone (guest rate limit), with no
+  answers in it. `POST /api/public/gatherings/:id/rsvp` takes `{name, phone, attending, guests?
+(1-10), message?}` and answers `{name, attending, guests}`; 30 per 10 minutes per address. The
+  phone is normalised (`0…` gets `62`) to 8-15 digits (`INVALID_PHONE`) and stored only as a hash
+  per gathering plus its last three digits; the same number again replaces its answer; past 3000
+  answers new ones are `GATHERING_FULL`. The web app serves the invite at `/m/<id>`, the host's
+  list at `/m/<id>/guests`, and your moments at `/m`.
+- The moment group (ADR 0037), members only (`NOT_FOUND` to anyone else). `GET
+/api/gatherings/:id/space` answers `GatheringSpace` (`invite`, `me`, `role`, `mode`, `members`,
+  the viewer's `groups`); `POST /api/gatherings/:id/join` joins from the link. `POST
+/api/gatherings/:id/mode` takes `{mode: "announce" | "open"}` from the host (`NOT_HOST`). `GET
+/api/gatherings/:id/messages?group=` answers the last 200 `GatheringMessageView`s of the main chat
+  or a small group; `POST` the same path takes `{text, group?}` (60 a minute per address;
+  `ANNOUNCEMENTS_ONLY` for a member in announce mode; small groups always free). `POST
+/api/gatherings/:id/groups` takes `{name, members}` of moment members (`NOT_A_MEMBER`) and answers
+  the space; `POST /api/gatherings/:id/groups/:group/leave` leaves it, and the last one out removes
+  it. Small groups are hidden from everyone outside them, the host included.
+- The day (ADR 0038). `GET /api/gatherings/:id/door` answers the host's `GatheringDoor` (`code`,
+  `path`, `rotatesInMs`, `arrived`); the code changes every 30 seconds and lasts 90.
+  `POST /api/public/gatherings/:id/door` takes `{code}` from anyone and answers `{pass}`
+  (`DOOR_CODE_EXPIRED`); `POST /api/gatherings/:id/checkin` takes `{pass}` (12 hours,
+  `DOOR_PASS_EXPIRED`), records the arrival, makes a member and answers `GatheringSpace`, which now
+  has `arrived`. `GatheringGuestList.totals` has `arrived`.
+- `GET /api/gatherings/:id/album` answers `GatheringAlbum` (`chapters` of `AlbumPhoto`, `wishes`,
+  `photographers`, `count`) to members. `POST /api/gatherings/:id/photos` takes the raw image
+  (`image/*`, 20 MB, optional `X-Taken-At: YYYY-MM-DDTHH:MM`) and answers `{id}` (`INVALID_IMAGE`,
+  `TOO_MANY_PHOTOS` past 300 each, `ALBUM_FULL` past 5000). `GET .../photos/:photo[?size=s]` serves
+  the JPEG to members; `DELETE` removes it (poster or host, `NOT_YOURS`). `POST .../photos/:photo/like`
+  takes `{on}`; `POST .../photos/:photo/tags` takes `{userId, on}`; `POST
+/api/gatherings/:id/photographers` takes `{userId, on}` from the host; `POST
+/api/gatherings/:id/wish` takes `{text}`. Each answers the album. `likes` is present only on the
+  viewer's own photos.
+- Closing (ADR 0039). `GatheringInvite` has `phase` (`upcoming`, `live`, `closed`), `thanks` and
+  `cover`; `GatheringAlbum` has `phase`, `locksAfter`, `thanks`, `coverId?` and the viewer's
+  `card?` (`shown` or `hidden`). After the lock, photos, tags and wishes are `ALBUM_LOCKED`. The
+  host posts `{thanks?, lock?: true}` to `/api/gatherings/:id/close`, `{photoId | null}` to
+  `/api/gatherings/:id/cover` and `{direction: "up" | "down"}` to `.../photos/:photo/move`; each
+  answers the album. `GET /api/public/gatherings/:id/cover` serves the cover to anyone.
+  `POST /api/gatherings/:id/card` takes `{shown}` from someone who came. `GET
+/api/users/:id/moments` answers that person's `MemoryCard[]` for closed moments, filtered like
+  their posts.
+- From the album (ADR 0040). `POST /api/gatherings/:id/share` takes `{photoIds}` (1-12; the
+  viewer's own photos or ones they are tagged in, else `NOT_YOURS`), copies them into the
+  viewer's images and answers `{draftId}` of a gallery draft. Post `metadata.gathering?: {id,
+title}` names the moment; publishing it needs membership and the moment's title
+  (`NOT_A_MEMBER`). The app opens `/?postDraft=<id>` in the post editor.
 - The app reads `?side=<id>` on `/` and `/u/<handle>`: a signed-in member is switched to the
   side (joining first when it is open); a guest sees the side named on the public page.
 - Search (the Posts tab) lists the sides in `SidesView` (`mine` and `open`, never Everyday)

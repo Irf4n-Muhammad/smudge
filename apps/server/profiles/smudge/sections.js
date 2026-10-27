@@ -1,15 +1,15 @@
-// smudge:v3
+// smudge:v7
 // Paint wall page sections. Reads the easy-editor settings (smudge/settings.js), applies colours and
 // section order, draws the sections the owner added, and turns taps into edits while editing.
 (() => {
   const defaults = {
     palette: "paint",
-    sections: ["latest", "selected", "posts"],
+    sections: [],
     quote: { text: "" },
-    now: { text: "", place: "", progress: 40 },
-    repeat: { song: "", artist: "" },
     countdown: { label: "", date: "" },
     wall: { title: "The Wall" },
+    quiz: { title: "" },
+    cat: { name: "" },
   };
   const s = Object.assign({}, defaults, window.smudgeSettings || {});
   const palettes = {
@@ -22,7 +22,7 @@
   const order = Array.isArray(s.sections) ? s.sections : defaults.sections;
   const paints = palettes[s.palette] || palettes.paint;
   let css = order.map((k, i) => `[data-sm-section="${k}"]{order:${i + 1}}`).join("");
-  for (const k of ["latest", "selected", "posts"])
+  for (const k of ["latest", "selected"])
     if (!order.includes(k)) css += `[data-sm-section="${k}"]{display:none!important}`;
   // Halloween keeps its own paints; the owner's palette is for the rest of the year.
   if (s.palette !== "paint")
@@ -59,6 +59,7 @@
     });
     return frag;
   };
+  // The song and what's going on live in the hero now (ADR 0046), not as sections.
   const builders = {
     quote() {
       if (!s.quote.text) return null;
@@ -66,34 +67,6 @@
       const q = el("blockquote");
       q.append(marked("“" + s.quote.text + "”"));
       node.append(q);
-      return node;
-    },
-    now() {
-      if (!s.now.text) return null;
-      const node = section("now", "NOW DOING");
-      const card = el("div", "sx-card");
-      if (s.now.place) card.append(el("span", "sx-pill", s.now.place));
-      card.append(el("strong", "", s.now.text));
-      const bar = el("div", "sx-bar");
-      bar.setAttribute("role", "img");
-      bar.setAttribute("aria-label", s.now.progress + "% done");
-      const fill = el("i");
-      fill.style.width = Math.max(0, Math.min(100, s.now.progress)) + "%";
-      bar.append(fill);
-      card.append(bar);
-      node.append(card);
-      return node;
-    },
-    repeat() {
-      if (!s.repeat.song) return null;
-      const node = section("repeat", "ON REPEAT");
-      const card = el("div", "sx-card");
-      const disc = el("span", "sx-disc");
-      disc.setAttribute("aria-hidden", "true");
-      const text = el("div");
-      text.append(el("strong", "", s.repeat.song), el("small", "", s.repeat.artist || ""));
-      card.append(disc, text);
-      node.append(card);
       return node;
     },
     countdown() {
@@ -236,6 +209,190 @@
         .read()
         .then(render)
         .catch(() => (status.textContent = "The notes could not load. Try refreshing."));
+      return node;
+    },
+    // "How well do you know me?" (ADR 0043): the owner's questions, a friend's answers, a board.
+    quiz() {
+      const node = section("quiz", "QUIZ");
+      const title = el("h2");
+      const words = (s.quiz.title || "How well do you *know* me?").split(" ");
+      title.append(marked(words.join(" ")));
+      node.append(title);
+      const box = el("div", "sx-card sx-quiz-box");
+      box.setAttribute("aria-live", "polite");
+      node.append(box);
+      const status = el("p", "sx-status");
+      status.setAttribute("role", "status");
+      node.append(status);
+      const errors = {
+        SIGN_IN_REQUIRED: "Sign in to take the quiz.",
+        OWN_QUIZ: "It's your quiz. Send it to a friend.",
+        CAPABILITY_DENIED: "The quiz is closed right now.",
+      };
+      const board = (data) => {
+        const list = el("ol", "sx-board");
+        list.setAttribute("aria-label", "Best scores");
+        data.board.forEach((b, i) => {
+          const li = el("li");
+          li.append(
+            el("b", "", String(i + 1)),
+            el("span", "", b.name),
+            el("strong", "", b.score + "/" + b.total),
+          );
+          list.append(li);
+        });
+        return list;
+      };
+      const result = (data) => {
+        box.textContent = "";
+        const m = data.mine;
+        const head = el("div", "sx-score");
+        head.append(el("strong", "", m.score + "/" + m.total));
+        head.append(
+          el(
+            "span",
+            "",
+            m.score === m.total
+              ? "Perfect. You really know them."
+              : m.score >= m.total / 2
+                ? "Not bad. Close friends."
+                : "Hmm. Time to hang out more.",
+          ),
+        );
+        box.append(head);
+        const review = el("ol", "sx-review");
+        data.questions.forEach((q, i) => {
+          const li = el("li", m.picked[i] === m.correct[i] ? "right" : "wrong");
+          li.append(el("p", "", q.text), el("small", "", "Answer: " + q.options[m.correct[i]]));
+          review.append(li);
+        });
+        box.append(review);
+        const again = el("button", "sx-stick", "Try again");
+        again.type = "button";
+        again.onclick = () => play(data);
+        box.append(again);
+        if (data.board.length) box.append(el("p", "sx-label", "Best scores"), board(data));
+      };
+      const play = (data) => {
+        box.textContent = "";
+        const picks = [];
+        let i = 0;
+        const ask = () => {
+          box.textContent = "";
+          const q = data.questions[i];
+          box.append(el("small", "sx-step", i + 1 + " of " + data.questions.length));
+          box.append(el("p", "sx-question", q.text));
+          const group = el("div", "sx-options");
+          group.setAttribute("role", "group");
+          group.setAttribute("aria-label", q.text);
+          q.options.forEach((o, k) => {
+            const b = el("button", "sx-option", o);
+            b.type = "button";
+            b.onclick = async () => {
+              picks.push(k);
+              i += 1;
+              if (i < data.questions.length) return ask();
+              box.textContent = "Checking…";
+              try {
+                status.textContent = "";
+                result(await forma.quiz.answer(picks));
+              } catch (err) {
+                status.textContent =
+                  errors[err.message] || "Could not send your answers. Try again.";
+                render(data);
+              }
+            };
+            group.append(b);
+          });
+          box.append(group);
+        };
+        ask();
+      };
+      const render = (data) => {
+        box.textContent = "";
+        if (!data.questions.length) {
+          box.append(
+            el("p", "", data.own ? "Write your questions in the editor." : "No questions yet."),
+          );
+          return;
+        }
+        if (data.mine) return result(data);
+        const intro = el("p", "sx-question", data.questions.length + " questions. No peeking.");
+        const start = el("button", "sx-stick", data.own ? "Preview the quiz" : "Start");
+        start.type = "button";
+        start.onclick = () => play(data);
+        box.append(intro, start);
+        if (data.takers) {
+          box.append(
+            el(
+              "p",
+              "sx-label",
+              data.takers + (data.takers === 1 ? " friend has" : " friends have") + " tried",
+            ),
+          );
+          box.append(board(data));
+        }
+      };
+      forma.quiz
+        .read()
+        .then(render)
+        .catch(() => (status.textContent = "The quiz could not load. Try refreshing."));
+      return node;
+    },
+    // The cat (ADR 0043): it lives on the page; friends keep it fed, once a day each.
+    cat() {
+      const name = s.cat.name || "the cat";
+      const node = section("cat", "THE CAT");
+      const card = el("div", "sx-card sx-cat-card");
+      const pic = el("div", "sx-cat");
+      pic.setAttribute("role", "img");
+      pic.innerHTML =
+        '<svg viewBox="0 0 120 100" aria-hidden="true"><path class="ear" d="M22 44 L14 12 L44 30Z"/><path class="ear" d="M98 44 L106 12 L76 30Z"/><ellipse class="body" cx="60" cy="68" rx="46" ry="30"/><circle class="head" cx="60" cy="48" r="32"/><g class="eyes"><ellipse cx="46" cy="46" rx="5" ry="7"/><ellipse cx="74" cy="46" rx="5" ry="7"/></g><g class="sleepy"><path d="M39 47 q7 5 14 0"/><path d="M67 47 q7 5 14 0"/></g><path class="nose" d="M57 56 L63 56 L60 60Z"/><path class="mouth" d="M52 61 q8 7 16 0"/><g class="whisk"><path d="M20 56 L44 58"/><path d="M20 64 L44 60"/><path d="M100 56 L76 58"/><path d="M100 64 L76 60"/></g><path class="tail" d="M104 80 q18 -4 10 -24"/></svg>';
+      const text = el("div", "sx-cat-text");
+      const line = el("strong");
+      const who = el("small");
+      const feed = el("button", "sx-stick", "Feed " + name);
+      feed.type = "button";
+      const status = el("p", "sx-status");
+      status.setAttribute("role", "status");
+      text.append(line, who, feed, status);
+      card.append(pic, text);
+      node.append(card);
+      const errors = {
+        SIGN_IN_REQUIRED: "Sign in to feed " + name + ".",
+        CAT_FED: "You already fed " + name + " today.",
+        CAPABILITY_DENIED: name + " is asleep right now.",
+      };
+      const render = (data) => {
+        pic.dataset.mood = data.mood;
+        pic.setAttribute("aria-label", name + " is " + data.mood);
+        line.textContent =
+          data.mood === "happy"
+            ? name + " is purring."
+            : data.mood === "fine"
+              ? name + " is fine. Could eat."
+              : name + " is hungry.";
+        who.textContent = data.today.length
+          ? "Fed today by " + data.today.map((f) => f.name).join(", ") + "."
+          : "Nobody has fed " + name + " today.";
+        feed.textContent = data.fedByMe ? "Fed ✓ come back tomorrow" : "Feed " + name;
+        feed.disabled = data.fedByMe;
+      };
+      feed.onclick = async () => {
+        feed.disabled = true;
+        try {
+          status.textContent = "";
+          render(await forma.cat.feed());
+          status.textContent = "Nom. " + name + " says thanks.";
+        } catch (err) {
+          status.textContent = errors[err.message] || "Could not feed " + name + ". Try again.";
+          feed.disabled = false;
+        }
+      };
+      forma.cat
+        .read()
+        .then(render)
+        .catch(() => (status.textContent = name + " could not be found. Try refreshing."));
       return node;
     },
   };

@@ -9,6 +9,9 @@ import { Avatar } from "./ui";
 import { CommentList } from "./comments";
 import type { CommentItem } from "./comments";
 import { MentionText } from "./mention-text";
+import { NowBar } from "./now";
+import { PageHead, PageStrip, PostsCollage, Stories, lookStyle } from "./pages";
+import type { FixedPage, PostTile } from "../../../packages/contracts/src/pages";
 
 interface Person {
   id: string;
@@ -35,7 +38,7 @@ interface SharedProfileView {
   followers: number;
   following: number;
   profile: { publicationId: string; manifest: ProfilePackage["manifest"] | null } | null;
-  posts: { id: string; title: string; caption: string; hasCover: boolean }[];
+  posts: PostTile[];
 }
 const asUser = (p: Person) => ({ ...p, bio: "" });
 
@@ -165,7 +168,18 @@ export function SharedPost({ id }: { id: string }) {
   );
 }
 
-export function SharedProfile({ handle }: { handle: string }) {
+/**
+ * Someone's page for a visitor without an account: the landing page they made, and the fixed
+ * Posts and Stories pages (ADR 0045) at /u/<handle>/posts and /u/<handle>/stories. Members are
+ * sent to the same page inside the app.
+ */
+export function SharedProfile({
+  handle,
+  page = "page",
+}: {
+  handle: string;
+  page?: FixedPage | "page";
+}) {
   const [view, setView] = useState<SharedProfileView | null | "missing">(null);
   const [guest, setGuest] = useState(false);
   const [side, setSide] = useState<SideLanding | null>(null);
@@ -177,7 +191,7 @@ export function SharedProfile({ handle }: { handle: string }) {
         const state = await api<{ signedIn?: boolean }>("/auth/state").catch(() => ({}));
         if ((state as { signedIn?: boolean }).signedIn)
           return window.location.replace(
-            `/?profile=${encodeURIComponent(v.user.id)}${landing ? `&side=${encodeURIComponent(landing)}` : ""}`,
+            `/?profile=${encodeURIComponent(v.user.id)}${landing ? `&side=${encodeURIComponent(landing)}` : ""}${page === "page" ? "" : `&page=${page}`}`,
           );
         if (landing)
           setSide(
@@ -189,33 +203,69 @@ export function SharedProfile({ handle }: { handle: string }) {
         setGuest(true);
       })
       .catch(() => setView("missing"));
-  }, [handle]);
+  }, [handle, page]);
   if (view === "missing") return <Missing what="profile" />;
   if (!view || !guest) return <div className="share-page" aria-busy="true" />;
   const manifest = view.profile?.manifest;
+  const look = lookStyle(manifest);
+  const base = `/u/${encodeURIComponent(handle)}`;
+  const strip = (
+    <PageStrip
+      current={page}
+      posts={view.posts.length}
+      href={(tab) => (tab === "page" ? base : `${base}/${tab}`)}
+      // Following needs an account; the action leads there (ADR 0048).
+      action={{ label: "Follow", href: side ? `/?side=${encodeURIComponent(side.id)}` : "/" }}
+    />
+  );
+  const cover = (p: PostTile) => `/api/public/posts/${encodeURIComponent(p.id)}/cover`;
+  const postHref = (p: PostTile) => `/p/${encodeURIComponent(p.id)}`;
+  if (page !== "page")
+    return (
+      <div className={`share-page ${look.className}`} style={look.style}>
+        <ShareBar />
+        <main className="share-main page-fixed" aria-label={`${view.user.name}'s ${page}`}>
+          <PageHead
+            user={{ ...view.user, bio: view.user.bio }}
+            page={page}
+            look={Boolean(look.className)}
+          />
+          {page === "posts" ? (
+            <PostsCollage posts={view.posts} cover={cover} href={postHref} empty="No posts yet." />
+          ) : (
+            <>
+              <NowBar ownerId={view.user.id} mine={false} guestHandle={handle} />
+              <Stories
+                path={`/public/users/${encodeURIComponent(handle)}/timeline`}
+                cover={cover}
+                postHref={postHref}
+                empty="Nothing yet."
+              />
+            </>
+          )}
+          <Invite name={view.user.name} side={side} />
+        </main>
+        {strip}
+      </div>
+    );
+  // The landing page says who this is; the plain head only stands in when there is no page yet.
   return (
-    <div className="share-page">
+    <div className={`share-page ${look.className}`} style={look.style}>
       <ShareBar />
       <main className="share-main">
-        <section className="share-profile-head">
-          <Avatar user={view.user} />
-          <div>
-            <h1>{view.user.name}</h1>
-            <small>@{view.user.handle}</small>
-            {view.user.bio && <p>{view.user.bio}</p>}
-            <div className="share-counts">
-              <span>
-                <strong>{view.posts.length}</strong> posts
-              </span>
-              <span>
-                <strong>{view.followers}</strong> followers
-              </span>
-              <span>
-                <strong>{view.following}</strong> following
-              </span>
+        {!(view.profile && manifest) && (
+          <section className="share-profile-head">
+            <Avatar user={view.user} />
+            <div>
+              <h1>{view.user.name}</h1>
+              <small>@{view.user.handle}</small>
+              {view.user.bio && <p>{view.user.bio}</p>}
             </div>
-          </div>
-        </section>
+          </section>
+        )}
+        {!(view.profile && manifest) && (
+          <NowBar ownerId={view.user.id} mine={false} guestHandle={handle} />
+        )}
         {view.profile && manifest && (
           <section className="share-profile-world" aria-label={`${view.user.name}'s page`}>
             <Runtime
@@ -229,24 +279,12 @@ export function SharedProfile({ handle }: { handle: string }) {
             />
           </section>
         )}
-        {view.posts.length > 0 && (
-          <ul className="share-grid" aria-label="Posts">
-            {view.posts.map((p) => (
-              <li key={p.id}>
-                <a href={`/p/${encodeURIComponent(p.id)}`}>
-                  {p.hasCover ? (
-                    <img src={`/api/public/posts/${encodeURIComponent(p.id)}/cover`} alt="" />
-                  ) : (
-                    <div className="no-cover">{p.title}</div>
-                  )}
-                  <span>{p.title}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
+        {!(view.profile && manifest) && (
+          <PostsCollage posts={view.posts} cover={cover} href={postHref} empty="No posts yet." />
         )}
         <Invite name={view.user.name} side={side} />
       </main>
+      {strip}
     </div>
   );
 }

@@ -72,3 +72,37 @@ export function placeAt(lat: number, lon: number): PlaceId | null {
   );
   return match ? match[0] : null;
 }
+
+/**
+ * When a photo was taken, as the camera's local time "YYYY-MM-DDTHH:MM", from an EXIF block (as
+ * an image library hands it, starting "Exif\0\0", or the bare TIFF). Cameras write the time at
+ * the place without a zone, which is what a rundown at the venue is written in. Null when absent.
+ */
+export function exifTakenAt(exif: Buffer): string | null {
+  const tiff = exif.toString("latin1", 0, 6) === "Exif\0\0" ? exif.subarray(6) : exif;
+  try {
+    const little = tiff.toString("latin1", 0, 2) === "II";
+    const u16 = (at: number) => (little ? tiff.readUInt16LE(at) : tiff.readUInt16BE(at));
+    const u32 = (at: number) => (little ? tiff.readUInt32LE(at) : tiff.readUInt32BE(at));
+    const find = (ifd: number, tag: number) => {
+      const count = u16(ifd);
+      if (count > 200) return undefined;
+      for (let i = 0; i < count; i++) {
+        const at = ifd + 2 + i * 12;
+        if (u16(at) === tag) return { type: u16(at + 2), count: u32(at + 4), value: at + 8 };
+      }
+      return undefined;
+    };
+    const pointer = find(u32(4), 0x8769);
+    if (!pointer) return null;
+    // DateTimeOriginal, an ASCII "YYYY:MM:DD HH:MM:SS" with its terminator: 20 bytes.
+    const original = find(u32(pointer.value), 0x9003);
+    if (!original || original.type !== 2 || original.count !== 20) return null;
+    const text = tiff.toString("latin1", u32(original.value), u32(original.value) + 19);
+    const m = /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):\d{2}$/.exec(text);
+    if (!m || Number(m[4]) > 23 || Number(m[5]) > 59) return null;
+    return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}`;
+  } catch {
+    return null;
+  }
+}

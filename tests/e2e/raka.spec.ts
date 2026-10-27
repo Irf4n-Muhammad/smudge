@@ -117,6 +117,7 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
     )
     .toBeGreaterThan(1400);
   await page.screenshot({ path: "artifacts/raka-reference-comparison.png", fullPage: true });
+  await page.getByLabel("Profile options", { exact: true }).click();
   await page.getByRole("button", { name: "Search posts", exact: true }).click();
   await page.getByLabel("Search published posts").fill("Pages from Sunday");
   await page

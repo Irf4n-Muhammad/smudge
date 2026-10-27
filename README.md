@@ -40,6 +40,7 @@ unread ones. **Messages** works between people when one follows the other. A pos
 **Moderation** lists open reports with Remove post, Dismiss and Suspend account. On phones these
 live in the bottom bar and **More**. In production, set `FORMA_ADMIN_EMAILS` for moderators and
 `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for "Continue with Google" (see docs/deploy.md).
+`SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` make the page show the song you are playing (ADR 0044).
 
 ## Try these paths
 
@@ -47,7 +48,7 @@ live in the bottom bar and **More**. In production, set `FORMA_ADMIN_EMAILS` for
 everywhere (omit it for today's date). Leo's **Finally graduated.** moment opens full screen from
 the feed: a counter intro, decoding titles, chapters and a sticker wall where each visitor can
 leave one preset sticker. As Alex, open **Who you are**, enter `alex@student.lembayung.edu`, read
-the code from the **local demo inbox** (no email leaves this app), verify, then **Share a moment →
+the code from the **local demo inbox** (no email leaves this app), verify, then **Share a milestone →
 Graduation**. Locked templates show their rule: new job (work email `@kopinusantara.co`), birthday
 (only around the stored date), trip (a JPEG with GPS), together (partner confirms), club or event
 titles (invite code; Maya admins Teater Senja, Leo the film festival). **Themes** lists event,
@@ -56,6 +57,36 @@ around every post of yours in the feed (edges, frame ring, the face of your name
 **Paris**, opened by her proven trip to France; as Alex, prove a trip with a JPEG taken in France
 and **Paris** opens for you too (ADR 0022). **Create an account** at the bottom of the sidebar opens signup to anyone. Rules: ADR 0011;
 design brief: `docs/design-handoff.md`.
+
+**A wedding invite.** Open **More → Moments** (or `/m`), fill in **New wedding invite** and
+**Make the invite**. The guest list page has the link, **Send on WhatsApp** and the head count.
+Open the link in a private window: the invite and its RSVP work without an account, and only the
+host sees the answers (ADR 0036). Answer while signed in and the link opens the moment group
+instead: the chat (announcements only until the host ticks **Semua tamu boleh ngobrol**), the
+members, and small groups only their members see (ADR 0037).
+On the day, the host opens **Layar pintu** for a QR that changes every 30 seconds; scanning it
+records the guest's arrival and opens the **Album**, where every member adds photos that fall
+into chapters by the rundown (ADR 0038).
+Three days after the day the album locks (the host can lock it sooner with a thank-you); the
+same link then opens on the thank-you, and everyone who came finds a memory card under
+**Moments you were at** on their profile (ADR 0039).
+In the Album, **Posting ke profil** turns photos you took or are tagged in into a post of your
+own, labelled with the moment (ADR 0040).
+For the test wedding, `npm run moment-report -- <id> --invited N` prints its numbers
+(`docs/runbooks/test-wedding.md`).
+
+**Your page.** A new account answers five questions (photo, one line, look, colour, a song)
+and has a page. On it, **Right now** mostly fills itself: the song from Spotify once connected,
+your posts, the quiz you took or the cat you fed on a friend's page; a song is one tap, and a
+typed note sits behind **Note**. The newest shows on top and the rest pile up under **Archive**.
+Friends see it on your profile, anyone at `/u/<handle>` without an account, and the Paint wall
+page shows it live in its "now" and "on repeat" sections (ADR 0041).
+Above the feed, **Friends right now** shows what the people you follow last noted; a tap opens
+their page. `/w/<handle>` is one friend's page the size of a widget, for a bookmark or a
+home-screen shortcut until the native app wraps it (ADR 0042).
+In the easy editor's **Section** sheet, **Quiz** asks friends how well they know you (you write
+the questions, they get a score and a board) and **The Cat** gives your page a cat friends feed
+once a day; its mood follows the attention (ADR 0043).
 
 **Profile > Menu > Made with** shows the recorded mod and pinned version for each surface.
 **Use this combination** previews the actual published composition with your identity and posts;
@@ -271,20 +302,39 @@ desktop/mobile screenshots go in `artifacts/`. GitHub Actions (`.github/workflow
 
 Demo photography credits are in [assets/demo/CREDITS.md](assets/demo/CREDITS.md).
 
+## Your page, then Posts and Stories
+
+A profile is two layers (ADR 0045), and over a page of its own the app shows only back and ☰
+as floating buttons (ADR 0047); everything else waits in the menu, and the one action (Edit,
+or Follow) sits in the strip (ADR 0048). The landing page is yours: a template you make your own.
+Posts and Stories are Smudge's fixed pages, the same under every look: a collage of your posts
+(`?page=posts`, `/u/<handle>/posts` for guests) and your days read from what happened, never
+typed (`?page=stories`, `/u/<handle>/stories`): posts, what was playing, where you were, the
+moments you came to. A strip with Page · Posts · Stories floats over every profile, drawn by the
+app outside the page, so no page can lose it. A look may colour the two fixed pages and the strip
+with five colours and two font roles (ADR 0049); it cannot reshape them.
+
 ## Paint wall profile
 
-New profiles start from **Smudge · Paint wall** (ADR 0015): a giant painted first name filled with
-your newest photo, tap anywhere to throw paint, your latest post, a sideways strip of picks and a
-tabbed grid. It follows the Paint/Halloween season, and post buttons open in the in-app page
-sheet. Open `/?profile=ines` to see it. Its parts mix with Ink & Paper in the mod library.
+New profiles start from **Smudge · Paint wall** (ADR 0015, a landing page since ADR 0046, a
+poster since ADR 0048): your first name as big as the page, your line under it, your photo
+tilted into the name, and the song you are playing and what you are up to, read from your
+archive. Below, up to three **chapters** say who you are with one measurable thing each (a
+record, years somewhere, hours of one band), typed in the easy editor, each with a photo of
+yours if you like (ADR 0050). On a wide screen the poster is two columns. No counts, no grid, no
+follow button of its own: the strip's one action is Edit for you and Follow for everyone else.
+Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
+Open `/?profile=ines` to see it. Pages published on an older Paint wall are brought up to the
+template when the server starts.
 
 ## Easy profile editor
 
 On your own profile, **Edit profile** opens the easy editor (ADR 0016). Pick a vibe from
 pictures, then tap any outlined part of your Paint wall to change it: your big name, the italic
-line (`*stars*` make words italic), the top corner, the ribbon, your name, bio and photo. The
-bottom bar changes colours, adds sections (Now doing, Gallery, The Wall, Big quote, On repeat,
-Countdown), reorders or hides them, and previews the result. Edits save to a private draft;
+line (`*stars*` make words italic), the song and what you are up to under the name, the top
+corner, the ribbon, your name, bio and photo. The bottom bar changes colours, adds sections
+(Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat), reorders or hides them, and
+previews the result. Edits save to a private draft;
 **Publish** makes them public. **The Wall** lets visitors stick short notes on your profile; you
 can take any of them down, and anyone else can report one. **Advanced editor** opens the same
 draft in the source editor.

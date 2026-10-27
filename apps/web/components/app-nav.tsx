@@ -2,6 +2,7 @@
 import {
   BadgeCheck,
   Bookmark,
+  CalendarDays,
   Gift,
   Globe,
   IdCard,
@@ -31,6 +32,7 @@ export type MoreKey =
   | "studio"
   | "moderation"
   | "moment"
+  | "moments"
   | "import"
   | "signup"
   | "login";
@@ -44,7 +46,8 @@ export function moreItems(
     ["who", BadgeCheck, "Who you are"],
     ["card", IdCard, "Share card"],
     ["studio", Layers, "My studio"],
-    ["moment", Gift, "Share a moment"],
+    ["moments", CalendarDays, "Moments"],
+    ["moment", Gift, "Share a milestone"],
     ["import", Globe, "Import a website"],
     ["account", Settings, "Account settings"],
     ...(moderator ? [["moderation", ShieldCheck, "Moderation"] as const] : []),

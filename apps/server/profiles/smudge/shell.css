@@ -1,14 +1,14 @@
-/* smudge:v3 */
+/* smudge:v7 */
 /* Smudge / Paint wall page shell. */
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  background: #f2efe8;
+  background: #0e0d0b;
 }
 html[data-theme="dark"] body {
-  background: #17121f;
+  background: #0e0d0b;
 }
 .wall {
   position: relative;
@@ -121,6 +121,12 @@ html[data-editing="on"] .tapnote {
   border-radius: inherit;
   background: var(--p2);
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 15%);
+}
+.sx-card .sx-when {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.7;
 }
 .sx-repeat .sx-card {
   display: flex;
@@ -326,4 +332,167 @@ html[data-editing="on"] .tapnote {
   .sx-disc {
     animation: none;
   }
+}
+
+/* The quiz (ADR 0043). */
+.sx-quiz-box {
+  display: grid;
+  gap: 12px;
+}
+.sx-step {
+  font: 700 11px var(--mono);
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+.sx-question {
+  margin: 0;
+  font: 800 22px/1.1 var(--big);
+  letter-spacing: -0.02em;
+}
+.sx-options {
+  display: grid;
+  gap: 8px;
+}
+.sm .sx-option {
+  padding: 12px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: 600 15px var(--ui);
+  text-align: left;
+  cursor: pointer;
+}
+.sm .sx-option:hover {
+  background: var(--p2);
+}
+.sx-score {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.sx-score strong {
+  font: 800 44px/1 var(--big);
+  letter-spacing: -0.04em;
+}
+.sx-review {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 0 0 18px;
+}
+.sx-review p {
+  margin: 0;
+  font: 600 14px var(--ui);
+}
+.sx-review small {
+  font-size: 12px;
+  opacity: 0.75;
+}
+.sx-review li.right::marker {
+  content: "✓ ";
+}
+.sx-review li.wrong::marker {
+  content: "✗ ";
+}
+.sx-label {
+  margin: 4px 0 0;
+  font: 700 11px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.sx-board {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sx-board li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font: 500 14px var(--ui);
+}
+.sx-board b {
+  width: 18px;
+  font: 700 11px var(--mono);
+  opacity: 0.6;
+}
+.sx-board span {
+  flex: 1;
+}
+
+/* The cat (ADR 0043). */
+.sx-cat-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.sx-cat {
+  flex: none;
+  width: 120px;
+}
+.sx-cat svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.sx-cat .body,
+.sx-cat .head,
+.sx-cat .ear {
+  fill: var(--ink);
+}
+.sx-cat .eyes ellipse {
+  fill: var(--p2);
+}
+.sx-cat .sleepy,
+.sx-cat .mouth,
+.sx-cat .whisk,
+.sx-cat .tail {
+  fill: none;
+  stroke: var(--wall);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.sx-cat .nose {
+  fill: var(--p1);
+}
+.sx-cat .sleepy {
+  display: none;
+}
+.sx-cat[data-mood="hungry"] .eyes {
+  display: none;
+}
+.sx-cat[data-mood="hungry"] .sleepy {
+  display: block;
+}
+.sx-cat[data-mood="hungry"] .mouth {
+  d: path("M52 64 q8 -6 16 0");
+}
+.sx-cat[data-mood="happy"] .tail {
+  animation: sx-tail 1.4s ease-in-out infinite alternate;
+  transform-origin: 104px 80px;
+}
+@keyframes sx-tail {
+  to {
+    transform: rotate(18deg);
+  }
+}
+.sx-cat-text {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.sx-cat-text strong {
+  font: 800 22px/1.1 var(--big);
+  letter-spacing: -0.02em;
+}
+.sx-cat-text small {
+  font: 500 13px var(--ui);
+  opacity: 0.8;
+}
+.sx-cat-text .sx-stick {
+  justify-self: start;
 }

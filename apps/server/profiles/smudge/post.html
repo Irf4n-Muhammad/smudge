@@ -1,4 +1,4 @@
-<!-- smudge:v3 -->
+<!-- smudge:v7 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm sm-flow">
@@ -14,22 +14,7 @@
     <h2>Things I <em>can't</em> take back</h2>
     <div class="track" id="track" tabindex="0" aria-label="Selected posts, scroll sideways"></div>
   </section>
-  <section
-    class="posts"
-    id="posts"
-    aria-label="All posts"
-    data-sm-section="posts"
-    data-edit="posts"
-  >
-    <div class="tabs" role="tablist" aria-label="Filter posts">
-      <button role="tab" aria-selected="true" data-filter="all">Posts</button>
-      <button role="tab" aria-selected="false" data-filter="story">Stories</button>
-      <button role="tab" aria-selected="false" data-filter="photo">Photos</button>
-    </div>
-    <div class="grid" id="grid"></div>
-    <p class="empty" id="grid-empty" hidden>Nothing here yet.</p>
-    <small class="part-status" id="posts-status" role="status"></small>
-  </section>
+  <small class="part-status" id="posts-status" role="status"></small>
 </div>
 <script>
   profileData
@@ -78,28 +63,6 @@
         $("selected-count").textContent = picks.length + " PICKS";
         picks.forEach((p, i) => $("track").append(tile(p, i, true)));
       }
-      function render(filter) {
-        const grid = $("grid");
-        grid.textContent = "";
-        const shown = d.posts.filter((p) =>
-          filter === "all"
-            ? true
-            : filter === "story"
-              ? p.format === "story"
-              : p.format !== "story",
-        );
-        shown.forEach((p, i) => grid.append(tile(p, i, false)));
-        $("grid-empty").hidden = shown.length > 0;
-      }
-      document.querySelectorAll(".tabs [data-filter]").forEach((t) => {
-        t.onclick = () => {
-          document
-            .querySelectorAll(".tabs [data-filter]")
-            .forEach((o) => o.setAttribute("aria-selected", String(o === t)));
-          render(t.dataset.filter);
-        };
-      });
-      render("all");
     })
     .catch(() => {
       document.getElementById("posts-status").textContent = "Could not load posts. Try refreshing.";

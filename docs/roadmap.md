@@ -46,6 +46,57 @@
       **Invite** shares the side's link, and `/s/<id>` opens the home without an account
       (ADR 0035). Next: the same recap on a profile, an invite that is not guessable, chat on a
       plan. See ADR 0033.
+- [x] Moments as gatherings, first slice: a wedding invite from a template at `/m/<id>` that opens
+      without an account, an RSVP by phone number that never stores the number, and a guest list
+      only the host sees, with Send on WhatsApp. The ADR 0011 pages are now called milestones.
+      See ADR 0036.
+- [x] The moment group: signed-in guests who answer (or join from the link) are members of a
+      space with the invite pinned, a chat that is announcements only until the host opens it,
+      a member list, and small groups members make themselves that even the host cannot see.
+      See ADR 0037.
+- [x] The day: a door QR on the host's phone that changes every 30 seconds and records who came
+      in, and a live album every member fills, sorted into chapters by the rundown, with
+      photographers first, likes only their poster sees, "Foto kamu" and wishes. Photos are
+      resized and lose their GPS position. See ADR 0038.
+- [x] Closing a moment: the album locks three days after the day (or when the host locks it),
+      the host writes a thank-you, picks a cover and reorders photos, the same link opens on the
+      thank-you, and everyone who came gets a memory card on their profile. Next: the test
+      wedding. See ADR 0039.
+- [x] Ready for the test wedding: `npm run moment-report` prints the four numbers the test is
+      judged by (answered, made an account, added a photo, made their own moment within 30 days)
+      as counts only. See `docs/runbooks/test-wedding.md`.
+- [x] From the album to the feed: members pick up to 12 of their own or tagged photos, which
+      open as a draft post in the editor and, once published, show on their profile and in
+      friends' feeds with a "From <moment>" label only members can use. See ADR 0040.
+- [x] Your page, the first thing you open (stage 1): five answers after signing up publish a
+      page; one tap notes what you are listening to, doing, where you are or what you are
+      thinking, and piles into an archive that friends and guests see under your privacy rules.
+      Next: the widget and the friends' row (stage 2). See ADR 0041.
+- [x] After the first test: a sign-up form with room, username, repeat password and a strength
+      meter; "Right now" read rather than typed (Spotify once, posts and programs by themselves,
+      a song in one tap, typing behind a +). See ADR 0044.
+- [x] Two layers (ADR 0045): the landing page is yours, Posts (a collage) and Stories (the days,
+      read) are fixed pages with a strip drawn outside the page, in the app and on share links.
+- [x] The Paint wall as a landing page (ADR 0046): the song and "right now" under the name,
+      no counts, no post grid; the easy editor and the sign-up setup fill the hero.
+      Next: the other looks on the same frame, one by one.
+- [x] One header (ADR 0047): over a page of its own the app keeps only back, edit and ☰
+      floating; one follow button, the page's own when it has one.
+- [x] The poster landing (ADR 0048): a hero with one idea, chapters that prove who you are
+      with one number each, and the strip's one action (Edit or Follow) instead of a button on
+      the page.
+- [x] The fixed pages in the look's colours (ADR 0049): a look declares five colours and two
+      font roles, and the app draws Posts, Stories and the strip with them.
+- [x] Chapter photos, the poster on a wide screen, the share page in the look (ADR 0050).
+      Next: sources (music, games, running) filling chapters by themselves.
+- [x] Friends right now (stage 2, web half): a row above the feed with what the people you
+      follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
+      open to guests. The native app and the home-screen widget itself are a separate project.
+      See ADR 0042.
+- [x] Programs between people (stage 3, first two): a quiz the owner writes and friends take,
+      with a board, and a cat friends keep fed once a day; each section grants only its own
+      capabilities while it is on the page. Next: one sandbox per program with budgets, and
+      shared pages. See ADR 0043.
 - [x] Instagram-style feed: free scrolling, one column, even 4:5 windows, load ahead, feed always
       wins the scroll gesture. TikTok-style snap mode is future work. See ADR 0023.
 

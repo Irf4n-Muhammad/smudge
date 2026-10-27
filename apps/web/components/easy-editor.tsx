@@ -10,10 +10,13 @@ import type {
 } from "../../../packages/contracts/src/profile";
 import {
   applySmudgeSettings,
+  chapterKinds,
+  emptyChapter,
   readSmudgeSettings,
   smudgePalettes,
   supportsSmudgeDesign,
   defaultSmudgeSettings,
+  type Chapter,
   type SmudgePalette,
   type SmudgeSection,
   type SmudgeSettings,
@@ -49,6 +52,8 @@ import {
   Plus,
   Smartphone,
   X,
+  BookOpen,
+  Trash2,
 } from "lucide-react";
 import { api, Runtime } from "./runtime";
 
@@ -118,25 +123,25 @@ const paletteNames: Record<SmudgePalette, string> = {
   ocean: "Ocean",
   mono: "Mono",
 };
+// The landing page's extras (ADR 0046). The song and what's going on sit in the hero, and all
+// posts live on the fixed Posts page, so neither is a section any more.
 const sectionInfo: Record<SmudgeSection, { name: string; note: string }> = {
-  now: { name: "Now doing", note: "What you're up to, with progress" },
-  selected: { name: "Gallery", note: "Swipe through your best posts" },
   wall: { name: "The Wall", note: "Friends leave notes" },
+  quiz: { name: "Quiz", note: "How well do friends know you?" },
+  cat: { name: "The Cat", note: "Friends keep it fed" },
   quote: { name: "Big quote", note: "One line, huge" },
-  repeat: { name: "On repeat", note: "Your song right now" },
   countdown: { name: "Countdown", note: "For drops and events" },
   latest: { name: "Latest", note: "Your newest post, big" },
-  posts: { name: "All posts", note: "Grid with tabs" },
+  selected: { name: "Gallery", note: "Swipe through your best posts" },
 };
 const addable: SmudgeSection[] = [
-  "now",
-  "selected",
   "wall",
+  "quiz",
+  "cat",
   "quote",
-  "repeat",
   "countdown",
   "latest",
-  "posts",
+  "selected",
 ];
 /** Fields the profile frame can report when its outlined parts are tapped. */
 const fieldTitles: Record<string, string> = {
@@ -145,7 +150,8 @@ const fieldTitles: Record<string, string> = {
   place: "Top corner",
   about: "Name & bio",
   photo: "Your photo",
-  marquee: "The ribbon",
+  chapters: "Chapters",
+  now: "Song & right now",
   story: "Highlights",
   post: "Posts",
   feature: "Drawing wall",
@@ -160,11 +166,9 @@ function inTwoWeeks() {
 function withStarter(s: SmudgeSettings, kind: SmudgeSection): SmudgeSettings {
   const next = { ...s, sections: [...s.sections, kind] };
   if (kind === "quote" && !s.quote.text) next.quote = { text: "Say it in *one* line." };
-  if (kind === "now" && !s.now.text)
-    next.now = { text: "Working on something new", place: s.place, progress: 30 };
-  if (kind === "repeat" && !s.repeat.song) next.repeat = { song: "Song title", artist: "Artist" };
   if (kind === "countdown" && !s.countdown.date)
     next.countdown = { label: "Something's coming", date: inTwoWeeks() };
+  if (kind === "cat" && !s.cat.name) next.cat = { name: "Mochi" };
   return next;
 }
 
@@ -385,7 +389,8 @@ export function EasyEditor({
       setBusy(false);
     }
   }
-  async function upload(file: File) {
+  /** Uploads one photo and returns its asset id, or null with the reason shown. */
+  async function uploadPhoto(file: File) {
     setMessage("");
     try {
       if (file.size > 3_000_000 || !["image/png", "image/jpeg", "image/webp"].includes(file.type))
@@ -401,10 +406,15 @@ export function EasyEditor({
         mime: file.type,
         base64,
       });
-      changeIdentity({ ...latest.current.identity, avatarAssetId: asset.id });
+      return asset.id;
     } catch (e) {
       setMessage(friendly((e as Error).message));
+      return null;
     }
+  }
+  async function upload(file: File) {
+    const id = await uploadPhoto(file);
+    if (id) changeIdentity({ ...latest.current.identity, avatarAssetId: id });
   }
   function pick(next: string) {
     setField(next);
@@ -672,14 +682,11 @@ export function EasyEditor({
               onChange={(v) => change({ ...settings, place: v })}
             />
           )}
-          {sheet === "field" && smudge && field === "marquee" && (
-            <TextField
-              title="The ribbon"
-              hint="Separate words with &. Empty shows your followers and posts."
-              value={settings.marquee}
-              max={80}
-              placeholder="Skater & film nerd & bad tapes"
-              onChange={(v) => change({ ...settings, marquee: v })}
+          {sheet === "field" && smudge && field === "chapters" && (
+            <ChapterFields
+              chapters={settings.chapters}
+              onUpload={uploadPhoto}
+              onChange={(chapters) => change({ ...settings, chapters })}
             />
           )}
           {sheet === "field" && easy && (field === "about" || field === "photo") && (
@@ -786,6 +793,36 @@ export function EasyEditor({
               onChange={(v) => changeLook({ ...look, line: v })}
             />
           )}
+          {sheet === "field" && smudge && field === "now" && (
+            <div className="easy-field">
+              <h2>Song &amp; right now</h2>
+              <p className="easy-note">
+                Under your name. Once your page reads a song or a note from your archive, that takes
+                over; this is what shows until then.
+              </p>
+              <TextField
+                title=""
+                label="Song"
+                value={settings.repeat.song}
+                max={50}
+                onChange={(v) => change({ ...settings, repeat: { ...settings.repeat, song: v } })}
+              />
+              <TextField
+                title=""
+                label="Artist"
+                value={settings.repeat.artist}
+                max={50}
+                onChange={(v) => change({ ...settings, repeat: { ...settings.repeat, artist: v } })}
+              />
+              <TextField
+                title=""
+                label="What are you up to?"
+                value={settings.now.text}
+                max={60}
+                onChange={(v) => change({ ...settings, now: { ...settings.now, text: v } })}
+              />
+            </div>
+          )}
           {sheet === "field" && smudge && sectionField && (
             <div className="easy-field">
               <h2>{sectionInfo[sectionField].name}</h2>
@@ -799,62 +836,6 @@ export function EasyEditor({
                   area
                   onChange={(v) => change({ ...settings, quote: { text: v } })}
                 />
-              )}
-              {sectionField === "now" && (
-                <>
-                  <TextField
-                    title=""
-                    label="What are you doing?"
-                    value={settings.now.text}
-                    max={60}
-                    onChange={(v) => change({ ...settings, now: { ...settings.now, text: v } })}
-                  />
-                  <TextField
-                    title=""
-                    label="Where"
-                    value={settings.now.place}
-                    max={30}
-                    onChange={(v) => change({ ...settings, now: { ...settings.now, place: v } })}
-                  />
-                  <label className="easy-range">
-                    How far along · {settings.now.progress}%
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={5}
-                      value={settings.now.progress}
-                      onChange={(e) =>
-                        change({
-                          ...settings,
-                          now: { ...settings.now, progress: Number(e.target.value) },
-                        })
-                      }
-                    />
-                  </label>
-                </>
-              )}
-              {sectionField === "repeat" && (
-                <>
-                  <TextField
-                    title=""
-                    label="Song"
-                    value={settings.repeat.song}
-                    max={50}
-                    onChange={(v) =>
-                      change({ ...settings, repeat: { ...settings.repeat, song: v } })
-                    }
-                  />
-                  <TextField
-                    title=""
-                    label="Artist"
-                    value={settings.repeat.artist}
-                    max={50}
-                    onChange={(v) =>
-                      change({ ...settings, repeat: { ...settings.repeat, artist: v } })
-                    }
-                  />
-                </>
               )}
               {sectionField === "countdown" && (
                 <>
@@ -894,6 +875,35 @@ export function EasyEditor({
                   <p className="easy-note">
                     Visitors can stick short notes here. You can take any note down from the wall
                     itself.
+                  </p>
+                </>
+              )}
+              {sectionField === "quiz" && (
+                <>
+                  <TextField
+                    title=""
+                    label="Title"
+                    value={settings.quiz.title}
+                    max={40}
+                    placeholder="How well do you *know* me?"
+                    onChange={(v) => change({ ...settings, quiz: { title: v } })}
+                  />
+                  <QuizFields />
+                </>
+              )}
+              {sectionField === "cat" && (
+                <>
+                  <TextField
+                    title=""
+                    label="Name"
+                    value={settings.cat.name}
+                    max={20}
+                    placeholder="Mochi"
+                    onChange={(v) => change({ ...settings, cat: { name: v } })}
+                  />
+                  <p className="easy-note">
+                    Friends feed the cat once a day each. Three feeds and it purrs; none and it
+                    sleeps hungry.
                   </p>
                 </>
               )}
@@ -1004,7 +1014,7 @@ export function EasyEditor({
                     >
                       <strong>{sectionInfo[kind].name}</strong>
                       <small>{added ? "On your profile ✓" : sectionInfo[kind].note}</small>
-                      {kind === "wall" && !added && <b className="easy-new">NEW</b>}
+                      {["quiz", "cat"].includes(kind) && !added && <b className="easy-new">NEW</b>}
                       <span className="easy-mini" aria-hidden="true" />
                     </button>
                   );
@@ -1086,6 +1096,15 @@ export function EasyEditor({
           <Palette />
           <span>Colors</span>
         </button>
+        {smudge && (
+          <button
+            aria-pressed={sheet === "field" && field === "chapters"}
+            onClick={() => pick("chapters")}
+          >
+            <BookOpen />
+            <span>Chapters</span>
+          </button>
+        )}
         {smudge && (
           <button
             className="easy-add"
@@ -1232,6 +1251,306 @@ export function ChipRow<T extends string>({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+type QuizDraft = { text: string; options: string[]; answer: number }[];
+const blankQuestion = () => ({ text: "", options: ["", ""], answer: 0 });
+/**
+ * The quiz's questions (ADR 0043) live with the owner, not in the page, so the answers never
+ * reach a visitor. Saved as a whole; saving again starts the scores over.
+ */
+function QuizFields() {
+  const [questions, setQuestions] = useState<QuizDraft>([]);
+  const [state, setState] = useState<"loading" | "idle" | "saving" | "saved" | "error">("loading");
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    api<{ questions: QuizDraft }>("/me/quiz")
+      .then((q) => {
+        setQuestions(q.questions.length ? q.questions : [blankQuestion()]);
+        setState("idle");
+      })
+      .catch(() => {
+        setQuestions([blankQuestion()]);
+        setState("idle");
+      });
+  }, []);
+  const update = (i: number, next: QuizDraft[number]) =>
+    setQuestions((qs) => qs.map((q, k) => (k === i ? next : q)));
+  const complete = questions.filter(
+    (q) => q.text.trim() && q.options.filter((o) => o.trim()).length >= 2,
+  );
+  async function save() {
+    setState("saving");
+    setMessage("");
+    try {
+      const clean = complete.map((q) => {
+        const options = q.options.filter((o) => o.trim());
+        return { text: q.text.trim(), options, answer: Math.min(q.answer, options.length - 1) };
+      });
+      await api("/me/quiz", { questions: clean }, "PUT");
+      setState("saved");
+      setMessage("Questions saved. Scores start over.");
+    } catch (e) {
+      setState("error");
+      setMessage((e as Error).message);
+    }
+  }
+  if (state === "loading") return null;
+  return (
+    <div className="easy-quiz">
+      <p className="easy-note">
+        Up to 10 questions, 2 to 4 options each. Tick the right one. Only you see the answers.
+      </p>
+      {questions.map((q, i) => (
+        <fieldset key={i} className="easy-quiz-q">
+          <legend>Question {i + 1}</legend>
+          <label className="easy-input">
+            <span className="sr-only">Question {i + 1}</span>
+            <input
+              maxLength={120}
+              value={q.text}
+              placeholder="My go-to order at the warung?"
+              aria-label={`Question ${i + 1}`}
+              onChange={(e) => update(i, { ...q, text: e.target.value })}
+            />
+          </label>
+          {q.options.map((o, k) => (
+            <label key={k} className="easy-quiz-option">
+              <input
+                type="radio"
+                name={`quiz-answer-${i}`}
+                checked={q.answer === k}
+                aria-label={`Question ${i + 1} right answer ${k + 1}`}
+                onChange={() => update(i, { ...q, answer: k })}
+              />
+              <input
+                maxLength={40}
+                value={o}
+                placeholder={`Option ${k + 1}`}
+                aria-label={`Question ${i + 1} option ${k + 1}`}
+                onChange={(e) =>
+                  update(i, {
+                    ...q,
+                    options: q.options.map((x, j) => (j === k ? e.target.value : x)),
+                  })
+                }
+              />
+            </label>
+          ))}
+          <div className="easy-row">
+            {q.options.length < 4 && (
+              <button
+                type="button"
+                onClick={() => update(i, { ...q, options: [...q.options, ""] })}
+              >
+                Add option
+              </button>
+            )}
+            {questions.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setQuestions((qs) => qs.filter((_, k) => k !== i))}
+              >
+                Remove question
+              </button>
+            )}
+          </div>
+        </fieldset>
+      ))}
+      <div className="easy-row">
+        {questions.length < 10 && (
+          <button type="button" onClick={() => setQuestions((qs) => [...qs, blankQuestion()])}>
+            Add question
+          </button>
+        )}
+        <button
+          type="button"
+          className="primary"
+          disabled={state === "saving" || !complete.length}
+          onClick={() => void save()}
+        >
+          {state === "saving" ? "Saving…" : "Save questions"}
+        </button>
+      </div>
+      {message && (
+        <p className="easy-note" role="status">
+          {message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The chapters of a landing (ADR 0048): up to three, each one measurable thing. A kind picks the
+ * drawing (a route for a run) and the label; the rest is the owner's words and numbers.
+ */
+const chapterNames: Record<Chapter["kind"], string> = {
+  run: "Run",
+  work: "Work",
+  music: "Music",
+  custom: "Anything",
+};
+function ChapterFields({
+  chapters,
+  onChange,
+  onUpload,
+}: {
+  chapters: Chapter[];
+  onChange: (chapters: Chapter[]) => void;
+  onUpload: (file: File) => Promise<string | null>;
+}) {
+  const [which, setWhich] = useState(0);
+  const at = Math.min(which, Math.max(0, chapters.length - 1));
+  const chapter = chapters[at];
+  const set = (patch: Partial<Chapter>) =>
+    onChange(chapters.map((c, i) => (i === at ? { ...c, ...patch } : c)));
+  const stat = (i: number, patch: Partial<Chapter["stats"][number]>) => {
+    const stats = [0, 1, 2].map((n) => chapter!.stats[n] ?? { value: "", label: "" });
+    stats[i] = { ...stats[i]!, ...patch };
+    set({ stats: stats.filter((x, n) => x.value || x.label || n < stats.length - 1) });
+  };
+  const line = (i: number, value: string) => {
+    const lines = [0, 1, 2].map((n) => chapter!.lines[n] ?? "");
+    lines[i] = value;
+    while (lines.length && !lines[lines.length - 1]) lines.pop();
+    set({ lines });
+  };
+  return (
+    <div className="easy-field easy-chapters">
+      <h2>Chapters</h2>
+      <p className="easy-note">
+        Who you are, shown with one thing that can be measured: a record, years somewhere, hours of
+        one band. Up to three.
+      </p>
+      <div className="easy-chips-row" role="group" aria-label="Which chapter">
+        {chapters.map((c, i) => (
+          <button key={i} aria-pressed={i === at} onClick={() => setWhich(i)}>
+            {i + 1}. {c.title || chapterNames[c.kind]}
+          </button>
+        ))}
+        {chapters.length < 3 && (
+          <button
+            onClick={() => {
+              onChange([...chapters, { ...emptyChapter, stats: [], lines: [] }]);
+              setWhich(chapters.length);
+            }}
+          >
+            <Plus /> Add a chapter
+          </button>
+        )}
+      </div>
+      {chapter && (
+        <>
+          <div className="easy-chips-row" role="group" aria-label="Kind">
+            {chapterKinds.map((kind) => (
+              <button key={kind} aria-pressed={chapter.kind === kind} onClick={() => set({ kind })}>
+                {chapterNames[kind]}
+              </button>
+            ))}
+          </div>
+          <TextField
+            title=""
+            label="Title"
+            hint="Wrap words in *stars* to colour them."
+            value={chapter.title}
+            max={40}
+            placeholder={chapter.kind === "run" ? "Slow, but *far*." : "What this chapter is"}
+            onChange={(title) => set({ title })}
+          />
+          <TextField
+            title=""
+            label="Top corner"
+            value={chapter.label}
+            max={24}
+            placeholder="Strava · 2025"
+            onChange={(label) => set({ label })}
+          />
+          <div className="easy-row">
+            <TextField
+              title=""
+              label="Big number"
+              value={chapter.big}
+              max={16}
+              placeholder={chapter.kind === "music" ? "412" : "1:52:10"}
+              onChange={(big) => set({ big })}
+            />
+            <TextField
+              title=""
+              label="Unit"
+              value={chapter.unit}
+              max={12}
+              placeholder={chapter.kind === "music" ? "hours" : ""}
+              onChange={(unit) => set({ unit })}
+            />
+          </div>
+          <div className="easy-photo">
+            <label className="easy-upload">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                aria-label="Upload a chapter photo"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void onUpload(file).then((photo) => photo && set({ photo }));
+                }}
+              />
+              {chapter.photo ? "Change the photo" : "Add a photo"}
+            </label>
+            {chapter.photo && <button onClick={() => set({ photo: "" })}>No photo</button>}
+          </div>
+          <TextField
+            title=""
+            label="A line about it"
+            value={chapter.note}
+            max={120}
+            area
+            onChange={(note) => set({ note })}
+          />
+          <p className="easy-note">
+            Three small numbers, and up to three lines (top songs, places, years).
+          </p>
+          {[0, 1, 2].map((i) => (
+            <div className="easy-row" key={"s" + i}>
+              <TextField
+                title=""
+                label={`Number ${i + 1}`}
+                value={chapter.stats[i]?.value ?? ""}
+                max={12}
+                onChange={(value) => stat(i, { value })}
+              />
+              <TextField
+                title=""
+                label={`Its label`}
+                value={chapter.stats[i]?.label ?? ""}
+                max={16}
+                onChange={(label) => stat(i, { label })}
+              />
+            </div>
+          ))}
+          {[0, 1, 2].map((i) => (
+            <TextField
+              key={"l" + i}
+              title=""
+              label={`Line ${i + 1}`}
+              value={chapter.lines[i] ?? ""}
+              max={40}
+              onChange={(v) => line(i, v)}
+            />
+          ))}
+          <div className="easy-row">
+            <button
+              className="danger"
+              onClick={() => onChange(chapters.filter((_, i) => i !== at))}
+            >
+              <Trash2 /> Remove this chapter
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
