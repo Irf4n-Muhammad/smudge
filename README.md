@@ -326,13 +326,15 @@ follow button of its own: the strip's one action is Edit for you and Follow for 
 Before you have a photo or chapters, the page shows you where they go (ADR 0051); visitors
 see only what is there. The page is drawn to the profile mock (ADR 0052): the Night palette
 (teal, a yellow accent, clay, violet) by default, a Run as a card with its route and stats,
-your two latest posts as Picks, and your name once more at the foot. Posts is a wall of
+your latest posts as Picks, and your name once more at the foot. Posts is a wall of
 coloured blocks in the look's tints, Stories a Now card and small day labels. Each chapter can
 carry two more photos with a place and a year, and a band **From the roll** lays up to eight
 more across the page (ADR 0053); the chapters sit close, the rule between them. Under the
 hero, a few sentences in your own words stand as big as the page, the starred words in the
 serif and the palette (ADR 0054). A Music chapter is a cassette, the band on its label and the
-hours under it, the reels turning (ADR 0055).
+hours under it, the reels turning (ADR 0055). Picks holds your four latest posts: two with
+their covers, two as blocks of teal and violet carrying the post's caption in the serif
+(ADR 0056).
 Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
 Open `/?profile=dani` to see it filled (Dani's three chapters with real photos, seeded once
 with the demo) or `/?profile=ines` for the optional sections. Pages published on an older

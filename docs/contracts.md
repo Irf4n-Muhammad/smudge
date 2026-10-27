@@ -23,7 +23,7 @@ remain unchanged. Example:
 }
 ```
 
-Height is an integer 600–4000 CSS pixels. The same post file/path and asset limits apply.
+Height is an integer 600–8000 CSS pixels (4000 before ADR 0056). The same post file/path and asset limits apply.
 Larger documents scroll inside the frame; automatic content sizing is not implemented.
 Profile capabilities are independent of post capabilities:
 
@@ -190,7 +190,7 @@ Raka story highlights open published `story` posts; this is not an expiring-stor
 parts control profile previews, not the independent published post's executable package or feed.
 Per-part sandboxing remains future work. Optional bounded automatic height is described below. See ADR 0004.
 
-Profile v2 may set `mobileHeight` (600–4000 CSS pixels). The host uses it at widths up to 600px
+Profile v2 may set `mobileHeight` (600–8000 CSS pixels). The host uses it at widths up to 600px
 and in the explicit mobile preview. This is bounded declarative sizing, not automatic measurement.
 
 ## In-profile social controls (additive profile v2 extension)

@@ -91,7 +91,8 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   (ADR 0052), and keeps every photo the settings name as the page's assets (ADR 0050, 0053:
   chapter photos, their snaps and the roll, up to twenty). The chapters are drawn by kind (a Run
   as a card, Music as a cassette, ADR 0055) with their snaps laid around them, a band of photos from the roll follows, then the
-  two latest posts as Picks and the name again at the foot.
+  four latest posts as Picks (two with their covers, two as blocks of colour with their captions,
+  ADR 0056) and the name again at the foot.
 - `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
   stories as a timeline of posts, now entries and moments, by the feed's audience rules.
   `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage
@@ -232,7 +233,7 @@ changes. This allows composition into existing publications without colliding wi
 Dense cockpit libraries (>8 posts) use a scrollable strip to avoid overlapping pointer targets.
 
 Profile v2 may opt into bounded automatic content height. The SDK observes body flow size;
-the host accepts only strict, finite 600–4000 px messages from the current opaque iframe and
+the host accepts only strict, finite 600–8000 px messages (4000 until ADR 0056) from the current opaque iframe and
 nonce, and coalesces updates. Height fields remain loading fallbacks. Other packages retain
 fixed sizing. The host reserves space for its bottom navigation separately from the creator's
 content. See ADR 0007 and the contract for limits and viewport-dependent layouts.

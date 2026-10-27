@@ -83,7 +83,7 @@ const common = {
   runtimeVersion: z.literal("web-v1"),
   name: z.string().trim().min(1).max(100),
   entrypoint: z.literal("index.html"),
-  height: z.number().int().min(600).max(4000),
+  height: z.number().int().min(600).max(8000),
   assets: z.array(z.string().uuid()).max(20).default([]),
 };
 const manifest = z.discriminatedUnion("schemaVersion", [
@@ -94,7 +94,7 @@ const manifest = z.discriminatedUnion("schemaVersion", [
     .object({
       ...common,
       schemaVersion: z.literal(2),
-      mobileHeight: z.number().int().min(600).max(4000).optional(),
+      mobileHeight: z.number().int().min(600).max(8000).optional(),
       headerOverlay: z.boolean().optional(),
       autoHeight: z.boolean().optional(),
       look: pageLookSchema.optional(),
@@ -262,6 +262,6 @@ export const profileSizeSchema = z
   .object({
     type: z.literal("forma:size"),
     nonce: z.string(),
-    height: z.number().int().min(600).max(4000),
+    height: z.number().int().min(600).max(8000),
   })
   .strict();

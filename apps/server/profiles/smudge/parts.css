@@ -788,7 +788,7 @@ html[data-owner="on"] .sm .roll.ghost {
   justify-self: end;
 }
 
-/* Picks (ADR 0052): the two latest posts as blocks, the accent and the ink. */
+/* Picks (ADR 0052, 0056): the four latest posts as blocks, covers then colour. */
 .sm .picks {
   position: relative;
   z-index: 5;
@@ -846,6 +846,30 @@ html[data-owner="on"] .sm .roll.ghost {
 }
 .sm .pick.has-cover .pick-cap {
   text-shadow: 0 1px 8px rgb(0 0 0 / 60%);
+}
+/* The third and fourth blocks (ADR 0056): colour, the title at the top, the caption set in the
+   serif at the foot. Teal with the ink's dark, then violet with white. */
+.sm .pick.tint {
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 12px;
+  background: var(--p1);
+  color: var(--wall);
+}
+.sm .pick.tint:nth-child(4) {
+  background: var(--p4);
+  color: #fff;
+}
+.sm .pick.tint .pick-cap small {
+  opacity: 0.8;
+}
+.sm .pick-say {
+  display: -webkit-box;
+  overflow: hidden;
+  font: italic 400 20px/1.1 var(--serif);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
 }
 
 /* The foot: the whole name once more, and where this is. */
@@ -1068,8 +1092,20 @@ html[data-owner="on"] .sm .roll.ghost {
   .sm .picks {
     padding: 88px 40px 0;
   }
+  .sm .picks-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
   .sm .pick {
-    height: 260px;
+    height: 300px;
+    padding: 20px;
+  }
+  .sm .pick-cap strong {
+    font-size: 18px;
+  }
+  .sm .pick-say {
+    font-size: 28px;
+    line-height: 1.05;
   }
   .sm .wall-foot {
     margin: 96px 40px 0;

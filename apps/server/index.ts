@@ -603,7 +603,7 @@ api.get("/api/profile-spec", (_req, res) =>
         "Use html[data-theme=dark]. Respect html[data-motion=reduce] and prefers-reduced-motion. No autoplay sound.",
     },
     limits:
-      "600–4000px height, up to 20 local html/css/js files, 100000 code units each; index.html required. No remote network/eval/dependencies. Asset IDs must be owned/shared, use asset:UUID. Runtime sandbox and CSP match posts. Host owns back/follow/report and post navigation.",
+      "600–8000px height, up to 20 local html/css/js files, 100000 code units each; index.html required. No remote network/eval/dependencies. Asset IDs must be owned/shared, use asset:UUID. Runtime sandbox and CSP match posts. Host owns back/follow/report and post navigation.",
     templates: Object.keys(profileTemplates),
   }),
 );

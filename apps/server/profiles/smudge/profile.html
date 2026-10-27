@@ -1,4 +1,4 @@
-<!-- smudge:v11 -->
+<!-- smudge:v12 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm">
@@ -48,7 +48,7 @@
       Photos from your roll go here, each with a place and a year.
     </p>
   </section>
-  <!-- Picks (ADR 0052): the two latest posts as blocks, the way to the Posts page. -->
+  <!-- Picks (ADR 0052, 0056): the four latest posts as blocks, the way to the Posts page. -->
   <section class="picks" id="picks" aria-label="Picks" hidden>
     <div class="idx">
       <span>Picks</span>
@@ -318,23 +318,31 @@
       grid.textContent = "";
       grid.append(...figs);
     }
-    // The two latest posts as blocks (ADR 0052), each opening in the app's dialog.
+    // Picks (ADR 0052, 0056): the four latest posts as blocks, each opening in the app's dialog.
+    // The first two carry their covers; the next two are blocks of colour with the post's caption
+    // set in the serif, so the band always reads as photos and words whatever the posts hold.
     function picks(posts) {
-      const list = (posts || []).slice(0, 2);
+      const list = (posts || [])
+        .slice()
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
+        .slice(0, 4);
       $("picks").hidden = !list.length;
       if (!list.length) return;
       $("picks-count").textContent = posts.length + (posts.length === 1 ? " post" : " posts");
       const grid = $("picks-grid");
       grid.textContent = "";
-      list.forEach((post) => {
-        const b = el("button", "pick");
+      list.forEach((post, i) => {
+        const tint = i >= 2;
+        const b = el("button", "pick" + (tint ? " tint" : ""));
         b.type = "button";
         b.setAttribute("aria-label", "Open " + post.title);
         const cap = el("span", "pick-cap");
         cap.append(el("strong", "", post.title), el("small", "", day(post.createdAt)));
         b.append(cap);
+        if (tint && post.caption) b.append(el("span", "pick-say", post.caption));
         b.addEventListener("click", () => window.openProfilePost(post.id, $("picks-status")));
         grid.append(b);
+        if (tint) return;
         window.coverFor(post).then((cover) => {
           if (!cover) return;
           const img = document.createElement("img");

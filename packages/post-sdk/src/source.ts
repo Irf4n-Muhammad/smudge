@@ -6,7 +6,7 @@ export function sdkSource(nonce: string) {
     function measure(){
       clearTimeout(resizeTimer);
       resizeTimer=setTimeout(()=>{
-        const height=Math.max(600,Math.min(4000,Math.ceil(document.body.getBoundingClientRect().height)));
+        const height=Math.max(600,Math.min(8000,Math.ceil(document.body.getBoundingClientRect().height)));
         if(height!==lastHeight){lastHeight=height;parent.postMessage({type:'forma:size',nonce,height},'*')}
       },100);
     }

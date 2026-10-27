@@ -10,6 +10,7 @@ import {
   defaultSmudgeSettings,
 } from "../../packages/core/src/smudge-design.js";
 import { photoId } from "./seed-photos.js";
+import { buildPost, startPostDesign } from "../../packages/core/src/easy-post.js";
 
 const make = (name: string, file: string, height: number, assets: string[]): ProfilePackage => ({
   manifest: {
@@ -121,7 +122,7 @@ const daniPhotos = [
 ] as const;
 export function seedDaniPage(profiles: ProfileService) {
   const store = profiles.social.store;
-  const marker = "profile-smudge-v5:dani";
+  const marker = "profile-smudge-v6:dani";
   if (store.get("seed", marker) || !store.get("user", "dani")) return;
   // A page this seed wrote in an earlier version is written again; one someone edited is kept.
   const state = profiles.state("dani");
@@ -129,6 +130,7 @@ export function seedDaniPage(profiles: ProfileService) {
     "profile-smudge-v2:dani",
     "profile-smudge-v3:dani",
     "profile-smudge-v4:dani",
+    "profile-smudge-v5:dani",
   ].some((m) => store.get("seed", m));
   if (state.version === 0 || earlier) {
     const actor = { userId: "dani" };
@@ -218,7 +220,66 @@ export function seedDaniPage(profiles: ProfileService) {
     const draft = profiles.create(actor, pkg);
     profiles.publish(actor, draft.id, 1, state.version);
   }
+  seedDaniPosts(profiles);
   store.transaction(() => store.put("seed", marker, { complete: true }));
+}
+/**
+ * Picks shows four posts (ADR 0056), the last two as blocks of colour with their captions. The
+ * photo seed gives Dani two; these two are dated before them so the reunion and the skate
+ * session keep their covers, and a data dir seeded earlier gets them too (once).
+ */
+const daniPosts: {
+  marker: string;
+  daysAgo: number;
+  headline: string;
+  kicker: string;
+  text: string;
+  photo: (typeof daniPhotos)[number];
+  caption: string;
+}[] = [
+  {
+    marker: "post-dani:night-three",
+    daysAgo: 1,
+    kicker: "Night three",
+    headline: "The cut is at *11 minutes*",
+    text: "It needs to be 8. Every clip I love is the clip that has to go.",
+    photo: "laptop-code",
+    caption: "The cut is at 11 minutes. It needs to be 8.",
+  },
+  {
+    marker: "post-dani:super-8",
+    daysAgo: 6,
+    kicker: "Film test",
+    headline: "Super 8 *test*",
+    text: "One roll of Kodak 50D, expired 2019, shot at the beach before the light went.",
+    photo: "beach-sunset",
+    caption: "Kodak 50D, expired 2019. Still gold.",
+  },
+];
+function seedDaniPosts(profiles: ProfileService) {
+  const social = profiles.social;
+  const store = social.store;
+  const actor = { userId: "dani" };
+  for (const p of daniPosts) {
+    if (store.get("seed", p.marker)) continue;
+    const built = buildPost(
+      startPostDesign("poster", {
+        kicker: p.kicker,
+        headline: p.headline,
+        text: p.text,
+        photos: [{ assetId: photoId(p.photo), caption: "" }],
+      }),
+    );
+    const draft = social.createDraft(actor, {
+      package: built.package,
+      metadata: { ...built.metadata, caption: p.caption, contributors: [] },
+    });
+    const createdAt = new Date(Date.now() - p.daysAgo * 86_400_000).toISOString();
+    social.publish(actor, draft.id, draft.revision, (post) => {
+      store.put("post", post.id, { ...post, createdAt });
+      store.put("seed", p.marker, { complete: true });
+    });
+  }
 }
 
 /** Inès shows what the easy editor can do: her own line, a place, extra sections and a Wall. */

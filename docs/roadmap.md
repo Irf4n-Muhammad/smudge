@@ -99,8 +99,10 @@
 - [x] The owner's words (ADR 0054, stage two): a manifesto of up to 140 characters under the
       hero, the starred words in the serif and the palette.
 - [x] The cassette (ADR 0055, stage three): a Music chapter drawn as a cassette from its title,
-      hours and corner line. Next: Picks as four blocks; then sources (music, games, running)
-      filling chapters by themselves.
+      hours and corner line.
+- [x] Picks as four blocks (ADR 0056, stage four, the last of the mock): the four latest posts,
+      two with covers and two as blocks of colour with their captions; the page may now run to
+      8000 px. Next: sources (music, games, running) filling chapters by themselves.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.
@@ -155,7 +157,7 @@ the application does not include or automatically connect a hosted model.
   built. Community themes cannot use web fonts, outside images or interaction, and approval is
   one moderator's call with no appeal. Personal edits cover position and text only, not colours. Trip themes exist for France, Japan, South Korea, Thailand and Bali; places use coarse boxes.
 
-- Profiles use bounded iframe heights, with optional content sizing up to 4000px and internal
+- Profiles use bounded iframe heights, with optional content sizing up to 8000px (ADR 0056) and internal
   scrolling for larger documents. Visual controls currently support the Raka shell and compatible
   parts; arbitrary imported mods use source/MCP for their own structure and behavior.
   Reduced motion is enforced for ordinary CSS through the SDK; arbitrary JS authors must cooperate.

@@ -375,7 +375,7 @@ test("automatic profile sizing is opt-in v2 and layout messages stay bounded", (
     manifest: { ...original.manifest, schemaVersion: 2, parts: {}, autoHeight: true },
   };
   assert.equal(profilePackageSchema.safeParse(modern).success, true);
-  for (const height of [-1, 0, 599, 4001, Infinity, NaN, "1200", 600.5])
+  for (const height of [-1, 0, 599, 8001, Infinity, NaN, "1200", 600.5])
     assert.equal(
       profileSizeSchema.safeParse({ type: "forma:size", nonce: "test", height }).success,
       false,
