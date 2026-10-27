@@ -52,6 +52,7 @@ export function ProfilePage({
   posts,
   onBack,
   onRefresh,
+  onCreate,
   onNavigate,
   onUseDraft,
   more,
@@ -61,6 +62,8 @@ export function ProfilePage({
   posts: PostView[];
   onBack: () => void;
   onRefresh: () => Promise<void>;
+  /** Opens the composer, for an owner whose Posts page is still empty. */
+  onCreate?: () => void;
   onNavigate: (
     destination:
       | "home"
@@ -538,13 +541,19 @@ export function ProfilePage({
           className="page-fixed"
           aria-label={page === "posts" ? "Posts page" : "Stories page"}
         >
-          <PageHead user={owner} page={page} look={Boolean(look.className)} />
+          <PageHead
+            user={owner}
+            page={page}
+            look={Boolean(look.className)}
+            posts={ownPosts.length}
+          />
           {page === "posts" ? (
             <PostsCollage
               posts={ownPosts}
               cover={(p) => `/api/assets/${p.coverAssetId}`}
               onOpen={(p) => openPost(p.id)}
               empty={mine ? "Your posts will show up here." : "No posts yet."}
+              onCreate={mine ? onCreate : undefined}
             />
           ) : (
             <>
@@ -592,6 +601,7 @@ export function ProfilePage({
                     profile.manifest.schemaVersion === 2 ? profile.manifest.mobileHeight : undefined
                   }
                   reducedMotion={motion}
+                  owner={mine}
                   onOpenPost={openPost}
                   onSocialChange={onRefresh}
                 />
@@ -1328,6 +1338,7 @@ function ProfileEditor({
                         : undefined
                     }
                     reducedMotion={reducedMotion}
+                    owner
                     onOpenPost={onOpenPost}
                   />
                 </div>

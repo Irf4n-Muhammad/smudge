@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Image as ImageIcon, Layers, PanelTop, Pencil } from "lucide-react";
+import { Image as ImageIcon, Layers, PanelTop, Pencil, Plus } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { User } from "../../../packages/contracts/src/experience";
 import type { PageLook, ProfilePackage } from "../../../packages/contracts/src/profile";
@@ -34,6 +34,11 @@ const labelFonts: Record<PageLook["label"], string> = {
   mono: "ui-monospace, Menlo, Consolas, monospace",
   sans: "var(--ui, inherit)",
 };
+/** Relative luminance of a #rrggbb colour, enough to pick dark or light ink for it. */
+const lightness = (hex: string) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+};
 /**
  * A look's tokens as CSS variables (ADR 0049): the fixed pages and the strip read them, so the
  * three pages feel like one. A page without a look leaves the app's own colours in place.
@@ -44,9 +49,22 @@ export function lookStyle(manifest: ProfilePackage["manifest"] | null | undefine
 } {
   const look = manifest?.schemaVersion === 2 ? manifest.look : undefined;
   if (!look) return { className: "", style: undefined };
+  // Blocks without a picture take the tints in turn (ADR 0052), the accent alone without them;
+  // each carries the ink that reads on it.
+  const tints = look.tints?.length ? look.tints : [look.accent];
+  const tintVars = Object.fromEntries(
+    [0, 1, 2, 3].flatMap((i) => {
+      const tint = tints[i % tints.length]!;
+      return [
+        [`--page-tint-${i + 1}`, tint],
+        [`--page-tint-${i + 1}-ink`, lightness(tint) > 0.5 ? look.ground : look.ink],
+      ];
+    }),
+  );
   return {
     className: "has-look",
     style: {
+      ...tintVars,
       "--page-ground": look.ground,
       "--page-ink": look.ink,
       "--page-muted": look.muted,
@@ -143,28 +161,36 @@ export function PageHead({
   user,
   page,
   look,
+  posts,
 }: {
   user: User;
   page: "posts" | "stories";
   look?: boolean;
+  /** How many posts there are, for the line under "Posts" (ADR 0052). */
+  posts?: number;
 }) {
   const name = page === "posts" ? "Posts" : "Stories";
+  const line =
+    page === "posts"
+      ? `${user.name} · ${posts === undefined ? `@${user.handle}` : posts === 0 ? "no posts yet" : `${posts} ${posts === 1 ? "post" : "posts"}`}`
+      : `${user.name}'s days, read from posts and moments`;
   return (
     <header className="page-head">
       {!look && <Avatar user={user} />}
       <div>
         <h1>{look ? name : user.name}</h1>
-        <small>{look ? `${user.name} · @${user.handle}` : `@${user.handle} · ${name}`}</small>
-        {user.bio && <p>{user.bio}</p>}
+        <small>{look ? line : `@${user.handle} · ${name}`}</small>
+        {user.bio && !look && <p>{user.bio}</p>}
       </div>
     </header>
   );
 }
 
 /**
- * Posts as a collage, not a three-column grid: one big tile with two small ones beside it, then
- * two wide ones, and the big tile changes side each round. Fixed patterns keep it tidy whatever
- * the count; a look can tilt or recolour the tiles, not reflow them.
+ * Posts as a collage, not a three-column grid (ADR 0052's pattern): one big tile with two small
+ * ones beside it, two wide ones, then a small one with the big tile on the other side, and
+ * round again. Fixed patterns keep it tidy whatever the count; a look can tilt or recolour the
+ * tiles, not reflow them.
  */
 const spans = [
   { col: 4, row: 2 },
@@ -172,28 +198,51 @@ const spans = [
   { col: 2, row: 1 },
   { col: 3, row: 1 },
   { col: 3, row: 1 },
+  { col: 2, row: 1 },
+  { col: 4, row: 2, right: true },
+  { col: 2, row: 1 },
 ];
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 export function PostsCollage({
   posts,
   cover,
   onOpen,
   href,
   empty,
+  onCreate,
 }: {
   posts: PostTile[];
   cover: (post: PostTile) => string;
   onOpen?: (post: PostTile) => void;
   href?: (post: PostTile) => string;
   empty: string;
+  /** The owner's way to the composer; with it, the empty collage is an invitation (ADR 0051). */
+  onCreate?: (() => void) | undefined;
 }) {
-  if (!posts.length) return <p className="page-empty">{empty}</p>;
+  if (!posts.length)
+    return (
+      <div className="collage collage-empty" role="status">
+        <p className="collage-ghost collage-ghost-big">
+          <span>{empty}</span>
+          {onCreate && (
+            <button className="collage-first" onClick={onCreate}>
+              <Plus size={16} aria-hidden="true" /> Write your first post
+            </button>
+          )}
+        </p>
+        <span className="collage-ghost" aria-hidden="true" />
+        <span className="collage-ghost" aria-hidden="true" />
+        <span className="collage-ghost collage-ghost-wide" aria-hidden="true" />
+        <span className="collage-ghost collage-ghost-wide" aria-hidden="true" />
+      </div>
+    );
   return (
     <ul className="collage" aria-label="Posts">
       {posts.map((post, i) => {
         const span = spans[i % spans.length]!;
-        const mirrored = Math.floor(i / spans.length) % 2 === 1 && i % spans.length === 0;
         const style = {
-          gridColumn: mirrored ? `3 / span ${span.col}` : `span ${span.col}`,
+          gridColumn: span.right ? `3 / span ${span.col}` : `span ${span.col}`,
           gridRow: `span ${span.row}`,
         };
         const body = (
@@ -201,13 +250,16 @@ export function PostsCollage({
             {post.hasCover ? (
               <img src={cover(post)} alt="" loading="lazy" />
             ) : (
-              <span className="collage-blank">{post.title}</span>
+              <span className="collage-blank" aria-hidden="true" />
             )}
-            <span className="collage-cap">{post.title}</span>
+            <span className="collage-cap">
+              <strong>{post.title}</strong>
+              {span.row > 1 && <small>{shortDate(post.createdAt)}</small>}
+            </span>
           </>
         );
         return (
-          <li key={post.id} style={style}>
+          <li key={post.id} style={style} className={span.row > 1 ? "collage-big" : undefined}>
             {href ? (
               <a href={href(post)}>{body}</a>
             ) : (
@@ -236,6 +288,12 @@ const dayLabel = (iso: string, today = new Date()) => {
     ...(day.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
   });
 };
+const clock = (iso: string) =>
+  new Date(iso).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 const dayKey = (iso: string) => {
   const d = new Date(iso);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -279,9 +337,11 @@ export function Stories({
           <h2>{day.label}</h2>
           <ul>
             {day.items.map((item) => {
+              const at = <time dateTime={item.at}>{clock(item.at)}</time>;
               if (item.kind === "post")
                 return (
                   <li key={`post:${item.post.id}`} className="story-post">
+                    {at}
                     {postHref ? (
                       <a href={postHref(item.post)}>
                         <StoryTile post={item.post} cover={cover} />
@@ -296,6 +356,7 @@ export function Stories({
               if (item.kind === "moment")
                 return (
                   <li key={`moment:${item.card.gatheringId}`} className="story-moment">
+                    {at}
                     <a href={`/m/${encodeURIComponent(item.card.gatheringId)}`}>
                       {item.card.cover && (
                         <img
@@ -315,7 +376,10 @@ export function Stories({
                 );
               return (
                 <li key={`now:${item.entry.id}`} className="story-now">
-                  <Entry entry={item.entry} />
+                  {at}
+                  <span className="story-entry">
+                    <Entry entry={item.entry} />
+                  </span>
                 </li>
               );
             })}
@@ -325,15 +389,19 @@ export function Stories({
     </ol>
   );
 }
+/** A post in the day: its cover small on the left, its title beside it, as one line of the day. */
 function StoryTile({ post, cover }: { post: PostTile; cover: (post: PostTile) => string }) {
   return (
     <>
       {post.hasCover ? (
         <img src={cover(post)} alt="" loading="lazy" />
       ) : (
-        <span className="collage-blank">{post.title}</span>
+        <span className="story-blank" aria-hidden="true" />
       )}
-      <span className="story-cap">{post.title}</span>
+      <span className="story-cap">
+        <strong>{post.title}</strong>
+        <small>Post{post.caption ? ` · ${post.caption}` : ""}</small>
+      </span>
     </>
   );
 }

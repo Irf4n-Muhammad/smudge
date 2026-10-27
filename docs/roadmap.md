@@ -88,7 +88,21 @@
 - [x] The fixed pages in the look's colours (ADR 0049): a look declares five colours and two
       font roles, and the app draws Posts, Stories and the strip with them.
 - [x] Chapter photos, the poster on a wide screen, the share page in the look (ADR 0050).
-      Next: sources (music, games, running) filling chapters by themselves.
+- [x] The empty page (ADR 0051): a new member's poster hints at the photo and three chapters,
+      Posts empty is the collage drawn faintly with a way to the composer, Stories are lines of
+      the day with the clock.
+- [x] The page drawn to the mock (ADR 0052): the Night palette with a yellow accent, the Run
+      as a card, Picks and a foot on the landing, Posts as a wall of coloured blocks, Stories
+      with a Now card and small day labels.
+- [x] Photos laid freely (ADR 0053, stage one of the landing mock v3): captions and two snaps
+      per chapter, a band From the roll of up to eight, chapters closer together.
+- [x] The owner's words (ADR 0054, stage two): a manifesto of up to 140 characters under the
+      hero, the starred words in the serif and the palette.
+- [x] The cassette (ADR 0055, stage three): a Music chapter drawn as a cassette from its title,
+      hours and corner line.
+- [x] Picks as four blocks (ADR 0056, stage four, the last of the mock): the four latest posts,
+      two with covers and two as blocks of colour with their captions; the page may now run to
+      8000 px. Next: sources (music, games, running) filling chapters by themselves.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.
@@ -143,7 +157,7 @@ the application does not include or automatically connect a hosted model.
   built. Community themes cannot use web fonts, outside images or interaction, and approval is
   one moderator's call with no appeal. Personal edits cover position and text only, not colours. Trip themes exist for France, Japan, South Korea, Thailand and Bali; places use coarse boxes.
 
-- Profiles use bounded iframe heights, with optional content sizing up to 4000px and internal
+- Profiles use bounded iframe heights, with optional content sizing up to 8000px (ADR 0056) and internal
   scrolling for larger documents. Visual controls currently support the Raka shell and compatible
   parts; arbitrary imported mods use source/MCP for their own structure and behavior.
   Reduced motion is enforced for ordinary CSS through the SDK; arbitrary JS authors must cooperate.

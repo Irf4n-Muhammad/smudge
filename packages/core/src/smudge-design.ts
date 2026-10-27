@@ -24,6 +24,8 @@ export const smudgeSectionKinds = [
 ] as const;
 export type SmudgeSection = (typeof smudgeSectionKinds)[number];
 export const smudgePalettes = {
+  /** The default (ADR 0052): teal, a warm yellow accent, clay and violet on the dark ground. */
+  night: ["#2ba39a", "#f2c53d", "#e8613c", "#7a5af8"],
   paint: ["#ff4f9a", "#d8ff3d", "#2b3cff", "#19c37d"],
   electric: ["#2b3cff", "#d8ff3d", "#ff4f9a", "#00c2ff"],
   sunset: ["#ff6a3d", "#ffc93d", "#ff3d8b", "#8a5cff"],
@@ -34,6 +36,7 @@ export type SmudgePalette = keyof typeof smudgePalettes;
 /**
  * What the Paint wall tells the app about itself (ADR 0049): the dark ground, the ink, and the
  * palette's second colour as the accent, so Posts, Stories and the strip read as the same page.
+ * The whole palette goes along as tints (ADR 0052), for the blocks of the Posts page.
  */
 export const smudgeLook = (palette: SmudgePalette): PageLook => ({
   ground: "#0e0d0b",
@@ -41,10 +44,14 @@ export const smudgeLook = (palette: SmudgePalette): PageLook => ({
   muted: "#9a948a",
   card: "#1a1816",
   accent: smudgePalettes[palette][1],
+  tints: [...smudgePalettes[palette]],
   display: "serif",
   label: "mono",
 });
 const text = (max: number) => z.string().trim().max(max);
+/** One of the owner's uploaded photos laid on the page with a place and a year (ADR 0053). */
+export const snapSchema = z.object({ photo: z.string().uuid(), caption: text(30) }).strict();
+export type Snap = z.infer<typeof snapSchema>;
 export const chapterKinds = ["run", "work", "music", "custom"] as const;
 export type ChapterKind = (typeof chapterKinds)[number];
 /** One chapter of the landing: a kind, a title, one big number, a note, up to three stats and lines. */
@@ -58,8 +65,11 @@ export const chapterSchema = z
     note: text(120),
     stats: z.array(z.object({ value: text(12), label: text(16) }).strict()).max(3),
     lines: z.array(text(40)).max(3),
-    /** One of the owner's uploaded photos (ADR 0050), or none. */
+    /** One of the owner's uploaded photos (ADR 0050), or none, with a caption under it. */
     photo: z.union([z.literal(""), z.string().uuid()]).default(""),
+    caption: text(40).default(""),
+    /** Up to two more photos laid around the chapter (ADR 0053). */
+    snaps: z.array(snapSchema).max(2).default([]),
   })
   .strict();
 export type Chapter = z.infer<typeof chapterSchema>;
@@ -73,14 +83,20 @@ export const emptyChapter: Chapter = {
   stats: [],
   lines: [],
   photo: "",
+  caption: "",
+  snaps: [],
 };
 export const smudgeSettingsSchema = z
   .object({
     bigName: z.enum(["first", "full", "nickname"]),
     nickname: text(24),
     tagline: text(60),
+    /** A few sentences in the owner's words, set huge under the hero (ADR 0054). */
+    manifesto: text(140),
     place: text(30),
     chapters: z.array(chapterSchema).max(3),
+    /** A band of photos from the roll, laid freely under the chapters (ADR 0053). */
+    roll: z.array(snapSchema).max(8).default([]),
     palette: z.enum(Object.keys(smudgePalettes) as [SmudgePalette, ...SmudgePalette[]]),
     sections: z
       .array(z.enum(smudgeSectionKinds))
@@ -104,9 +120,11 @@ export const defaultSmudgeSettings: SmudgeSettings = {
   bigName: "first",
   nickname: "",
   tagline: "",
+  manifesto: "",
   place: "",
   chapters: [],
-  palette: "paint",
+  roll: [],
+  palette: "night",
   sections: [],
   quote: { text: "" },
   now: { text: "", place: "", progress: 40 },
@@ -123,7 +141,16 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v7";
+export const smudgeVersionMarker = "smudge:v12";
+/** Every photo the settings lay on the page: chapter photos and snaps, then the roll. */
+export const smudgePhotoIds = (s: SmudgeSettings) => [
+  ...new Set(
+    [
+      ...s.chapters.flatMap((c) => [c.photo, ...c.snaps.map((p) => p.photo)]),
+      ...s.roll.map((p) => p.photo),
+    ].filter(Boolean),
+  ),
+];
 
 export function supportsSmudgeDesign(pkg: ProfilePackage) {
   return (
@@ -185,12 +212,12 @@ export function applySmudgeSettings(
         )
       : shell.replace("</main>", '<div class="sm-sections" id="sm-sections"></div>\n</main>');
   pkg.files["index.html"] = shell;
-  // Chapter photos are the page's assets (ADR 0050): the ones the last settings named make way
+  // The page's photos are its assets (ADR 0050, 0053): the ones the last settings named make way
   // for these, and the runtime fills `smudgePhotos` with their data URLs when it serves the page.
-  const before = new Set(readSmudgeSettings(pkg).chapters.map((c) => c.photo));
-  const photos = s.chapters.map((c) => c.photo).filter(Boolean);
+  const before = new Set(smudgePhotoIds(readSmudgeSettings(pkg)));
+  const photos = smudgePhotoIds(s);
   const assets = [...new Set([...pkg.manifest.assets.filter((id) => !before.has(id)), ...photos])];
-  if (assets.length > 12) throw new Error("This page already carries too many pictures.");
+  if (assets.length > 20) throw new Error("This page already carries too many pictures.");
   pkg.manifest.assets = assets;
   pkg.files[settingsFile] =
     `window.smudgeSettings = ${JSON.stringify(s)};\n` +

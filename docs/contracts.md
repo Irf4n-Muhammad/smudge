@@ -23,12 +23,12 @@ remain unchanged. Example:
 }
 ```
 
-Height is an integer 600–4000 CSS pixels. The same post file/path and asset limits apply.
+Height is an integer 600–8000 CSS pixels (4000 before ADR 0056). The same post file/path and asset limits apply.
 Larger documents scroll inside the frame; automatic content sizing is not implemented.
 Profile capabilities are independent of post capabilities:
 
 - `profile.read`: `await forma.profile.read()` returns `{owner, posts, now}`. Owner is the public
-  user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`; `now` is the
+  user record; posts contain only `id`, `title`, `caption`, `format`, `hasCover`, `createdAt`; `now` is the
   owner's latest one-tap entries (`current`, `listening`, `recent`) as the viewer may see them
   (ADR 0041). No draft, bookmark, session, or viewer identity is supplied, including in visitor preview.
 - `quiz.read` / `quiz.answer`: `await forma.quiz.read()` returns the owner's questions without
@@ -190,7 +190,7 @@ Raka story highlights open published `story` posts; this is not an expiring-stor
 parts control profile previews, not the independent published post's executable package or feed.
 Per-part sandboxing remains future work. Optional bounded automatic height is described below. See ADR 0004.
 
-Profile v2 may set `mobileHeight` (600–4000 CSS pixels). The host uses it at widths up to 600px
+Profile v2 may set `mobileHeight` (600–8000 CSS pixels). The host uses it at widths up to 600px
 and in the explicit mobile preview. This is bounded declarative sizing, not automatic measurement.
 
 ## In-profile social controls (additive profile v2 extension)
@@ -600,7 +600,10 @@ keep using `personal/design.js`; its generated boot script now tags their parts 
 The Smudge Paint wall stores easy-editor choices in an ordinary file, `smudge/settings.js`
 (`window.smudgeSettings = {…};`), validated by `smudgeSettingsSchema` in
 `packages/core/src/smudge-design.ts`. Writing it adds the Wall grants only while the Wall section
-is shown.
+is shown. A chapter's `photo`, `caption` and `snaps` (up to two `{photo, caption}`) and the
+settings' `roll` (up to eight) name the page's assets (ADR 0053); a profile manifest lists up to
+20 assets. `manifesto` (up to 140 characters, `*stars*` for the coloured words) is the owner's
+line under the hero (ADR 0054).
 
 ## Website import (additive)
 

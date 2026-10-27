@@ -425,6 +425,7 @@ export function FormaApp() {
         boot={boot}
         posts={posts}
         onRefresh={refresh}
+        onCreate={createPost}
         onUseDraft={(draftId) => {
           window.history.replaceState(
             null,

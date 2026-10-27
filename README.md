@@ -310,7 +310,7 @@ or Follow) sits in the strip (ADR 0048). The landing page is yours: a template y
 Posts and Stories are Smudge's fixed pages, the same under every look: a collage of your posts
 (`?page=posts`, `/u/<handle>/posts` for guests) and your days read from what happened, never
 typed (`?page=stories`, `/u/<handle>/stories`): posts, what was playing, where you were, the
-moments you came to. A strip with Page · Posts · Stories floats over every profile, drawn by the
+moments you came to, one line per happening with the clock beside it (ADR 0051). A strip with Page · Posts · Stories floats over every profile, drawn by the
 app outside the page, so no page can lose it. A look may colour the two fixed pages and the strip
 with five colours and two font roles (ADR 0049); it cannot reshape them.
 
@@ -323,9 +323,22 @@ archive. Below, up to three **chapters** say who you are with one measurable thi
 record, years somewhere, hours of one band), typed in the easy editor, each with a photo of
 yours if you like (ADR 0050). On a wide screen the poster is two columns. No counts, no grid, no
 follow button of its own: the strip's one action is Edit for you and Follow for everyone else.
+Before you have a photo or chapters, the page shows you where they go (ADR 0051); visitors
+see only what is there. The page is drawn to the profile mock (ADR 0052): the Night palette
+(teal, a yellow accent, clay, violet) by default, a Run as a card with its route and stats,
+your latest posts as Picks, and your name once more at the foot. Posts is a wall of
+coloured blocks in the look's tints, Stories a Now card and small day labels. Each chapter can
+carry two more photos with a place and a year, and a band **From the roll** lays up to eight
+more across the page (ADR 0053); the chapters sit close, the rule between them. Under the
+hero, a few sentences in your own words stand as big as the page, the starred words in the
+serif and the palette (ADR 0054). A Music chapter is a cassette, the band on its label and the
+hours under it, the reels turning (ADR 0055). Picks holds your four latest posts: two with
+their covers, two as blocks of teal and violet carrying the post's caption in the serif
+(ADR 0056).
 Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
-Open `/?profile=ines` to see it. Pages published on an older Paint wall are brought up to the
-template when the server starts.
+Open `/?profile=dani` to see it filled (Dani's three chapters with real photos, seeded once
+with the demo) or `/?profile=ines` for the optional sections. Pages published on an older
+Paint wall are brought up to the template when the server starts.
 
 ## Easy profile editor
 

@@ -1,4 +1,4 @@
-/* smudge:v7 */
+/* smudge:v8 */
 /* Smudge / Paint wall parts. One file so a mixed profile stays within the package file limit;
    every part links it, and everything is scoped to .sm. */
 /* Smudge / Paint wall, shared by every part. Scoped to .sm so a part mixed into another
@@ -8,20 +8,22 @@
   --ink: #f3efe6;
   --muted: #9a948a;
   --card: #1a1816;
-  --p1: #ff4f9a;
-  --p2: #d8ff3d;
-  --p3: #2b3cff;
-  --p4: #19c37d;
+  /* The Night palette (ADR 0052): teal, the yellow accent, clay, violet. */
+  --p1: #2ba39a;
+  --p2: #f2c53d;
+  --p3: #e8613c;
+  --p4: #7a5af8;
   --big: "Bricolage Grotesque", "Arial Black", Impact, sans-serif;
   --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
   --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Menlo, Consolas, monospace;
 }
+/* Halloween touches only the mark on the hero (ADR 0052): the page keeps its own paints. */
+.sm {
+  --mark: var(--p1);
+}
 html[data-season="halloween"] .sm {
-  --p1: #ff7a1a;
-  --p2: #c6ff3d;
-  --p3: #8a5cff;
-  --p4: #ff7a1a;
+  --mark: #ff7a1a;
 }
 html[data-theme="dark"] .sm {
   --wall: #0e0d0b;
@@ -82,8 +84,9 @@ html[data-theme="dark"] .sm {
   outline: 3px solid var(--p3);
   outline-offset: 3px;
 }
-/* Smudge / Paint wall: the poster hero and the chapters (ADR 0048). One type scale (the giant
-   name, 26px lines, 11px mono labels), spacing in eights, one accent for what matters. */
+/* Smudge / Paint wall: the poster hero and the chapters (ADR 0048), drawn to the profile mock
+   (ADR 0052). One type scale (the giant name, 56px chapter titles, 26px lines, 16px notes,
+   11px mono labels), spacing in eights, the yellow for what matters and the teal for one mark. */
 .sm .hero {
   position: relative;
   z-index: 5;
@@ -97,7 +100,7 @@ html[data-theme="dark"] .sm {
 .sm .giant {
   margin: 16px -6px 0;
   font: 800 164px/0.82 var(--big);
-  letter-spacing: -0.05em;
+  letter-spacing: -0.04em;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
@@ -114,7 +117,7 @@ html[data-theme="dark"] .sm {
   font: italic 400 clamp(56px, 24vw, 112px) / 0.9 var(--serif);
   letter-spacing: -0.02em;
   color: var(--p2);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .sm .giant2 em {
   font-style: normal;
@@ -125,6 +128,8 @@ html[data-theme="dark"] .sm {
   font-size: 32px;
   line-height: 1.05;
   max-width: 18ch;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .sm .giant2.long + .poster {
   margin-top: 24px;
@@ -148,19 +153,39 @@ html[data-theme="dark"] .sm {
   font: 800 96px var(--big);
   transform: rotate(-3deg);
 }
+.sm .avatar.blank {
+  background: var(--p2);
+  color: var(--wall);
+}
+.sm .avatar.blank b {
+  font: italic 400 140px/1 var(--serif);
+}
+.sm .avatar.blank .hint {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: none;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+html[data-owner="on"] .sm .avatar.blank .hint {
+  display: block;
+}
 .sm .avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: 55% 30%;
 }
+/* The one mark on the hero: the palette's first colour, teal by default. */
 .sm .mark {
   position: absolute;
   left: 154px;
   bottom: -22px;
   width: 118px;
   height: 88px;
-  background: var(--p4);
+  background: var(--mark);
   border-radius: 45% 55% 40% 60% / 58% 42% 58% 42%;
   transform: rotate(16deg);
 }
@@ -264,14 +289,43 @@ html[data-editing="on"] .sm .hero-now {
   min-height: 48px;
 }
 
-/* Chapters */
+/* The manifesto (ADR 0054): the owner's words in the big face, the starred words in the serif
+   and the palette, first the accent, then the first paint, in turn. */
+.sm .manifesto {
+  position: relative;
+  z-index: 5;
+  margin: 48px 16px 0;
+  font: 800 40px/0.95 var(--big);
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.sm .manifesto em {
+  font: italic 400 1.08em/1 var(--serif);
+  text-transform: none;
+  color: var(--p2);
+}
+.sm .manifesto em:nth-of-type(even) {
+  color: var(--p1);
+}
+.sm .manifesto.ghost {
+  display: none;
+  font: italic 400 26px/1.1 var(--serif);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+html[data-owner="on"] .sm .manifesto.ghost {
+  display: block;
+}
+/* Chapters, 48px apart (ADR 0053): the rule and the number separate them, not empty ground. */
 .sm .chapters {
   position: relative;
   z-index: 5;
   display: flex;
   flex-direction: column;
-  gap: 64px;
-  padding: 64px 16px 0;
+  gap: 48px;
+  padding: 56px 16px 0;
 }
 html[data-editing="on"] .sm .chapters[hidden] {
   display: block;
@@ -291,6 +345,17 @@ html[data-editing="on"] .sm .chapters[hidden] {
   font-style: normal;
   color: var(--p2);
 }
+/* A Run's card: the route, the time, the note as its caption, the stats under a rule. */
+.sm .card {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--card);
+}
 .sm .route {
   display: block;
   width: 100%;
@@ -303,6 +368,12 @@ html[data-editing="on"] .sm .chapters[hidden] {
   stroke-width: 2.5;
   stroke-linejoin: round;
   stroke-linecap: round;
+}
+.sm .route .start {
+  fill: var(--ink);
+}
+.sm .route .end {
+  fill: var(--p2);
 }
 .sm .big {
   display: flex;
@@ -317,6 +388,28 @@ html[data-editing="on"] .sm .chapters[hidden] {
 }
 .sm .big em {
   font: italic 400 56px/1 var(--serif);
+}
+.sm .card .big {
+  flex-direction: column;
+  gap: 4px;
+}
+.sm .card .big strong {
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.sm .card .big em {
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sm .card .caption {
+  margin: -8px 0 0;
+  font: 500 11px/1.5 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 .sm .note {
   margin: 0;
@@ -347,17 +440,84 @@ html[data-editing="on"] .sm .chapters[hidden] {
   text-transform: uppercase;
   color: var(--muted);
 }
-.sm .lines {
+.sm .lines,
+.sm .pills {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-/* A chapter's photo (ADR 0050): a print laid on the page, tilted the other way each time. */
+/* Empty chapters (ADR 0051): drawn only for the owner, as places to tap. */
+.sm .chapter.ghost {
+  display: none;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+}
+html[data-owner="on"] .sm .chapter.ghost {
+  display: flex;
+}
+.sm .chapters:has(.ghost) {
+  gap: 32px;
+}
+.sm .chapter.ghost .note {
+  margin: 0;
+  font: italic 400 26px/1.1 var(--serif);
+  color: var(--muted);
+}
+/* A chapter's pictures (ADR 0050, 0053): the photo and up to two snaps, prints laid on the
+   page, each tilted its own way, a place and a year under them. On a phone the box is not
+   drawn, so the prints sit among the chapter's other parts. */
+.sm .pics {
+  display: contents;
+}
+.sm .photo figcaption {
+  margin-top: 8px;
+  font: 500 10px/1.3 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .sm .chapter .photo {
   margin: 8px 0 0;
   transform: rotate(-1.5deg);
 }
-.sm .chapter:nth-child(even) .photo {
+.sm .chapter .snap {
+  position: relative;
+  z-index: 2;
+}
+.sm .chapter .snap img {
+  aspect-ratio: 3 / 4;
+}
+.sm .chapter .snap-1 {
+  align-self: flex-start;
+  width: 130px;
+  margin: -32px 0 0 8px;
+  transform: rotate(-3deg);
+}
+.sm .chapter .snap-2 {
+  align-self: flex-end;
+  width: 150px;
+  margin: -48px 8px 0 0;
+  transform: rotate(2deg);
+}
+.sm .chapter .snap-2 img {
+  aspect-ratio: 4 / 3;
+}
+.sm .chapter-work .snap-1 {
+  align-self: flex-end;
+  margin: -56px 0 0;
+  transform: rotate(4deg);
+}
+.sm .chapter-work .snap-2 {
+  align-self: flex-start;
+  margin: -40px 0 0 8px;
+  transform: rotate(-2deg);
+}
+.sm .chapter-music .snap-1,
+.sm .chapter-custom .snap-1 {
+  margin-top: -24px;
+}
+.sm .chapter:nth-child(even) .photo:not(.snap) {
   transform: rotate(1.5deg);
 }
 .sm .chapter .photo img {
@@ -366,6 +526,44 @@ html[data-editing="on"] .sm .chapters[hidden] {
   aspect-ratio: 4 / 3;
   object-fit: cover;
   border-radius: 4px;
+}
+/* On a Run the print lies over the card's corner; on Music it is the closing picture. */
+.sm .chapter-run .photo:not(.snap) {
+  position: relative;
+  z-index: 3;
+  align-self: flex-end;
+  width: 220px;
+  margin: -24px -8px 0 0;
+  transform: rotate(3deg);
+}
+.sm .chapter-run .photo:not(.snap) img {
+  aspect-ratio: 22 / 15;
+}
+.sm .chapter-music .photo:not(.snap),
+.sm .chapter-custom .photo:not(.snap) {
+  position: relative;
+  transform: none;
+}
+.sm .chapter-music .photo:not(.snap) img,
+.sm .chapter-custom .photo:not(.snap) img {
+  aspect-ratio: 358 / 200;
+  border-radius: 12px;
+}
+.sm .chapter-music .photo:not(.snap)::after {
+  content: "";
+  position: absolute;
+  top: -20px;
+  right: -14px;
+  width: 100px;
+  height: 76px;
+  background: var(--p1);
+  border-radius: 45% 55% 40% 60% / 58% 42% 58% 42%;
+  transform: rotate(18deg);
+}
+.sm .chapter-work .photo:not(.snap) {
+  width: 280px;
+  margin: 8px 0 8px;
+  transform: rotate(-2deg);
 }
 .sm .lines li {
   display: flex;
@@ -385,6 +583,314 @@ html[data-editing="on"] .sm .chapters[hidden] {
 .sm .lines b {
   font: italic 400 22px/1.1 var(--serif);
 }
+/* The cassette (ADR 0055): a shell in the card colour, the label in the accent with the band
+   and the hours, two reels turning behind the window. */
+.sm .tape {
+  position: relative;
+  width: 300px;
+  max-width: 100%;
+  aspect-ratio: 16 / 10;
+  margin: 8px 0 8px 8px;
+  border-radius: 14px;
+  background: #23201c;
+  box-shadow:
+    inset 0 0 0 1px #3a352f,
+    0 24px 48px rgba(0, 0, 0, 0.5);
+  transform: rotate(-2deg);
+}
+.sm .tape .label {
+  position: absolute;
+  inset: 7% 7% auto;
+  height: 40%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 6px;
+  background: var(--p2);
+  color: var(--wall);
+}
+.sm .tape .label b {
+  font: 800 15px/1 var(--big);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sm .tape .label i {
+  font: italic 400 14px/1 var(--serif);
+}
+.sm .tape .label small {
+  display: flex;
+  justify-content: space-between;
+  font: 500 8px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.sm .tape .win {
+  position: absolute;
+  inset: 52% 22% auto;
+  height: 24%;
+  border-radius: 999px;
+  background: var(--wall);
+  box-shadow: inset 0 0 0 1px #3a352f;
+}
+.sm .tape .reel {
+  position: absolute;
+  top: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--wall) 30%,
+    #3a352f 31%,
+    #3a352f 36%,
+    var(--wall) 37%,
+    var(--wall) 56%,
+    #2b2824 57%
+  );
+}
+.sm .tape .reel.l {
+  left: 8%;
+}
+.sm .tape .reel.r {
+  right: 8%;
+}
+.sm .tape .reel::after {
+  content: "";
+  position: absolute;
+  inset: 42%;
+  border-radius: 50%;
+  background: var(--wall);
+  box-shadow: inset 0 0 0 2px #6b645a;
+}
+.sm .tape .base {
+  position: absolute;
+  inset: auto 18% 4%;
+  height: 12%;
+  border: 1px solid #3a352f;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+}
+.sm .tape .screw {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3a352f;
+}
+.sm .tape .screw:nth-child(1) {
+  left: 3%;
+  top: 5%;
+}
+.sm .tape .screw:nth-child(2) {
+  right: 3%;
+  top: 5%;
+}
+.sm .tape .screw:nth-child(3) {
+  left: 3%;
+  bottom: 5%;
+}
+.sm .tape .screw:nth-child(4) {
+  right: 3%;
+  bottom: 5%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sm .tape .reel {
+    animation: sm-reel 6s linear infinite;
+  }
+}
+@keyframes sm-reel {
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+/* Work's lines as tags. */
+.sm .pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sm .pills li {
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  border-radius: 999px;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sm .pills b {
+  font-weight: inherit;
+}
+
+/* From the roll (ADR 0053): a band of prints laid freely, two across on a phone, each turned a
+   little and pushed up or down so no two sit level. */
+.sm .roll {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 56px 16px 0;
+}
+.sm .roll[hidden] {
+  display: none;
+}
+.sm .roll.ghost {
+  display: none;
+}
+html[data-owner="on"] .sm .roll.ghost {
+  display: flex;
+}
+.sm .roll .ghost-note {
+  margin: 0;
+  font: italic 400 26px/1.1 var(--serif);
+  color: var(--muted);
+}
+.sm .roll-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 36px 20px;
+  padding-bottom: 24px;
+}
+.sm .roll .photo {
+  margin: 0;
+}
+.sm .roll .photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.sm .roll .photo:nth-child(3n + 2) img {
+  aspect-ratio: 3 / 4;
+}
+.sm .roll .photo:nth-child(3n) img {
+  aspect-ratio: 1;
+}
+.sm .roll .photo:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+.sm .roll .photo:nth-child(even) {
+  margin-top: 40px;
+  transform: rotate(3deg);
+}
+.sm .roll .photo:nth-child(4n + 3) {
+  margin: -16px 0 0 24px;
+  width: 80%;
+}
+.sm .roll .photo:nth-child(4n) {
+  width: 85%;
+  justify-self: end;
+}
+
+/* Picks (ADR 0052, 0056): the four latest posts as blocks, covers then colour. */
+.sm .picks {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 64px 16px 0;
+}
+.sm .picks[hidden] {
+  display: none;
+}
+.sm .picks-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.sm .pick {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: 200px;
+  padding: 16px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background: var(--p2);
+  color: var(--wall);
+  text-align: left;
+  cursor: pointer;
+}
+.sm .pick:nth-child(2) {
+  background: var(--ink);
+}
+.sm .pick img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sm .pick-cap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sm .pick-cap strong {
+  font: 500 16px/1.3 var(--ui);
+}
+.sm .pick-cap small {
+  font: 400 12px var(--ui);
+}
+.sm .pick.has-cover {
+  color: #fff;
+}
+.sm .pick.has-cover .pick-cap {
+  text-shadow: 0 1px 8px rgb(0 0 0 / 60%);
+}
+/* The third and fourth blocks (ADR 0056): colour, the title at the top, the caption set in the
+   serif at the foot. Teal with the ink's dark, then violet with white. */
+.sm .pick.tint {
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 12px;
+  background: var(--p1);
+  color: var(--wall);
+}
+.sm .pick.tint:nth-child(4) {
+  background: var(--p4);
+  color: #fff;
+}
+.sm .pick.tint .pick-cap small {
+  opacity: 0.8;
+}
+.sm .pick-say {
+  display: -webkit-box;
+  overflow: hidden;
+  font: italic 400 20px/1.1 var(--serif);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+/* The foot: the whole name once more, and where this is. */
+.sm .wall-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 64px 16px 0;
+  padding-bottom: 8px;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sm .wall-foot strong {
+  font: 800 40px/1 var(--big);
+  letter-spacing: -0.03em;
+  text-transform: none;
+  color: var(--ink);
+}
+
 /* Wide screens (ADR 0050): the hero becomes two columns, the words left and the photo right,
    and each chapter puts its picture beside its numbers instead of under them. */
 @media (min-width: 720px) {
@@ -438,9 +944,14 @@ html[data-editing="on"] .sm .chapters[hidden] {
   .sm .doing {
     flex: 1;
   }
+  .sm .manifesto {
+    margin: 88px 40px 0;
+    max-width: 1240px;
+    font-size: clamp(56px, 6.4vw, 92px);
+  }
   .sm .chapters {
-    padding: 96px 40px 0;
-    gap: 96px;
+    padding: 88px 40px 0;
+    gap: 88px;
   }
   .sm .chapter {
     display: grid;
@@ -454,18 +965,150 @@ html[data-editing="on"] .sm .chapters[hidden] {
   .sm .chapter > .idx {
     grid-column: 1 / -1;
   }
-  .sm .chapter > .photo,
-  .sm .chapter > .route {
+  /* The pictures take the other column, the photo big and the snaps laid over its edges. On
+     Work the picture comes first and the words go right (ADR 0053). */
+  .sm .chapter > .pics {
+    position: relative;
+    display: flex;
+    flex-direction: column;
     grid-column: 2;
     grid-row: 2 / span 8;
     align-self: start;
+  }
+  .sm .chapter .pics > .photo:not(.snap) {
+    width: auto;
     margin: 0;
+  }
+  .sm .chapter .pics > .snap {
+    position: absolute;
+    margin: 0;
+  }
+  .sm .chapter .snap-1 {
+    right: -24px;
+    top: -36px;
+    width: 160px;
+  }
+  .sm .chapter .snap-2 {
+    left: -32px;
+    bottom: -40px;
+    width: 190px;
+  }
+  .sm .chapter-run > .pics {
+    margin: 56px 0 0 -120px;
+  }
+  .sm .chapter-run .pics > .photo:not(.snap) {
+    width: 78%;
+    transform: rotate(3deg);
+  }
+  .sm .chapter-run .snap-1 {
+    top: auto;
+    bottom: -96px;
+    right: 0;
+    width: 180px;
+  }
+  .sm .chapter-run .snap-2 {
+    left: auto;
+    right: -8px;
+    bottom: auto;
+    top: 24px;
+    width: 170px;
+  }
+  .sm .chapter-work > .pics {
+    grid-column: 1;
+  }
+  .sm .chapter-work > :not(.idx):not(.pics) {
+    grid-column: 2;
+  }
+  .sm .chapter-work .pics > .photo {
+    transform: none;
+  }
+  .sm .chapter-work .pics > .photo img {
+    border-radius: 10px;
+  }
+  .sm .chapter-work {
+    padding-bottom: 72px;
+  }
+  .sm .chapter-work .snap-1 {
+    right: -40px;
+    top: auto;
+    bottom: -88px;
+    width: 190px;
+  }
+  .sm .chapter-work .snap-2 {
+    left: 24px;
+    right: auto;
+    bottom: -112px;
+    width: 130px;
+  }
+  .sm .chapter-music .snap-1,
+  .sm .chapter-custom .snap-1 {
+    left: -40px;
+    right: auto;
+    top: auto;
+    bottom: -48px;
+  }
+  /* On Music the cassette takes the top of the picture column, the photo under it. */
+  .sm .chapter-music > .tape {
+    grid-column: 2;
+    grid-row: 2 / span 3;
+    width: 420px;
+    margin: 0 0 40px 24px;
+    justify-self: start;
+  }
+  .sm .chapter-music > .tape .label b {
+    font-size: 22px;
+  }
+  .sm .chapter-music > .tape .label i {
+    font-size: 20px;
+  }
+  .sm .chapter-music > .tape .label small {
+    font-size: 10px;
+  }
+  .sm .chapter-music > .tape .label {
+    padding: 14px 18px;
+  }
+  .sm .chapter-music > .pics {
+    grid-row: 5 / span 8;
+  }
+  .sm .roll {
+    padding: 64px 40px 0;
+  }
+  .sm .roll-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px 32px;
+  }
+  .sm .roll .photo:nth-child(4n + 3) {
+    width: 90%;
+  }
+  .sm .roll .photo:nth-child(4n + 1) {
+    margin-top: 24px;
   }
   .sm .chapter h2 {
     font-size: 80px;
   }
   .sm .route {
     max-width: none;
+  }
+  .sm .picks {
+    padding: 88px 40px 0;
+  }
+  .sm .picks-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .sm .pick {
+    height: 300px;
+    padding: 20px;
+  }
+  .sm .pick-cap strong {
+    font-size: 18px;
+  }
+  .sm .pick-say {
+    font-size: 28px;
+    line-height: 1.05;
+  }
+  .sm .wall-foot {
+    margin: 96px 40px 0;
   }
 }
 /* Smudge / Latest. */

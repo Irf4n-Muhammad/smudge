@@ -73,7 +73,7 @@ test("the Paint wall profile shows real posts, follows the season and opens post
   await expect(posts).toHaveCSS("background-color", "rgb(14, 13, 11)");
   await expect(page.getByRole("button", { name: "Follow" })).toHaveCSS(
     "background-color",
-    "rgb(216, 255, 61)",
+    "rgb(242, 197, 61)",
   );
   await page
     .getByRole("navigation", { name: "Pages" })

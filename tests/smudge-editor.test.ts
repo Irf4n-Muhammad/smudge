@@ -45,6 +45,13 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
   const look = pkg.manifest.schemaVersion === 2 ? pkg.manifest.look : undefined;
   assert.equal(look?.accent, "#d8ff3d");
   assert.equal(look?.ground, "#0e0d0b");
+  // The whole palette goes along as tints (ADR 0052); the default palette is Night.
+  assert.deepEqual(look?.tints, ["#2b3cff", "#d8ff3d", "#ff4f9a", "#00c2ff"]);
+  const night = applySmudgeSettings(smudgeProfilePackage, defaultSmudgeSettings);
+  assert.equal(
+    night.manifest.schemaVersion === 2 ? night.manifest.look?.accent : undefined,
+    "#f2c53d",
+  );
   assert.throws(() =>
     profilePackageSchema.parse({
       ...pkg,
@@ -81,6 +88,37 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
     chapters: [],
   });
   assert.ok(!without.manifest.assets.includes(photo));
+  // Snaps around a chapter and the roll are assets too, with their captions kept (ADR 0053).
+  const snap = "10000000-0000-4000-8000-000000000002",
+    rolled = "10000000-0000-4000-8000-000000000003";
+  const withRoll = applySmudgeSettings(pkg, {
+    ...readSmudgeSettings(pkg),
+    chapters: [
+      { ...defaultChapter, kind: "run", snaps: [{ photo: snap, caption: "Sentul, 05:40" }] },
+    ],
+    roll: [{ photo: rolled, caption: "Blok M, 2025" }],
+  });
+  assert.ok(withRoll.manifest.assets.includes(snap) && withRoll.manifest.assets.includes(rolled));
+  assert.equal(readSmudgeSettings(withRoll).roll[0]?.caption, "Blok M, 2025");
+  // The owner's words (ADR 0054) are kept and bounded.
+  const words = applySmudgeSettings(pkg, {
+    ...readSmudgeSettings(pkg),
+    manifesto: "Skate since *fourteen.* Film since *college.*",
+  });
+  assert.match(readSmudgeSettings(words).manifesto, /^Skate since/);
+  assert.throws(() =>
+    applySmudgeSettings(pkg, { ...readSmudgeSettings(pkg), manifesto: "x".repeat(141) }),
+  );
+  assert.equal(readSmudgeSettings(withRoll).chapters[0]?.snaps[0]?.caption, "Sentul, 05:40");
+  assert.throws(() =>
+    applySmudgeSettings(pkg, {
+      ...readSmudgeSettings(pkg),
+      roll: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
+        photo: `10000000-0000-4000-8000-00000000000${n}`,
+        caption: "",
+      })),
+    }),
+  );
   assert.throws(() =>
     applySmudgeSettings(pkg, {
       ...readSmudgeSettings(pkg),
@@ -113,7 +151,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
   ).replace('<div class="sm-sections" id="sm-sections"></div>\n  ', "");
   delete old.files["smudge/sections.js"];
   old.files["smudge/profile.html"] = "<p>old hero</p>";
-  old.files["smudge/post.html"] = "<!-- smudge:v7 --><p>my own grid</p>";
+  old.files["smudge/post.html"] = "<!-- smudge:v12 --><p>my own grid</p>";
   const next = applySmudgeSettings(
     profilePackageSchema.parse(old),
     defaultSmudgeSettings,
@@ -123,7 +161,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
     next.files["smudge/profile.html"],
     smudgeProfilePackage.files["smudge/profile.html"],
   );
-  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v7 --><p>my own grid</p>");
+  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v12 --><p>my own grid</p>");
   assert.ok(next.files["smudge/sections.js"]);
   const shell = next.files["index.html"]!;
   assert.match(shell, /src="smudge\/settings\.js"/);

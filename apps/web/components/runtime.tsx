@@ -35,6 +35,7 @@ export function Runtime({
   onReady,
   guest = false,
   clip = false,
+  owner = false,
 }: {
   target: string;
   preview?: boolean;
@@ -55,6 +56,8 @@ export function Runtime({
   onReady?: () => void;
   /** Opened from a share link without an account: read-only, through the public endpoints. */
   guest?: boolean;
+  /** The viewer owns this page: the page may show its own hints for filling it in (ADR 0051). */
+  owner?: boolean;
   /**
    * A feed window: the page may not scroll inside the frame, so a swipe or wheel over the post
    * always scrolls the feed. The whole page opens full screen instead.
@@ -73,6 +76,8 @@ export function Runtime({
   editingNow.current = editing;
   const motion = useRef(reducedMotion);
   motion.current = reducedMotion;
+  const ownerNow = useRef(owner);
+  ownerNow.current = owner;
   const readyNow = useRef(onReady);
   readyNow.current = onReady;
   const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
@@ -129,6 +134,7 @@ export function Runtime({
           theme: document.documentElement.dataset.theme === "dark" ? "dark" : "light",
           season: document.documentElement.dataset.season === "halloween" ? "halloween" : "paint",
           reducedMotion: motion.current,
+          owner: ownerNow.current,
         },
         "*",
       );

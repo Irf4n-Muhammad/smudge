@@ -23,7 +23,7 @@ import {
   profileRequestSchema,
   profileIdentitySchema,
 } from "../../packages/contracts/src/profile.js";
-import { seedProfiles, profileTemplates } from "./seed-profiles.js";
+import { seedProfiles, seedDaniPage, profileTemplates } from "./seed-profiles.js";
 import { IdentityService } from "../../packages/core/src/identity.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
@@ -165,6 +165,8 @@ if (config.demoContent) {
   seedProfiles(profiles);
   seedSmudge(service);
   seedPhotos(service);
+  // After the photo seed, which adds Dani and the photos on his page.
+  seedDaniPage(profiles);
   // After the photo seed, which adds Arif.
   seedThemes(service, studio);
   seedSides(service, sidesService);
@@ -601,7 +603,7 @@ api.get("/api/profile-spec", (_req, res) =>
         "Use html[data-theme=dark]. Respect html[data-motion=reduce] and prefers-reduced-motion. No autoplay sound.",
     },
     limits:
-      "600–4000px height, up to 20 local html/css/js files, 100000 code units each; index.html required. No remote network/eval/dependencies. Asset IDs must be owned/shared, use asset:UUID. Runtime sandbox and CSP match posts. Host owns back/follow/report and post navigation.",
+      "600–8000px height, up to 20 local html/css/js files, 100000 code units each; index.html required. No remote network/eval/dependencies. Asset IDs must be owned/shared, use asset:UUID. Runtime sandbox and CSP match posts. Host owns back/follow/report and post navigation.",
     templates: Object.keys(profileTemplates),
   }),
 );

@@ -71,6 +71,8 @@ export const pageLookSchema = z
     muted: colour,
     card: colour,
     accent: colour,
+    /** Up to four more colours for blocks without a picture (ADR 0052); the accent alone otherwise. */
+    tints: z.array(colour).max(4).optional(),
     display: z.enum(["serif", "hand", "sans"]),
     label: z.enum(["mono", "sans"]),
   })
@@ -81,8 +83,8 @@ const common = {
   runtimeVersion: z.literal("web-v1"),
   name: z.string().trim().min(1).max(100),
   entrypoint: z.literal("index.html"),
-  height: z.number().int().min(600).max(4000),
-  assets: z.array(z.string().uuid()).max(12).default([]),
+  height: z.number().int().min(600).max(8000),
+  assets: z.array(z.string().uuid()).max(20).default([]),
 };
 const manifest = z.discriminatedUnion("schemaVersion", [
   z
@@ -92,7 +94,7 @@ const manifest = z.discriminatedUnion("schemaVersion", [
     .object({
       ...common,
       schemaVersion: z.literal(2),
-      mobileHeight: z.number().int().min(600).max(4000).optional(),
+      mobileHeight: z.number().int().min(600).max(8000).optional(),
       headerOverlay: z.boolean().optional(),
       autoHeight: z.boolean().optional(),
       look: pageLookSchema.optional(),
@@ -260,6 +262,6 @@ export const profileSizeSchema = z
   .object({
     type: z.literal("forma:size"),
     nonce: z.string(),
-    height: z.number().int().min(600).max(4000),
+    height: z.number().int().min(600).max(8000),
   })
   .strict();

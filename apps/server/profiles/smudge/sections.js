@@ -1,9 +1,9 @@
-// smudge:v7
+// smudge:v8
 // Paint wall page sections. Reads the easy-editor settings (smudge/settings.js), applies colours and
 // section order, draws the sections the owner added, and turns taps into edits while editing.
 (() => {
   const defaults = {
-    palette: "paint",
+    palette: "night",
     sections: [],
     quote: { text: "" },
     countdown: { label: "", date: "" },
@@ -13,6 +13,7 @@
   };
   const s = Object.assign({}, defaults, window.smudgeSettings || {});
   const palettes = {
+    night: ["#2ba39a", "#f2c53d", "#e8613c", "#7a5af8"],
     paint: ["#ff4f9a", "#d8ff3d", "#2b3cff", "#19c37d"],
     electric: ["#2b3cff", "#d8ff3d", "#ff4f9a", "#00c2ff"],
     sunset: ["#ff6a3d", "#ffc93d", "#ff3d8b", "#8a5cff"],
@@ -20,15 +21,13 @@
     mono: ["#101010", "#bdbdbd", "#5b5b5b", "#e8e8e8"],
   };
   const order = Array.isArray(s.sections) ? s.sections : defaults.sections;
-  const paints = palettes[s.palette] || palettes.paint;
+  const paints = palettes[s.palette] || palettes.night;
   let css = order.map((k, i) => `[data-sm-section="${k}"]{order:${i + 1}}`).join("");
   for (const k of ["latest", "selected"])
     if (!order.includes(k)) css += `[data-sm-section="${k}"]{display:none!important}`;
-  // Halloween keeps its own paints; the owner's palette is for the rest of the year.
-  if (s.palette !== "paint")
-    css += `html:not([data-season="halloween"]) .sm{${paints
-      .map((c, i) => `--p${i + 1}:${c}`)
-      .join(";")}}`;
+  // The owner's palette; Halloween only recolours the mark on the hero (parts.css).
+  if (s.palette !== "night")
+    css += `.sm{${paints.map((c, i) => `--p${i + 1}:${c}`).join(";")}}html[data-season="halloween"] .sm{--mark:#ff7a1a}`;
   const style = document.createElement("style");
   style.textContent = css;
   document.head.append(style);
