@@ -45,7 +45,7 @@ const photos = [
   "stage-lights",
   "friends-hill",
   "crowd-party",
-  // Alex's chapters (ADR 0052).
+  // Dani's chapters (ADR 0052); also stored by seedDaniPage for data dirs seeded earlier.
   "run-shoes",
   "laptop-code",
   "dj-hands",

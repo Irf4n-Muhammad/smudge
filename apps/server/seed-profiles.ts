@@ -111,6 +111,21 @@ export function seedDaniPage(profiles: ProfileService) {
   if (store.get("seed", marker) || !store.get("user", "dani")) return;
   if (profiles.state("dani").version === 0) {
     const actor = { userId: "dani" };
+    // The photos on the page were added after the photo seed first ran, so a data dir from
+    // before gets them here; the photo seed skips the ones that exist.
+    store.transaction(() => {
+      for (const photo of ["run-shoes", "laptop-code", "dj-hands"] as const) {
+        const assetId = photoId(photo);
+        if (store.get("asset", assetId)) continue;
+        store.put("asset", assetId, {
+          id: assetId,
+          ownerId: "shared",
+          name: `${photo}.jpg`,
+          mime: "image/jpeg",
+          base64: readFileSync(resolve(`assets/demo/photos/${photo}.jpg`)).toString("base64"),
+        });
+      }
+    });
     const pkg = applySmudgeSettings(profileTemplates.smudge, {
       ...defaultSmudgeSettings,
       place: "Jakarta",
