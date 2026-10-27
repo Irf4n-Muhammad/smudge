@@ -43,5 +43,10 @@ squares. The owner's verdict on the result was that the pages were ugly, and the
 
 - `smudgePalettes.night`, `smudgeLook` with `tints`, `pageLookSchema.tints`; the version
   marker is `smudge:v8`, so published Paint walls are refreshed at start.
+- The demo seeds a filled page for Dani Saputra (`seedDaniPage`, once, like the other seeded
+  profiles) with three photos of their own (`run-shoes`, `laptop-code`, `dj-hands` under
+  `assets/demo/photos`, credited), so the mock can be seen with real pictures at
+  `/?profile=dani`. Alex stays without a page: the "you" account walks the setup flow.
+- The surname line under the name stays one line and shrinks to fit, like the name itself.
 - `PageHead` takes `posts`; `PostsCollage` marks big tiles `collage-big`; Inès's seed drops
   the Latest and Gallery sections, since Picks and the Posts page carry her posts.

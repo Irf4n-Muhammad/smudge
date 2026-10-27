@@ -30,7 +30,8 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
 - `apps/web/components/profile-page.tsx`: public profile controls and package editor, desktop/mobile
   visitor preview, import, publish and restoration. Opened posts retain their own runtime tickets.
 - `apps/server/profiles/*.html`, `seed-profiles.ts`: ordinary room/comic profile packages, seeded
-  once for Maya and Leo. Existing edited/published profiles are never replaced on startup.
+  once for Maya and Leo, and a filled Paint wall for Dani (ADR 0052). Existing edited/published
+  profiles are never replaced on startup.
 
 - `breakout-feed.tsx`, `app/breakout.css`: host-authored vertical overlap experiment. Each post
   reserves normal flow height while a clipped absolute extension envelope overlaps adjacent posts.

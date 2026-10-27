@@ -67,6 +67,17 @@
         size -= 4;
         h.style.fontSize = size + "px";
       }
+      // The short second line (a surname, a word) stays one line too, shrinking before it
+      // would break over the photo.
+      const line = $("giant-line");
+      line.style.fontSize = "";
+      if (!line.classList.contains("long")) {
+        let px = parseFloat(getComputedStyle(line).fontSize);
+        while (line.scrollWidth > line.clientWidth && px > 40) {
+          px -= 4;
+          line.style.fontSize = px + "px";
+        }
+      }
     }
     window.addEventListener("resize", fit);
     const ago = (iso) => {

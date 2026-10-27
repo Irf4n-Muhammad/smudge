@@ -45,9 +45,13 @@ const photos = [
   "stage-lights",
   "friends-hill",
   "crowd-party",
+  // Alex's chapters (ADR 0052).
+  "run-shoes",
+  "laptop-code",
+  "dj-hands",
 ] as const;
 type Photo = (typeof photos)[number];
-const photoId = (name: Photo) => id(20 + photos.indexOf(name));
+export const photoId = (name: Photo) => id(20 + photos.indexOf(name));
 const faceId = (name: string) => id(Object.values(faces).indexOf(name));
 
 const people: User[] = [

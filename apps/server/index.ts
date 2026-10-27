@@ -23,7 +23,7 @@ import {
   profileRequestSchema,
   profileIdentitySchema,
 } from "../../packages/contracts/src/profile.js";
-import { seedProfiles, profileTemplates } from "./seed-profiles.js";
+import { seedProfiles, seedDaniPage, profileTemplates } from "./seed-profiles.js";
 import { IdentityService } from "../../packages/core/src/identity.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
@@ -165,6 +165,8 @@ if (config.demoContent) {
   seedProfiles(profiles);
   seedSmudge(service);
   seedPhotos(service);
+  // After the photo seed, which adds Dani and the photos on his page.
+  seedDaniPage(profiles);
   // After the photo seed, which adds Arif.
   seedThemes(service, studio);
   seedSides(service, sidesService);

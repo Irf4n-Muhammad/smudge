@@ -9,6 +9,7 @@ import {
   applySmudgeSettings,
   defaultSmudgeSettings,
 } from "../../packages/core/src/smudge-design.js";
+import { photoId } from "./seed-photos.js";
 
 const make = (name: string, file: string, height: number, assets: string[]): ProfilePackage => ({
   manifest: {
@@ -98,6 +99,67 @@ export function seedProfiles(profiles: ProfileService) {
     }
     store.transaction(() => store.put("seed", marker, { complete: true }));
   }
+}
+
+/**
+ * Dani's page is the profile mock made real (ADR 0052): a Run as a card, Work with tags, Music
+ * in hours, each with one of the demo photos. Seeded after the photos, which it needs.
+ */
+export function seedDaniPage(profiles: ProfileService) {
+  const store = profiles.social.store;
+  const marker = "profile-smudge-v2:dani";
+  if (store.get("seed", marker) || !store.get("user", "dani")) return;
+  if (profiles.state("dani").version === 0) {
+    const actor = { userId: "dani" };
+    const pkg = applySmudgeSettings(profileTemplates.smudge, {
+      ...defaultSmudgeSettings,
+      place: "Jakarta",
+      repeat: { song: "Nothing's Gonna Hurt You Baby", artist: "Cigarettes After Sex" },
+      now: { text: "Cutting the skate film, night three", place: "Kemang", progress: 60 },
+      chapters: [
+        {
+          kind: "run",
+          label: "Strava · 2025",
+          title: "Slow *runs*, far.",
+          big: "1:52:10",
+          unit: "",
+          note: "Half marathon · Jakarta Marathon · Oct 2025",
+          stats: [
+            { value: "21.1", label: "km" },
+            { value: "5:19", label: "per km" },
+            { value: "148", label: "bpm" },
+          ],
+          lines: [],
+          photo: photoId("run-shoes"),
+        },
+        {
+          kind: "work",
+          label: "2021 — now",
+          title: "Film since *college*.",
+          big: "",
+          unit: "",
+          note: "Four years shooting for brands in Bandung. Now cutting a skate film from a room in Kemang.",
+          stats: [],
+          lines: ["Bandung · 4 yrs", "Skate film · 2026", "Super 8 · always"],
+          photo: photoId("laptop-code"),
+        },
+        {
+          kind: "music",
+          label: "Spotify · 2026",
+          title: "",
+          big: "412",
+          unit: "hours",
+          note: "Cigarettes After Sex, this year alone. Top 0.1% of listeners.",
+          stats: [],
+          lines: ["Apocalypse", "Nothing's Gonna Hurt You Baby", "Cry"],
+          photo: photoId("dj-hands"),
+        },
+      ],
+    });
+    const draft = profiles.create(actor, pkg);
+    profiles.publish(actor, draft.id, 1, 0);
+  }
+  store.transaction(() => store.put("seed", marker, { complete: true }));
 }
 
 /** Inès shows what the easy editor can do: her own line, a place, extra sections and a Wall. */

@@ -51,3 +51,6 @@ from Unsplash, resized (faces 320px, photos 1200px):
 - photos/stage-lights.jpg: https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3
 - photos/friends-hill.jpg: https://images.unsplash.com/photo-1529156069898-49953e39b3ac
 - photos/crowd-party.jpg: https://images.unsplash.com/photo-1517457373958-b7bdd4587205
+- photos/run-shoes.jpg: https://images.unsplash.com/photo-1542291026-7eec264c27ff
+- photos/laptop-code.jpg: https://images.unsplash.com/photo-1498050108023-c5249f4df085
+- photos/dj-hands.jpg: https://images.unsplash.com/photo-1470225620780-dba8ba36b745

@@ -114,7 +114,7 @@ html[data-theme="dark"] .sm {
   font: italic 400 clamp(56px, 24vw, 112px) / 0.9 var(--serif);
   letter-spacing: -0.02em;
   color: var(--p2);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .sm .giant2 em {
   font-style: normal;
@@ -125,6 +125,8 @@ html[data-theme="dark"] .sm {
   font-size: 32px;
   line-height: 1.05;
   max-width: 18ch;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .sm .giant2.long + .poster {
   margin-top: 24px;
@@ -451,7 +453,7 @@ html[data-owner="on"] .sm .chapter.ghost {
   z-index: 3;
   align-self: flex-end;
   width: 220px;
-  margin: -44px -8px 0 0;
+  margin: -24px -8px 0 0;
   transform: rotate(3deg);
 }
 .sm .chapter-run .photo img {
@@ -467,8 +469,7 @@ html[data-owner="on"] .sm .chapter.ghost {
   aspect-ratio: 358 / 200;
   border-radius: 12px;
 }
-.sm .chapter-music .photo::after,
-.sm .chapter-work .photo::after {
+.sm .chapter-music .photo::after {
   content: "";
   position: absolute;
   top: -20px;
@@ -480,17 +481,9 @@ html[data-owner="on"] .sm .chapter.ghost {
   transform: rotate(18deg);
 }
 .sm .chapter-work .photo {
-  width: 250px;
+  width: 280px;
+  margin: 8px 0 8px;
   transform: rotate(-2deg);
-}
-.sm .chapter-work .photo::after {
-  top: auto;
-  right: -24px;
-  bottom: -20px;
-  width: 96px;
-  height: 72px;
-  background: var(--p2);
-  transform: rotate(-12deg);
 }
 .sm .lines li {
   display: flex;
