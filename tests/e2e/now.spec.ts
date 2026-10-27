@@ -82,6 +82,13 @@ test("five answers after signing up become a published page", async ({ page }) =
   const frame = page.locator(".profile-page iframe").first().contentFrame();
   await expect(frame.locator("#giant-line")).toHaveText("Drawing people on trains");
   await expect(frame.getByText("Velvet Static")).toBeVisible();
+  // The empty page shows its owner where the photo and the chapters go (ADR 0051).
+  await expect(frame.locator(".avatar.blank .hint")).toBeVisible();
+  await expect(frame.locator(".chapter.ghost")).toHaveCount(3);
+  await expect(frame.locator(".chapter.ghost").first()).toBeVisible();
+  // Posts: the collage drawn faintly, with the way to the composer.
+  await strip.getByRole("button", { name: /^Posts/ }).click();
+  await expect(page.getByRole("button", { name: "Make your first post" })).toBeVisible();
   const status = await page.evaluate(
     (h) => fetch(`/api/public/users/${h}`).then((r) => r.json()),
     handle,

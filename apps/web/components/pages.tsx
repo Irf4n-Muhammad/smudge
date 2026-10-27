@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Image as ImageIcon, Layers, PanelTop, Pencil } from "lucide-react";
+import { Image as ImageIcon, Layers, PanelTop, Pencil, Plus } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { User } from "../../../packages/contracts/src/experience";
 import type { PageLook, ProfilePackage } from "../../../packages/contracts/src/profile";
@@ -179,14 +179,31 @@ export function PostsCollage({
   onOpen,
   href,
   empty,
+  onCreate,
 }: {
   posts: PostTile[];
   cover: (post: PostTile) => string;
   onOpen?: (post: PostTile) => void;
   href?: (post: PostTile) => string;
   empty: string;
+  /** The owner's way to the composer; with it, the empty collage is an invitation (ADR 0051). */
+  onCreate?: (() => void) | undefined;
 }) {
-  if (!posts.length) return <p className="page-empty">{empty}</p>;
+  if (!posts.length)
+    return (
+      <div className="collage collage-empty" role="status">
+        <p className="collage-ghost collage-ghost-big">
+          <span>{empty}</span>
+          {onCreate && (
+            <button className="collage-first" onClick={onCreate}>
+              <Plus size={16} aria-hidden="true" /> Make your first post
+            </button>
+          )}
+        </p>
+        <span className="collage-ghost" aria-hidden="true" />
+        <span className="collage-ghost" aria-hidden="true" />
+      </div>
+    );
   return (
     <ul className="collage" aria-label="Posts">
       {posts.map((post, i) => {
@@ -236,6 +253,12 @@ const dayLabel = (iso: string, today = new Date()) => {
     ...(day.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
   });
 };
+const clock = (iso: string) =>
+  new Date(iso).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 const dayKey = (iso: string) => {
   const d = new Date(iso);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -279,9 +302,11 @@ export function Stories({
           <h2>{day.label}</h2>
           <ul>
             {day.items.map((item) => {
+              const at = <time dateTime={item.at}>{clock(item.at)}</time>;
               if (item.kind === "post")
                 return (
                   <li key={`post:${item.post.id}`} className="story-post">
+                    {at}
                     {postHref ? (
                       <a href={postHref(item.post)}>
                         <StoryTile post={item.post} cover={cover} />
@@ -296,6 +321,7 @@ export function Stories({
               if (item.kind === "moment")
                 return (
                   <li key={`moment:${item.card.gatheringId}`} className="story-moment">
+                    {at}
                     <a href={`/m/${encodeURIComponent(item.card.gatheringId)}`}>
                       {item.card.cover && (
                         <img
@@ -315,7 +341,10 @@ export function Stories({
                 );
               return (
                 <li key={`now:${item.entry.id}`} className="story-now">
-                  <Entry entry={item.entry} />
+                  {at}
+                  <span className="story-entry">
+                    <Entry entry={item.entry} />
+                  </span>
                 </li>
               );
             })}
@@ -325,15 +354,19 @@ export function Stories({
     </ol>
   );
 }
+/** A post in the day: its cover small on the left, its title beside it, as one line of the day. */
 function StoryTile({ post, cover }: { post: PostTile; cover: (post: PostTile) => string }) {
   return (
     <>
       {post.hasCover ? (
         <img src={cover(post)} alt="" loading="lazy" />
       ) : (
-        <span className="collage-blank">{post.title}</span>
+        <span className="story-blank" aria-hidden="true" />
       )}
-      <span className="story-cap">{post.title}</span>
+      <span className="story-cap">
+        <strong>{post.title}</strong>
+        <small>Post{post.caption ? ` · ${post.caption}` : ""}</small>
+      </span>
     </>
   );
 }

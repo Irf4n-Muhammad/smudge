@@ -88,7 +88,10 @@
 - [x] The fixed pages in the look's colours (ADR 0049): a look declares five colours and two
       font roles, and the app draws Posts, Stories and the strip with them.
 - [x] Chapter photos, the poster on a wide screen, the share page in the look (ADR 0050).
-      Next: sources (music, games, running) filling chapters by themselves.
+- [x] The empty page (ADR 0051): a new member's poster hints at the photo and three chapters,
+      Posts empty is the collage drawn faintly with a way to the composer, Stories are lines of
+      the day with the clock. Next: sources (music, games, running) filling chapters by
+      themselves.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.

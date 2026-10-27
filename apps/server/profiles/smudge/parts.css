@@ -97,7 +97,7 @@ html[data-theme="dark"] .sm {
 .sm .giant {
   margin: 16px -6px 0;
   font: 800 164px/0.82 var(--big);
-  letter-spacing: -0.05em;
+  letter-spacing: -0.03em;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
@@ -147,6 +147,25 @@ html[data-theme="dark"] .sm {
   color: #101010;
   font: 800 96px var(--big);
   transform: rotate(-3deg);
+}
+.sm .avatar.blank {
+  background: var(--p2);
+  color: var(--wall);
+}
+.sm .avatar.blank b {
+  font: italic 400 140px/1 var(--serif);
+}
+.sm .avatar.blank .hint {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: none;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+html[data-owner="on"] .sm .avatar.blank .hint {
+  display: block;
 }
 .sm .avatar img {
   width: 100%;
@@ -351,6 +370,24 @@ html[data-editing="on"] .sm .chapters[hidden] {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+/* Empty chapters (ADR 0051): drawn only for the owner, as places to tap. */
+.sm .chapter.ghost {
+  display: none;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+}
+html[data-owner="on"] .sm .chapter.ghost {
+  display: flex;
+}
+.sm .chapters:has(.ghost) {
+  gap: 32px;
+}
+.sm .chapter.ghost .note {
+  margin: 0;
+  font: italic 400 26px/1.1 var(--serif);
+  color: var(--muted);
 }
 /* A chapter's photo (ADR 0050): a print laid on the page, tilted the other way each time. */
 .sm .chapter .photo {

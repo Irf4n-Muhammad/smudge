@@ -45,16 +45,17 @@
       if (text !== undefined) node.textContent = text;
       return node;
     };
-    // Shrink the giant name until it fits the hero, whatever its length.
+    // Shrink the giant name until it fits the hero, whatever its length. The size goes on the
+    // heading itself, so its line box shrinks with the letters and leaves no gap above.
     function fit() {
       const h = $("giant"),
         name = $("giant-name");
       const max = Math.min(260, Math.max(120, h.clientWidth * 0.46));
       let size = max;
-      name.style.fontSize = size + "px";
+      h.style.fontSize = size + "px";
       while (name.scrollWidth > h.clientWidth && size > 44) {
         size -= 4;
-        name.style.fontSize = size + "px";
+        h.style.fontSize = size + "px";
       }
     }
     window.addEventListener("resize", fit);
@@ -112,7 +113,24 @@
       const list = Array.isArray(settings.chapters) ? settings.chapters : [];
       const box = $("chapters");
       box.textContent = "";
-      box.hidden = !list.length;
+      box.hidden = false;
+      // Nothing written yet: the owner sees three empty chapters to tap, a visitor sees none.
+      if (!list.length) {
+        const ghosts = [
+          ["Run", "Your best time, or how far you got."],
+          ["Work", "Where you've been, and for how long."],
+          ["Music", "The band you've given the most hours to."],
+        ];
+        ghosts.forEach(([kind, hint], i) => {
+          const sec = el("section", "chapter ghost");
+          sec.setAttribute("aria-label", "Empty chapter: " + kind);
+          const head = el("div", "idx");
+          head.append(el("span", "", "0" + (i + 1) + " / " + kind), el("span", "", "Tap to write"));
+          sec.append(head, el("p", "note", hint));
+          box.append(sec);
+        });
+        return;
+      }
       list.forEach((c, i) => {
         const sec = el("section", "chapter chapter-" + c.kind);
         sec.setAttribute("aria-label", c.title || kinds[c.kind] || "Chapter " + (i + 1));
@@ -196,8 +214,14 @@
         $("giant-line").classList.toggle("long", line.replace(/\*/g, "").length > 14);
         const meta = $("hero-meta");
         meta.textContent = "";
+        // The first sentence of the bio, unless it is the line already under the name.
         const bio = (d.owner.bio || "").split(/(?<=[.!?])\s/)[0].slice(0, 60);
-        for (const text of ["@" + d.owner.handle, settings.place, bio].filter(Boolean))
+        const plainLine = line.replace(/\*/g, "").trim().toLowerCase();
+        for (const text of [
+          "@" + d.owner.handle,
+          settings.place,
+          bio.trim().toLowerCase() === plainLine ? "" : bio,
+        ].filter(Boolean))
           meta.append(el("li", "", text));
         heroNow(d.now);
         const avatar = $("avatar");
@@ -207,8 +231,10 @@
           img.alt = "";
           avatar.prepend(img);
         } else {
-          avatar.style.background = d.owner.color || "#ffcc00";
+          // No photo yet: the initials on the accent, and a word to the owner (ADR 0051).
+          avatar.classList.add("blank");
           avatar.prepend(el("b", "", d.owner.initials || first.slice(0, 1)));
+          avatar.append(el("small", "hint", "Add a photo"));
         }
         chapters();
         fit();

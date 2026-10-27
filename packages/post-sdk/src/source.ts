@@ -14,6 +14,7 @@ export function sdkSource(nonce: string) {
       if(event.source!==parent || !event.data || event.data.nonce!==nonce)return;
       if(event.data.type==='forma:appearance' && ['light','dark'].includes(event.data.theme)){
         document.documentElement.dataset.theme=event.data.theme;
+        document.documentElement.dataset.owner=event.data.owner===true?'on':'off';
         document.documentElement.dataset.motion=event.data.reducedMotion?'reduce':'normal';
         if(['paint','halloween'].includes(event.data.season))document.documentElement.dataset.season=event.data.season;
         let style=document.getElementById('forma-motion-policy');

@@ -91,7 +91,8 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
 - `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
   stories as a timeline of posts, now entries and moments, by the feed's audience rules.
   `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage
-  (`PostsCollage`) and the days (`Stories`) in the look's tokens (`lookStyle`, the manifest's
+  (`PostsCollage`, faint tiles and a way to the composer when empty) and the days (`Stories`,
+  one timed line per happening, ADR 0051) in the look's tokens (`lookStyle`, the manifest's
   `look` as `--page-*` and `--strip-*` variables, ADR 0049), inside the app (`?page=`) and on `/u/<handle>/posts`
   and `/u/<handle>/stories`.
 - `packages/core/src/share-card.ts` and `apps/server/share-card.ts`: the facts of a share card
