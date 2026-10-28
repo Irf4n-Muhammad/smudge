@@ -1,4 +1,4 @@
-<!-- smudge:v13 -->
+<!-- smudge:v14 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm">
@@ -82,6 +82,16 @@
     <p class="note ghost-note" id="roll-hint" hidden>
       Photos from your roll go here, each with a place and a year.
     </p>
+  </section>
+  <!-- The Track, stage three (ADR 0057): the chapters' numbers in a row, then the affiliations
+       as crests, each a name and a line. -->
+  <section class="tstats" id="tstats" aria-label="Numbers" data-edit="chapters" hidden></section>
+  <section class="taff" id="taff" aria-label="Affiliations" data-edit="crews" hidden>
+    <div class="taff-k">
+      <span>Affiliations</span><span class="m">what the page can say about you</span>
+    </div>
+    <div class="taff-grid" id="taff-grid"></div>
+    <p class="hint" id="taff-hint" hidden>Crews, clubs, places: a name and a line each.</p>
   </section>
   <!-- Picks (ADR 0052, 0056): the four latest posts as blocks, the way to the Posts page. -->
   <section class="picks" id="picks" aria-label="Picks" hidden>
@@ -465,10 +475,43 @@
       if (n.title) {
         next.append(el("small", "", "Next up"), el("b", "", n.title), el("span", "", n.when || ""));
       } else next.append(el("small", "hint", "Next up: what's on your calendar?"));
+      trackStats();
+      trackCrews();
       marked(settings.tagline || d.owner.bio || "", $("tintro-line"));
       $("tintro-place").textContent = settings.place
         ? settings.place + " · " + new Date().getFullYear()
         : "@" + d.owner.handle;
+    }
+    // The chapters' numbers in a row: the big figure with its unit small, the title, the label.
+    function trackStats() {
+      const sec = $("tstats");
+      sec.textContent = "";
+      const rows = (settings.chapters || []).filter((c) => c.big);
+      sec.hidden = !rows.length;
+      rows.forEach((c) => {
+        const stat = el("div", "tstat");
+        const b = el("b", "", c.big);
+        if (c.unit) b.append(el("small", "", c.unit));
+        const title = el("div", "tlbl");
+        marked(c.title || "", title);
+        stat.append(b, title, el("span", "m", c.label || ""));
+        sec.append(stat);
+      });
+    }
+    // Affiliations as crests: the owner's crews, clubs and places, a name and a line each.
+    function trackCrews() {
+      const list = (settings.crews || []).filter((c) => c.name);
+      const sec = $("taff");
+      sec.hidden = false;
+      sec.classList.toggle("blank", !list.length);
+      $("taff-hint").hidden = list.length > 0;
+      const grid = $("taff-grid");
+      grid.textContent = "";
+      list.forEach((c) => {
+        const crest = el("div", "tcrest");
+        crest.append(el("b", "", c.name), el("span", "", c.line || ""));
+        grid.append(crest);
+      });
     }
     profileData
       .then((d) => {
@@ -534,7 +577,17 @@
           foot.textContent = "";
           foot.append(
             el("strong", "", d.owner.name),
-            el("span", "", ["Made in Smudge", settings.place].filter(Boolean).join(" · ")),
+            el(
+              "span",
+              "",
+              [
+                "Made in Smudge",
+                settings.place,
+                settings.look === "track" ? new Date().getFullYear() : "",
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            ),
           );
         }
         fit();

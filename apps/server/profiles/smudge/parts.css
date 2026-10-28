@@ -1925,3 +1925,170 @@ html[data-look="track"] .sm .roll .photo figcaption {
     padding: 40px 40px 120px;
   }
 }
+
+/* The Track, stage three: the chapters' numbers in a row over a rule, the affiliations as
+   crests, and the foot on the ink with the name in the lime. */
+.sm .tstats {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  margin: 56px 16px 0;
+  padding-top: 24px;
+  border-top: 1.5px solid var(--ink);
+}
+.sm .tstats[hidden] {
+  display: none;
+}
+.sm .tstat b {
+  display: block;
+  font: 900 72px/0.85 var(--big);
+  letter-spacing: -0.05em;
+  color: var(--ink);
+}
+.sm .tstat b small {
+  font: 400 0.5em/1 var(--serif);
+  letter-spacing: 0;
+  margin-left: 0.08em;
+}
+.sm .tlbl {
+  margin-top: 12px;
+  font: 700 12px/1.4 var(--big);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.sm .tlbl em {
+  font-style: normal;
+  color: var(--p1);
+}
+.sm .tstat .m,
+.sm .taff-k .m {
+  display: block;
+  margin-top: 4px;
+  font: 500 10px/1.4 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sm .taff {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 56px 16px 0;
+  padding-top: 20px;
+  border-top: 1.5px solid var(--ink);
+}
+.sm .taff[hidden] {
+  display: none;
+}
+.sm .taff.blank {
+  display: none;
+}
+html[data-owner="on"] .sm .taff.blank {
+  display: grid;
+}
+.sm .taff-k {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font: 700 10px/1.4 var(--big);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.sm .taff-k .m {
+  margin: 0;
+  text-align: right;
+}
+.sm .taff-grid {
+  display: contents;
+}
+.sm .taff .hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font: italic 400 22px/1.1 var(--serif);
+  color: var(--muted);
+}
+.sm .tcrest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 120px;
+  padding: 0 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  text-align: center;
+}
+.sm .tcrest::before {
+  content: "";
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--p2) 0 30%, transparent 32%);
+}
+.sm .tcrest b {
+  font: 900 14px/1.1 var(--big);
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.sm .tcrest span {
+  font: 700 9px/1.3 var(--big);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+html[data-look="track"] .sm .wall-foot {
+  margin: 96px 0 0;
+  padding: 48px 16px 24px;
+  border-radius: 32px 32px 0 0;
+  background: #171a12;
+  color: rgb(255 255 255 / 60%);
+}
+html[data-look="track"] .sm .wall-foot strong {
+  font: 900 64px/0.85 var(--big);
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  color: var(--p2);
+}
+html[data-look="track"] .sm .wall-foot span {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / 18%);
+}
+@media (min-width: 720px) {
+  .sm .tstats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin: 96px 40px 0;
+    padding-top: 32px;
+  }
+  .sm .tstat b {
+    font-size: 112px;
+  }
+  .sm .taff {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin: 96px 40px 0;
+  }
+  .sm .tcrest {
+    height: 150px;
+  }
+  html[data-look="track"] .sm .wall-foot {
+    margin: 120px 0 0;
+    padding: 64px 40px 40px;
+    border-radius: 56px 56px 0 0;
+  }
+  html[data-look="track"] .sm .wall-foot strong {
+    font-size: 180px;
+  }
+}

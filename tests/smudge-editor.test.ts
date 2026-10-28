@@ -152,12 +152,20 @@ test("the Track look (ADR 0057): cream colours, the cutouts as assets, and a tem
     cutout: me,
     things: [{ photo: board, caption: "Senayan, 2025" }],
     next: { title: "Senayan Open", when: "2 Nov · 07:00" },
+    crews: [{ name: "Rossi Musik", line: "Crew · since 2022" }],
   });
   const read = readSmudgeSettings(pkg);
   assert.equal(read.look, "track");
   assert.equal(read.cutout, me);
   assert.deepEqual(read.things, [{ photo: board, caption: "Senayan, 2025" }]);
   assert.deepEqual(read.next, { title: "Senayan Open", when: "2 Nov · 07:00" });
+  assert.deepEqual(read.crews, [{ name: "Rossi Musik", line: "Crew · since 2022" }]);
+  assert.throws(() =>
+    applySmudgeSettings(smudgeProfilePackage, {
+      ...defaultSmudgeSettings,
+      crews: [1, 2, 3, 4, 5].map((n) => ({ name: "Crew " + n, line: "" })),
+    }),
+  );
   // The app's chrome follows the look: a cream ground and the lime, whatever the paints.
   const look = pkg.manifest.schemaVersion === 2 ? pkg.manifest.look : undefined;
   assert.equal(look?.ground, "#f3f2ec");
@@ -190,7 +198,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
   ).replace('<div class="sm-sections" id="sm-sections"></div>\n  ', "");
   delete old.files["smudge/sections.js"];
   old.files["smudge/profile.html"] = "<p>old hero</p>";
-  old.files["smudge/post.html"] = "<!-- smudge:v13 --><p>my own grid</p>";
+  old.files["smudge/post.html"] = "<!-- smudge:v14 --><p>my own grid</p>";
   const next = applySmudgeSettings(
     profilePackageSchema.parse(old),
     defaultSmudgeSettings,
@@ -200,7 +208,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
     next.files["smudge/profile.html"],
     smudgeProfilePackage.files["smudge/profile.html"],
   );
-  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v13 --><p>my own grid</p>");
+  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v14 --><p>my own grid</p>");
   assert.ok(next.files["smudge/sections.js"]);
   const shell = next.files["index.html"]!;
   assert.match(shell, /src="smudge\/settings\.js"/);

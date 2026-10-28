@@ -128,6 +128,11 @@ export const smudgeSettingsSchema = z
       .object({ title: text(30), when: text(20) })
       .strict()
       .default({ title: "", when: "" }),
+    /** Affiliations (ADR 0057, stage three): a name and a line each, drawn as crests. */
+    crews: z
+      .array(z.object({ name: text(24), line: text(24) }).strict())
+      .max(4)
+      .default([]),
     palette: z.enum(Object.keys(smudgePalettes) as [SmudgePalette, ...SmudgePalette[]]),
     sections: z
       .array(z.enum(smudgeSectionKinds))
@@ -159,6 +164,7 @@ export const defaultSmudgeSettings: SmudgeSettings = {
   cutout: "",
   things: [],
   next: { title: "", when: "" },
+  crews: [],
   palette: "night",
   sections: [],
   quote: { text: "" },
@@ -176,7 +182,7 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v13";
+export const smudgeVersionMarker = "smudge:v14";
 /** Every photo the settings lay on the page: chapter photos and snaps, the roll, the cutouts. */
 export const smudgePhotoIds = (s: SmudgeSettings) => [
   ...new Set(

@@ -136,7 +136,7 @@ const daniCutouts = {
 } as const;
 export function seedDaniPage(profiles: ProfileService) {
   const store = profiles.social.store;
-  const marker = "profile-smudge-v7:dani";
+  const marker = "profile-smudge-v8:dani";
   if (store.get("seed", marker) || !store.get("user", "dani")) return;
   // A page this seed wrote in an earlier version is written again; one someone edited is kept.
   const state = profiles.state("dani");
@@ -146,6 +146,7 @@ export function seedDaniPage(profiles: ProfileService) {
     "profile-smudge-v4:dani",
     "profile-smudge-v5:dani",
     "profile-smudge-v6:dani",
+    "profile-smudge-v7:dani",
   ].some((m) => store.get("seed", m));
   if (state.version === 0 || earlier) {
     const actor = { userId: "dani" };
@@ -183,6 +184,12 @@ export function seedDaniPage(profiles: ProfileService) {
         { photo: daniCutouts.shoe, caption: "1,204 km this year" },
       ],
       next: { title: "Senayan Open", when: "2 Nov · 07:00" },
+      crews: [
+        { name: "Rossi Musik", line: "Crew · since 2022" },
+        { name: "Strava", line: "Connected · 2023" },
+        { name: "Senayan Skate", line: "Local · since 2019" },
+        { name: "Spotify", line: "Connected · 2024" },
+      ],
       tagline: "*Skate*, film cameras, Bandung → Jakarta.",
       place: "Jakarta",
       manifesto:

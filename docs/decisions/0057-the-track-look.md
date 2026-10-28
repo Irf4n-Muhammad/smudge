@@ -1,6 +1,6 @@
 # 0057 — The Track: a second look for the Paint wall
 
-Status: accepted. Stages one and two of four of the landing mock "Smudge landing v4" (the
+Status: accepted. Stages one to three of four of the landing mock "Smudge landing v4" (the
 Track).
 
 ## Context
@@ -50,6 +50,12 @@ and the seeds, for what is the same page in different clothes.
   olive, and the roll lays its prints square, the second of every three in black and white.
   Text set on a paint uses `--on-paint`: the ground's colour on the Paint wall, the ink on the
   Track, so a label on the lime stays readable.
+- **Numbers, crests and the foot (stage three).** After the roll, the chapters that carry a
+  big figure stand in a row over a rule: the figure with its unit small in the serif, the
+  title, the label. Then the affiliations: the settings gain `crews`, up to four `{name, line}`
+  (24 characters each), drawn as bordered crests with a lime dot, "Rossi Musik · Crew · since
+  2022"; the owner sees where they go while editing. The foot sits on the ink with its top
+  corners rounded, the whole name in the lime and "Made in Smudge · place · year" under a rule.
 - Dani's seeded page is a Track: cut out of his photo, his board and a shoe cut from the
   skate photo (`assets/demo/cutouts/`, credited), "Senayan Open · 2 Nov" next up, a line of his
   own. A data dir seeded earlier is written again, once.
@@ -68,5 +74,6 @@ and the seeds, for what is the same page in different clothes.
 - The template: `.tband` with `trackBand()` drawn from `heroNow`'s doing, `data-edit="now"`
   so the owner edits it where the poster's hero did; the Track's `.manifesto`, `.chapters` and
   `.roll` rules under `html[data-look="track"]`.
-- Stages to come from the mock: stats, affiliations and the foot (three); reveal, count-up and
-  parallax motion (four).
+- `smudgeSettingsSchema.crews`; `trackStats()` and `trackCrews()` in `profile.html`; the
+  Affiliations sheet in the editor; the marker is `smudge:v14`.
+- The stage to come from the mock: reveal, count-up and parallax motion (four).

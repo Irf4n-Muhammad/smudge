@@ -605,7 +605,8 @@ settings' `roll` (up to eight) name the page's assets (ADR 0053); a profile mani
 20 assets. `manifesto` (up to 140 characters, `*stars*` for the coloured words) is the owner's
 line under the hero (ADR 0054). `look` (`wall` or `track`), `cutout` (an asset id or empty),
 `things` (up to two `{photo, caption}`) and `next` (`{title, when}`, up to 30 and 20
-characters) are the Track's (ADR 0057); the cutout and the things count among the assets.
+characters) and `crews` (up to four `{name, line}`, 24 characters each) are the Track's
+(ADR 0057); the cutout and the things count among the assets.
 
 ## Website import (additive)
 

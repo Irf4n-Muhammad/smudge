@@ -169,6 +169,7 @@ const fieldTitles: Record<string, string> = {
   cutout: "You, cut out",
   things: "Your things",
   next: "Next up",
+  crews: "Affiliations",
 };
 
 function inTwoWeeks() {
@@ -796,6 +797,63 @@ export function EasyEditor({
                 placeholder="2 Nov · 07:00"
                 onChange={(when) => change({ ...settings, next: { ...settings.next, when } })}
               />
+            </div>
+          )}
+          {sheet === "field" && smudge && field === "crews" && (
+            <div className="easy-field">
+              <h2>Affiliations</h2>
+              <p className="easy-note">
+                Crews, clubs, places you belong to: a name and a line each, up to four.
+              </p>
+              {settings.crews.map((crew, i) => (
+                <div className="easy-row easy-snap" key={i}>
+                  <TextField
+                    title=""
+                    label={`Name ${i + 1}`}
+                    value={crew.name}
+                    max={24}
+                    placeholder="Rossi Musik"
+                    onChange={(name) =>
+                      change({
+                        ...settings,
+                        crews: settings.crews.map((c, n) => (n === i ? { ...c, name } : c)),
+                      })
+                    }
+                  />
+                  <TextField
+                    title=""
+                    label="Line"
+                    value={crew.line}
+                    max={24}
+                    placeholder="Crew · since 2022"
+                    onChange={(line) =>
+                      change({
+                        ...settings,
+                        crews: settings.crews.map((c, n) => (n === i ? { ...c, line } : c)),
+                      })
+                    }
+                  />
+                  <button
+                    aria-label={`Remove affiliation ${i + 1}`}
+                    onClick={() =>
+                      change({ ...settings, crews: settings.crews.filter((_, n) => n !== i) }, true)
+                    }
+                  >
+                    <Trash2 />
+                  </button>
+                </div>
+              ))}
+              {settings.crews.length < 4 && (
+                <div className="easy-row">
+                  <button
+                    onClick={() =>
+                      change({ ...settings, crews: [...settings.crews, { name: "", line: "" }] })
+                    }
+                  >
+                    Add one
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {sheet === "field" && easy && (field === "about" || field === "photo") && (

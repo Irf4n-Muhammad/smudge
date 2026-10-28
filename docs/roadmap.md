@@ -103,11 +103,12 @@
 - [x] Picks as four blocks (ADR 0056, stage four, the last of the mock): the four latest posts,
       two with covers and two as blocks of colour with their captions; the page may now run to
       8000 px. Next: sources (music, games, running) filling chapters by themselves.
-- [x] The Track (ADR 0057, stages one and two of four of the landing mock v4): a second look
+- [x] The Track (ADR 0057, stages one to three of four of the landing mock v4): a second look
       for the Paint wall on a cream ground with one lime, a hero of cutouts (you, two things,
       stickers, next up), a Track vibe and Dani's page as one; then the olive band with what
       you are up to as a still from a film, the manifesto on the same olive, and the chapters
-      and roll back on the cream. Next: stats, affiliations and the foot (three), motion (four).
+      and roll back on the cream; then the chapters' numbers in a row, affiliations as crests
+      and the foot on the ink with the name in lime (three). Next: motion (four).
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.
