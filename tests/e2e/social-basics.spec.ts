@@ -116,7 +116,8 @@ test("owners edit and delete posts; people reply, mention and delete comments; l
   await expect(guest.getByText("Thanks for coming")).toBeVisible();
   await expect(guest).toHaveTitle(/Sunday market · Alex Morgan on Smudge/);
   await guest.goto("/u/mayainframes");
-  await expect(guest.getByRole("heading", { name: "Maya Chen", exact: true })).toBeVisible();
+  // Her own page says who she is; the plain name heading only stands in when there is none.
+  await expect(guest.getByRole("region", { name: "Maya Chen's page" })).toBeVisible();
   await expect(
     guest.locator(".share-profile-world iframe").contentFrame().getByText("Maya Chen’s room"),
   ).toBeVisible();
