@@ -10,8 +10,10 @@ import {
   defaultSmudgeSettings,
 } from "../../packages/core/src/smudge-design.js";
 import { photoId } from "./seed-photos.js";
+import type { PhotoName } from "./seed-photos.js";
 import { buildPost, startPostDesign } from "../../packages/core/src/easy-post.js";
 
+const inTwoWeeks = () => new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
 const make = (name: string, file: string, height: number, assets: string[]): ProfilePackage => ({
   manifest: {
     kind: "profile",
@@ -87,18 +89,22 @@ export function seedProfiles(profiles: ProfileService) {
   for (const [ownerId, template, marker] of [
     ["maya", "room", "profile-v1:maya"],
     ["leo", "comic", "profile-v1:leo"],
-    ["ines", "smudge", "profile-smudge-v2:ines"],
+    ["ines", "smudge", "profile-smudge-v3:ines"],
   ] as const) {
     if (store.get("seed", marker)) continue;
     // Never replace a profile a user has already published, including after interrupted seeding.
-    if (profiles.state(ownerId).version === 0) {
+    // Inès's page from this seed's earlier version is written again, with the fuller demo.
+    const state = profiles.state(ownerId);
+    const rewrite = ownerId === "ines" && !!store.get("seed", "profile-smudge-v2:ines");
+    if (state.version === 0 || rewrite) {
       const actor = { userId: ownerId };
+      if (ownerId === "ines") ensurePhotos(store, inesPhotos);
       const draft = profiles.create(
         actor,
         ownerId === "ines" ? inesPaintWall() : profileTemplates[template],
       );
-      profiles.publish(actor, draft.id, 1, 0);
-      if (ownerId === "ines")
+      profiles.publish(actor, draft.id, 1, state.version);
+      if (ownerId === "ines" && !rewrite)
         store.transaction(() =>
           store.put("profile-wall", "owner:ines", [
             wallNote("maya", "Maya Chen", "Walked past the mural today. The pink is unreal.", 2),
@@ -128,6 +134,22 @@ const daniPhotos = [
   "stage-lights",
   "skate",
 ] as const;
+/** The demo photos a seeded page names are stored first; the photo seed skips those that exist. */
+function ensurePhotos(store: ProfileService["social"]["store"], names: readonly PhotoName[]) {
+  store.transaction(() => {
+    for (const photo of names) {
+      const assetId = photoId(photo);
+      if (store.get("asset", assetId)) continue;
+      store.put("asset", assetId, {
+        id: assetId,
+        ownerId: "shared",
+        name: `${photo}.jpg`,
+        mime: "image/jpeg",
+        base64: readFileSync(resolve(`assets/demo/photos/${photo}.jpg`)).toString("base64"),
+      });
+    }
+  });
+}
 /** Dani cut out of a photo, and two of his things (assets/demo/CREDITS.md), for the Track. */
 const daniCutouts = {
   dani: "40000000-0000-4000-8000-000000000001",
@@ -326,10 +348,13 @@ function seedDaniPosts(profiles: ProfileService) {
 function inesPaintWall() {
   return applySmudgeSettings(profileTemplates.smudge, {
     ...defaultSmudgeSettings,
+    palette: "sunset",
     tagline: "*paints* the city, *slowly.*",
     place: "LISBON, PT",
+    manifesto:
+      "Walls are *slow* conversations. Six years, four cities, one *cat* who supervises. Lisbon, for now.",
     // Her posts live on the Posts page and in the landing's Picks (ADR 0052); the extras are hers.
-    sections: ["quote", "wall"],
+    sections: ["quote", "cat", "wall", "countdown"],
     chapters: [
       {
         kind: "work",
@@ -343,9 +368,27 @@ function inesPaintWall() {
           { value: "2", label: "collectives" },
           { value: "1", label: "cat" },
         ],
-        lines: [],
+        lines: ["Lisbon · 12", "Porto · 9", "Madrid · 6"],
         // A shared demo photo, seeded before the pages (seed.ts).
         photo: "10000000-0000-4000-8000-000000000001",
+        caption: "Rua das Flores · Lisbon, 2026",
+        snaps: [
+          { photo: photoId("city"), caption: "Madrid, 2024" },
+          { photo: photoId("workshop"), caption: "The studio, 2025" },
+        ],
+      },
+      {
+        kind: "custom",
+        label: "Supervisor",
+        title: "Miso *watches*.",
+        big: "9",
+        unit: "lives",
+        note: "Miso came with the studio. She has opinions about pink.",
+        stats: [],
+        lines: ["Naps on the ladder", "Hates the roller", "Loves the sun"],
+        photo: photoId("cat"),
+        caption: "Very serious · Lisbon, 2025",
+        snaps: [{ photo: photoId("latte"), caption: "Garagem, 2025" }],
       },
       {
         kind: "music",
@@ -353,14 +396,96 @@ function inesPaintWall() {
         title: "Paint to *this*.",
         big: "212",
         unit: "hours",
-        note: "Cigarettes After Sex, every mural.",
+        note: "Cigarettes After Sex, every mural. Top 1% of listeners.",
         stats: [],
         lines: ["Apocalypse", "Sunsetz", "K."],
+        photo: photoId("stage-lights"),
+        caption: "Lisboa ao Vivo, 2025",
+        snaps: [],
       },
     ],
+    roll: [
+      { photo: photoId("cafe-room"), caption: "Garagem, 2025" },
+      { photo: photoId("long-table"), caption: "Collective dinner, 2024" },
+      { photo: photoId("library"), caption: "Sundays, 2025" },
+      { photo: photoId("french-toast"), caption: "Porto, 2023" },
+      { photo: photoId("bookshelf"), caption: "The shelf, 2026" },
+      { photo: photoId("summit-friends"), caption: "Sintra, 2024" },
+    ],
+    repeat: { song: "Apocalypse", artist: "Cigarettes After Sex" },
     now: { text: "Finishing the Rua das Flores mural", place: "Lisbon", progress: 70 },
     quote: { text: "Walls are just *slow* conversations." },
+    cat: { name: "Miso" },
+    countdown: { label: "Rua das Flores unveiling", date: inTwoWeeks() },
   });
+}
+const inesPhotos = [
+  "city",
+  "workshop",
+  "cat",
+  "latte",
+  "stage-lights",
+  "cafe-room",
+  "long-table",
+  "library",
+  "french-toast",
+  "bookshelf",
+  "summit-friends",
+] as const;
+/** Two more posts for Inès, so Picks holds four (ADR 0056), added once to any data dir. */
+const inesPosts: {
+  marker: string;
+  daysAgo: number;
+  headline: string;
+  kicker: string;
+  text: string;
+  photo: "city" | "workshop";
+  caption: string;
+}[] = [
+  {
+    marker: "post-ines:day-nine",
+    daysAgo: 2,
+    kicker: "Day nine",
+    headline: "The pink is *finally* right",
+    text: "Nine days on Rua das Flores. Three tries at the pink. The neighbours bring coffee now.",
+    photo: "city",
+    caption: "Day nine. The pink is finally right.",
+  },
+  {
+    marker: "post-ines:sketch",
+    daysAgo: 8,
+    kicker: "Studio",
+    headline: "Sketch for the *next* wall",
+    text: "A fish market in Porto asked for something with light in it. Miso approved the sketch.",
+    photo: "workshop",
+    caption: "Sketch for the next wall. Miso approved.",
+  },
+];
+export function seedInesPosts(profiles: ProfileService) {
+  const social = profiles.social;
+  const store = social.store;
+  const actor = { userId: "ines" };
+  if (!store.get("user", "ines")) return;
+  for (const p of inesPosts) {
+    if (store.get("seed", p.marker)) continue;
+    const built = buildPost(
+      startPostDesign("poster", {
+        kicker: p.kicker,
+        headline: p.headline,
+        text: p.text,
+        photos: [{ assetId: photoId(p.photo), caption: "" }],
+      }),
+    );
+    const draft = social.createDraft(actor, {
+      package: built.package,
+      metadata: { ...built.metadata, caption: p.caption, contributors: [] },
+    });
+    const createdAt = new Date(Date.now() - p.daysAgo * 86_400_000).toISOString();
+    social.publish(actor, draft.id, draft.revision, (post) => {
+      store.put("post", post.id, { ...post, createdAt });
+      store.put("seed", p.marker, { complete: true });
+    });
+  }
 }
 function wallNote(userId: string, name: string, text: string, tone: number) {
   return {
