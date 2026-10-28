@@ -216,19 +216,19 @@ body:has(.profile-page) .mobile-nav {
   }
 }
 
-/* The feed: one wide column that grows with the window at any zoom, with the sides row and friends'
+/* The feed: one wide column that fills the window beside the rail at any zoom, with the sides row and friends'
    tiles lined up above it instead of hugging the rail. */
 @media (min-width: 701px) {
   .app-shell {
-    --feed-w: clamp(420px, (100vh - 120px) * 0.9, 760px);
+    --feed-w: 1000px;
   }
   .app-shell .post-list {
-    width: min(var(--feed-w), 100% - 48px);
+    width: min(var(--feed-w), 100% - 96px);
   }
   .app-shell[data-view="home"] .feed-column > .sides-bar,
   .app-shell[data-view="home"] .feed-column > .friends-now,
   .app-shell[data-view="following"] .feed-column > .sides-bar {
-    width: min(var(--feed-w), 100% - 48px);
+    width: min(var(--feed-w), 100% - 96px);
     margin-inline: auto;
   }
 }
