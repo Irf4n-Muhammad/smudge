@@ -11,7 +11,7 @@ No private user data is needed for development.
 1. Describe the concrete problem and reproduction, including expected versus actual behavior.
 2. Put domain rules in core and versioned shapes in contracts. Web/MCP must share the same API rules.
 3. Add a focused regression for permissions, compatibility, persistence, or behavior changes.
-4. Update the related documentation in the same change. Record significant tradeoffs in an ADR.
+4. Do not write documentation (README, roadmap, docs/ pages or ADRs) unless the owner asks for it.
 5. Run `npm run check`. For UI, runtime, transport or publication changes, also run
    `npm run build:web` and `npm run test:e2e` with development servers stopped.
 6. Submit a focused diff with checks actually run, limitations, and rollback considerations.
