@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openMore, openPeople, pickFeed } from "./nav";
+import { openMore, openPeople, pickFeed, previewAs } from "./nav";
 import type { Page } from "@playwright/test";
 
 const toast = (page: Page, text: string) =>
@@ -51,7 +51,7 @@ test("find people, follow, notify, message, report, moderate, block and delete a
   await toast(page, "A moderator will review this post");
 
   // Alex sees the follow as a notification, can now write, and reviews the report.
-  await page.getByLabel("Preview as demo account").selectOption("you");
+  await previewAs(page, "you");
   await toast(page, "Now viewing");
   await page.getByRole("button", { name: /^Notifications \(\d+ new\)$/ }).click();
   await expect(
@@ -75,7 +75,7 @@ test("find people, follow, notify, message, report, moderate, block and delete a
   await expect(page.locator(".report-item").filter({ hasText: title })).toHaveCount(0);
 
   // Back as the new member: an unread message, a reply, then a block.
-  await page.getByLabel("Preview as demo account").selectOption({ label: name });
+  await previewAs(page, { label: name });
   await toast(page, "Now viewing");
   await page.getByRole("button", { name: "Messages (1 new)" }).click();
   await page.getByRole("button", { name: /Alex Morgan/ }).click();

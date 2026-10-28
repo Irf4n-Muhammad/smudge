@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openMore, openPeople, pickFeed } from "./nav";
+import { openMore, openPeople, pickFeed, previewAs } from "./nav";
 import type { Locator, Page } from "@playwright/test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -168,7 +168,7 @@ test("real MCP client creates a novel interaction, revises, previews and publish
       publication.id,
     );
     await boot(page);
-    await page.getByLabel("Preview as demo account").selectOption("leo");
+    await previewAs(page, "leo");
     await expect(page.getByRole("status")).toContainText("Now viewing");
     const card = page.getByRole("article", { name: `${name} by Alex Morgan` });
     await expect(card).toBeVisible();
@@ -206,7 +206,7 @@ test("sandbox blocks host access and network; undeclared and cross-account opera
   await expect(frame.getByText("CAPABILITY_DENIED")).toBeVisible();
   expect(await page.locator("body").getAttribute("data-compromised")).toBeNull();
   const runtimeResponse = await post(page, "/runtime", { target: d.body.id, preview: true });
-  await page.getByLabel("Preview as demo account").selectOption("ines");
+  await previewAs(page, "ines");
   await expect(page.getByRole("status")).toContainText("Now viewing");
   const forbidden = await post(page, `/drafts/${d.body.id}/publish`, { revision: 1 });
   expect(forbidden.status).toBe(404);

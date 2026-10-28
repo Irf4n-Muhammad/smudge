@@ -2,6 +2,7 @@
 import {
   BadgeCheck,
   Bookmark,
+  Check,
   CalendarDays,
   Gift,
   Globe,
@@ -13,7 +14,10 @@ import {
   ShieldCheck,
   UserPlus,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
+import { createPortal } from "react-dom";
+import { Avatar } from "./ui";
 import { ThemeToggle } from "./theme-toggle";
 import { SeasonChip } from "./season";
 import type { User } from "../../../packages/contracts/src/experience";
@@ -103,6 +107,86 @@ export function MoreMenu({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The rail's "Preview as": tap your photo, pick one of the demo people from a list with their
+ * faces. A native select drew its options in the page's ink, which on night mode is white on the
+ * browser's white popup.
+ */
+export function AccountSwitch({
+  users,
+  meId,
+  onSwitch,
+}: {
+  users: User[];
+  meId: string;
+  onSwitch: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null),
+    list = useRef<HTMLDivElement>(null);
+  const me = users.find((u) => u.id === meId);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!box.current?.contains(t) && !list.current?.contains(t)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
+  if (!me) return null;
+  return (
+    <div className="account-switch" ref={box}>
+      <button
+        className="account-switch-button"
+        aria-label="Preview as demo account"
+        title={`Previewing as ${me.name}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Avatar user={me} />
+        <span className="account-switch-text">
+          <small>Preview as</small>
+          <strong>{me.name}</strong>
+        </span>
+      </button>
+      {/* In the body: the rail blurs and scrolls, which would clip a fixed menu inside it. */}
+      {open &&
+        createPortal(
+          <div className="account-menu" role="menu" aria-label="Preview as" ref={list}>
+            <span className="account-menu-label">Preview as</span>
+            {users.map((u) => (
+              <button
+                key={u.id}
+                role="menuitemradio"
+                aria-checked={u.id === meId}
+                aria-label={u.name}
+                data-user={u.id}
+                onClick={() => {
+                  setOpen(false);
+                  if (u.id !== meId) onSwitch(u.id);
+                }}
+              >
+                <Avatar user={u} small />
+                <span>{u.name}</span>
+                {u.id === meId && <Check size={16} />}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

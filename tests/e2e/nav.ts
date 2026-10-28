@@ -52,3 +52,11 @@ export async function switchAppearance(
 ) {
   await openMore(page, label);
 }
+
+/** Switches the demo account from the rail's photo: by id, or by name with { label }. */
+export async function previewAs(page: Page, who: string | { label: string }) {
+  await page.locator(".sidebar").getByRole("button", { name: "Preview as demo account" }).click();
+  const menu = page.getByRole("menu", { name: "Preview as" });
+  if (typeof who === "string") await menu.locator(`[data-user="${who}"]`).click();
+  else await menu.getByRole("menuitemradio", { name: who.label, exact: true }).click();
+}

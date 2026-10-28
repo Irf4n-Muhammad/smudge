@@ -4,6 +4,7 @@ import { NowBar } from "./now";
 import { PageHead, PageStrip, PostsCollage, Stories, lookStyle } from "./pages";
 import type { PageTab, PostTile } from "../../../packages/contracts/src/pages";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { PostView, User } from "../../../packages/contracts/src/experience";
 import type {
   ProfileDraft,
@@ -27,18 +28,7 @@ import {
   applyProfileDesign,
   defaultProfileDesign,
 } from "../../../packages/core/src/profile-design";
-import {
-  ArrowLeft,
-  Home,
-  Search,
-  Bell,
-  MessageCircle,
-  Plus,
-  UserRound,
-  BadgeCheck,
-  Pencil,
-  Lock,
-} from "lucide-react";
+import { ArrowLeft, Search, BadgeCheck, Pencil, Lock } from "lucide-react";
 import type { Chapter } from "../../../packages/contracts/src/identity";
 import { ChapterList } from "./identity-hub";
 import { DecorFrame, themeStyle } from "./post-decor";
@@ -56,6 +46,7 @@ export function ProfilePage({
   onNavigate,
   onUseDraft,
   more,
+  nav,
 }: {
   ownerId: string;
   boot: Boot;
@@ -78,6 +69,8 @@ export function ProfilePage({
   onUseDraft: (id: string) => void;
   /** The app's More menu (Saved, Themes, settings…), shown behind ☰ on your own profile. */
   more?: ReactNode;
+  /** The app's rail and phone dock, so a profile keeps the same navigation as the feed. */
+  nav?: ReactNode;
 }) {
   const owner = boot.users.find((u) => u.id === ownerId),
     mine = ownerId === boot.actor.userId;
@@ -722,42 +715,8 @@ export function ProfilePage({
           }}
         />
       )}
-      {!editing && (
-        // The same tabs as the feed: a bottom bar on phones, the left sidebar on wider screens.
-        <nav className="profile-bottom-nav" aria-label="Profile navigation">
-          <a className="profile-nav-brand" href="/" aria-label="Smudge home">
-            smudge
-          </a>
-          <button onClick={() => onNavigate("home")}>
-            <Home />
-            <span>Home</span>
-          </button>
-          <button onClick={() => onNavigate("explore")}>
-            <Search />
-            <span>Search</span>
-          </button>
-          <button className="wide-only" onClick={() => onNavigate("messages")}>
-            <MessageCircle />
-            <span>Messages</span>
-          </button>
-          <button className="wide-only" onClick={() => onNavigate("notifications")}>
-            <Bell />
-            <span>Notifications</span>
-          </button>
-          <button className="nav-create" onClick={() => onNavigate("create")}>
-            <Plus />
-            <span>Create</span>
-          </button>
-          <button
-            className={ownerId === boot.actor.userId ? "active" : undefined}
-            aria-current={ownerId === boot.actor.userId ? "page" : undefined}
-            onClick={() => onNavigate("profile")}
-          >
-            <UserRound />
-            <span>Profile</span>
-          </button>
-        </nav>
-      )}
+      {/* Outside the page, so the rail keeps the app's colors rather than this profile's. */}
+      {!editing && nav && createPortal(nav, document.body)}
       {panel && (
         <Dialog title="Search posts" onClose={() => setPanel(null)}>
           <div className="profile-discovery">

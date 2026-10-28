@@ -1,0 +1,234 @@
+/* One frame for the whole app: the same rail on the feed and on every profile, a feed column
+   sized to the window, a readable account switch and a sign-in dialog with room around it.
+   Loaded last. */
+
+/* Profiles sit beside the feed's rail, so they make room for it the way the feed does. */
+@media (min-width: 701px) {
+  .profile-page.has-side-nav {
+    --profile-rail: 92px;
+  }
+  .profile-page.has-side-nav .page-strip {
+    left: calc(50% + var(--profile-rail) / 2);
+    bottom: 24px;
+  }
+}
+@media (min-width: 1200px) {
+  .profile-page.has-side-nav {
+    --profile-rail: 240px;
+  }
+}
+/* Glass over a dark profile turns grey; there the rail and dock are solid. */
+body:has(.profile-page) .sidebar,
+body:has(.profile-page) .mobile-nav {
+  background: var(--white, #fff);
+}
+@media (max-width: 700px) {
+  .profile-page.has-side-nav {
+    padding-bottom: 96px;
+  }
+  /* Above the floating dock instead of under it. */
+  .profile-page.has-side-nav .page-strip {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Preview as: your photo in the rail opens a list of faces and names. */
+.sidebar .account-switch {
+  position: relative;
+  display: block;
+  height: auto;
+  padding: 0;
+  border: 0;
+}
+.account-switch-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.account-switch-button:hover,
+.account-switch-button[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.account-switch-button .avatar {
+  flex: none;
+  width: 38px;
+  height: 38px;
+}
+.account-switch-text {
+  display: none;
+  min-width: 0;
+}
+.account-switch-text small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.account-switch-text strong {
+  color: var(--ink);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.account-menu {
+  position: fixed;
+  left: 90px;
+  bottom: 24px;
+  z-index: 40;
+  display: grid;
+  gap: 2px;
+  width: 250px;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white, #fff);
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 22%);
+}
+.account-menu-label {
+  padding: 6px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.account-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font: 500 14px var(--ui);
+  text-align: left;
+  cursor: pointer;
+}
+.account-menu button:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.account-menu button[aria-checked="true"] {
+  font-weight: 700;
+}
+.account-menu button > span:not(.avatar) {
+  flex: 1;
+}
+.account-menu .avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+}
+@media (min-width: 1200px) {
+  .account-switch-button {
+    justify-content: flex-start;
+    padding: 6px 8px;
+    border-radius: 14px;
+  }
+  .account-switch-text {
+    display: block;
+  }
+  .account-menu {
+    left: 240px;
+  }
+}
+/* The More menu still uses a list box: draw its options in the theme's colors. */
+.more-switch select {
+  color-scheme: light dark;
+}
+.more-switch option {
+  background: var(--white, #fff);
+  color: var(--ink);
+}
+
+/* Sign up and log in: a narrow card with padding, the tabs as one switch, the form below. */
+.modal:has(> .auth-forms) {
+  width: min(440px, 100%);
+  border-radius: 24px;
+}
+.modal:has(> .auth-forms) .modal-header {
+  padding: 26px 28px 6px;
+  border-bottom: 0;
+}
+.modal:has(> .auth-forms) .modal-header .eyebrow {
+  display: none;
+}
+.modal:has(> .auth-forms) .modal-header h2 {
+  margin: 0;
+  font: 700 28px/1.1 var(--ui);
+  letter-spacing: -0.03em;
+}
+.modal > .auth-forms {
+  gap: 18px;
+  padding: 14px 28px 28px;
+}
+.modal > .auth-forms .auth-tabs {
+  margin: 0;
+  padding: 4px;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.modal > .auth-forms .auth-tabs button {
+  padding: 10px;
+  font-weight: 600;
+}
+.modal > .auth-forms .auth-form {
+  gap: 16px;
+}
+.modal > .auth-forms .auth-form input {
+  background: var(--white, #fff);
+}
+.modal > .auth-forms .auth-submit {
+  width: 100%;
+  border-radius: 999px;
+}
+.modal > .auth-forms .text-button {
+  justify-self: center;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+@media (max-width: 700px) {
+  .modal-backdrop:has(> .modal > .auth-forms) {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal:has(> .auth-forms) {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 24px 24px 0 0;
+  }
+  .modal > .auth-forms {
+    padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+}
+
+/* The feed: one column whose posts fit the window at any zoom, with the sides row and friends'
+   tiles lined up above it instead of hugging the rail. */
+@media (min-width: 701px) {
+  .app-shell {
+    --feed-w: clamp(360px, (100vh - 230px) * 0.8, 600px);
+  }
+  .app-shell .post-list {
+    width: min(var(--feed-w), 100% - 48px);
+  }
+  .app-shell[data-view="home"] .feed-column > .sides-bar,
+  .app-shell[data-view="home"] .feed-column > .friends-now,
+  .app-shell[data-view="following"] .feed-column > .sides-bar {
+    width: min(var(--feed-w), 100% - 48px);
+    margin-inline: auto;
+  }
+}
