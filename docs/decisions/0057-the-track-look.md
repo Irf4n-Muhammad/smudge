@@ -1,7 +1,6 @@
 # 0057 — The Track: a second look for the Paint wall
 
-Status: accepted. Stages one to three of four of the landing mock "Smudge landing v4" (the
-Track).
+Status: accepted. The four stages of the landing mock "Smudge landing v4" (the Track).
 
 ## Context
 
@@ -56,6 +55,13 @@ and the seeds, for what is the same page in different clothes.
   (24 characters each), drawn as bordered crests with a lime dot, "Rossi Musik · Crew · since
   2022"; the owner sees where they go while editing. The foot sits on the ink with its top
   corners rounded, the whole name in the lime and "Made in Smudge · place · year" under a rule.
+- **Motion (stage four).** Things arrive as they come into view (the band's still, the
+  manifesto with its starred words a beat apart, each number, crest, print and pick, the foot's
+  name), a figure of digits counts up once over 1.4 s, and the hero's cutouts, stickers and name
+  drift at their own speeds while the hero leaves. The page sits in a frame that does not scroll
+  itself, so the hero's visible share, read with an IntersectionObserver, stands in for the
+  scroll (`--py`, how much of the hero has gone). None of it for someone who asked for reduced
+  motion: everything is simply there.
 - Dani's seeded page is a Track: cut out of his photo, his board and a shoe cut from the
   skate photo (`assets/demo/cutouts/`, credited), "Senayan Open · 2 Nov" next up, a line of his
   own. A data dir seeded earlier is written again, once.
@@ -76,4 +82,5 @@ and the seeds, for what is the same page in different clothes.
   `.roll` rules under `html[data-look="track"]`.
 - `smudgeSettingsSchema.crews`; `trackStats()` and `trackCrews()` in `profile.html`; the
   Affiliations sheet in the editor; the marker is `smudge:v14`.
-- The stage to come from the mock: reveal, count-up and parallax motion (four).
+- `trackMotion()` and `countUp()` in `profile.html`; the `.rv` rules and the drift transforms
+  under `prefers-reduced-motion: no-preference` in `parts.css`.

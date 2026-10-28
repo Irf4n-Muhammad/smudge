@@ -513,6 +513,72 @@
         grid.append(crest);
       });
     }
+    // The Track's motion (ADR 0057, stage four): things arrive as they come into view, the
+    // numbers count up once, and the hero's cutouts drift at their own speeds while it leaves.
+    // The page sits in a frame that does not scroll itself, so the hero's visible share stands
+    // in for the scroll. Nothing moves for someone who asked for reduced motion.
+    function trackMotion() {
+      const marks = [
+        ["#tvideo", 0],
+        ["#manifesto", 0],
+        ...[".tstat", ".tcrest", "#roll-grid .photo", "#picks-grid > *"].map((s) => [s, 1]),
+        [".wall-foot strong", 0],
+      ];
+      marks.forEach(([sel, stagger]) =>
+        document.querySelectorAll(sel).forEach((node, i) => {
+          node.classList.add("rv");
+          if (stagger && i % 4) node.classList.add("d" + (i % 4));
+        }),
+      );
+      const all = document.querySelectorAll(".rv");
+      if (
+        !("IntersectionObserver" in window) ||
+        matchMedia("(prefers-reduced-motion: reduce)").matches
+      ) {
+        all.forEach((node) => node.classList.add("in"));
+        return;
+      }
+      const seen = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add("in");
+            seen.unobserve(entry.target);
+            entry.target.querySelectorAll(".tstat > b, :scope > b").forEach(countUp);
+          });
+        },
+        { threshold: 0.18 },
+      );
+      all.forEach((node) => seen.observe(node));
+      const hero = $("thero");
+      const steps = Array.from({ length: 51 }, (_, i) => i / 50);
+      const drift = new IntersectionObserver(
+        (entries) => {
+          const r = entries[entries.length - 1];
+          if (!r) return;
+          const gone = r.boundingClientRect.height * (1 - r.intersectionRatio);
+          hero.style.setProperty("--py", gone.toFixed(1) + "px");
+        },
+        { threshold: steps },
+      );
+      drift.observe(hero);
+    }
+    // A figure of digits counts up from nothing over 1.4 s; a time or a word stays as it is.
+    function countUp(b) {
+      const text = b.firstChild && b.firstChild.nodeValue;
+      if (!text || b.dataset.counted || !/^[\d,]+$/.test(text.trim())) return;
+      b.dataset.counted = "1";
+      const to = Number(text.replace(/,/g, ""));
+      const commas = text.includes(",");
+      const t0 = performance.now();
+      const tick = (t) => {
+        const k = 1 - Math.pow(1 - Math.min(1, (t - t0) / 1400), 3);
+        const n = Math.round(to * k);
+        b.firstChild.nodeValue = commas ? n.toLocaleString("en-US") : String(n);
+        if (k < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
     profileData
       .then((d) => {
         const first = d.owner.name.split(" ")[0] || d.owner.name;
@@ -591,6 +657,7 @@
           );
         }
         fit();
+        if (settings.look === "track") trackMotion();
       })
       .catch(() => {
         $("giant-name").textContent = "Could not load this page.";

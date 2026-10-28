@@ -339,7 +339,8 @@ contour lines and one lime, and a hero where you stand cut out of a photo in fro
 name, your things cut out around it with sticker lines, the chapters' labels as stickers, and
 the next thing on your calendar in the corner. Under it, what you are up to as a still from a
 film on the olive, your words on the same wall, the chapters' numbers in a row, your crews and
-clubs as crests, and the foot on the ink with your name in lime. A cutout is a PNG with no
+clubs as crests, and the foot on the ink with your name in lime; it all arrives as you scroll,
+the numbers counting up, unless you asked for reduced motion. A cutout is a PNG with no
 background, made on your phone and uploaded like any photo. Pick Track as a vibe, or switch the
 look under Colors.
 Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.

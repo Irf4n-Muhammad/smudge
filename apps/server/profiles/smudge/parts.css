@@ -2092,3 +2092,68 @@ html[data-look="track"] .sm .wall-foot span {
     font-size: 180px;
   }
 }
+
+/* The Track, stage four: motion. Things arrive as they come into view, the manifesto's words
+   a beat apart, and the hero's cutouts drift at their own speeds while it leaves (--py is how
+   much of the hero has gone). None of it for someone who asked for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-look="track"] .sm .rv {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+      opacity 0.9s cubic-bezier(0.2, 0.7, 0.2, 1),
+      transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  html[data-look="track"] .sm .rv.in {
+    opacity: 1;
+    transform: none;
+  }
+  html[data-look="track"] .sm .rv.d1 {
+    transition-delay: 0.08s;
+  }
+  html[data-look="track"] .sm .rv.d2 {
+    transition-delay: 0.16s;
+  }
+  html[data-look="track"] .sm .rv.d3 {
+    transition-delay: 0.24s;
+  }
+  html[data-look="track"] .sm .manifesto em {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(0.3em) rotate(-2deg);
+    transition:
+      opacity 0.7s,
+      transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  html[data-look="track"] .sm .manifesto.in em {
+    opacity: 1;
+    transform: none;
+  }
+  html[data-look="track"] .sm .manifesto.in em:nth-of-type(2) {
+    transition-delay: 0.2s;
+  }
+  html[data-look="track"] .sm .manifesto.in em:nth-of-type(3) {
+    transition-delay: 0.4s;
+  }
+  .sm .tme,
+  .sm .tthing,
+  .sm .tstickers,
+  .sm .tgiant {
+    will-change: transform;
+  }
+  .sm .tme {
+    transform: translate3d(0, calc(var(--py, 0px) * -0.1), 0);
+  }
+  .sm .tthing-1 {
+    transform: rotate(-14deg) translate3d(0, calc(var(--py, 0px) * 0.18), 0);
+  }
+  .sm .tthing-2 {
+    transform: rotate(-18deg) translate3d(0, calc(var(--py, 0px) * 0.08), 0);
+  }
+  .sm .tstickers {
+    transform: translate3d(0, calc(var(--py, 0px) * 0.05), 0);
+  }
+  .sm .tgiant {
+    transform: translate3d(0, calc(var(--py, 0px) * 0.04), 0);
+  }
+}
