@@ -9,7 +9,7 @@ import { photoId } from "../apps/server/seed-photos.js";
 
 /**
  * Fills a few demo people with two weeks of posts and "right now" lines, so the Posts wall and
- * the Stories shelves (ADR 0058) can be seen full. Local playground only: it writes the demo
+ * the Stories shelves can be seen full. Local playground only: it writes the demo
  * database directly, so stop `npm run dev` first and start it again after.
  *
  *   npm run build:core && node dist/scripts/fill-demo.js [people…]   (default: ines dani)

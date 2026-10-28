@@ -204,7 +204,7 @@
   color: inherit;
   text-shadow: none;
 }
-/* The post's place on the wall, newest first (ADR 0058). */
+/* The post's place on the wall, newest first. */
 .collage-no {
   position: absolute;
   top: 8px;
@@ -222,7 +222,7 @@
   }
 }
 
-/* Each day a shelf of upright stories, swiped sideways (ADR 0058): the day's name, its date and
+/* Each day a shelf of upright stories, swiped sideways: the day's name, its date and
    how many, then the stories at 9:16 with the clock on top and the title at the foot. */
 .stories {
   padding: 0;
@@ -359,7 +359,7 @@
   letter-spacing: 0;
 }
 
-/* One story full screen (ADR 0058), over everything, the page's tint behind a story without a
+/* One story full screen, over everything, the page's tint behind a story without a
    picture and the title as a block of the accent. */
 .story-viewer {
   position: fixed;
@@ -630,7 +630,7 @@
 /* A look's tokens (ADR 0049): the page sets the colours and two font roles, the app keeps the
    shapes. Everything below reads a --page-* variable and falls back to the app's own. */
 .has-look {
-  /* The big face the fixed pages set names and titles in (ADR 0058); the app owns it, like the
+  /* The big face the fixed pages set names and titles in; the app owns it, like the
      shapes, and a look colours it. */
   --page-big: "Bricolage Grotesque", "Arial Black", var(--ui, inherit), sans-serif;
   background: var(--page-ground);
@@ -708,7 +708,7 @@
 .has-look .collage-blank {
   background: var(--block);
 }
-/* The wall, louder (ADR 0058): the title in the big face, bigger on the big and wide blocks,
+/* The wall, louder: the title in the big face, bigger on the big and wide blocks,
    the date in the label face under it and the block's number in the corner. A picture gets a
    shade at its foot so the title reads on it. */
 .has-look .collage-cap {
@@ -782,7 +782,7 @@
   color: var(--page-ground);
 }
 /* The shelves in the look's colours: the day's name in the accent, stories without a picture
-   in the look's tints in turn, each with the ink that reads on it (ADR 0058). */
+   in the look's tints in turn, each with the ink that reads on it. */
 .has-look .story-day h2 {
   font-family: var(--page-label);
   color: var(--page-muted);

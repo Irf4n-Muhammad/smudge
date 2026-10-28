@@ -186,7 +186,7 @@ export function PageHead({
   posts?: number;
 }) {
   const name = page === "posts" ? "Posts" : "Stories";
-  // Under a look the page's name is set big with a second voice under it (ADR 0058), as the
+  // Under a look the page's name is set big with a second voice under it, as the
   // landing sets the name with the rest of it in italic.
   const voice = page === "posts" ? "all of them" : "day by day";
   const line =
@@ -267,7 +267,7 @@ export function PostsCollage({
   return (
     <ul className="collage" aria-label="Posts">
       {/* Newest first, whatever order the feed ranked them in, so the numbers count from the
-          latest post (ADR 0058). */}
+          latest post. */}
       {[...posts]
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .map((post, i) => {
@@ -284,7 +284,7 @@ export function PostsCollage({
               ) : (
                 <span className="collage-blank" aria-hidden="true" />
               )}
-              {/* The post's place on the wall, counted from the newest (ADR 0058). */}
+              {/* The post's place on the wall, counted from the newest. */}
               <span className="collage-no" aria-hidden="true">
                 {String(i + 1).padStart(2, "0")}
               </span>
@@ -368,7 +368,7 @@ type Day = { key: string; name: string; date: string; items: TimelineItem[] };
  * Stories are the days: what was posted, what was playing, where they were, which moments
  * they came to. Read from the archive, never typed, and kept for as long as the account is.
  * Each day is a shelf of upright stories, newest first; a story opens full screen and the
- * viewer runs on through the days from there (ADR 0058).
+ * viewer runs on through the days from there.
  */
 export function Stories({
   path,

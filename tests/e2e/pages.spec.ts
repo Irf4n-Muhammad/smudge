@@ -25,7 +25,7 @@ test("every page has a strip to its Posts and Stories, inside the app and on the
   const stories = page.getByRole("list", { name: "Stories" });
   await expect(stories).toBeVisible();
   await expect(stories.getByRole("heading").first()).toBeVisible();
-  // Each day is a shelf; a story opens full screen and closes again (ADR 0058).
+  // Each day is a shelf; a story opens full screen and closes again.
   await stories.getByRole("listitem").getByRole("button").first().click();
   const story = page.getByRole("dialog", { name: /^Story:/ });
   await expect(story).toBeVisible();
