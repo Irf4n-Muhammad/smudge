@@ -182,7 +182,7 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v14";
+export const smudgeVersionMarker = "smudge:v15";
 /** Every photo the settings lay on the page: chapter photos and snaps, the roll, the cutouts. */
 export const smudgePhotoIds = (s: SmudgeSettings) => [
   ...new Set(

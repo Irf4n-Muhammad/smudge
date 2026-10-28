@@ -1366,6 +1366,476 @@ html[data-owner="on"] .sm .roll.ghost {
   }
 }
 
+/* The Paint wall as a collage: three splats of paint behind the hero, the photo pushed over
+   the name with the chapters' numbers as stickers on it, the countdown in the corner; the
+   first marked word of the manifesto underlined in marker and the quote as an aside under it;
+   the chapters as bands of paint with the prints taped on; the guestbook numbered on from
+   them; the name once more at the foot, as big as the page. The Track keeps its own drawing. */
+.sm .hero {
+  isolation: isolate;
+}
+.sm .hero .idx {
+  position: relative;
+  z-index: 4;
+  color: var(--ink);
+}
+.sm .splat {
+  position: absolute;
+  z-index: -1;
+  opacity: 0.96;
+  border-radius: 48% 52% 42% 58% / 56% 44% 60% 40%;
+}
+.sm .splat.s1 {
+  right: -70px;
+  top: 48px;
+  width: 290px;
+  height: 250px;
+  background: var(--mark);
+  transform: rotate(-12deg);
+}
+.sm .splat.s2 {
+  right: 16px;
+  top: 400px;
+  width: 210px;
+  height: 180px;
+  background: var(--p3);
+  border-radius: 55% 45% 60% 40% / 45% 60% 40% 55%;
+  transform: rotate(18deg);
+}
+.sm .splat.s3 {
+  left: -90px;
+  top: 150px;
+  width: 230px;
+  height: 200px;
+  background: var(--p4);
+  border-radius: 40% 60% 55% 45% / 60% 40% 55% 45%;
+  transform: rotate(8deg);
+}
+.sm .poster {
+  display: block;
+  margin-top: -28px;
+}
+.sm .avatar {
+  width: 230px;
+  height: 300px;
+  margin-left: auto;
+  transform: rotate(3deg);
+  box-shadow: 0 24px 50px rgb(0 0 0 / 45%);
+}
+.sm .thatsme {
+  position: absolute;
+  right: 12px;
+  top: -30px;
+  z-index: 3;
+  font: italic 400 22px/1 var(--serif);
+  color: var(--ink);
+  white-space: nowrap;
+  transform: rotate(-6deg);
+  text-shadow:
+    0 0 6px var(--wall),
+    0 0 2px var(--wall);
+}
+.sm .thatsme::after {
+  content: " ↓";
+}
+.sm .stickers {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.sm .sticker {
+  position: absolute;
+  max-width: 58%;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: var(--p2);
+  color: var(--on-paint);
+  font: 800 10px/1 var(--big);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 35%);
+  pointer-events: auto;
+}
+.sm .sticker.n1 {
+  left: 0;
+  top: 42%;
+  transform: rotate(-6deg);
+}
+.sm .sticker.n2 {
+  left: 10px;
+  top: 58%;
+  background: var(--p3);
+  color: #fff;
+  transform: rotate(3deg);
+}
+.sm .sticker.n3 {
+  right: -6px;
+  bottom: 6%;
+  background: var(--p1);
+  transform: rotate(-4deg);
+}
+.sm .meta {
+  margin: 16px 0 0;
+}
+.sm .doing .where {
+  font: 400 12px var(--ui);
+  color: var(--muted);
+}
+.sm .doing .where:empty {
+  display: none;
+}
+.sm .doing .bar {
+  display: block;
+  height: 4px;
+  margin-top: 10px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.sm .doing .bar[hidden] {
+  display: none;
+}
+.sm .doing .bar i {
+  display: block;
+  height: 100%;
+  background: var(--p1);
+}
+/* The countdown's card in the hero: the label on its border like a tab, the days in the accent. */
+.sm .hero-count {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 28px;
+}
+.sm .hero-count:empty {
+  display: none;
+}
+.sm .hero-count .sx {
+  width: min(100%, 280px);
+  margin: 0;
+}
+.sm .hero-count .sx .label {
+  position: absolute;
+  top: -7px;
+  left: 14px;
+  z-index: 1;
+  margin: 0;
+  padding: 0 6px;
+  background: var(--wall);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+.sm .hero-count .sx-count .sx-card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px 14px;
+  border: 1.5px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  border-radius: 14px;
+  background: var(--wall);
+  color: var(--ink);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 35%);
+}
+.sm .hero-count .sx-count strong {
+  order: 2;
+  margin: 6px 0 0;
+  font: 400 13px var(--ui);
+  color: var(--muted);
+}
+.sm .hero-count .sx-clock {
+  font-size: 30px;
+  color: var(--p2);
+}
+/* The manifesto's first marked word is underlined in marker; the quote is its aside. */
+html:not([data-look="track"]) .sm .manifesto em:first-of-type {
+  padding: 0 0.04em;
+  background: linear-gradient(transparent 70%, var(--p1) 70% 92%, transparent 92%);
+}
+html:not([data-look="track"]) .sm .sx-quote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 20px 16px 0;
+}
+html:not([data-look="track"]) .sm .sx-quote .label {
+  margin: 0;
+  font: italic 400 22px/1 var(--serif);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--p3);
+  transform: rotate(-2deg);
+}
+html:not([data-look="track"]) .sm .sx-quote blockquote {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  font: italic 400 22px/1.2 var(--serif);
+  letter-spacing: 0;
+}
+html:not([data-look="track"]) .sm .sx-quote em {
+  font-style: normal;
+  color: var(--p2);
+}
+/* Chapters as bands of paint: the accent, the ground, the first paint, in turn. */
+html:not([data-look="track"]) .sm .chapters {
+  gap: 0;
+  padding: 48px 0 0;
+}
+html:not([data-look="track"]) .sm .chapter {
+  --band: var(--wall);
+  --band-ink: var(--ink);
+  --band-muted: var(--muted);
+  --band-em: var(--p2);
+  padding: 40px 16px 56px;
+  background: var(--band);
+  color: var(--band-ink);
+}
+html:not([data-look="track"]) .sm .chapter:nth-child(3n + 1) {
+  --band: var(--p2);
+  --band-ink: var(--on-paint);
+  --band-muted: color-mix(in srgb, var(--on-paint) 65%, transparent);
+  --band-em: var(--p3);
+}
+html:not([data-look="track"]) .sm .chapter:nth-child(3n) {
+  --band: var(--p1);
+  --band-ink: var(--on-paint);
+  --band-muted: color-mix(in srgb, var(--on-paint) 65%, transparent);
+  --band-em: var(--ink);
+}
+html:not([data-look="track"]) .sm .chapter .idx,
+html:not([data-look="track"]) .sm .chapter .note,
+html:not([data-look="track"]) .sm .chapter .stats dt,
+html:not([data-look="track"]) .sm .chapter .lines span {
+  color: var(--band-muted);
+}
+html:not([data-look="track"]) .sm .chapter .idx {
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--band-ink) 25%, transparent);
+}
+html:not([data-look="track"]) .sm .chapter h2 em {
+  color: var(--band-em);
+}
+html:not([data-look="track"]) .sm .chapter .big strong,
+html:not([data-look="track"]) .sm .chapter .big em,
+html:not([data-look="track"]) .sm .chapter .stats dd,
+html:not([data-look="track"]) .sm .chapter .lines b {
+  color: var(--band-ink);
+}
+html:not([data-look="track"]) .sm .chapter .lines li {
+  border-color: color-mix(in srgb, var(--band-ink) 25%, transparent);
+}
+html:not([data-look="track"]) .sm .chapter.ghost {
+  --band: var(--wall);
+  --band-ink: var(--ink);
+  --band-muted: var(--muted);
+}
+/* The prints are taped on, with a shadow, the place and the year written under them. */
+html:not([data-look="track"]) .sm .chapter .photo:not(.snap),
+html:not([data-look="track"]) .sm .roll .photo {
+  position: relative;
+}
+html:not([data-look="track"]) .sm .chapter-music .photo:not(.snap)::after {
+  background: var(--p3);
+}
+html:not([data-look="track"]) .sm .chapter .photo img,
+html:not([data-look="track"]) .sm .roll .photo img {
+  border-radius: 2px;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 40%);
+}
+html:not([data-look="track"]) .sm .chapter .snap::before,
+html:not([data-look="track"]) .sm .roll .photo::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: -10px;
+  width: 64px;
+  height: 20px;
+  margin-left: -32px;
+  background: rgb(255 255 255 / 28%);
+  transform: rotate(-3deg);
+}
+html:not([data-look="track"]) .sm .chapter .snap-2::before {
+  transform: rotate(4deg);
+}
+html:not([data-look="track"]) .sm .photo figcaption {
+  font: italic 400 18px/1.2 var(--serif);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--band-ink, var(--ink));
+}
+/* The cat in its chapter: one card over the chapter's print, the cat drawn small on it. */
+.sm .sx.in-chapter {
+  z-index: 3;
+  width: auto;
+  margin: 12px 0 0;
+}
+.sm .in-chapter .label {
+  display: none;
+}
+.sm .in-chapter .sx-cat-card {
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1.5px solid rgb(243 239 230 / 18%);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 35%);
+}
+.sm .in-chapter .sx-cat {
+  width: 64px;
+}
+.sm .in-chapter .sx-cat-text strong {
+  display: block;
+  font: italic 400 22px/1 var(--serif);
+}
+.sm .in-chapter .sx-cat-text small {
+  display: block;
+  margin-top: 6px;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sm .in-chapter .sx-stick {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--p3);
+  color: #fff;
+  font: 800 12px var(--big);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+/* The guestbook, numbered like a chapter, with a word in the corner. */
+html:not([data-look="track"]) .sm .sx-wall .label,
+html:not([data-look="track"]) .sm .sx-quiz .label {
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+html:not([data-look="track"]) .sm .sx-wall .label::after {
+  content: "Leave a note before you go";
+}
+html:not([data-look="track"]) .sm .sx-wall h2 em {
+  color: var(--p1);
+}
+/* The foot: the name once more, as big as the page, in the accent. */
+html:not([data-look="track"]) .sm .wall-foot strong {
+  font: 800 clamp(72px, 24vw, 220px) / 0.85 var(--big);
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  color: var(--p2);
+}
+html:not([data-look="track"]) .sm .wall-foot span {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 20%, transparent);
+}
+@media (min-width: 720px) {
+  .sm .hero:not([hidden]) {
+    grid-template-rows: auto auto auto 1fr auto;
+  }
+  .sm .splat.s1 {
+    right: 140px;
+    top: 60px;
+    width: 440px;
+    height: 400px;
+  }
+  .sm .splat.s2 {
+    right: 48px;
+    top: 420px;
+    width: 300px;
+    height: 270px;
+  }
+  .sm .splat.s3 {
+    left: 30%;
+    top: 420px;
+    width: 260px;
+    height: 230px;
+  }
+  .sm .poster {
+    grid-row: 2 / span 3;
+  }
+  .sm .avatar {
+    width: 360px;
+    height: 450px;
+    margin-left: -96px;
+    transform: rotate(-2deg);
+  }
+  .sm .thatsme {
+    right: auto;
+    left: 28%;
+    top: -34px;
+    font-size: 26px;
+  }
+  .sm .sticker.n1 {
+    left: -150px;
+    top: 36%;
+  }
+  .sm .sticker.n2 {
+    left: -120px;
+    top: 64%;
+  }
+  .sm .sticker.n3 {
+    right: -24px;
+    bottom: 12%;
+  }
+  .sm .meta {
+    margin-left: -96px;
+  }
+  .sm .hero-now {
+    grid-row: 5;
+    grid-column: 1;
+  }
+  .sm .hero-count {
+    grid-row: 5;
+    grid-column: 2;
+    align-self: end;
+    margin-top: 0;
+  }
+  html:not([data-look="track"]) .sm .sx-quote {
+    margin: 24px 40px 0;
+  }
+  html:not([data-look="track"]) .sm .sx-quote .label,
+  html:not([data-look="track"]) .sm .sx-quote blockquote {
+    font-size: 26px;
+  }
+  html:not([data-look="track"]) .sm .chapters {
+    gap: 0;
+    padding: 72px 0 0;
+  }
+  html:not([data-look="track"]) .sm .chapter {
+    padding: 64px 40px 136px;
+  }
+  html:not([data-look="track"]) .sm .chapter .pics > .in-chapter {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: -56px;
+    margin: 0;
+  }
+  html:not([data-look="track"]) .sm .chapter-work .pics > .in-chapter {
+    bottom: -120px;
+  }
+  /* On Work the second snap lies over the print's corner, the caption keeps to the other side. */
+  html:not([data-look="track"]) .sm .chapter-work .snap-2 {
+    left: -32px;
+    top: 58%;
+    bottom: auto;
+    width: 170px;
+  }
+  html:not([data-look="track"]) .sm .chapter-work .pics > .photo:not(.snap) figcaption {
+    text-align: right;
+  }
+  html:not([data-look="track"]) .sm .photo figcaption {
+    font-size: 20px;
+  }
+}
+
 /* The Track look (ADR 0057): the same parts on a cream ground with contour lines, one lime,
    and a hero where the owner stands cut out in front of their own name. The shell sets
    data-look on <html> from the settings, so every part recolours without a line of script. */

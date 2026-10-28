@@ -1,4 +1,4 @@
-<!-- smudge:v14 -->
+<!-- smudge:v15 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm">
@@ -37,9 +37,13 @@
     </div>
     <p class="hint" id="tband-hint" hidden>What are you up to? It goes here, on the olive.</p>
   </section>
-  <!-- The poster hero (ADR 0048): the name as big as the page, the photo pushed into it, and
-       under them the song and what's going on. Nothing here is decoration without a job. -->
+  <!-- The Paint wall's hero: the name as big as the page, the photo pushed into it over three
+       splats of paint, the chapters' numbers as stickers, and under them the song, what's going
+       on and the countdown. Nothing here is decoration without a job. -->
   <section class="hero" id="hero" aria-label="About">
+    <span class="splat s1" aria-hidden="true"></span>
+    <span class="splat s2" aria-hidden="true"></span>
+    <span class="splat s3" aria-hidden="true"></span>
     <div class="idx">
       <span>Smudge / <span id="hero-first"></span></span>
       <span id="hero-place" data-edit="place"></span>
@@ -48,7 +52,8 @@
     <p class="giant2" id="giant-line" data-edit="tagline"></p>
     <div class="poster">
       <div class="avatar" id="avatar" data-edit="photo"></div>
-      <span class="mark" aria-hidden="true"></span>
+      <span class="thatsme" aria-hidden="true">that's me</span>
+      <div class="stickers" id="stickers" data-edit="chapters"></div>
       <ul class="meta" id="hero-meta" data-edit="about"></ul>
     </div>
     <!-- Live entries first (ADR 0044); what the owner typed wins while they edit. -->
@@ -63,8 +68,12 @@
         <small>Right now</small>
         <strong id="doing-text"></strong>
         <time id="doing-when"></time>
+        <span class="where" id="doing-where"></span>
+        <span class="bar" id="doing-bar" hidden><i id="doing-fill"></i></span>
       </div>
     </div>
+    <!-- The countdown, when the owner added one, sits here in the corner of the hero. -->
+    <div class="hero-count" id="hero-count"></div>
   </section>
   <!-- The owner's words (ADR 0054): a few sentences as big as the page, the starred words in
        the serif and the palette, the way a manifesto reads on a poster. -->
@@ -108,6 +117,9 @@
     const $ = (id) => document.getElementById(id);
     // Easy-editor settings (smudge/settings.js); every field falls back to the profile's own data.
     const settings = window.smudgeSettings || {};
+    // On the Paint wall the quote, the countdown and the cat are drawn where they belong (under
+    // the words, in the hero, in the cat's chapter), so sections.js leaves them to this part.
+    window.smudgeClaims = settings.look === "track" ? [] : ["quote", "countdown", "cat"];
     const el = (tag, cls, text) => {
       const node = document.createElement(tag);
       if (cls) node.className = cls;
@@ -177,6 +189,14 @@
         $("doing-text").textContent = doing.text;
         $("doing-when").textContent = doing.at ? ago(doing.at) : "";
         if (doing.at) $("doing-when").dateTime = doing.at;
+        // The place and the progress belong to what the owner typed, not to a live entry.
+        const now = settings.now || {};
+        const typedNow = !doing.at;
+        $("doing-where").textContent = typedNow
+          ? [now.place, now.progress ? now.progress + "% there" : ""].filter(Boolean).join(" · ")
+          : "";
+        $("doing-bar").hidden = !typedNow || !now.progress;
+        $("doing-fill").style.width = Math.min(100, Math.max(0, now.progress || 0)) + "%";
       }
       if (settings.look === "track") trackBand(doing);
     }
@@ -318,6 +338,7 @@
     function chapters() {
       const list = Array.isArray(settings.chapters) ? settings.chapters : [];
       const box = $("chapters");
+      const made = [];
       box.textContent = "";
       box.hidden = false;
       // Nothing written yet: the owner sees three empty chapters to tap, a visitor sees none.
@@ -335,14 +356,18 @@
           sec.append(head, el("p", "note", hint));
           box.append(sec);
         });
-        return;
+        return made;
       }
       list.forEach((c, i) => {
         const sec = el("section", "chapter chapter-" + c.kind);
         sec.setAttribute("aria-label", c.title || kinds[c.kind] || "Chapter " + (i + 1));
         const head = el("div", "idx");
         head.append(
-          el("span", "", "0" + (i + 1) + " / " + (kinds[c.kind] || c.title || "")),
+          el(
+            "span",
+            "",
+            "0" + (i + 1) + " / " + (kinds[c.kind] || (c.title || "").replace(/\*/g, "")),
+          ),
           el("span", "", c.label || ""),
         );
         sec.append(head);
@@ -376,7 +401,62 @@
           add(statsOf(c), linesOf(c, "lines"), photo);
         }
         box.append(sec);
+        made.push(sec);
       });
+      return made;
+    }
+    // The chapters' numbers as stickers on the hero's photo: the label and the big figure of
+    // each, up to three, the way a sticker says "since 2019 · 31 murals".
+    function stickers() {
+      const box = $("stickers");
+      box.textContent = "";
+      (settings.chapters || [])
+        .map(
+          (c) =>
+            [c.label, [c.big, c.unit].filter(Boolean).join(" ")]
+              .filter(Boolean)
+              .join(" · ")
+              .replace(/\*/g, "")
+              .trim() || (c.title || "").replace(/\*/g, "").trim(),
+        )
+        .filter(Boolean)
+        .slice(0, 3)
+        .forEach((text, i) => box.append(el("span", "sticker n" + (i + 1), text)));
+    }
+    // The extras in their places (Paint wall): the countdown in the hero's corner, the quote
+    // as an aside under the words, the cat in the chapter that is about it, else at the foot.
+    function extras(first, made) {
+      if (settings.look === "track" || !window.smudgeSection) return;
+      const want = (kind) =>
+        (settings.sections || []).includes(kind) ? window.smudgeSection(kind) : null;
+      const count = want("countdown");
+      $("hero-count").textContent = "";
+      if (count) $("hero-count").append(count);
+      const quote = want("quote");
+      if (quote) {
+        const label = quote.querySelector(".label span");
+        if (label) label.textContent = first + ", in one line:";
+        $("manifesto").after(quote);
+      }
+      const cat = want("cat");
+      if (cat) {
+        const name = ((settings.cat || {}).name || "").trim().toLowerCase();
+        const i = name
+          ? (settings.chapters || []).findIndex(
+              (c) =>
+                c.kind === "custom" &&
+                [c.title, c.label, c.note].join(" ").toLowerCase().includes(name),
+            )
+          : -1;
+        const home = i >= 0 ? made[i] : null;
+        if (home) {
+          cat.classList.add("in-chapter");
+          (home.querySelector(".pics") || home).append(cat);
+        } else {
+          const host = document.getElementById("sm-sections");
+          if (host) host.append(cat);
+        }
+      }
     }
     // Photos from the roll (ADR 0053): laid freely by the stylesheet, each with its caption. The
     // owner sees where they go while editing; a visitor sees nothing until there are some.
@@ -634,7 +714,9 @@
           manifesto.hidden = false;
           manifesto.classList.add("ghost");
         }
-        chapters();
+        const made = chapters();
+        stickers();
+        extras(first, made);
         roll();
         picks(d.posts);
         // The foot of the page (ADR 0052): the whole name once more, and where this is.

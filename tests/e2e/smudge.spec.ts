@@ -71,9 +71,10 @@ test("the Paint wall profile shows real posts, follows the season and opens post
     .click();
   const posts = page.locator(".profile-page.has-look");
   await expect(posts).toHaveCSS("background-color", "rgb(14, 13, 11)");
+  // Inès paints in the Sunset palette, so the strip's accent is its yellow.
   await expect(page.getByRole("button", { name: "Follow" })).toHaveCSS(
     "background-color",
-    "rgb(242, 197, 61)",
+    "rgb(255, 201, 61)",
   );
   await page
     .getByRole("navigation", { name: "Pages" })

@@ -1,4 +1,4 @@
-// smudge:v8
+// smudge:v15
 // Paint wall page sections. Reads the easy-editor settings (smudge/settings.js), applies colours and
 // section order, draws the sections the owner added, and turns taps into edits while editing.
 (() => {
@@ -27,7 +27,7 @@
     if (!order.includes(k)) css += `[data-sm-section="${k}"]{display:none!important}`;
   // The owner's palette; Halloween only recolours the mark on the hero (parts.css).
   if (s.palette !== "night")
-    css += `.sm{${paints.map((c, i) => `--p${i + 1}:${c}`).join(";")}}html[data-season="halloween"] .sm{--mark:#ff7a1a}`;
+    css += `html .sm{${paints.map((c, i) => `--p${i + 1}:${c}`).join(";")}}html[data-season="halloween"] .sm{--mark:#ff7a1a}`;
   const style = document.createElement("style");
   style.textContent = css;
   document.head.append(style);
@@ -40,12 +40,19 @@
     if (text !== undefined) node.textContent = text;
     return node;
   };
+  // On the Paint wall the guestbook and the quiz are numbered on from the chapters, like a
+  // chapter each ("04 / Guestbook"); on the Track every section keeps its dash.
+  const numbered = s.look === "track" ? [] : order.filter((k) => k === "wall" || k === "quiz");
   const section = (kind, label) => {
     const node = el("section", "sx sx-" + kind);
     node.dataset.smSection = kind === "count" ? "countdown" : kind;
     node.dataset.edit = node.dataset.smSection;
     const head = el("div", "label");
-    head.append(el("span", "", "— " + label));
+    const n = numbered.indexOf(kind);
+    const count = (Array.isArray(s.chapters) ? s.chapters : []).length;
+    head.append(
+      el("span", "", n < 0 ? "— " + label : String(count + n + 1).padStart(2, "0") + " / " + label),
+    );
     node.append(head);
     return node;
   };
@@ -62,7 +69,7 @@
   const builders = {
     quote() {
       if (!s.quote.text) return null;
-      const node = section("quote", "IN ONE LINE");
+      const node = section("quote", "In one line");
       const q = el("blockquote");
       q.append(marked("“" + s.quote.text + "”"));
       node.append(q);
@@ -70,7 +77,7 @@
     },
     countdown() {
       if (!s.countdown.date) return null;
-      const node = section("count", "COUNTDOWN");
+      const node = section("count", "Countdown");
       const card = el("div", "sx-card");
       const clock = el("div", "sx-clock");
       card.append(el("strong", "", s.countdown.label || "Something's coming"), clock);
@@ -94,7 +101,7 @@
       return node;
     },
     wall() {
-      const node = section("wall", "GUESTBOOK");
+      const node = section("wall", "Guestbook");
       const title = el("h2");
       const words = (s.wall.title || "The Wall").split(" ");
       title.append(document.createTextNode(words.slice(0, -1).join(" ") + " "));
@@ -212,7 +219,7 @@
     },
     // "How well do you know me?" (ADR 0043): the owner's questions, a friend's answers, a board.
     quiz() {
-      const node = section("quiz", "QUIZ");
+      const node = section("quiz", "Quiz");
       const title = el("h2");
       const words = (s.quiz.title || "How well do you *know* me?").split(" ");
       title.append(marked(words.join(" ")));
@@ -341,7 +348,7 @@
     // The cat (ADR 0043): it lives on the page; friends keep it fed, once a day each.
     cat() {
       const name = s.cat.name || "the cat";
-      const node = section("cat", "THE CAT");
+      const node = section("cat", "The cat");
       const card = el("div", "sx-card sx-cat-card");
       const pic = el("div", "sx-cat");
       pic.setAttribute("role", "img");
@@ -395,11 +402,21 @@
       return node;
     },
   };
+  // Each section is built once. A part that places a section itself (the profile puts the
+  // countdown in its hero) names it in window.smudgeClaims before this runs and asks for the
+  // node here; the rest go to the column at the foot, in the owner's order.
+  const built = {};
+  window.smudgeSection = (kind) => {
+    if (!(kind in built)) built[kind] = builders[kind] ? builders[kind]() : null;
+    return built[kind];
+  };
   window.addEventListener("DOMContentLoaded", () => {
     const host = document.getElementById("sm-sections");
     if (!host) return;
+    const claimed = Array.isArray(window.smudgeClaims) ? window.smudgeClaims : [];
     for (const kind of order) {
-      const node = builders[kind] && builders[kind]();
+      if (claimed.includes(kind)) continue;
+      const node = window.smudgeSection(kind);
       if (node) host.append(node);
     }
   });

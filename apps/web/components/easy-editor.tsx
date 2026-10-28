@@ -136,9 +136,9 @@ const paletteNames: Record<SmudgePalette, string> = {
 const sectionInfo: Record<SmudgeSection, { name: string; note: string }> = {
   wall: { name: "The Wall", note: "Friends leave notes" },
   quiz: { name: "Quiz", note: "How well do friends know you?" },
-  cat: { name: "The Cat", note: "Friends keep it fed" },
-  quote: { name: "Big quote", note: "One line, huge" },
-  countdown: { name: "Countdown", note: "For drops and events" },
+  cat: { name: "The Cat", note: "In its chapter; friends keep it fed" },
+  quote: { name: "Big quote", note: "One line, under your words" },
+  countdown: { name: "Countdown", note: "In the hero, for drops and events" },
   latest: { name: "Latest", note: "Your newest post, big" },
   selected: { name: "Gallery", note: "Swipe through your best posts" },
 };

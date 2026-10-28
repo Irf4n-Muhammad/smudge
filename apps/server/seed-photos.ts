@@ -51,6 +51,7 @@ const photos = [
   "dj-hands",
 ] as const;
 type Photo = (typeof photos)[number];
+export type PhotoName = Photo;
 export const photoId = (name: Photo) => id(20 + photos.indexOf(name));
 const faceId = (name: string) => id(Object.values(faces).indexOf(name));
 
