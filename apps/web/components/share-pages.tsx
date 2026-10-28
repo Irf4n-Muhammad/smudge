@@ -238,6 +238,7 @@ export function SharedProfile({
               <NowBar ownerId={view.user.id} mine={false} guestHandle={handle} />
               <Stories
                 path={`/public/users/${encodeURIComponent(handle)}/timeline`}
+                who={view.user.name}
                 cover={cover}
                 postHref={postHref}
                 empty="Nothing yet."

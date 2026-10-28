@@ -1,7 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Image as ImageIcon, Layers, PanelTop, Pencil, Plus } from "lucide-react";
+import {
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+  Layers,
+  PanelTop,
+  Pencil,
+  Plus,
+  X,
+} from "lucide-react";
 import type { CSSProperties } from "react";
 import type { User } from "../../../packages/contracts/src/experience";
 import type { PageLook, ProfilePackage } from "../../../packages/contracts/src/profile";
@@ -11,7 +21,7 @@ import type {
   Timeline,
   TimelineItem,
 } from "../../../packages/contracts/src/pages";
-import { Entry } from "./now";
+import { leads, nowIcons } from "./now";
 import { api } from "./runtime";
 import { Avatar } from "./ui";
 
@@ -52,12 +62,18 @@ export function lookStyle(manifest: ProfilePackage["manifest"] | null | undefine
   // Blocks without a picture take the tints in turn (ADR 0052), the accent alone without them;
   // each carries the ink that reads on it.
   const tints = look.tints?.length ? look.tints : [look.accent];
+  // The darker of the ground and the ink reads on a light tint, the lighter on a dark one, so a
+  // cream look like the Track's gets dark words on its lime, not cream ones.
+  const [dark, light] =
+    lightness(look.ground) < lightness(look.ink)
+      ? [look.ground, look.ink]
+      : [look.ink, look.ground];
   const tintVars = Object.fromEntries(
     [0, 1, 2, 3].flatMap((i) => {
       const tint = tints[i % tints.length]!;
       return [
         [`--page-tint-${i + 1}`, tint],
-        [`--page-tint-${i + 1}-ink`, lightness(tint) > 0.5 ? look.ground : look.ink],
+        [`--page-tint-${i + 1}-ink`, lightness(tint) > 0.5 ? dark : light],
       ];
     }),
   );
@@ -170,6 +186,9 @@ export function PageHead({
   posts?: number;
 }) {
   const name = page === "posts" ? "Posts" : "Stories";
+  // Under a look the page's name is set big with a second voice under it (ADR 0058), as the
+  // landing sets the name with the rest of it in italic.
+  const voice = page === "posts" ? "all of them" : "day by day";
   const line =
     page === "posts"
       ? `${user.name} · ${posts === undefined ? `@${user.handle}` : posts === 0 ? "no posts yet" : `${posts} ${posts === 1 ? "post" : "posts"}`}`
@@ -178,7 +197,15 @@ export function PageHead({
     <header className="page-head">
       {!look && <Avatar user={user} />}
       <div>
-        <h1>{look ? name : user.name}</h1>
+        <h1>
+          {look ? (
+            <>
+              {name} <em>{voice}</em>
+            </>
+          ) : (
+            user.name
+          )}
+        </h1>
         <small>{look ? line : `@${user.handle} · ${name}`}</small>
         {user.bio && !look && <p>{user.bio}</p>}
       </div>
@@ -245,6 +272,7 @@ export function PostsCollage({
           gridColumn: span.right ? `3 / span ${span.col}` : `span ${span.col}`,
           gridRow: `span ${span.row}`,
         };
+        const shape = span.row > 1 ? "collage-big" : span.col === 3 ? "collage-wide" : "";
         const body = (
           <>
             {post.hasCover ? (
@@ -252,14 +280,18 @@ export function PostsCollage({
             ) : (
               <span className="collage-blank" aria-hidden="true" />
             )}
+            {/* The post's place on the wall, counted from the newest (ADR 0058). */}
+            <span className="collage-no" aria-hidden="true">
+              {String(i + 1).padStart(2, "0")}
+            </span>
             <span className="collage-cap">
               <strong>{post.title}</strong>
-              {span.row > 1 && <small>{shortDate(post.createdAt)}</small>}
+              <small>{shortDate(post.createdAt)}</small>
             </span>
           </>
         );
         return (
-          <li key={post.id} style={style} className={span.row > 1 ? "collage-big" : undefined}>
+          <li key={post.id} style={style} className={shape || undefined}>
             {href ? (
               <a href={href(post)}>{body}</a>
             ) : (
@@ -272,21 +304,19 @@ export function PostsCollage({
   );
 }
 
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+/** A day's name and, for today and yesterday, the date beside it. */
 const dayLabel = (iso: string, today = new Date()) => {
   const day = new Date(iso);
-  const diff = Math.round(
-    (new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() -
-      new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime()) /
-      86_400_000,
-  );
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Yesterday";
-  return day.toLocaleDateString(undefined, {
-    weekday: "short",
+  const diff = Math.round((startOfDay(today) - startOfDay(day)) / 86_400_000);
+  const date = day.toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
     ...(day.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
   });
+  if (diff === 0) return { name: "Today", date };
+  if (diff === 1) return { name: "Yesterday", date };
+  return { name: day.toLocaleDateString(undefined, { weekday: "short" }), date };
 };
 const clock = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, {
@@ -298,13 +328,47 @@ const dayKey = (iso: string) => {
   const d = new Date(iso);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
+const itemKey = (item: TimelineItem) =>
+  item.kind === "post"
+    ? `post:${item.post.id}`
+    : item.kind === "moment"
+      ? `moment:${item.card.gatheringId}`
+      : `now:${item.entry.id}`;
+const momentCover = (id: string) => `/api/public/gatherings/${encodeURIComponent(id)}/cover`;
+
+/** What a story says, whatever it was read from: a picture, a title and the line under it. */
+function storyFace(item: TimelineItem, cover: (post: PostTile) => string) {
+  if (item.kind === "post")
+    return {
+      image: item.post.hasCover ? cover(item.post) : undefined,
+      title: item.post.title,
+      line: item.post.caption,
+    };
+  if (item.kind === "moment")
+    return {
+      image: item.card.cover ? momentCover(item.card.gatheringId) : undefined,
+      title: item.card.title,
+      line: `${item.card.place} · ${item.card.people} came`,
+    };
+  const lead = leads[item.entry.kind];
+  return {
+    image: undefined,
+    title: item.entry.text,
+    line: [lead, item.entry.by].filter(Boolean).join(" · "),
+  };
+}
+
+type Day = { key: string; name: string; date: string; items: TimelineItem[] };
 
 /**
  * Stories are the days: what was posted, what was playing, where they were, which moments
  * they came to. Read from the archive, never typed, and kept for as long as the account is.
+ * Each day is a shelf of upright stories, newest first; a story opens full screen and the
+ * viewer runs on through the days from there (ADR 0058).
  */
 export function Stories({
   path,
+  who,
   cover,
   onOpenPost,
   postHref,
@@ -312,96 +376,214 @@ export function Stories({
 }: {
   /** API path of the timeline, member or public. */
   path: string;
+  /** Whose days these are, for the head of the full-screen story. */
+  who?: string;
   cover: (post: PostTile) => string;
   onOpenPost?: (post: PostTile) => void;
   postHref?: (post: PostTile) => string;
   empty: string;
 }) {
   const [timeline, setTimeline] = useState<Timeline | null>(null);
+  const [open, setOpen] = useState<number | null>(null);
   useEffect(() => {
     api<Timeline>(path).then(setTimeline, () => setTimeline({ items: [], posts: 0 }));
   }, [path]);
   if (!timeline) return <p className="page-empty" aria-busy="true" />;
   if (!timeline.items.length) return <p className="page-empty">{empty}</p>;
-  const days: { key: string; label: string; items: TimelineItem[] }[] = [];
+  const days: Day[] = [];
   for (const item of timeline.items) {
     const key = dayKey(item.at);
     const last = days[days.length - 1];
     if (last && last.key === key) last.items.push(item);
-    else days.push({ key, label: dayLabel(item.at), items: [item] });
+    else days.push({ key, ...dayLabel(item.at), items: [item] });
   }
-  return (
-    <ol className="stories" aria-label="Stories">
-      {days.map((day) => (
-        <li key={day.key} className="story-day">
-          <h2>{day.label}</h2>
-          <ul>
-            {day.items.map((item) => {
-              const at = <time dateTime={item.at}>{clock(item.at)}</time>;
-              if (item.kind === "post")
-                return (
-                  <li key={`post:${item.post.id}`} className="story-post">
-                    {at}
-                    {postHref ? (
-                      <a href={postHref(item.post)}>
-                        <StoryTile post={item.post} cover={cover} />
-                      </a>
-                    ) : (
-                      <button onClick={() => onOpenPost?.(item.post)}>
-                        <StoryTile post={item.post} cover={cover} />
-                      </button>
-                    )}
-                  </li>
-                );
-              if (item.kind === "moment")
-                return (
-                  <li key={`moment:${item.card.gatheringId}`} className="story-moment">
-                    {at}
-                    <a href={`/m/${encodeURIComponent(item.card.gatheringId)}`}>
-                      {item.card.cover && (
-                        <img
-                          src={`/api/public/gatherings/${encodeURIComponent(item.card.gatheringId)}/cover`}
-                          alt=""
-                          loading="lazy"
-                        />
-                      )}
-                      <span>
-                        <strong>{item.card.title}</strong>
-                        <small>
-                          {item.card.place} · {item.card.people} came
-                        </small>
-                      </span>
-                    </a>
-                  </li>
-                );
-              return (
-                <li key={`now:${item.entry.id}`} className="story-now">
-                  {at}
-                  <span className="story-entry">
-                    <Entry entry={item.entry} />
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </li>
-      ))}
-    </ol>
-  );
-}
-/** A post in the day: its cover small on the left, its title beside it, as one line of the day. */
-function StoryTile({ post, cover }: { post: PostTile; cover: (post: PostTile) => string }) {
+  // The viewer walks the stories in the order the shelves show them.
+  const flat = days.flatMap((day) => day.items.map((item) => ({ item, day })));
+  let n = 0;
   return (
     <>
-      {post.hasCover ? (
-        <img src={cover(post)} alt="" loading="lazy" />
-      ) : (
-        <span className="story-blank" aria-hidden="true" />
+      <ol className="stories" aria-label="Stories">
+        {days.map((day) => (
+          <li key={day.key} className="story-day">
+            <h2>
+              <span className="story-day-name">{day.name}</span>
+              <span className="story-day-date">{day.date}</span>
+              <span className="story-day-count">{day.items.length}</span>
+            </h2>
+            <ul className="story-shelf">
+              {day.items.map((item) => {
+                const index = n++;
+                const face = storyFace(item, cover);
+                const Icon = item.kind === "now" ? nowIcons[item.entry.kind] : null;
+                return (
+                  <li key={itemKey(item)} className={`story-tile story-${item.kind}`}>
+                    <button
+                      aria-label={`${face.title}, ${day.name} at ${clock(item.at)}`}
+                      onClick={() => setOpen(index)}
+                    >
+                      {face.image ? (
+                        <img src={face.image} alt="" loading="lazy" />
+                      ) : (
+                        <span className="story-blank" aria-hidden="true" />
+                      )}
+                      <time dateTime={item.at}>{clock(item.at)}</time>
+                      <span className="story-cap">
+                        {Icon && <Icon size={16} aria-hidden="true" />}
+                        <strong>{face.title}</strong>
+                        {face.line && <small>{face.line}</small>}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
+        ))}
+      </ol>
+      {open !== null && flat[open] && (
+        <StoryViewer
+          stories={flat}
+          index={open}
+          who={who}
+          cover={cover}
+          onMove={setOpen}
+          onClose={() => setOpen(null)}
+          onOpenPost={onOpenPost}
+          postHref={postHref}
+        />
       )}
-      <span className="story-cap">
-        <strong>{post.title}</strong>
-        <small>Post{post.caption ? ` · ${post.caption}` : ""}</small>
-      </span>
     </>
+  );
+}
+
+const storyMs = 6000;
+/**
+ * One story full screen: the day's progress along the top, a tap on the right or left half to
+ * go on or back, the title as a block of paint. It runs on by itself unless the person asked
+ * for less motion; the last story closes it.
+ */
+function StoryViewer({
+  stories,
+  index,
+  who,
+  cover,
+  onMove,
+  onClose,
+  onOpenPost,
+  postHref,
+}: {
+  stories: { item: TimelineItem; day: Day }[];
+  index: number;
+  who?: string | undefined;
+  cover: (post: PostTile) => string;
+  onMove: (index: number) => void;
+  onClose: () => void;
+  onOpenPost?: ((post: PostTile) => void) | undefined;
+  postHref?: ((post: PostTile) => string) | undefined;
+}) {
+  const { item, day } = stories[index]!;
+  const face = storyFace(item, cover);
+  const [still, setStill] = useState(false);
+  const next = () => (index + 1 < stories.length ? onMove(index + 1) : onClose());
+  const back = () => onMove(Math.max(0, index - 1));
+  useEffect(() => {
+    setStill(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
+  useEffect(() => {
+    const keys = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") next();
+      else if (e.key === "ArrowLeft") back();
+    };
+    window.addEventListener("keydown", keys);
+    return () => window.removeEventListener("keydown", keys);
+  });
+  const inDay = day.items.indexOf(item);
+  // The story's own tint behind it, the next one for the block its title is set on.
+  const tint = (index % 4) + 1;
+  const sticker = (tint % 4) + 1;
+  const Icon = item.kind === "now" ? nowIcons[item.entry.kind] : null;
+  return (
+    <div
+      className="story-viewer"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Story: ${face.title}`}
+      style={
+        {
+          "--story-tint": `var(--page-tint-${tint}, var(--accent, #6b5cff))`,
+          "--story-sticker": `var(--page-tint-${sticker}, var(--accent, #6b5cff))`,
+          "--story-sticker-ink": `var(--page-tint-${sticker}-ink, #fff)`,
+        } as CSSProperties
+      }
+    >
+      {face.image ? (
+        <img className="story-viewer-bg" src={face.image} alt="" />
+      ) : (
+        <span className="story-viewer-bg story-viewer-blank" aria-hidden="true" />
+      )}
+      <div className="story-viewer-bars" aria-hidden="true">
+        {day.items.map((it, i) => (
+          <i key={itemKey(it)} className={i < inDay ? "done" : i === inDay ? "on" : undefined}>
+            {i === inDay && (
+              <b
+                key={index}
+                className={still ? "still" : undefined}
+                style={{ animationDuration: `${storyMs}ms` }}
+                onAnimationEnd={next}
+              />
+            )}
+          </i>
+        ))}
+      </div>
+      <header className="story-viewer-head">
+        {who && <span className="story-viewer-mark">{who.slice(0, 1)}</span>}
+        <span>
+          {who && <strong>{who}</strong>}
+          <small>
+            {day.name} · {clock(item.at)}
+          </small>
+        </span>
+        <button className="story-viewer-close" aria-label="Close story" onClick={onClose}>
+          <X size={22} />
+        </button>
+      </header>
+      <button className="story-viewer-zone back" aria-label="Previous story" onClick={back}>
+        <ChevronLeft size={28} aria-hidden="true" />
+      </button>
+      <button className="story-viewer-zone next" aria-label="Next story" onClick={next}>
+        <ChevronRight size={28} aria-hidden="true" />
+      </button>
+      <div className="story-viewer-say">
+        <p className="story-viewer-title">
+          {Icon && <Icon size={22} aria-hidden="true" />}
+          {face.title}
+        </p>
+        {face.line && <p className="story-viewer-line">{face.line}</p>}
+      </div>
+      {item.kind === "post" &&
+        (postHref ? (
+          <a className="story-viewer-go" href={postHref(item.post)}>
+            Open post <ArrowUpRight size={16} aria-hidden="true" />
+          </a>
+        ) : (
+          onOpenPost && (
+            <button
+              className="story-viewer-go"
+              onClick={() => {
+                onClose();
+                onOpenPost(item.post);
+              }}
+            >
+              Open post <ArrowUpRight size={16} aria-hidden="true" />
+            </button>
+          )
+        ))}
+      {item.kind === "moment" && (
+        <a className="story-viewer-go" href={`/m/${encodeURIComponent(item.card.gatheringId)}`}>
+          Open moment <ArrowUpRight size={16} aria-hidden="true" />
+        </a>
+      )}
+    </div>
   );
 }

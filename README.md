@@ -342,7 +342,9 @@ film on the olive, your words on the same wall, the chapters' numbers in a row, 
 clubs as crests, and the foot on the ink with your name in lime; it all arrives as you scroll,
 the numbers counting up, unless you asked for reduced motion. A cutout is a PNG with no
 background, made on your phone and uploaded like any photo. Pick Track as a vibe, or switch the
-look under Colors.
+look under Colors. Posts is a louder wall, each block numbered with its title set big,
+and Stories are shelves of upright stories for each day that open full screen and run on by
+themselves (ADR 0058).
 Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
 Open `/?profile=dani` to see it filled (Dani's three chapters with real photos, seeded once
 with the demo) or `/?profile=ines` for the optional sections. Pages published on an older

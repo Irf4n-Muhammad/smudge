@@ -270,7 +270,7 @@ test("after the day: the host thanks and locks the album, and guests who came ge
   // The memory card is a day on Maya's Stories page (ADR 0045).
   await page.goto("/?profile=maya&page=stories");
   const cards = page.getByRole("list", { name: "Stories" });
-  await expect(cards.getByRole("link", { name: /Lala & Bayu/ })).toBeVisible();
+  await expect(cards.getByRole("button", { name: /Lala & Bayu/ })).toBeVisible();
   await expect(cards.getByText("1 came")).toBeVisible();
   await other.close();
 

@@ -25,6 +25,13 @@ test("every page has a strip to its Posts and Stories, inside the app and on the
   const stories = page.getByRole("list", { name: "Stories" });
   await expect(stories).toBeVisible();
   await expect(stories.getByRole("heading").first()).toBeVisible();
+  // Each day is a shelf; a story opens full screen and closes again (ADR 0058).
+  await stories.getByRole("listitem").getByRole("button").first().click();
+  const story = page.getByRole("dialog", { name: /^Story:/ });
+  await expect(story).toBeVisible();
+  await expect(story.getByRole("button", { name: "Next story" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(story).toHaveCount(0);
 
   // Back to the landing page, which is the person's own.
   await strip.getByRole("button", { name: "Page" }).click();

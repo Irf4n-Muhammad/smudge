@@ -110,6 +110,8 @@
       and roll back on the cream; then the chapters' numbers in a row, affiliations as crests
       and the foot on the ink with the name in lime (three); then motion: reveal on scroll,
       count-up and the hero's drift, none of it under reduced motion (four, the last).
+- [x] Posts and Stories redrawn (ADR 0058): the wall of blocks numbered with big titles, and
+      each day a shelf of upright stories opening full screen. Next: filters and counts on Posts.
 - [x] Friends right now (stage 2, web half): a row above the feed with what the people you
       follow are up to, and `/w/<handle>`, one friend's page the size of a widget, polled and
       open to guests. The native app and the home-screen widget itself are a separate project.
