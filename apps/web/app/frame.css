@@ -216,11 +216,11 @@ body:has(.profile-page) .mobile-nav {
   }
 }
 
-/* The feed: one column whose posts fit the window at any zoom, with the sides row and friends'
+/* The feed: one wide column that grows with the window at any zoom, with the sides row and friends'
    tiles lined up above it instead of hugging the rail. */
 @media (min-width: 701px) {
   .app-shell {
-    --feed-w: clamp(360px, (100vh - 230px) * 0.8, 600px);
+    --feed-w: clamp(420px, (100vh - 120px) * 0.9, 760px);
   }
   .app-shell .post-list {
     width: min(var(--feed-w), 100% - 48px);

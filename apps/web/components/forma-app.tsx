@@ -452,22 +452,20 @@ export function FormaApp() {
         <div className="sidebar-bottom">
           {demoSwitch && <AccountSwitch {...demoSwitch} />}
           {!production && (
-            <div className="demo-auth">
+            <>
               <button
-                className="text-button signup-link"
+                className="nav-item"
                 title="Create an account"
                 onClick={() => setAuthDialog("signup")}
               >
-                <UserPlus size={14} /> Create an account
+                <UserPlus size={22} />
+                <span>Create an account</span>
               </button>
-              <button
-                className="text-button signup-link"
-                title="Log in"
-                onClick={() => setAuthDialog("login")}
-              >
-                <LogIn size={14} /> Log in
+              <button className="nav-item" title="Log in" onClick={() => setAuthDialog("login")}>
+                <LogIn size={22} />
+                <span>Log in</span>
               </button>
-            </div>
+            </>
           )}
           <button
             className={tab === "more" || more ? "nav-item active" : "nav-item"}
