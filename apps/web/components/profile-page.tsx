@@ -565,6 +565,7 @@ export function ProfilePage({
               />
               <Stories
                 path={`/users/${encodeURIComponent(ownerId)}/timeline`}
+                who={owner.name}
                 cover={(p) => `/api/assets/${p.coverAssetId}`}
                 onOpenPost={(p) => openPost(p.id)}
                 empty={mine ? "Your days will show up here." : "Nothing yet."}

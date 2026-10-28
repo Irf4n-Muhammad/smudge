@@ -199,9 +199,21 @@
 .collage-cap small {
   font-size: 12px;
 }
-.collage-blank + .collage-cap {
+.collage-blank ~ .collage-cap,
+.collage-blank ~ .collage-no {
   color: inherit;
   text-shadow: none;
+}
+/* The post's place on the wall, newest first. */
+.collage-no {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 @media (min-width: 560px) {
   .collage {
@@ -210,118 +222,366 @@
   }
 }
 
+/* Each day a shelf of upright stories, swiped sideways: the day's name, its date and
+   how many, then the stories at 9:16 with the clock on top and the title at the foot. */
 .stories {
   padding: 0;
   margin: 0;
   list-style: none;
 }
 .story-day {
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 .story-day h2 {
-  margin: 0 0 10px;
-  font-family: var(--hand, inherit);
-  font-size: 26px;
-  line-height: 1;
-}
-.story-day ul {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0;
-  margin: 0;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 10px;
+  font:
+    700 11px/1.4 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.story-day-name {
+  color: var(--ink);
+}
+.story-day-count {
+  margin-left: auto;
+}
+.story-shelf {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 4px;
+  margin: 0 -16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 16px;
+  scrollbar-width: none;
   list-style: none;
 }
-/* One line of the day (ADR 0051): the clock on the left, what happened beside it. */
-.story-post,
-.story-now,
-.story-moment {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  font-size: 15px;
+.story-shelf::-webkit-scrollbar {
+  display: none;
 }
-.story-post > time,
-.story-now > time,
-.story-moment > time {
-  flex: none;
-  width: 44px;
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+.story-tile {
+  flex: 0 0 108px;
+  scroll-snap-align: start;
 }
-.story-post a,
-.story-post button,
-.story-moment a {
+.story-tile > button {
+  position: relative;
   display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  padding: 6px;
-  margin: 0 -6px;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  padding: 8px;
+  overflow: hidden;
   border: 0;
   border-radius: 12px;
   background: none;
-  color: inherit;
+  color: #fff;
   font: inherit;
   text-align: left;
-  text-decoration: none;
   cursor: pointer;
 }
-.story-post a:hover,
-.story-post button:hover,
-.story-moment a:hover {
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
-}
-.story-post img,
-.story-moment img,
+.story-tile img,
 .story-blank {
-  flex: none;
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+}
+.story-blank {
   background: var(--accent-light, #e9e6ff);
 }
-.story-cap,
-.story-moment a > span {
+.story-tile img + time ~ .story-cap::before {
+  content: "";
+  position: absolute;
+  inset: -60px -8px -8px;
+  z-index: -1;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.65));
+}
+.story-tile time {
+  position: relative;
+  align-self: flex-start;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(14, 13, 11, 0.55);
+  color: #fff;
+  font:
+    700 10px ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0.06em;
+}
+.story-cap {
+  position: relative;
+  z-index: 0;
   display: flex;
   flex-direction: column;
+  gap: 4px;
   min-width: 0;
 }
-.story-cap strong,
-.story-moment strong {
-  display: block;
-  overflow: hidden;
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.story-blank ~ .story-cap {
+  color: var(--ink);
 }
-.story-cap small,
-.story-moment small {
+.story-cap strong {
+  display: -webkit-box;
   overflow: hidden;
-  color: var(--muted);
-  font-size: 12px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  font:
+    800 15px/1.05 "Bricolage Grotesque",
+    var(--ui, inherit);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
-.story-entry {
+.story-cap small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 11px;
+  line-height: 1.25;
+  opacity: 0.85;
+}
+/* A line typed or read into "right now" is words, so it reads as words: in italic. */
+.story-now .story-cap strong {
+  font:
+    italic 400 19px/1.02 "Instrument Serif",
+    Georgia,
+    serif;
+  letter-spacing: 0;
+}
+
+/* One story full screen, over everything, the page's tint behind a story without a
+   picture and the title as a block of the accent. */
+.story-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
   display: flex;
-  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
+  padding: 72px 24px 96px;
+  background: #0e0d0b;
+  color: #fff;
 }
-.story-now .now-text small {
-  color: var(--muted);
+.story-viewer-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-.story-entry > time {
+.story-viewer-blank {
+  background: var(--story-tint);
+}
+@media (min-width: 701px) {
+  .story-viewer-bg {
+    left: 50%;
+    width: min(100%, 480px);
+    transform: translateX(-50%);
+  }
+}
+.story-viewer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.45),
+    transparent 22%,
+    transparent 70%,
+    rgba(0, 0, 0, 0.5)
+  );
+  pointer-events: none;
+}
+.story-viewer-bars,
+.story-viewer-head,
+.story-viewer-zone,
+.story-viewer-say,
+.story-viewer-go {
+  z-index: 1;
+}
+.story-viewer-bars {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  gap: 4px;
+  width: min(100% - 24px, 456px);
+  transform: translateX(-50%);
+}
+.story-viewer-bars i {
+  flex: 1;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.3);
+}
+.story-viewer-bars i.done {
+  background: #fff;
+}
+.story-viewer-bars b {
+  display: block;
+  height: 100%;
+  background: #fff;
+  transform-origin: left;
+  animation: story-run linear forwards;
+}
+.story-viewer-bars b.still {
+  animation: none;
+}
+@keyframes story-run {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.story-viewer-head {
+  position: absolute;
+  top: calc(26px + env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100% - 28px, 452px);
+  transform: translateX(-50%);
+}
+.story-viewer-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--page-accent, var(--accent, #6b5cff));
+  color: var(--page-ground, #fff);
+  font:
+    800 15px "Bricolage Grotesque",
+    var(--ui, inherit);
+}
+.story-viewer-head strong {
+  display: block;
+  font:
+    800 15px "Bricolage Grotesque",
+    var(--ui, inherit);
+}
+.story-viewer-head small {
+  display: block;
+  font:
+    700 10px ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.story-viewer-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   margin-left: auto;
-  color: var(--muted);
-  font-size: 12px;
-  white-space: nowrap;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+/* The two halves of the screen are the way on and back, as on every story app. */
+.story-viewer-zone {
+  position: absolute;
+  top: 80px;
+  bottom: 80px;
+  width: 50%;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: #fff;
+  opacity: 0;
+  cursor: pointer;
+}
+.story-viewer-zone:focus-visible,
+.story-viewer-zone:hover {
+  opacity: 0.8;
+}
+.story-viewer-zone.back {
+  left: 0;
+}
+.story-viewer-zone.next {
+  right: 0;
+  justify-content: flex-end;
+}
+.story-viewer-say {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 420px;
+  pointer-events: none;
+}
+.story-viewer-title {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--story-sticker);
+  color: var(--story-sticker-ink);
+  font:
+    800 32px/0.98 "Bricolage Grotesque",
+    var(--ui, inherit);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  transform: rotate(-3deg);
+}
+.story-viewer-title svg {
+  flex: none;
+  margin-top: 4px;
+}
+.story-viewer-line {
+  margin: 0 0 0 12px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(14, 13, 11, 0.7);
+  font:
+    700 11px/1.3 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0.06em;
+  transform: rotate(2deg);
+}
+.story-viewer-go {
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 22px;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  background: rgba(14, 13, 11, 0.4);
+  color: #fff;
+  font: 600 15px var(--ui, inherit);
+  text-decoration: none;
+  transform: translateX(-50%);
+  cursor: pointer;
 }
 
 /* Nothing posted yet (ADR 0051, drawn as in ADR 0052): one dashed tile that says what a post
@@ -370,6 +630,9 @@
 /* A look's tokens (ADR 0049): the page sets the colours and two font roles, the app keeps the
    shapes. Everything below reads a --page-* variable and falls back to the app's own. */
 .has-look {
+  /* The big face the fixed pages set names and titles in; the app owns it, like the
+     shapes, and a look colours it. */
+  --page-big: "Bricolage Grotesque", "Arial Black", var(--ui, inherit), sans-serif;
   background: var(--page-ground);
 }
 .has-look .page-fixed {
@@ -386,8 +649,14 @@
   margin: 8px 0 24px;
 }
 .has-look .page-head h1 {
-  font: italic 400 56px/1 var(--page-display);
+  font: 800 48px/0.95 var(--page-big);
   letter-spacing: -0.02em;
+}
+.has-look .page-head h1 em {
+  display: block;
+  font: italic 400 46px/1 var(--page-display);
+  letter-spacing: 0;
+  color: var(--page-accent);
 }
 .has-look .page-head small {
   font: 500 11px/1.4 var(--page-label);
@@ -439,18 +708,65 @@
 .has-look .collage-blank {
   background: var(--block);
 }
+/* The wall, louder: the title in the big face, bigger on the big and wide blocks,
+   the date in the label face under it and the block's number in the corner. A picture gets a
+   shade at its foot so the title reads on it. */
 .has-look .collage-cap {
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  text-shadow: none;
 }
 .has-look .collage-cap strong {
-  font: 500 12px/1.3 var(--ui, inherit);
+  font: 800 15px/1 var(--page-big);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.has-look .collage .collage-wide .collage-cap strong {
+  font-size: 22px;
 }
 .has-look .collage .collage-big .collage-cap strong {
-  font-size: 16px;
+  font-size: 30px;
+  -webkit-line-clamp: 3;
 }
-.has-look .collage-blank + .collage-cap {
+/* A block without a picture is mostly words, so the big and wide ones set them as words. */
+.has-look .collage .collage-wide .collage-blank + .collage-no + .collage-cap strong,
+.has-look .collage .collage-big .collage-blank + .collage-no + .collage-cap strong {
+  font: italic 400 26px/1.02 var(--page-display);
+  letter-spacing: 0;
+}
+.has-look .collage .collage-big .collage-blank + .collage-no + .collage-cap strong {
+  font-size: 34px;
+}
+.has-look .collage-cap small {
+  font: 700 9px/1.3 var(--page-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.has-look .collage li > a:has(img)::after,
+.has-look .collage li > button:has(img)::after {
+  content: "";
+  position: absolute;
+  inset: 45% 0 0;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+.has-look .collage-cap,
+.has-look .collage-no {
+  z-index: 1;
+}
+.has-look .collage .collage-blank ~ .collage-cap {
+  color: var(--block-ink);
+}
+.has-look .collage-no {
+  position: absolute;
+  top: 7px;
+  right: 10px;
+  font: 800 13px var(--page-big);
+  color: #fff;
+}
+.has-look .collage-blank ~ .collage-no {
   color: var(--block-ink);
 }
 .has-look .collage-ghost {
@@ -465,66 +781,63 @@
   background: var(--page-accent);
   color: var(--page-ground);
 }
-/* The day as a label in the look's label face, the clock small beside each line (ADR 0052). */
-.has-look .story-day {
-  margin-bottom: 24px;
-}
+/* The shelves in the look's colours: the day's name in the accent, stories without a picture
+   in the look's tints in turn, each with the ink that reads on it. */
 .has-look .story-day h2 {
-  margin-bottom: 8px;
-  font: 500 11px/1.4 var(--page-label);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--page-label);
   color: var(--page-muted);
 }
-.has-look .story-day ul {
-  gap: 0;
+.has-look .story-day-name {
+  color: var(--page-accent);
 }
-.has-look .story-post,
-.has-look .story-now,
-.has-look .story-moment {
-  min-height: 44px;
-  font-size: 16px;
+.has-look .story-tile:nth-child(5n + 1) {
+  --block: var(--page-tint-1);
+  --block-ink: var(--page-tint-1-ink);
 }
-.has-look .story-post > time,
-.has-look .story-now > time,
-.has-look .story-moment > time {
-  font: 400 12px var(--ui, inherit);
-  color: var(--page-muted);
+.has-look .story-tile:nth-child(5n + 2) {
+  --block: var(--page-tint-2);
+  --block-ink: var(--page-tint-2-ink);
 }
-.has-look .story-post a:hover,
-.has-look .story-post button:hover,
-.has-look .story-moment a:hover {
+.has-look .story-tile:nth-child(5n + 3) {
+  --block: var(--page-tint-3);
+  --block-ink: var(--page-tint-3-ink);
+}
+.has-look .story-tile:nth-child(5n + 4) {
+  --block: var(--page-tint-4);
+  --block-ink: var(--page-tint-4-ink);
+}
+.has-look .story-tile:nth-child(5n + 5) {
+  --block: var(--page-ink);
+  --block-ink: var(--page-ground);
+}
+.has-look .story-blank {
+  background: var(--block);
+}
+.has-look .story-blank ~ .story-cap {
+  color: var(--block-ink);
+}
+.has-look .story-tile > button {
   background: var(--page-card);
 }
-.has-look .story-post img,
-.has-look .story-moment img,
-.has-look .story-blank {
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
+.has-look .story-cap strong {
+  font-family: var(--page-big);
 }
-.has-look .story-cap strong,
-.has-look .story-moment strong {
-  font-weight: 500;
+.has-look .story-now .story-cap strong {
+  font-family: var(--page-display);
 }
-.has-look .story-blank {
-  background: var(--page-tint-1);
+.has-look .story-viewer {
+  background: var(--page-ground);
 }
-.has-look .story-post:nth-child(4n + 2) .story-blank {
-  background: var(--page-tint-2);
+.has-look .story-viewer-head strong,
+.has-look .story-viewer-mark,
+.has-look .story-viewer-title {
+  font-family: var(--page-big);
 }
-.has-look .story-post:nth-child(4n + 3) .story-blank {
-  background: var(--page-tint-3);
+.has-look .story-viewer-line,
+.has-look .story-viewer-head small {
+  font-family: var(--page-label);
 }
-.has-look .story-post:nth-child(4n) .story-blank {
-  background: var(--page-tint-4);
-}
-.has-look .story-cap small,
-.has-look .story-moment small,
-.has-look .story-entry > time,
-.has-look .story-now .now-text small {
-  color: var(--page-muted);
-}
+
 /* "Right now" as the first card of the days (ADR 0052), under its own label. */
 .has-look .page-fixed .now-bar {
   position: relative;

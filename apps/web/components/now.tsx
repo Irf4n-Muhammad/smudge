@@ -25,7 +25,7 @@ export const nowIcons: Record<NowKind, typeof Disc3> = {
   fed: Cat,
   page: Paintbrush,
 };
-const leads: Record<NowKind, string> = {
+export const leads: Record<NowKind, string> = {
   listening: "Listening to",
   doing: "",
   place: "At",
