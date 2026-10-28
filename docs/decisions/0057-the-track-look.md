@@ -1,6 +1,7 @@
 # 0057 — The Track: a second look for the Paint wall
 
-Status: accepted. Stage one of four of the landing mock "Smudge landing v4" (the Track).
+Status: accepted. Stages one and two of four of the landing mock "Smudge landing v4" (the
+Track).
 
 ## Context
 
@@ -40,6 +41,15 @@ and the seeds, for what is the same page in different clothes.
 - **Up to twenty assets everywhere.** ADR 0053 raised the profile manifest's assets to 20, but
   the experience schema the same package is checked against still said 12; it says 20 now, so a
   page with full chapters, a roll and the cutouts is accepted.
+- **The band and the wall (stage two).** Under the hero's curve, on the dark olive, the mark
+  and "Right now" over the owner's doing as a still from a film: the Work chapter's photo (or
+  the first chapter's, or the roll's first) behind, the text and the place in the corner, the
+  progress as a lime bar when it is what the owner typed, "just now" when it is a live entry.
+  The manifesto (ADR 0054) follows on the same olive, centred, its starred words in the serif
+  and the lime. The chapters come back on the cream with their top corners rounded over the
+  olive, and the roll lays its prints square, the second of every three in black and white.
+  Text set on a paint uses `--on-paint`: the ground's colour on the Paint wall, the ink on the
+  Track, so a label on the lime stays readable.
 - Dani's seeded page is a Track: cut out of his photo, his board and a shoe cut from the
   skate photo (`assets/demo/cutouts/`, credited), "Senayan Open · 2 Nov" next up, a line of his
   own. A data dir seeded earlier is written again, once.
@@ -55,6 +65,8 @@ and the seeds, for what is the same page in different clothes.
 - The editor: a Look row under Colors; sheets for the cutout, the things and Next up, reached
   by tapping them on the page; the Track vibe with its picture. `setupPage` keeps a template's
   look. `profileTemplates.track`.
-- Stages to come from the mock: the band and manifesto on the dark olive, with photos laid
-  freely (two); stats, affiliations and the foot (three); reveal, count-up and parallax motion
-  (four).
+- The template: `.tband` with `trackBand()` drawn from `heroNow`'s doing, `data-edit="now"`
+  so the owner edits it where the poster's hero did; the Track's `.manifesto`, `.chapters` and
+  `.roll` rules under `html[data-look="track"]`.
+- Stages to come from the mock: stats, affiliations and the foot (three); reveal, count-up and
+  parallax motion (four).

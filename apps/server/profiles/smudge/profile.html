@@ -25,6 +25,18 @@
       <span id="tintro-place"></span>
     </div>
   </section>
+  <!-- The Track's band (ADR 0057, stage two): what's going on right now, on the olive, the
+       photo of the chapter it belongs to behind it; the manifesto wall follows on the same olive. -->
+  <section class="tband" id="tband" aria-label="Right now" data-edit="now" hidden>
+    <div class="tband-k"><b id="tband-mark"></b>Right now</div>
+    <div class="tvideo" id="tvideo" hidden>
+      <img id="tvideo-img" alt="" hidden />
+      <span class="tplay" aria-hidden="true"><i></i></span>
+      <div class="tcap"><b id="tcap-text"></b><span id="tcap-where"></span></div>
+      <div class="tbar" id="tbar" hidden><i id="tbar-fill"></i></div>
+    </div>
+    <p class="hint" id="tband-hint" hidden>What are you up to? It goes here, on the olive.</p>
+  </section>
   <!-- The poster hero (ADR 0048): the name as big as the page, the photo pushed into it, and
        under them the song and what's going on. Nothing here is decoration without a job. -->
   <section class="hero" id="hero" aria-label="About">
@@ -155,6 +167,34 @@
         $("doing-text").textContent = doing.text;
         $("doing-when").textContent = doing.at ? ago(doing.at) : "";
         if (doing.at) $("doing-when").dateTime = doing.at;
+      }
+      if (settings.look === "track") trackBand(doing);
+    }
+    // The Track's band: the same "right now" as the poster's, as a still from a film, with the
+    // photo of the chapter it belongs to (Work first) behind it and the progress as a bar.
+    function trackBand(doing) {
+      const band = $("tband");
+      band.hidden = false;
+      const now = settings.now || {};
+      const chapters = settings.chapters || [];
+      const pic =
+        (chapters.find((c) => c.kind === "work" && c.photo) || chapters.find((c) => c.photo) || {})
+          .photo || ((settings.roll || [])[0] || {}).photo;
+      const img = $("tvideo-img");
+      img.hidden = !pic;
+      if (pic) img.src = photoOf(pic);
+      $("tvideo").hidden = !doing;
+      $("tband-hint").hidden = !!doing;
+      if (doing) {
+        $("tcap-text").textContent = doing.text;
+        // The place and the progress belong to what the owner typed, not to a live entry.
+        const typed = !doing.at;
+        const where = typed
+          ? [now.place, now.progress ? now.progress + "% there" : ""].filter(Boolean).join(" · ")
+          : ago(doing.at);
+        $("tcap-where").textContent = where;
+        $("tbar").hidden = !typed || !now.progress;
+        $("tbar-fill").style.width = Math.min(100, Math.max(0, now.progress || 0)) + "%";
       }
     }
     // A line in *stars* turns italic; without stars the first word does.
@@ -387,6 +427,7 @@
       $("tlogo-rest").textContent = rest;
       $("tmark").textContent = "";
       $("tmark").append(el("b", "", first.slice(0, 1)), el("i", "", (rest || first).slice(0, 1)));
+      $("tband-mark").textContent = first.slice(0, 1) + (rest || first).slice(0, 1);
       $("tplace").textContent = settings.place || "@" + d.owner.handle;
       $("tgiant-first").textContent = first;
       $("tgiant-rest").textContent = rest;

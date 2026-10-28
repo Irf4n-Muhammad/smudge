@@ -17,6 +17,8 @@
   --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
   --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Menlo, Consolas, monospace;
+  /* Text set on a paint: the ground's colour on the Paint wall, the ink on the Track. */
+  --on-paint: var(--wall);
 }
 /* Halloween touches only the mark on the hero (ADR 0052): the page keeps its own paints. */
 .sm {
@@ -155,7 +157,7 @@ html[data-theme="dark"] .sm {
 }
 .sm .avatar.blank {
   background: var(--p2);
-  color: var(--wall);
+  color: var(--on-paint);
 }
 .sm .avatar.blank b {
   font: italic 400 140px/1 var(--serif);
@@ -608,7 +610,7 @@ html[data-owner="on"] .sm .chapter.ghost {
   padding: 9px 12px;
   border-radius: 6px;
   background: var(--p2);
-  color: var(--wall);
+  color: var(--on-paint);
 }
 .sm .tape .label b {
   font: 800 15px/1 var(--big);
@@ -815,7 +817,7 @@ html[data-owner="on"] .sm .roll.ghost {
   border: 0;
   border-radius: 12px;
   background: var(--p2);
-  color: var(--wall);
+  color: var(--on-paint);
   text-align: left;
   cursor: pointer;
 }
@@ -855,7 +857,7 @@ html[data-owner="on"] .sm .roll.ghost {
   align-items: stretch;
   gap: 12px;
   background: var(--p1);
-  color: var(--wall);
+  color: var(--on-paint);
 }
 .sm .pick.tint:nth-child(4) {
   background: var(--p4);
@@ -894,7 +896,7 @@ html[data-owner="on"] .sm .roll.ghost {
 /* Wide screens (ADR 0050): the hero becomes two columns, the words left and the photo right,
    and each chapter puts its picture beside its numbers instead of under them. */
 @media (min-width: 720px) {
-  .sm .hero {
+  .sm .hero:not([hidden]) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
     grid-template-rows: auto auto auto 1fr auto;
@@ -1378,6 +1380,7 @@ html[data-look="track"] .sm {
   --p3: #272b1e;
   --p4: #171a12;
   --mark: #d9ff2f;
+  --on-paint: #171a12;
 }
 html[data-look="track"][data-theme="dark"] .sm {
   --wall: #f3f2ec;
@@ -1735,5 +1738,190 @@ html[data-owner="on"] .sm .tnext.blank {
   }
   .sm .tintro p {
     font-size: 26px;
+  }
+}
+
+/* The Track, stage two: the band and the manifesto on the olive under the hero's curve, then
+   the chapters and the roll back on the cream, its top corners rounded over the olive. */
+.sm .tband {
+  position: relative;
+  z-index: 1;
+  margin-top: -32px;
+  padding: 104px 16px 48px;
+  background: #272b1e;
+  color: #eceadf;
+  text-align: center;
+}
+.sm .tband[hidden] {
+  display: none;
+}
+.sm .tband-k {
+  font: 700 10px var(--big);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sm .tband-k b {
+  display: block;
+  margin-bottom: 10px;
+  font: 900 30px/1 var(--big);
+  letter-spacing: -0.06em;
+  color: var(--p2);
+}
+.sm .tvideo {
+  position: relative;
+  margin: 32px auto 0;
+  max-width: 760px;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #3b4030;
+  text-align: left;
+}
+.sm .tvideo[hidden] {
+  display: none;
+}
+.sm .tvideo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+.sm .tvideo img[hidden] {
+  display: none;
+}
+.sm .tplay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--p2);
+  display: grid;
+  place-items: center;
+}
+.sm .tplay i {
+  display: block;
+  width: 0;
+  height: 0;
+  border: 11px solid transparent;
+  border-left: 17px solid #171a12;
+  margin-left: 10px;
+}
+.sm .tcap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 48px 16px 14px;
+  background: linear-gradient(transparent, rgb(23 26 18 / 70%));
+}
+.sm .tcap b {
+  display: block;
+  font: 900 16px/1.1 var(--big);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 50%);
+}
+.sm .tcap span {
+  display: block;
+  margin-top: 4px;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.sm .tbar {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 20%);
+}
+.sm .tbar[hidden] {
+  display: none;
+}
+.sm .tbar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--p2);
+}
+.sm .tband .hint {
+  display: none;
+  margin: 24px auto 0;
+  font: italic 400 22px/1.1 var(--serif);
+  color: #a8ab9c;
+}
+html[data-owner="on"] .sm .tband .hint {
+  display: block;
+}
+/* The manifesto on the olive, centred, the starred words in the serif and the lime. */
+html[data-look="track"] .sm .manifesto {
+  z-index: 1;
+  margin: 0;
+  padding: 24px 16px 104px;
+  background: #272b1e;
+  color: #eceadf;
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+html[data-look="track"] .sm .manifesto em,
+html[data-look="track"] .sm .manifesto em:nth-of-type(even) {
+  font: 400 1.14em/0.8 var(--serif);
+  color: var(--p2);
+}
+html[data-look="track"] .sm .manifesto.ghost {
+  color: #a8ab9c;
+}
+/* Back on the cream: the chapters' corners rounded over the olive, the roll laid like prints. */
+html[data-look="track"] .sm .chapters,
+html[data-look="track"] .sm .chapters[hidden] + .roll {
+  margin-top: -56px;
+  padding-top: 72px;
+  border-radius: 56px 56px 0 0;
+  background: var(--wall);
+}
+html[data-look="track"] .sm .roll .photo {
+  position: relative;
+}
+html[data-look="track"] .sm .roll .photo img {
+  border-radius: 0;
+}
+html[data-look="track"] .sm .roll .photo:nth-child(3n + 2) img {
+  filter: grayscale(1) contrast(1.05);
+}
+html[data-look="track"] .sm .roll .photo:nth-child(5n) img {
+  filter: grayscale(1) sepia(0.2);
+}
+html[data-look="track"] .sm .roll .photo figcaption {
+  font: 700 10px/1.4 var(--big);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+@media (min-width: 720px) {
+  .sm .tband {
+    margin-top: -56px;
+    padding: 140px 40px 56px;
+  }
+  .sm .tvideo {
+    margin-top: 56px;
+  }
+  .sm .tplay {
+    width: 72px;
+    height: 72px;
+  }
+  .sm .tcap b {
+    font-size: 18px;
+  }
+  html[data-look="track"] .sm .manifesto {
+    padding: 40px 40px 120px;
   }
 }
