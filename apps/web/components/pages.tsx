@@ -266,40 +266,44 @@ export function PostsCollage({
     );
   return (
     <ul className="collage" aria-label="Posts">
-      {posts.map((post, i) => {
-        const span = spans[i % spans.length]!;
-        const style = {
-          gridColumn: span.right ? `3 / span ${span.col}` : `span ${span.col}`,
-          gridRow: `span ${span.row}`,
-        };
-        const shape = span.row > 1 ? "collage-big" : span.col === 3 ? "collage-wide" : "";
-        const body = (
-          <>
-            {post.hasCover ? (
-              <img src={cover(post)} alt="" loading="lazy" />
-            ) : (
-              <span className="collage-blank" aria-hidden="true" />
-            )}
-            {/* The post's place on the wall, counted from the newest (ADR 0058). */}
-            <span className="collage-no" aria-hidden="true">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <span className="collage-cap">
-              <strong>{post.title}</strong>
-              <small>{shortDate(post.createdAt)}</small>
-            </span>
-          </>
-        );
-        return (
-          <li key={post.id} style={style} className={shape || undefined}>
-            {href ? (
-              <a href={href(post)}>{body}</a>
-            ) : (
-              <button onClick={() => onOpen?.(post)}>{body}</button>
-            )}
-          </li>
-        );
-      })}
+      {/* Newest first, whatever order the feed ranked them in, so the numbers count from the
+          latest post (ADR 0058). */}
+      {[...posts]
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map((post, i) => {
+          const span = spans[i % spans.length]!;
+          const style = {
+            gridColumn: span.right ? `3 / span ${span.col}` : `span ${span.col}`,
+            gridRow: `span ${span.row}`,
+          };
+          const shape = span.row > 1 ? "collage-big" : span.col === 3 ? "collage-wide" : "";
+          const body = (
+            <>
+              {post.hasCover ? (
+                <img src={cover(post)} alt="" loading="lazy" />
+              ) : (
+                <span className="collage-blank" aria-hidden="true" />
+              )}
+              {/* The post's place on the wall, counted from the newest (ADR 0058). */}
+              <span className="collage-no" aria-hidden="true">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="collage-cap">
+                <strong>{post.title}</strong>
+                <small>{shortDate(post.createdAt)}</small>
+              </span>
+            </>
+          );
+          return (
+            <li key={post.id} style={style} className={shape || undefined}>
+              {href ? (
+                <a href={href(post)}>{body}</a>
+              ) : (
+                <button onClick={() => onOpen?.(post)}>{body}</button>
+              )}
+            </li>
+          );
+        })}
     </ul>
   );
 }
