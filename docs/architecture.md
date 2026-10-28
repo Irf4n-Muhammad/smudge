@@ -92,7 +92,10 @@ the old five-second close boundary; headers remain bounded to 65 seconds.
   chapter photos, their snaps and the roll, up to twenty). The chapters are drawn by kind (a Run
   as a card, Music as a cassette, ADR 0055) with their snaps laid around them, a band of photos from the roll follows, then the
   four latest posts as Picks (two with their covers, two as blocks of colour with their captions,
-  ADR 0056) and the name again at the foot.
+  ADR 0056) and the name again at the foot. The settings' `look` picks the Paint wall or the
+  Track (ADR 0057): the shell sets `data-look` on `<html>`, `parts.css` recolours every part
+  under it, and `profile.html` draws the Track's hero of cutouts (`cutout`, `things`, `next`)
+  instead of the poster; `profileTemplates.track` is the same package with that look.
 - `packages/core/src/pages.ts`: the fixed pages (ADR 0045): a person's posts as tiles and their
   stories as a timeline of posts, now entries and moments, by the feed's audience rules.
   `components/pages.tsx` draws the strip (`PageStrip`, outside the page's iframe), the collage

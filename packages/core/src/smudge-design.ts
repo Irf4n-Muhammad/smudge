@@ -38,16 +38,36 @@ export type SmudgePalette = keyof typeof smudgePalettes;
  * palette's second colour as the accent, so Posts, Stories and the strip read as the same page.
  * The whole palette goes along as tints (ADR 0052), for the blocks of the Posts page.
  */
-export const smudgeLook = (palette: SmudgePalette): PageLook => ({
-  ground: "#0e0d0b",
-  ink: "#f3efe6",
-  muted: "#9a948a",
-  card: "#1a1816",
-  accent: smudgePalettes[palette][1],
-  tints: [...smudgePalettes[palette]],
-  display: "serif",
-  label: "mono",
-});
+export const smudgeLook = (palette: SmudgePalette, look: SmudgeLookKind = "wall"): PageLook =>
+  look === "track"
+    ? {
+        // The Track (ADR 0057): cream paper, dark ink, one lime, the olive of the dark band.
+        ground: "#f3f2ec",
+        ink: "#171a12",
+        muted: "#6f7266",
+        card: "#ffffff",
+        accent: "#d9ff2f",
+        tints: ["#d9ff2f", "#272b1e", "#9bb300", "#171a12"],
+        display: "serif",
+        label: "mono",
+      }
+    : {
+        ground: "#0e0d0b",
+        ink: "#f3efe6",
+        muted: "#9a948a",
+        card: "#1a1816",
+        accent: smudgePalettes[palette][1],
+        tints: [...smudgePalettes[palette]],
+        display: "serif",
+        label: "mono",
+      };
+/**
+ * The two ways the one Smudge page can be drawn (ADR 0057): the Paint wall, dark with the
+ * palette's paints, and the Track, cream with contour lines and a lime, the person cut out of
+ * their photo in front of their name. Same files, same settings, one switch.
+ */
+export const smudgeLookKinds = ["wall", "track"] as const;
+export type SmudgeLookKind = (typeof smudgeLookKinds)[number];
 const text = (max: number) => z.string().trim().max(max);
 /** One of the owner's uploaded photos laid on the page with a place and a year (ADR 0053). */
 export const snapSchema = z.object({ photo: z.string().uuid(), caption: text(30) }).strict();
@@ -97,6 +117,17 @@ export const smudgeSettingsSchema = z
     chapters: z.array(chapterSchema).max(3),
     /** A band of photos from the roll, laid freely under the chapters (ADR 0053). */
     roll: z.array(snapSchema).max(8).default([]),
+    /** Which drawing of the page (ADR 0057). */
+    look: z.enum(smudgeLookKinds).default("wall"),
+    /** The owner, cut out of a photo: a PNG with a transparent ground (the Track's hero). */
+    cutout: z.union([z.literal(""), z.string().uuid()]).default(""),
+    /** Up to two of the owner's things, cut out the same way, each with a sticker line. */
+    things: z.array(snapSchema).max(2).default([]),
+    /** The next thing on the owner's calendar, for the Track's corner card. */
+    next: z
+      .object({ title: text(30), when: text(20) })
+      .strict()
+      .default({ title: "", when: "" }),
     palette: z.enum(Object.keys(smudgePalettes) as [SmudgePalette, ...SmudgePalette[]]),
     sections: z
       .array(z.enum(smudgeSectionKinds))
@@ -124,6 +155,10 @@ export const defaultSmudgeSettings: SmudgeSettings = {
   place: "",
   chapters: [],
   roll: [],
+  look: "wall",
+  cutout: "",
+  things: [],
+  next: { title: "", when: "" },
   palette: "night",
   sections: [],
   quote: { text: "" },
@@ -141,13 +176,15 @@ export const wallCapabilities = [
 ] as const;
 const settingsFile = "smudge/settings.js";
 /** Files from this version on carry the marker; older copies are refreshed from the template. */
-export const smudgeVersionMarker = "smudge:v12";
-/** Every photo the settings lay on the page: chapter photos and snaps, then the roll. */
+export const smudgeVersionMarker = "smudge:v13";
+/** Every photo the settings lay on the page: chapter photos and snaps, the roll, the cutouts. */
 export const smudgePhotoIds = (s: SmudgeSettings) => [
   ...new Set(
     [
       ...s.chapters.flatMap((c) => [c.photo, ...c.snaps.map((p) => p.photo)]),
       ...s.roll.map((p) => p.photo),
+      s.cutout,
+      ...s.things.map((p) => p.photo),
     ].filter(Boolean),
   ),
 ];
@@ -204,6 +241,12 @@ export function applySmudgeSettings(
     shell = '<script src="smudge/sections.js"></script>\n' + shell;
   if (!shell.includes(`src="${settingsFile}"`))
     shell = `<script src="${settingsFile}"></script>\n` + shell;
+  // The shell learns the look before any part draws (ADR 0057), so the ground is right at once.
+  if (!shell.includes("dataset.look"))
+    shell = shell.replace(
+      '<script src="smudge/sections.js"></script>',
+      '<script src="smudge/sections.js"></script>\n<script>document.documentElement.dataset.look=(window.smudgeSettings||{}).look||"wall"</script>',
+    );
   if (!shell.includes('id="sm-sections"'))
     shell = shell.includes('<footer class="wall-foot">')
       ? shell.replace(
@@ -243,6 +286,6 @@ export function applySmudgeSettings(
     throw new Error("This profile already uses too many features to add this section.");
   pkg.manifest.capabilities = caps as typeof pkg.manifest.capabilities;
   pkg.manifest.autoHeight = true;
-  pkg.manifest.look = smudgeLook(s.palette);
+  pkg.manifest.look = smudgeLook(s.palette, s.look);
   return profilePackageSchema.parse(pkg);
 }

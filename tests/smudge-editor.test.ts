@@ -143,6 +143,45 @@ test("easy-editor settings are ordinary source, round-trip, and grant the Wall o
   assert.deepEqual(readSmudgeSettings(broken), defaultSmudgeSettings);
 });
 
+test("the Track look (ADR 0057): cream colours, the cutouts as assets, and a template that keeps it", () => {
+  const me = randomUUID();
+  const board = randomUUID();
+  const pkg = applySmudgeSettings(smudgeProfilePackage, {
+    ...defaultSmudgeSettings,
+    look: "track",
+    cutout: me,
+    things: [{ photo: board, caption: "Senayan, 2025" }],
+    next: { title: "Senayan Open", when: "2 Nov · 07:00" },
+  });
+  const read = readSmudgeSettings(pkg);
+  assert.equal(read.look, "track");
+  assert.equal(read.cutout, me);
+  assert.deepEqual(read.things, [{ photo: board, caption: "Senayan, 2025" }]);
+  assert.deepEqual(read.next, { title: "Senayan Open", when: "2 Nov · 07:00" });
+  // The app's chrome follows the look: a cream ground and the lime, whatever the paints.
+  const look = pkg.manifest.schemaVersion === 2 ? pkg.manifest.look : undefined;
+  assert.equal(look?.ground, "#f3f2ec");
+  assert.equal(look?.accent, "#d9ff2f");
+  // The cutouts travel with the page like its photos, so a visitor's frame may load them.
+  assert.ok(pkg.manifest.assets.includes(me) && pkg.manifest.assets.includes(board));
+  // The shell tells every part which look it is, so a fixed part recolours without script.
+  assert.match(pkg.files["index.html"]!, /dataset\.look/);
+  // The Track template is the same package with its look set; setup and the vibe picker keep it.
+  assert.equal(readSmudgeSettings(profileTemplates.track).look, "track");
+  assert.equal(readSmudgeSettings(profileTemplates.smudge).look, "wall");
+  assert.deepEqual(readSmudgeSettings(applySmudgeSettings(pkg, defaultSmudgeSettings)).cutout, "");
+  // Too many things, or a cutout that is not an asset id, is refused.
+  assert.throws(() =>
+    applySmudgeSettings(smudgeProfilePackage, {
+      ...defaultSmudgeSettings,
+      things: [1, 2, 3].map(() => ({ photo: randomUUID(), caption: "" })),
+    }),
+  );
+  assert.throws(() =>
+    applySmudgeSettings(smudgeProfilePackage, { ...defaultSmudgeSettings, cutout: "me.png" }),
+  );
+});
+
 test("an older Paint wall copy is brought up to date, keeping files already rewritten at this version", () => {
   const old = structuredClone(smudgeProfilePackage);
   old.files["index.html"] = old.files["index.html"]!.replace(
@@ -151,7 +190,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
   ).replace('<div class="sm-sections" id="sm-sections"></div>\n  ', "");
   delete old.files["smudge/sections.js"];
   old.files["smudge/profile.html"] = "<p>old hero</p>";
-  old.files["smudge/post.html"] = "<!-- smudge:v12 --><p>my own grid</p>";
+  old.files["smudge/post.html"] = "<!-- smudge:v13 --><p>my own grid</p>";
   const next = applySmudgeSettings(
     profilePackageSchema.parse(old),
     defaultSmudgeSettings,
@@ -161,7 +200,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
     next.files["smudge/profile.html"],
     smudgeProfilePackage.files["smudge/profile.html"],
   );
-  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v12 --><p>my own grid</p>");
+  assert.equal(next.files["smudge/post.html"], "<!-- smudge:v13 --><p>my own grid</p>");
   assert.ok(next.files["smudge/sections.js"]);
   const shell = next.files["index.html"]!;
   assert.match(shell, /src="smudge\/settings\.js"/);

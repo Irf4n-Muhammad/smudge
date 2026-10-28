@@ -54,3 +54,7 @@ from Unsplash, resized (faces 320px, photos 1200px):
 - photos/run-shoes.jpg: https://images.unsplash.com/photo-1542291026-7eec264c27ff
 - photos/laptop-code.jpg: https://images.unsplash.com/photo-1498050108023-c5249f4df085
 - photos/dj-hands.jpg: https://images.unsplash.com/photo-1470225620780-dba8ba36b745
+
+Cutouts in `cutouts/` for the Track look (ADR 0057), cut from the photos above with no
+background, the edges faded: dani.png from people/dani.jpg, board.png and shoe.png from
+photos/skate.jpg.

@@ -1363,3 +1363,377 @@ html[data-owner="on"] .sm .roll.ghost {
     margin-inline: 40px;
   }
 }
+
+/* The Track look (ADR 0057): the same parts on a cream ground with contour lines, one lime,
+   and a hero where the owner stands cut out in front of their own name. The shell sets
+   data-look on <html> from the settings, so every part recolours without a line of script. */
+html[data-look="track"] .sm {
+  --wall: #f3f2ec;
+  --ink: #171a12;
+  --muted: #6f7266;
+  --card: #ffffff;
+  --line: #d9d7cd;
+  --p1: #9bb300;
+  --p2: #d9ff2f;
+  --p3: #272b1e;
+  --p4: #171a12;
+  --mark: #d9ff2f;
+}
+html[data-look="track"][data-theme="dark"] .sm {
+  --wall: #f3f2ec;
+  --ink: #171a12;
+  --muted: #6f7266;
+  --card: #ffffff;
+}
+html[data-look="track"] .sm .paint-fill,
+html[data-look="track"] .sm .art {
+  background:
+    radial-gradient(circle at 20% 25%, var(--p2) 0 18%, transparent 19%),
+    radial-gradient(circle at 75% 70%, var(--p3) 0 22%, transparent 23%),
+    radial-gradient(circle at 70% 20%, var(--p1) 0 10%, transparent 11%), #e6e4d8;
+}
+.sm .thero {
+  position: relative;
+  z-index: 5;
+  height: 700px;
+  padding: 72px 16px 16px;
+  overflow: hidden;
+  background: var(--wall);
+  border-radius: 0 0 32px 32px;
+  box-shadow: 0 24px 60px rgb(23 26 18 / 22%);
+}
+.sm .thero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.9;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' width='1440' height='900'><g fill='none' stroke='%23cfcdc2' stroke-width='1.2'><path d='M-40 120c160 90 260-60 420 20s180 210 360 160 240-200 420-120 200 220 320 140'/><path d='M-40 200c170 110 280-40 440 40s190 220 370 170 240-210 430-130 200 230 320 150'/><path d='M-40 300c180 120 290-30 450 50s200 230 380 180 250-220 440-140 200 240 320 160'/><path d='M60 900c60-120 200-180 330-120s200 170 350 60 160-260 330-180 140 220 390 90'/><path d='M-20 760c120-110 240-60 360 20s250 60 350-50 150-210 330-150 140 200 420 120'/><path d='M560 -20c-60 120 20 200 120 230s150 140 80 240-200 120-160 240 170 90 140 230'/><path d='M1100 -20c-80 110-10 190 70 230s130 150 60 240-190 130-150 240 160 100 130 220'/><path d='M300 420c80-70 190-60 240 10s0 170-80 180-220-40-160-190z'/><path d='M960 600c60-60 170-40 200 30s-40 150-120 140-140-110-80-170z'/></g></svg>");
+  background-size: 780px 488px;
+  background-repeat: repeat-y;
+}
+.sm .thero > * {
+  position: relative;
+}
+.sm .tthings {
+  position: static;
+}
+.sm .thero-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 6;
+}
+.sm .tlogo {
+  display: flex;
+  flex-direction: column;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+.sm .tlogo .s {
+  font: 400 22px/0.9 var(--serif);
+  letter-spacing: 0.02em;
+}
+.sm .tlogo .b {
+  font: 900 22px/0.9 var(--big);
+  letter-spacing: -0.02em;
+}
+.sm .tmark {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  font: 900 22px/1 var(--big);
+  letter-spacing: -0.06em;
+}
+.sm .tmark i {
+  font-style: normal;
+  color: var(--p1);
+}
+.sm .tplace {
+  font: 500 10px/1.4 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 6px;
+}
+.sm .tgiant {
+  position: absolute;
+  left: 12px;
+  bottom: 190px;
+  margin: 0;
+  z-index: 1;
+  font: 900 96px/0.78 var(--big);
+  letter-spacing: -0.055em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.sm .tgiant em {
+  display: block;
+  font: italic 400 0.62em/0.8 var(--serif);
+  color: var(--p1);
+  letter-spacing: -0.02em;
+  text-transform: none;
+  margin-left: 0.06em;
+}
+.sm .tgiant em:empty {
+  display: none;
+}
+.sm .tme {
+  position: absolute;
+  right: -16px;
+  bottom: 0;
+  width: 250px;
+  z-index: 7;
+}
+.sm .tme img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.sm .thand {
+  position: absolute;
+  right: 28px;
+  top: -6%;
+  transform: rotate(-8deg);
+  font: italic 400 22px/1 var(--serif);
+  color: var(--ink);
+  white-space: nowrap;
+  text-shadow:
+    0 0 6px var(--wall),
+    0 0 2px var(--wall);
+}
+.sm .thand::after {
+  content: " ↓";
+}
+.sm .tme.blank {
+  right: 16px;
+  bottom: 120px;
+  width: 200px;
+  display: none;
+}
+html[data-owner="on"] .sm .tme.blank {
+  display: block;
+}
+.sm .tme.blank .hint,
+.sm .tnext.blank .hint {
+  display: block;
+  padding: 8px 10px;
+  border: 1.5px dashed var(--ink);
+  border-radius: 8px;
+  font: 500 10px/1.4 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sm .tthing {
+  position: absolute;
+  margin: 0;
+  z-index: 4;
+}
+.sm .tthing img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
+}
+.sm .tthing-1 {
+  right: -30px;
+  top: 170px;
+  width: 220px;
+  transform: rotate(-14deg);
+}
+.sm .tthing-2 {
+  left: 16px;
+  top: 270px;
+  width: 110px;
+  transform: rotate(-18deg);
+}
+.sm .tsticker {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--p2);
+  color: var(--ink);
+  font: 900 11px var(--big);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 var(--ink);
+}
+.sm .tsticker.paper {
+  background: #fff;
+  border: 1.5px solid var(--ink);
+  box-shadow: none;
+}
+.sm .tthing figcaption {
+  position: absolute;
+  left: 0;
+  bottom: -10px;
+  transform: rotate(4deg);
+}
+.sm .tstickers {
+  position: absolute;
+  left: 16px;
+  top: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  z-index: 5;
+}
+.sm .tstickers .n1 {
+  transform: rotate(-3deg);
+}
+.sm .tstickers .n2 {
+  transform: rotate(2deg) translateX(14px);
+}
+.sm .tstickers .n3 {
+  transform: rotate(-2deg);
+}
+.sm .tnext {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  width: 96px;
+  padding: 10px 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  background: var(--wall);
+  text-align: center;
+  z-index: 6;
+}
+.sm .tnext small {
+  position: absolute;
+  left: 0;
+  top: -16px;
+  font: 700 9px var(--big);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sm .tnext b {
+  display: block;
+  font: 700 10px/1.4 var(--big);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sm .tnext span {
+  display: block;
+  margin-top: 4px;
+  font: 500 9px/1.4 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sm .tnext.blank {
+  display: none;
+  border: 0;
+  padding: 0;
+  width: 140px;
+  text-align: left;
+}
+.sm .tnext.blank small {
+  position: static;
+}
+html[data-owner="on"] .sm .tnext.blank {
+  display: block;
+}
+.sm .tintro {
+  position: absolute;
+  left: 16px;
+  bottom: 110px;
+  width: 170px;
+  z-index: 6;
+}
+.sm .tintro p {
+  margin: 0;
+  font: italic 400 18px/1.1 var(--serif);
+  color: var(--ink);
+}
+.sm .tintro p em {
+  font-style: normal;
+  font-weight: 700;
+  font-family: var(--big);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.sm .tintro span {
+  display: block;
+  margin-top: 8px;
+  font: 500 10px/1.4 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+@media (min-width: 720px) {
+  .sm .thero {
+    height: 800px;
+    padding: 72px 40px 24px;
+    border-radius: 0 0 56px 56px;
+  }
+  .sm .thero::before {
+    background-size: 1440px 900px;
+  }
+  .sm .tlogo .s,
+  .sm .tlogo .b,
+  .sm .tmark {
+    font-size: 30px;
+  }
+  .sm .tgiant {
+    left: 36px;
+    bottom: 150px;
+    font-size: 240px;
+  }
+  .sm .tme {
+    right: 260px;
+    bottom: -40px;
+    width: 440px;
+  }
+  .sm .thand {
+    right: -170px;
+    top: 10%;
+    font-size: 30px;
+  }
+  .sm .thand::after {
+    content: none;
+  }
+  .sm .thand::before {
+    content: "← ";
+  }
+  .sm .tthing-1 {
+    right: 20px;
+    top: 150px;
+    width: 340px;
+  }
+  .sm .tthing-2 {
+    left: auto;
+    right: 60px;
+    top: auto;
+    bottom: 250px;
+    width: 190px;
+  }
+  .sm .tsticker {
+    font-size: 13px;
+    padding: 8px 14px;
+  }
+  .sm .tstickers {
+    left: 50%;
+    top: 220px;
+  }
+  .sm .tnext {
+    left: 24px;
+    bottom: 24px;
+    width: 100px;
+  }
+  .sm .tintro {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    width: 300px;
+    text-align: right;
+  }
+  .sm .tintro p {
+    font-size: 26px;
+  }
+}

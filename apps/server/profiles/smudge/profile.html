@@ -1,7 +1,30 @@
-<!-- smudge:v12 -->
+<!-- smudge:v13 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm">
+  <!-- The Track's hero (ADR 0057), drawn instead of the poster when the look is "track": the
+       name as big as the page, the owner cut out of a photo in front of it, their things cut
+       out around it with sticker lines, the next thing on their calendar in the corner. -->
+  <section class="thero" id="thero" aria-label="About" hidden>
+    <div class="thero-bar">
+      <div class="tlogo" data-edit="name">
+        <span class="s" id="tlogo-first"></span><span class="b" id="tlogo-rest"></span>
+      </div>
+      <span class="tmark" id="tmark" aria-hidden="true"></span>
+      <span class="tplace" id="tplace" data-edit="place"></span>
+    </div>
+    <h1 class="tgiant" id="tgiant" data-edit="name">
+      <span id="tgiant-first"></span><em id="tgiant-rest"></em>
+    </h1>
+    <div class="tme" id="tme" data-edit="cutout"></div>
+    <div class="tthings" id="tthings" data-edit="things"></div>
+    <div class="tstickers" id="tstickers" data-edit="chapters"></div>
+    <div class="tnext" id="tnext" data-edit="next"></div>
+    <div class="tintro" data-edit="tagline">
+      <p id="tintro-line"></p>
+      <span id="tintro-place"></span>
+    </div>
+  </section>
   <!-- The poster hero (ADR 0048): the name as big as the page, the photo pushed into it, and
        under them the song and what's going on. Nothing here is decoration without a job. -->
   <section class="hero" id="hero" aria-label="About">
@@ -74,6 +97,7 @@
     function fit() {
       const h = $("giant"),
         name = $("giant-name");
+      if ($("hero").hidden) return;
       const max = Math.min(260, Math.max(120, h.clientWidth * 0.46));
       let size = max;
       h.style.fontSize = size + "px";
@@ -353,6 +377,58 @@
         });
       });
     }
+    const photoOf = (id) => (window.smudgePhotos || {})[id] || "";
+    // The Track's hero (ADR 0057). Everything on it is the owner's: the name, the cutouts, the
+    // chapters' labels as stickers, the next thing on their calendar, the line and the place.
+    function trackHero(d, first, rest) {
+      $("hero").hidden = true;
+      $("thero").hidden = false;
+      $("tlogo-first").textContent = first;
+      $("tlogo-rest").textContent = rest;
+      $("tmark").textContent = "";
+      $("tmark").append(el("b", "", first.slice(0, 1)), el("i", "", (rest || first).slice(0, 1)));
+      $("tplace").textContent = settings.place || "@" + d.owner.handle;
+      $("tgiant-first").textContent = first;
+      $("tgiant-rest").textContent = rest;
+      const me = $("tme");
+      me.textContent = "";
+      me.classList.toggle("blank", !settings.cutout);
+      if (settings.cutout) {
+        const img = document.createElement("img");
+        img.src = photoOf(settings.cutout);
+        img.alt = "";
+        me.append(img, el("span", "thand", "that's me"));
+      } else me.append(el("span", "hint", "Add a cutout of you (a PNG with no background)"));
+      const things = $("tthings");
+      things.textContent = "";
+      (settings.things || []).forEach((t, i) => {
+        const fig = el("figure", "tthing tthing-" + (i + 1));
+        const img = document.createElement("img");
+        img.src = photoOf(t.photo);
+        img.alt = "";
+        fig.append(img);
+        if (t.caption) fig.append(el("figcaption", "tsticker", t.caption));
+        things.append(fig);
+      });
+      const stickers = $("tstickers");
+      stickers.textContent = "";
+      (settings.chapters || [])
+        .map((c) => (c.label || c.title || "").replace(/\*/g, "").trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .forEach((text, i) => stickers.append(el("span", "tsticker paper n" + (i + 1), text)));
+      const next = $("tnext");
+      next.textContent = "";
+      const n = settings.next || {};
+      next.classList.toggle("blank", !n.title);
+      if (n.title) {
+        next.append(el("small", "", "Next up"), el("b", "", n.title), el("span", "", n.when || ""));
+      } else next.append(el("small", "hint", "Next up: what's on your calendar?"));
+      marked(settings.tagline || d.owner.bio || "", $("tintro-line"));
+      $("tintro-place").textContent = settings.place
+        ? settings.place + " · " + new Date().getFullYear()
+        : "@" + d.owner.handle;
+    }
     profileData
       .then((d) => {
         const first = d.owner.name.split(" ")[0] || d.owner.name;
@@ -384,6 +460,7 @@
         ].filter(Boolean))
           meta.append(el("li", "", text));
         heroNow(d.now);
+        if (settings.look === "track") trackHero(d, first, rest);
         const avatar = $("avatar");
         if (d.owner.avatarSrc) {
           const img = document.createElement("img");

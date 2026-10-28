@@ -10,6 +10,10 @@ body {
 html[data-theme="dark"] body {
   background: #0e0d0b;
 }
+/* The Track (ADR 0057) sits on cream paper, in the dark too. */
+html[data-look="track"] body {
+  background: #f3f2ec;
+}
 .wall {
   position: relative;
   max-width: 1100px;

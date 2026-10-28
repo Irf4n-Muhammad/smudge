@@ -53,6 +53,8 @@ export function setupPage(
     // The song and what you are doing sit in the hero (ADR 0046), under the name.
     pkg = applySmudgeSettings(template, {
       ...defaultSmudgeSettings,
+      // A template's own look (the Track's) stays; everything else is the owner's.
+      look: readSmudgeSettings(template).look,
       tagline: value.bio.slice(0, 60),
       ...(value.colour ? { palette: value.colour } : {}),
       now: { ...defaultSmudgeSettings.now, text: value.doing ?? "" },
