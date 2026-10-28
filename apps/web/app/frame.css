@@ -5,7 +5,7 @@
 /* Profiles sit beside the feed's rail, so they make room for it the way the feed does. */
 @media (min-width: 701px) {
   .profile-page.has-side-nav {
-    --profile-rail: 92px;
+    --profile-rail: 104px;
   }
   .profile-page.has-side-nav .page-strip {
     left: calc(50% + var(--profile-rail) / 2);
@@ -14,7 +14,7 @@
 }
 @media (min-width: 1200px) {
   .profile-page.has-side-nav {
-    --profile-rail: 240px;
+    --profile-rail: 284px;
   }
 }
 /* Glass over a dark profile turns grey; there the rail and dock are solid. */
@@ -82,7 +82,7 @@ body:has(.profile-page) .mobile-nav {
 }
 .account-menu {
   position: fixed;
-  left: 90px;
+  left: 104px;
   bottom: 24px;
   z-index: 40;
   display: grid;
@@ -144,7 +144,7 @@ body:has(.profile-page) .mobile-nav {
     display: block;
   }
   .account-menu {
-    left: 240px;
+    left: 284px;
   }
 }
 /* The More menu still uses a list box: draw its options in the theme's colors. */
@@ -216,19 +216,81 @@ body:has(.profile-page) .mobile-nav {
   }
 }
 
-/* The feed: one wide column that fills the window beside the rail at any zoom, with the sides row and friends'
+/* The feed: one wide column that grows with the window at any zoom, with the sides row and friends'
    tiles lined up above it instead of hugging the rail. */
 @media (min-width: 701px) {
   .app-shell {
-    --feed-w: 1000px;
+    --feed-w: clamp(420px, (100vh - 120px) * 0.9, 760px);
   }
   .app-shell .post-list {
-    width: min(var(--feed-w), 100% - 96px);
+    width: min(var(--feed-w), 100% - 48px);
   }
   .app-shell[data-view="home"] .feed-column > .sides-bar,
   .app-shell[data-view="home"] .feed-column > .friends-now,
   .app-shell[data-view="following"] .feed-column > .sides-bar {
-    width: min(var(--feed-w), 100% - 96px);
+    width: min(var(--feed-w), 100% - 48px);
     margin-inline: auto;
+  }
+}
+
+/* A bigger rail, as if the app were zoomed in a step: larger icons, labels and targets. */
+@media (min-width: 701px) {
+  .sidebar {
+    width: 76px;
+    padding: 22px 8px 16px;
+  }
+  .workspace {
+    margin-left: 104px;
+  }
+  .sidebar .brand-mark {
+    font-size: 40px;
+  }
+  .nav-item {
+    width: 52px;
+    height: 52px;
+  }
+  .nav-item svg,
+  .account-switch-button .avatar {
+    width: 26px;
+    height: 26px;
+  }
+  .account-switch-button .avatar {
+    width: 44px;
+    height: 44px;
+  }
+  .more-popover {
+    left: 104px;
+  }
+}
+@media (min-width: 1200px) {
+  .sidebar {
+    width: 256px;
+    padding: 26px 14px 18px;
+  }
+  .workspace {
+    margin-left: 284px;
+  }
+  .sidebar .brand {
+    margin-left: 12px;
+  }
+  .main-nav {
+    gap: 6px;
+  }
+  .nav-item {
+    width: 100%;
+    height: 54px;
+    gap: 16px;
+    padding: 0 16px;
+    border-radius: 16px;
+    font-size: 17px;
+  }
+  .account-switch-text small {
+    font-size: 12px;
+  }
+  .account-switch-text strong {
+    font-size: 16px;
+  }
+  .more-popover {
+    left: 284px;
   }
 }
