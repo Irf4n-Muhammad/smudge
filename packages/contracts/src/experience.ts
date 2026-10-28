@@ -25,7 +25,7 @@ export const manifestV2 = z
       .array(capability)
       .max(10)
       .refine((v) => new Set(v).size === v.length, "Duplicate capability"),
-    assets: z.array(z.string().uuid()).max(12).default([]),
+    assets: z.array(z.string().uuid()).max(20).default([]),
     stage: z
       .object({
         background: z.string().regex(/^#[0-9a-fA-F]{6}$/),

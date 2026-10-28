@@ -334,7 +334,15 @@ hero, a few sentences in your own words stand as big as the page, the starred wo
 serif and the palette (ADR 0054). A Music chapter is a cassette, the band on its label and the
 hours under it, the reels turning (ADR 0055). Picks holds your four latest posts: two with
 their covers, two as blocks of teal and violet carrying the post's caption in the serif
-(ADR 0056).
+(ADR 0056). The same page has a second look, the **Track** (ADR 0057): a cream ground with
+contour lines and one lime, and a hero where you stand cut out of a photo in front of your own
+name, your things cut out around it with sticker lines, the chapters' labels as stickers, and
+the next thing on your calendar in the corner. Under it, what you are up to as a still from a
+film on the olive, your words on the same wall, the chapters' numbers in a row, your crews and
+clubs as crests, and the foot on the ink with your name in lime; it all arrives as you scroll,
+the numbers counting up, unless you asked for reduced motion. A cutout is a PNG with no
+background, made on your phone and uploaded like any photo. Pick Track as a vibe, or switch the
+look under Colors.
 Optional sections (Latest, Gallery, Big quote, Countdown, The Wall, Quiz, The Cat) go below.
 Open `/?profile=dani` to see it filled (Dani's three chapters with real photos, seeded once
 with the demo) or `/?profile=ines` for the optional sections. Pages published on an older

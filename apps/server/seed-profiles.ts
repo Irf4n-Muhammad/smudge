@@ -27,6 +27,14 @@ const make = (name: string, file: string, height: number, assets: string[]): Pro
 });
 export const profileTemplates = {
   smudge: smudgeProfilePackage,
+  // The Track (ADR 0057): the same package, its look set to the cream ground.
+  track: (() => {
+    const pkg = applySmudgeSettings(smudgeProfilePackage, {
+      ...defaultSmudgeSettings,
+      look: "track",
+    });
+    return { ...pkg, manifest: { ...pkg.manifest, name: "Smudge · Track" } };
+  })(),
   stack: {
     manifest: {
       kind: "profile",
@@ -120,9 +128,15 @@ const daniPhotos = [
   "stage-lights",
   "skate",
 ] as const;
+/** Dani cut out of a photo, and two of his things (assets/demo/CREDITS.md), for the Track. */
+const daniCutouts = {
+  dani: "40000000-0000-4000-8000-000000000001",
+  board: "40000000-0000-4000-8000-000000000002",
+  shoe: "40000000-0000-4000-8000-000000000003",
+} as const;
 export function seedDaniPage(profiles: ProfileService) {
   const store = profiles.social.store;
-  const marker = "profile-smudge-v6:dani";
+  const marker = "profile-smudge-v8:dani";
   if (store.get("seed", marker) || !store.get("user", "dani")) return;
   // A page this seed wrote in an earlier version is written again; one someone edited is kept.
   const state = profiles.state("dani");
@@ -131,6 +145,8 @@ export function seedDaniPage(profiles: ProfileService) {
     "profile-smudge-v3:dani",
     "profile-smudge-v4:dani",
     "profile-smudge-v5:dani",
+    "profile-smudge-v6:dani",
+    "profile-smudge-v7:dani",
   ].some((m) => store.get("seed", m));
   if (state.version === 0 || earlier) {
     const actor = { userId: "dani" };
@@ -148,9 +164,33 @@ export function seedDaniPage(profiles: ProfileService) {
           base64: readFileSync(resolve(`assets/demo/photos/${photo}.jpg`)).toString("base64"),
         });
       }
+      for (const [name, assetId] of Object.entries(daniCutouts)) {
+        if (store.get("asset", assetId)) continue;
+        store.put("asset", assetId, {
+          id: assetId,
+          ownerId: "shared",
+          name: `${name}.png`,
+          mime: "image/png",
+          base64: readFileSync(resolve(`assets/demo/cutouts/${name}.png`)).toString("base64"),
+        });
+      }
     });
     const pkg = applySmudgeSettings(profileTemplates.smudge, {
       ...defaultSmudgeSettings,
+      look: "track",
+      cutout: daniCutouts.dani,
+      things: [
+        { photo: daniCutouts.board, caption: "Senayan, 2025" },
+        { photo: daniCutouts.shoe, caption: "1,204 km this year" },
+      ],
+      next: { title: "Senayan Open", when: "2 Nov · 07:00" },
+      crews: [
+        { name: "Rossi Musik", line: "Crew · since 2022" },
+        { name: "Strava", line: "Connected · 2023" },
+        { name: "Senayan Skate", line: "Local · since 2019" },
+        { name: "Spotify", line: "Connected · 2024" },
+      ],
+      tagline: "*Skate*, film cameras, Bandung → Jakarta.",
       place: "Jakarta",
       manifesto:
         "Skate since *fourteen.* Film since *college.* Bandung, then Jakarta. A skate film nobody asked for, cut at night.",

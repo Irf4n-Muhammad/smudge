@@ -115,6 +115,12 @@ const vibes = [
     image: "/vibes/comic.jpg",
     note: "Your posts laid out like a vertical comic.",
   },
+  {
+    key: "track",
+    name: "Track",
+    image: "/vibes/track.jpg",
+    note: "Cream ground, one lime, and you cut out in front of your own name.",
+  },
 ] as const;
 
 const paletteNames: Record<SmudgePalette, string> = {
@@ -160,6 +166,10 @@ const fieldTitles: Record<string, string> = {
   post: "Posts",
   feature: "Drawing wall",
   line: "Your big line",
+  cutout: "You, cut out",
+  things: "Your things",
+  next: "Next up",
+  crews: "Affiliations",
 };
 
 function inTwoWeeks() {
@@ -361,7 +371,7 @@ export function EasyEditor({
       const k = kindOf(template);
       const pkg =
         k === "smudge"
-          ? applySmudgeSettings(template, settings)
+          ? applySmudgeSettings(template, { ...settings, look: readSmudgeSettings(template).look })
           : k === "design"
             ? applyProfileDesign(template, defaultProfileDesign)
             : k === "room" || k === "comic"
@@ -719,6 +729,133 @@ export function EasyEditor({
               />
             </div>
           )}
+          {sheet === "field" && smudge && field === "cutout" && (
+            <div className="easy-field">
+              <h2>You, cut out</h2>
+              <p className="easy-note">
+                A PNG of you with the background removed. On a phone, press and hold yourself in a
+                photo, choose Copy or Share, and save the cutout. Then upload it here.
+              </p>
+              <div className="easy-photo">
+                {settings.cutout && (
+                  <img src={`/api/assets/${settings.cutout}`} alt="" className="easy-cutout" />
+                )}
+                <label className="easy-upload">
+                  <input
+                    type="file"
+                    accept="image/png,image/webp"
+                    aria-label="Upload your cutout"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file)
+                        void uploadPhoto(file).then(
+                          (cutout) => cutout && change({ ...settings, cutout }, true),
+                        );
+                    }}
+                  />
+                  {settings.cutout ? "Replace the cutout" : "Upload a cutout"}
+                </label>
+                {settings.cutout && (
+                  <button onClick={() => change({ ...settings, cutout: "" }, true)}>Remove</button>
+                )}
+              </div>
+            </div>
+          )}
+          {sheet === "field" && smudge && field === "things" && (
+            <div className="easy-field">
+              <h2>Your things</h2>
+              <p className="easy-note">
+                Up to two things cut out of photos, laid around your name with a sticker line.
+              </p>
+              <SnapFields
+                snaps={settings.things}
+                max={2}
+                label="cutout of a thing"
+                onUpload={uploadPhoto}
+                onChange={(things) => change({ ...settings, things }, true)}
+              />
+            </div>
+          )}
+          {sheet === "field" && smudge && field === "next" && (
+            <div className="easy-field">
+              <h2>Next up</h2>
+              <p className="easy-note">The next thing on your calendar, in the corner.</p>
+              <TextField
+                title=""
+                label="What"
+                value={settings.next.title}
+                max={30}
+                placeholder="Senayan Open"
+                onChange={(title) => change({ ...settings, next: { ...settings.next, title } })}
+              />
+              <TextField
+                title=""
+                label="When"
+                value={settings.next.when}
+                max={20}
+                placeholder="2 Nov · 07:00"
+                onChange={(when) => change({ ...settings, next: { ...settings.next, when } })}
+              />
+            </div>
+          )}
+          {sheet === "field" && smudge && field === "crews" && (
+            <div className="easy-field">
+              <h2>Affiliations</h2>
+              <p className="easy-note">
+                Crews, clubs, places you belong to: a name and a line each, up to four.
+              </p>
+              {settings.crews.map((crew, i) => (
+                <div className="easy-row easy-snap" key={i}>
+                  <TextField
+                    title=""
+                    label={`Name ${i + 1}`}
+                    value={crew.name}
+                    max={24}
+                    placeholder="Rossi Musik"
+                    onChange={(name) =>
+                      change({
+                        ...settings,
+                        crews: settings.crews.map((c, n) => (n === i ? { ...c, name } : c)),
+                      })
+                    }
+                  />
+                  <TextField
+                    title=""
+                    label="Line"
+                    value={crew.line}
+                    max={24}
+                    placeholder="Crew · since 2022"
+                    onChange={(line) =>
+                      change({
+                        ...settings,
+                        crews: settings.crews.map((c, n) => (n === i ? { ...c, line } : c)),
+                      })
+                    }
+                  />
+                  <button
+                    aria-label={`Remove affiliation ${i + 1}`}
+                    onClick={() =>
+                      change({ ...settings, crews: settings.crews.filter((_, n) => n !== i) }, true)
+                    }
+                  >
+                    <Trash2 />
+                  </button>
+                </div>
+              ))}
+              {settings.crews.length < 4 && (
+                <div className="easy-row">
+                  <button
+                    onClick={() =>
+                      change({ ...settings, crews: [...settings.crews, { name: "", line: "" }] })
+                    }
+                  >
+                    Add one
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           {sheet === "field" && easy && (field === "about" || field === "photo") && (
             <AboutFields
               identity={identity}
@@ -1021,6 +1158,21 @@ export function EasyEditor({
                 ))}
               </div>
               <p className="easy-note">In October, Halloween paints take over for everyone.</p>
+              <ChipRow
+                label="Look"
+                value={settings.look}
+                options={[
+                  ["wall", "Paint wall"],
+                  ["track", "Track"],
+                ]}
+                onChange={(look) => change({ ...settings, look }, true)}
+              />
+              {settings.look === "track" && (
+                <p className="easy-note">
+                  The Track keeps a cream ground and one lime, whatever the paints. Tap the hero to
+                  add a cutout of you.
+                </p>
+              )}
             </div>
           )}
           {sheet === "section" && (

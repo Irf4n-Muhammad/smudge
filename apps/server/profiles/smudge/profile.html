@@ -1,7 +1,42 @@
-<!-- smudge:v12 -->
+<!-- smudge:v14 -->
 <link rel="stylesheet" href="smudge/parts.css" />
 <script src="smudge/helpers.js"></script>
 <div class="sm">
+  <!-- The Track's hero (ADR 0057), drawn instead of the poster when the look is "track": the
+       name as big as the page, the owner cut out of a photo in front of it, their things cut
+       out around it with sticker lines, the next thing on their calendar in the corner. -->
+  <section class="thero" id="thero" aria-label="About" hidden>
+    <div class="thero-bar">
+      <div class="tlogo" data-edit="name">
+        <span class="s" id="tlogo-first"></span><span class="b" id="tlogo-rest"></span>
+      </div>
+      <span class="tmark" id="tmark" aria-hidden="true"></span>
+      <span class="tplace" id="tplace" data-edit="place"></span>
+    </div>
+    <h1 class="tgiant" id="tgiant" data-edit="name">
+      <span id="tgiant-first"></span><em id="tgiant-rest"></em>
+    </h1>
+    <div class="tme" id="tme" data-edit="cutout"></div>
+    <div class="tthings" id="tthings" data-edit="things"></div>
+    <div class="tstickers" id="tstickers" data-edit="chapters"></div>
+    <div class="tnext" id="tnext" data-edit="next"></div>
+    <div class="tintro" data-edit="tagline">
+      <p id="tintro-line"></p>
+      <span id="tintro-place"></span>
+    </div>
+  </section>
+  <!-- The Track's band (ADR 0057, stage two): what's going on right now, on the olive, the
+       photo of the chapter it belongs to behind it; the manifesto wall follows on the same olive. -->
+  <section class="tband" id="tband" aria-label="Right now" data-edit="now" hidden>
+    <div class="tband-k"><b id="tband-mark"></b>Right now</div>
+    <div class="tvideo" id="tvideo" hidden>
+      <img id="tvideo-img" alt="" hidden />
+      <span class="tplay" aria-hidden="true"><i></i></span>
+      <div class="tcap"><b id="tcap-text"></b><span id="tcap-where"></span></div>
+      <div class="tbar" id="tbar" hidden><i id="tbar-fill"></i></div>
+    </div>
+    <p class="hint" id="tband-hint" hidden>What are you up to? It goes here, on the olive.</p>
+  </section>
   <!-- The poster hero (ADR 0048): the name as big as the page, the photo pushed into it, and
        under them the song and what's going on. Nothing here is decoration without a job. -->
   <section class="hero" id="hero" aria-label="About">
@@ -48,6 +83,16 @@
       Photos from your roll go here, each with a place and a year.
     </p>
   </section>
+  <!-- The Track, stage three (ADR 0057): the chapters' numbers in a row, then the affiliations
+       as crests, each a name and a line. -->
+  <section class="tstats" id="tstats" aria-label="Numbers" data-edit="chapters" hidden></section>
+  <section class="taff" id="taff" aria-label="Affiliations" data-edit="crews" hidden>
+    <div class="taff-k">
+      <span>Affiliations</span><span class="m">what the page can say about you</span>
+    </div>
+    <div class="taff-grid" id="taff-grid"></div>
+    <p class="hint" id="taff-hint" hidden>Crews, clubs, places: a name and a line each.</p>
+  </section>
   <!-- Picks (ADR 0052, 0056): the four latest posts as blocks, the way to the Posts page. -->
   <section class="picks" id="picks" aria-label="Picks" hidden>
     <div class="idx">
@@ -74,6 +119,7 @@
     function fit() {
       const h = $("giant"),
         name = $("giant-name");
+      if ($("hero").hidden) return;
       const max = Math.min(260, Math.max(120, h.clientWidth * 0.46));
       let size = max;
       h.style.fontSize = size + "px";
@@ -131,6 +177,34 @@
         $("doing-text").textContent = doing.text;
         $("doing-when").textContent = doing.at ? ago(doing.at) : "";
         if (doing.at) $("doing-when").dateTime = doing.at;
+      }
+      if (settings.look === "track") trackBand(doing);
+    }
+    // The Track's band: the same "right now" as the poster's, as a still from a film, with the
+    // photo of the chapter it belongs to (Work first) behind it and the progress as a bar.
+    function trackBand(doing) {
+      const band = $("tband");
+      band.hidden = false;
+      const now = settings.now || {};
+      const chapters = settings.chapters || [];
+      const pic =
+        (chapters.find((c) => c.kind === "work" && c.photo) || chapters.find((c) => c.photo) || {})
+          .photo || ((settings.roll || [])[0] || {}).photo;
+      const img = $("tvideo-img");
+      img.hidden = !pic;
+      if (pic) img.src = photoOf(pic);
+      $("tvideo").hidden = !doing;
+      $("tband-hint").hidden = !!doing;
+      if (doing) {
+        $("tcap-text").textContent = doing.text;
+        // The place and the progress belong to what the owner typed, not to a live entry.
+        const typed = !doing.at;
+        const where = typed
+          ? [now.place, now.progress ? now.progress + "% there" : ""].filter(Boolean).join(" · ")
+          : ago(doing.at);
+        $("tcap-where").textContent = where;
+        $("tbar").hidden = !typed || !now.progress;
+        $("tbar-fill").style.width = Math.min(100, Math.max(0, now.progress || 0)) + "%";
       }
     }
     // A line in *stars* turns italic; without stars the first word does.
@@ -353,6 +427,158 @@
         });
       });
     }
+    const photoOf = (id) => (window.smudgePhotos || {})[id] || "";
+    // The Track's hero (ADR 0057). Everything on it is the owner's: the name, the cutouts, the
+    // chapters' labels as stickers, the next thing on their calendar, the line and the place.
+    function trackHero(d, first, rest) {
+      $("hero").hidden = true;
+      $("thero").hidden = false;
+      $("tlogo-first").textContent = first;
+      $("tlogo-rest").textContent = rest;
+      $("tmark").textContent = "";
+      $("tmark").append(el("b", "", first.slice(0, 1)), el("i", "", (rest || first).slice(0, 1)));
+      $("tband-mark").textContent = first.slice(0, 1) + (rest || first).slice(0, 1);
+      $("tplace").textContent = settings.place || "@" + d.owner.handle;
+      $("tgiant-first").textContent = first;
+      $("tgiant-rest").textContent = rest;
+      const me = $("tme");
+      me.textContent = "";
+      me.classList.toggle("blank", !settings.cutout);
+      if (settings.cutout) {
+        const img = document.createElement("img");
+        img.src = photoOf(settings.cutout);
+        img.alt = "";
+        me.append(img, el("span", "thand", "that's me"));
+      } else me.append(el("span", "hint", "Add a cutout of you (a PNG with no background)"));
+      const things = $("tthings");
+      things.textContent = "";
+      (settings.things || []).forEach((t, i) => {
+        const fig = el("figure", "tthing tthing-" + (i + 1));
+        const img = document.createElement("img");
+        img.src = photoOf(t.photo);
+        img.alt = "";
+        fig.append(img);
+        if (t.caption) fig.append(el("figcaption", "tsticker", t.caption));
+        things.append(fig);
+      });
+      const stickers = $("tstickers");
+      stickers.textContent = "";
+      (settings.chapters || [])
+        .map((c) => (c.label || c.title || "").replace(/\*/g, "").trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .forEach((text, i) => stickers.append(el("span", "tsticker paper n" + (i + 1), text)));
+      const next = $("tnext");
+      next.textContent = "";
+      const n = settings.next || {};
+      next.classList.toggle("blank", !n.title);
+      if (n.title) {
+        next.append(el("small", "", "Next up"), el("b", "", n.title), el("span", "", n.when || ""));
+      } else next.append(el("small", "hint", "Next up: what's on your calendar?"));
+      trackStats();
+      trackCrews();
+      marked(settings.tagline || d.owner.bio || "", $("tintro-line"));
+      $("tintro-place").textContent = settings.place
+        ? settings.place + " · " + new Date().getFullYear()
+        : "@" + d.owner.handle;
+    }
+    // The chapters' numbers in a row: the big figure with its unit small, the title, the label.
+    function trackStats() {
+      const sec = $("tstats");
+      sec.textContent = "";
+      const rows = (settings.chapters || []).filter((c) => c.big);
+      sec.hidden = !rows.length;
+      rows.forEach((c) => {
+        const stat = el("div", "tstat");
+        const b = el("b", "", c.big);
+        if (c.unit) b.append(el("small", "", c.unit));
+        const title = el("div", "tlbl");
+        marked(c.title || "", title);
+        stat.append(b, title, el("span", "m", c.label || ""));
+        sec.append(stat);
+      });
+    }
+    // Affiliations as crests: the owner's crews, clubs and places, a name and a line each.
+    function trackCrews() {
+      const list = (settings.crews || []).filter((c) => c.name);
+      const sec = $("taff");
+      sec.hidden = false;
+      sec.classList.toggle("blank", !list.length);
+      $("taff-hint").hidden = list.length > 0;
+      const grid = $("taff-grid");
+      grid.textContent = "";
+      list.forEach((c) => {
+        const crest = el("div", "tcrest");
+        crest.append(el("b", "", c.name), el("span", "", c.line || ""));
+        grid.append(crest);
+      });
+    }
+    // The Track's motion (ADR 0057, stage four): things arrive as they come into view, the
+    // numbers count up once, and the hero's cutouts drift at their own speeds while it leaves.
+    // The page sits in a frame that does not scroll itself, so the hero's visible share stands
+    // in for the scroll. Nothing moves for someone who asked for reduced motion.
+    function trackMotion() {
+      const marks = [
+        ["#tvideo", 0],
+        ["#manifesto", 0],
+        ...[".tstat", ".tcrest", "#roll-grid .photo", "#picks-grid > *"].map((s) => [s, 1]),
+        [".wall-foot strong", 0],
+      ];
+      marks.forEach(([sel, stagger]) =>
+        document.querySelectorAll(sel).forEach((node, i) => {
+          node.classList.add("rv");
+          if (stagger && i % 4) node.classList.add("d" + (i % 4));
+        }),
+      );
+      const all = document.querySelectorAll(".rv");
+      if (
+        !("IntersectionObserver" in window) ||
+        matchMedia("(prefers-reduced-motion: reduce)").matches
+      ) {
+        all.forEach((node) => node.classList.add("in"));
+        return;
+      }
+      const seen = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add("in");
+            seen.unobserve(entry.target);
+            entry.target.querySelectorAll(".tstat > b, :scope > b").forEach(countUp);
+          });
+        },
+        { threshold: 0.18 },
+      );
+      all.forEach((node) => seen.observe(node));
+      const hero = $("thero");
+      const steps = Array.from({ length: 51 }, (_, i) => i / 50);
+      const drift = new IntersectionObserver(
+        (entries) => {
+          const r = entries[entries.length - 1];
+          if (!r) return;
+          const gone = r.boundingClientRect.height * (1 - r.intersectionRatio);
+          hero.style.setProperty("--py", gone.toFixed(1) + "px");
+        },
+        { threshold: steps },
+      );
+      drift.observe(hero);
+    }
+    // A figure of digits counts up from nothing over 1.4 s; a time or a word stays as it is.
+    function countUp(b) {
+      const text = b.firstChild && b.firstChild.nodeValue;
+      if (!text || b.dataset.counted || !/^[\d,]+$/.test(text.trim())) return;
+      b.dataset.counted = "1";
+      const to = Number(text.replace(/,/g, ""));
+      const commas = text.includes(",");
+      const t0 = performance.now();
+      const tick = (t) => {
+        const k = 1 - Math.pow(1 - Math.min(1, (t - t0) / 1400), 3);
+        const n = Math.round(to * k);
+        b.firstChild.nodeValue = commas ? n.toLocaleString("en-US") : String(n);
+        if (k < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
     profileData
       .then((d) => {
         const first = d.owner.name.split(" ")[0] || d.owner.name;
@@ -384,6 +610,7 @@
         ].filter(Boolean))
           meta.append(el("li", "", text));
         heroNow(d.now);
+        if (settings.look === "track") trackHero(d, first, rest);
         const avatar = $("avatar");
         if (d.owner.avatarSrc) {
           const img = document.createElement("img");
@@ -416,10 +643,21 @@
           foot.textContent = "";
           foot.append(
             el("strong", "", d.owner.name),
-            el("span", "", ["Made in Smudge", settings.place].filter(Boolean).join(" · ")),
+            el(
+              "span",
+              "",
+              [
+                "Made in Smudge",
+                settings.place,
+                settings.look === "track" ? new Date().getFullYear() : "",
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            ),
           );
         }
         fit();
+        if (settings.look === "track") trackMotion();
       })
       .catch(() => {
         $("giant-name").textContent = "Could not load this page.";
