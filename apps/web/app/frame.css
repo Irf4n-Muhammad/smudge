@@ -294,3 +294,151 @@ body:has(.profile-page) .mobile-nav {
     left: 284px;
   }
 }
+
+/* Wide screens: a side column beside the feed, like Instagram's, with what friends are up to
+   and people to know. Below 1280px it is not rendered and the friends row sits above the feed. */
+.home-aside {
+  display: none;
+}
+@media (min-width: 1280px) {
+  .app-shell:is([data-view="home"], [data-view="following"]) .content-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 24px;
+    padding-right: 40px;
+  }
+  .home-aside {
+    position: sticky;
+    top: 88px;
+    align-self: start;
+    display: grid;
+    gap: 28px;
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+    padding: 4px 4px 24px;
+    scrollbar-width: none;
+    color: var(--ink);
+  }
+}
+.home-aside-title {
+  margin: 0 0 10px;
+  font: 700 15px var(--ui);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.friends-now-list ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+.friends-now-list .friend-now {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 1px;
+  justify-items: start;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  text-align: left;
+}
+.friends-now-list .friend-now:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.friends-now-list .friend-now .avatar {
+  grid-row: 1 / 3;
+  width: 44px;
+  height: 44px;
+}
+.friends-now-list .friend-now strong {
+  font-size: 14px;
+}
+.friends-now-list .friend-now-text {
+  grid-column: 2 / 4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: left;
+}
+.friends-now-list .friend-now time {
+  grid-column: 3;
+  grid-row: 1;
+  font-size: 12px;
+  color: var(--muted);
+}
+.home-aside-people ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.home-aside-people li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-aside-person {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+}
+.home-aside-person:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.home-aside-person .avatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+.home-aside-person span {
+  min-width: 0;
+}
+.home-aside-person strong,
+.home-aside-person small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-aside-person strong {
+  font-size: 14px;
+}
+.home-aside-person small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.home-aside-follow {
+  flex: none;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--accent);
+  font: 700 13px var(--ui);
+}
+.home-aside-follow:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.home-aside-foot {
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}

@@ -65,6 +65,7 @@ import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
+  const wide = useWide();
   const [cockpit, setCockpit] = useState(false);
   const [breakout, setBreakout] = useState(false);
   const [boot, setBoot] = useState<Boot | null>(null),
@@ -410,6 +411,12 @@ export function FormaApp() {
     else if (key === "signup" || key === "login") setAuthDialog(key);
     else navigate(key);
   }
+  /** People you don't follow yet, for the feed's side column. */
+  const suggested = boot
+    ? boot.users
+        .filter((u) => u.id !== boot.actor.userId && !boot.following.includes(u.id))
+        .slice(0, 5)
+    : [];
   /** The rail and the phone dock, the same on the feed and on every profile. */
   const rail = (
     <>
@@ -890,7 +897,7 @@ export function FormaApp() {
                     onLeft={refresh}
                   />
                 )}
-                {view === "home" && !inSide && <FriendsNow onOpenUser={openUser} />}
+                {view === "home" && !inSide && !wide && <FriendsNow onOpenUser={openUser} />}
                 {view === "home" && (
                   <section className="composer">
                     <span className="composer-symbol">
@@ -1048,6 +1055,39 @@ export function FormaApp() {
               </>
             )}
           </main>
+          {wide && (view === "home" || view === "following") && boot && (
+            <aside className="home-aside" aria-label="Around you">
+              {!inSide && <FriendsNow list onOpenUser={openUser} />}
+              {suggested.length > 0 && (
+                <section className="home-aside-people">
+                  <h3 className="home-aside-title">People to know</h3>
+                  <ul>
+                    {suggested.map((user) => (
+                      <li key={user.id}>
+                        <button className="home-aside-person" onClick={() => openUser(user.id)}>
+                          <Avatar user={user} />
+                          <span>
+                            <strong>{user.name}</strong>
+                            <small>@{user.handle}</small>
+                          </span>
+                        </button>
+                        <button
+                          className="home-aside-follow"
+                          aria-label={`Follow ${user.name}`}
+                          onClick={() => void follow(user.id)}
+                        >
+                          Follow
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              <footer className="home-aside-foot">
+                Smudge · made for a little more expression
+              </footer>
+            </aside>
+          )}
           <aside className="right-column">
             <section className="manifesto-card">
               <span className="eyebrow">A DIFFERENT KIND OF SOCIAL</span>
@@ -1297,4 +1337,17 @@ export function FormaApp() {
       )}
     </div>
   );
+}
+
+/** Wide enough for the feed's side column beside the rail and the post column. */
+function useWide() {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1280px)");
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return wide;
 }
