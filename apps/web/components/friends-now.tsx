@@ -12,7 +12,14 @@ import { Avatar } from "./ui";
  * first, above the feed. A tap opens their page. Nothing shows until a friend has noted
  * something, so the row never looks empty.
  */
-export function FriendsNow({ onOpenUser }: { onOpenUser: (userId: string) => void }) {
+export function FriendsNow({
+  onOpenUser,
+  list = false,
+}: {
+  onOpenUser: (userId: string) => void;
+  /** One row per friend under a heading, for the feed's side column on wide screens. */
+  list?: boolean;
+}) {
   const [rows, setRows] = useState<FriendNow[]>([]);
   useEffect(() => {
     let alive = true;
@@ -30,7 +37,11 @@ export function FriendsNow({ onOpenUser }: { onOpenUser: (userId: string) => voi
   }, []);
   if (!rows.length) return null;
   return (
-    <section className="friends-now" aria-label="Friends right now">
+    <section
+      className={list ? "friends-now friends-now-list" : "friends-now"}
+      aria-label="Friends right now"
+    >
+      {list && <h3 className="home-aside-title">Right now</h3>}
       <ul>
         {rows.map(({ user, entry }) => {
           const Icon = nowIcons[entry.kind];

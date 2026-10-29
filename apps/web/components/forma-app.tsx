@@ -26,7 +26,7 @@ import {
   LogIn,
   Shapes,
 } from "lucide-react";
-import { MoreMenu } from "./app-nav";
+import { AccountSwitch, MoreMenu } from "./app-nav";
 import type { MoreKey } from "./app-nav";
 import { MessagesPanel, ModerationPanel, NotificationsPanel, PeoplePanel } from "./community";
 import { ThemeReviews } from "./theme-studio";
@@ -65,6 +65,7 @@ import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
+  const wide = useWide();
   const [cockpit, setCockpit] = useState(false);
   const [breakout, setBreakout] = useState(false);
   const [boot, setBoot] = useState<Boot | null>(null),
@@ -376,14 +377,18 @@ export function FormaApp() {
     ["profile", UserRound, "Profile"],
   ];
   const tab =
-    view === "following" || view === "post"
-      ? "home"
-      : view === "people"
-        ? "explore"
-        : ["saved", "decor", "who", "account", "moderation"].includes(view)
-          ? "more"
-          : view;
+    view === "profile" && profile && profile !== boot?.actor.userId
+      ? ""
+      : view === "following" || view === "post"
+        ? "home"
+        : view === "people"
+          ? "explore"
+          : ["saved", "decor", "who", "account", "moderation"].includes(view)
+            ? "more"
+            : view;
   function openTab(key: string) {
+    // A profile's address (?profile=…) belongs to that page only.
+    if (view === "profile") window.history.replaceState(null, "", "/");
     if (key === "create") {
       setMore(false);
       createPost();
@@ -406,86 +411,15 @@ export function FormaApp() {
     else if (key === "signup" || key === "login") setAuthDialog(key);
     else navigate(key);
   }
-  /** Search covers posts and people, like Instagram's search tab; the sides row sits below. */
-  const searchTabs = (
-    <div className="search-tabs" aria-label="Search">
-      <button aria-pressed={view === "explore"} onClick={() => navigate("explore")}>
-        Posts
-      </button>
-      <button aria-pressed={view === "people"} onClick={() => navigate("people")}>
-        People
-      </button>
-    </div>
-  );
-  if (view === "profile" && boot && !studio)
-    return (
-      <ProfilePage
-        key={`${boot.actor.userId}:${profile ?? boot.actor.userId}:${profileVisit}`}
-        ownerId={profile ?? boot.actor.userId}
-        boot={boot}
-        posts={posts}
-        onRefresh={refresh}
-        onCreate={createPost}
-        onUseDraft={(draftId) => {
-          window.history.replaceState(
-            null,
-            "",
-            `/?profile=${encodeURIComponent(boot.actor.userId)}&profileDraft=${encodeURIComponent(draftId)}`,
-          );
-          setProfile(boot.actor.userId);
-          setProfileVisit((v) => v + 1);
-          window.scrollTo(0, 0);
-        }}
-        onNavigate={(destination) => {
-          window.history.replaceState(null, "", "/");
-          setCockpit(false);
-          setBreakout(false);
-          openTab(destination);
-        }}
-        more={
-          <MoreMenu
-            moderator={!!auth?.moderator}
-            production={production}
-            demo={demoSwitch}
-            onPick={(key) => {
-              window.history.replaceState(null, "", "/");
-              pickMore(key);
-            }}
-          />
-        }
-        onBack={() => {
-          setView("home");
-          setProfile(null);
-          setCockpit(false);
-          setBreakout(false);
-          window.history.replaceState(null, "", "/");
-          window.scrollTo(0, 0);
-        }}
-      />
-    );
-  function changeMode(active: boolean) {
-    setBreakout(false);
-    setCockpit(active);
-    const url = new URL(window.location.href);
-    if (active) url.searchParams.set("mode", "cockpit");
-    else url.searchParams.delete("mode");
-    window.history.replaceState(null, "", url);
-    window.scrollTo(0, 0);
-  }
-  if (breakout && boot && !studio)
-    return <BreakoutFeed posts={posts} onRefresh={refresh} onExit={() => changeMode(false)} />;
-  if (cockpit && boot && !studio)
-    return (
-      <Cockpit posts={posts} boot={boot} onRefresh={refresh} onExit={() => changeMode(false)} />
-    );
-  return (
-    <div
-      className="app-shell"
-      data-view={view}
-      data-side={activeSide?.id}
-      style={{ "--side-accent": activeSide?.accent } as React.CSSProperties}
-    >
-      <AmbientLight watch={`${view}:${visible.map((p) => p.id).join(",")}`} />
+  /** People you don't follow yet, for the feed's side column. */
+  const suggested = boot
+    ? boot.users
+        .filter((u) => u.id !== boot.actor.userId && !boot.following.includes(u.id))
+        .slice(0, 5)
+    : [];
+  /** The rail and the phone dock, the same on the feed and on every profile. */
+  const rail = (
+    <>
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Smudge home">
           <span className="brand-mark">s</span>smudge<span className="brand-dot">.</span>
@@ -523,43 +457,22 @@ export function FormaApp() {
           })}
         </nav>
         <div className="sidebar-bottom">
-          {demoSwitch && (
-            <div className="account-switch">
-              <Avatar user={me!} />
-              <label>
-                <span>Preview as</span>
-                <select
-                  aria-label="Preview as demo account"
-                  value={demoSwitch.meId}
-                  onChange={(e) => demoSwitch.onSwitch(e.target.value)}
-                >
-                  {demoSwitch.users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <ChevronDown size={14} />
-            </div>
-          )}
+          {demoSwitch && <AccountSwitch {...demoSwitch} />}
           {!production && (
-            <div className="demo-auth">
+            <>
               <button
-                className="text-button signup-link"
+                className="nav-item"
                 title="Create an account"
                 onClick={() => setAuthDialog("signup")}
               >
-                <UserPlus size={14} /> Create an account
+                <UserPlus size={22} />
+                <span>Create an account</span>
               </button>
-              <button
-                className="text-button signup-link"
-                title="Log in"
-                onClick={() => setAuthDialog("login")}
-              >
-                <LogIn size={14} /> Log in
+              <button className="nav-item" title="Log in" onClick={() => setAuthDialog("login")}>
+                <LogIn size={22} />
+                <span>Log in</span>
               </button>
-            </div>
+            </>
           )}
           <button
             className={tab === "more" || more ? "nav-item active" : "nav-item"}
@@ -580,6 +493,119 @@ export function FormaApp() {
           <MoreMenu moderator={!!auth?.moderator} production={production} onPick={pickMore} />
         </div>
       )}
+      <nav className="mobile-nav" aria-label="Mobile navigation">
+        {["home", "explore", "create", "sides", "profile"]
+          .map((k) => mainTabs.find(([key]) => key === k)!)
+          .map(([key, Icon, label]) => {
+            const I = Icon as typeof Home;
+            return (
+              <button
+                key={key}
+                aria-label={key === "create" ? "Create a post" : label}
+                aria-current={tab === key ? "page" : undefined}
+                className={key === "create" ? "mobile-create" : tab === key ? "active" : ""}
+                onClick={() => openTab(key)}
+              >
+                <I size={key === "create" ? 23 : 22} />
+              </button>
+            );
+          })}
+      </nav>
+    </>
+  );
+  /** Search covers posts and people, like Instagram's search tab; the sides row sits below. */
+  const searchTabs = (
+    <div className="search-tabs" aria-label="Search">
+      <button aria-pressed={view === "explore"} onClick={() => navigate("explore")}>
+        Posts
+      </button>
+      <button aria-pressed={view === "people"} onClick={() => navigate("people")}>
+        People
+      </button>
+    </div>
+  );
+  const authDialogView = authDialog && (
+    <AuthDialog
+      initial={authDialog}
+      google={!!auth?.google}
+      onClose={() => setAuthDialog(null)}
+      onSignedIn={signedIn}
+    />
+  );
+  if (view === "profile" && boot && !studio)
+    return (
+      <>
+        <ProfilePage
+          nav={rail}
+          key={`${boot.actor.userId}:${profile ?? boot.actor.userId}:${profileVisit}`}
+          ownerId={profile ?? boot.actor.userId}
+          boot={boot}
+          posts={posts}
+          onRefresh={refresh}
+          onCreate={createPost}
+          onUseDraft={(draftId) => {
+            window.history.replaceState(
+              null,
+              "",
+              `/?profile=${encodeURIComponent(boot.actor.userId)}&profileDraft=${encodeURIComponent(draftId)}`,
+            );
+            setProfile(boot.actor.userId);
+            setProfileVisit((v) => v + 1);
+            window.scrollTo(0, 0);
+          }}
+          onNavigate={(destination) => {
+            window.history.replaceState(null, "", "/");
+            setCockpit(false);
+            setBreakout(false);
+            openTab(destination);
+          }}
+          more={
+            <MoreMenu
+              moderator={!!auth?.moderator}
+              production={production}
+              demo={demoSwitch}
+              onPick={(key) => {
+                window.history.replaceState(null, "", "/");
+                pickMore(key);
+              }}
+            />
+          }
+          onBack={() => {
+            setView("home");
+            setProfile(null);
+            setCockpit(false);
+            setBreakout(false);
+            window.history.replaceState(null, "", "/");
+            window.scrollTo(0, 0);
+          }}
+        />
+        {authDialogView}
+      </>
+    );
+  function changeMode(active: boolean) {
+    setBreakout(false);
+    setCockpit(active);
+    const url = new URL(window.location.href);
+    if (active) url.searchParams.set("mode", "cockpit");
+    else url.searchParams.delete("mode");
+    window.history.replaceState(null, "", url);
+    window.scrollTo(0, 0);
+  }
+  if (breakout && boot && !studio)
+    return <BreakoutFeed posts={posts} onRefresh={refresh} onExit={() => changeMode(false)} />;
+  if (cockpit && boot && !studio)
+    return (
+      <Cockpit posts={posts} boot={boot} onRefresh={refresh} onExit={() => changeMode(false)} />
+    );
+  return (
+    <div
+      className="app-shell"
+      data-view={view}
+      data-side={activeSide?.id}
+      style={{ "--side-accent": activeSide?.accent } as React.CSSProperties}
+    >
+      <AmbientLight watch={`${view}:${visible.map((p) => p.id).join(",")}`} />
+      {rail}
       <div className="workspace">
         <header className="topbar">
           <a className="mobile-brand" href="/" aria-label="Smudge home">
@@ -871,7 +897,7 @@ export function FormaApp() {
                     onLeft={refresh}
                   />
                 )}
-                {view === "home" && !inSide && <FriendsNow onOpenUser={openUser} />}
+                {view === "home" && !inSide && !wide && <FriendsNow onOpenUser={openUser} />}
                 {view === "home" && (
                   <section className="composer">
                     <span className="composer-symbol">
@@ -1029,6 +1055,39 @@ export function FormaApp() {
               </>
             )}
           </main>
+          {wide && (view === "home" || view === "following") && boot && (
+            <aside className="home-aside" aria-label="Around you">
+              {!inSide && <FriendsNow list onOpenUser={openUser} />}
+              {suggested.length > 0 && (
+                <section className="home-aside-people">
+                  <h3 className="home-aside-title">People to know</h3>
+                  <ul>
+                    {suggested.map((user) => (
+                      <li key={user.id}>
+                        <button className="home-aside-person" onClick={() => openUser(user.id)}>
+                          <Avatar user={user} />
+                          <span>
+                            <strong>{user.name}</strong>
+                            <small>@{user.handle}</small>
+                          </span>
+                        </button>
+                        <button
+                          className="home-aside-follow"
+                          aria-label={`Follow ${user.name}`}
+                          onClick={() => void follow(user.id)}
+                        >
+                          Follow
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              <footer className="home-aside-foot">
+                Smudge · made for a little more expression
+              </footer>
+            </aside>
+          )}
           <aside className="right-column">
             <section className="manifesto-card">
               <span className="eyebrow">A DIFFERENT KIND OF SOCIAL</span>
@@ -1107,24 +1166,6 @@ export function FormaApp() {
           </aside>
         </div>
       </div>
-      <nav className="mobile-nav" aria-label="Mobile navigation">
-        {["home", "explore", "create", "sides", "profile"]
-          .map((k) => mainTabs.find(([key]) => key === k)!)
-          .map(([key, Icon, label]) => {
-            const I = Icon as typeof Home;
-            return (
-              <button
-                key={key}
-                aria-label={key === "create" ? "Create a post" : label}
-                aria-current={tab === key ? "page" : undefined}
-                className={key === "create" ? "mobile-create" : tab === key ? "active" : ""}
-                onClick={() => openTab(key)}
-              >
-                <I size={key === "create" ? 23 : 22} />
-              </button>
-            );
-          })}
-      </nav>
       {toast && (
         <div className="toast" role="status">
           <span>✳</span>
@@ -1247,14 +1288,7 @@ export function FormaApp() {
           }}
         />
       )}
-      {authDialog && (
-        <AuthDialog
-          initial={authDialog}
-          google={!!auth?.google}
-          onClose={() => setAuthDialog(null)}
-          onSignedIn={signedIn}
-        />
-      )}
+      {authDialogView}
       {resetToken && auth?.signedIn && (
         <Dialog title="New password" onClose={() => setResetToken(null)}>
           <ResetPasswordForm
@@ -1303,4 +1337,17 @@ export function FormaApp() {
       )}
     </div>
   );
+}
+
+/** Wide enough for the feed's side column beside the rail and the post column. */
+function useWide() {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1280px)");
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return wide;
 }

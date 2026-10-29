@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { openMore, openPeople, pickFeed } from "./nav";
+import { openMore, openPeople, pickFeed, previewAs } from "./nav";
 
 // Switching between people waits out each toast, so these run longer than most.
 test.describe.configure({ timeout: 120_000 });
@@ -33,7 +33,7 @@ async function viewAs(page: Page, option: string | { label: string }) {
   await expect(page.getByRole("status").filter({ hasText: "Now viewing" })).toHaveCount(0, {
     timeout: 20000,
   });
-  await page.getByLabel("Preview as demo account").selectOption(option);
+  await previewAs(page, option);
   await toast(page, "Now viewing");
 }
 // Waits for the button the current viewer should see, since switching people reloads the panel.

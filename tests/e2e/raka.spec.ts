@@ -71,7 +71,7 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
     const endButton = await frame
       .getByRole("button", { name: "Explore sketchbook", exact: true })
       .boundingBox();
-    const nav = await page.locator(".profile-bottom-nav").boundingBox();
+    const nav = await page.locator(width <= 700 ? ".mobile-nav" : ".sidebar").boundingBox();
     if (width <= 700) expect(endButton!.y + endButton!.height).toBeLessThan(nav!.y);
     // Wider screens move the navigation into a left sidebar beside the profile.
     else

@@ -1,0 +1,444 @@
+/* One frame for the whole app: the same rail on the feed and on every profile, a feed column
+   sized to the window, a readable account switch and a sign-in dialog with room around it.
+   Loaded last. */
+
+/* Profiles sit beside the feed's rail, so they make room for it the way the feed does. */
+@media (min-width: 701px) {
+  .profile-page.has-side-nav {
+    --profile-rail: 104px;
+  }
+  .profile-page.has-side-nav .page-strip {
+    left: calc(50% + var(--profile-rail) / 2);
+    bottom: 24px;
+  }
+}
+@media (min-width: 1200px) {
+  .profile-page.has-side-nav {
+    --profile-rail: 284px;
+  }
+}
+/* Glass over a dark profile turns grey; there the rail and dock are solid. */
+body:has(.profile-page) .sidebar,
+body:has(.profile-page) .mobile-nav {
+  background: var(--white, #fff);
+}
+@media (max-width: 700px) {
+  .profile-page.has-side-nav {
+    padding-bottom: 96px;
+  }
+  /* Above the floating dock instead of under it. */
+  .profile-page.has-side-nav .page-strip {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Preview as: your photo in the rail opens a list of faces and names. */
+.sidebar .account-switch {
+  position: relative;
+  display: block;
+  height: auto;
+  padding: 0;
+  border: 0;
+}
+.account-switch-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.account-switch-button:hover,
+.account-switch-button[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.account-switch-button .avatar {
+  flex: none;
+  width: 38px;
+  height: 38px;
+}
+.account-switch-text {
+  display: none;
+  min-width: 0;
+}
+.account-switch-text small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.account-switch-text strong {
+  color: var(--ink);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.account-menu {
+  position: fixed;
+  left: 104px;
+  bottom: 24px;
+  z-index: 40;
+  display: grid;
+  gap: 2px;
+  width: 250px;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white, #fff);
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 22%);
+}
+.account-menu-label {
+  padding: 6px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.account-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font: 500 14px var(--ui);
+  text-align: left;
+  cursor: pointer;
+}
+.account-menu button:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.account-menu button[aria-checked="true"] {
+  font-weight: 700;
+}
+.account-menu button > span:not(.avatar) {
+  flex: 1;
+}
+.account-menu .avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+}
+@media (min-width: 1200px) {
+  .account-switch-button {
+    justify-content: flex-start;
+    padding: 6px 8px;
+    border-radius: 14px;
+  }
+  .account-switch-text {
+    display: block;
+  }
+  .account-menu {
+    left: 284px;
+  }
+}
+/* The More menu still uses a list box: draw its options in the theme's colors. */
+.more-switch select {
+  color-scheme: light dark;
+}
+.more-switch option {
+  background: var(--white, #fff);
+  color: var(--ink);
+}
+
+/* Sign up and log in: a narrow card with padding, the tabs as one switch, the form below. */
+.modal:has(> .auth-forms) {
+  width: min(440px, 100%);
+  border-radius: 24px;
+}
+.modal:has(> .auth-forms) .modal-header {
+  padding: 26px 28px 6px;
+  border-bottom: 0;
+}
+.modal:has(> .auth-forms) .modal-header .eyebrow {
+  display: none;
+}
+.modal:has(> .auth-forms) .modal-header h2 {
+  margin: 0;
+  font: 700 28px/1.1 var(--ui);
+  letter-spacing: -0.03em;
+}
+.modal > .auth-forms {
+  gap: 18px;
+  padding: 14px 28px 28px;
+}
+.modal > .auth-forms .auth-tabs {
+  margin: 0;
+  padding: 4px;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.modal > .auth-forms .auth-tabs button {
+  padding: 10px;
+  font-weight: 600;
+}
+.modal > .auth-forms .auth-form {
+  gap: 16px;
+}
+.modal > .auth-forms .auth-form input {
+  background: var(--white, #fff);
+}
+.modal > .auth-forms .auth-submit {
+  width: 100%;
+  border-radius: 999px;
+}
+.modal > .auth-forms .text-button {
+  justify-self: center;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+@media (max-width: 700px) {
+  .modal-backdrop:has(> .modal > .auth-forms) {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal:has(> .auth-forms) {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 24px 24px 0 0;
+  }
+  .modal > .auth-forms {
+    padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+}
+
+/* The feed: one column sized so a whole post and its name row fit the window at any zoom, with the sides row and friends'
+   tiles lined up above it instead of hugging the rail. */
+@media (min-width: 701px) {
+  .app-shell {
+    --feed-w: clamp(420px, (100vh - 175px) * 0.8, 640px);
+  }
+  .app-shell .post-list {
+    width: min(var(--feed-w), 100% - 48px);
+  }
+  .app-shell[data-view="home"] .feed-column > .sides-bar,
+  .app-shell[data-view="home"] .feed-column > .friends-now,
+  .app-shell[data-view="following"] .feed-column > .sides-bar {
+    width: min(var(--feed-w), 100% - 48px);
+    margin-inline: auto;
+  }
+}
+
+/* A bigger rail, as if the app were zoomed in a step: larger icons, labels and targets. */
+@media (min-width: 701px) {
+  .sidebar {
+    width: 76px;
+    padding: 22px 8px 16px;
+  }
+  .workspace {
+    margin-left: 104px;
+  }
+  .sidebar .brand-mark {
+    font-size: 40px;
+  }
+  .nav-item {
+    width: 52px;
+    height: 52px;
+  }
+  .nav-item svg,
+  .account-switch-button .avatar {
+    width: 26px;
+    height: 26px;
+  }
+  .account-switch-button .avatar {
+    width: 44px;
+    height: 44px;
+  }
+  .more-popover {
+    left: 104px;
+  }
+}
+@media (min-width: 1200px) {
+  .sidebar {
+    width: 256px;
+    padding: 26px 14px 18px;
+  }
+  .workspace {
+    margin-left: 284px;
+  }
+  .sidebar .brand {
+    margin-left: 12px;
+  }
+  .main-nav {
+    gap: 6px;
+  }
+  .nav-item {
+    width: 100%;
+    height: 54px;
+    gap: 16px;
+    padding: 0 16px;
+    border-radius: 16px;
+    font-size: 17px;
+  }
+  .account-switch-text small {
+    font-size: 12px;
+  }
+  .account-switch-text strong {
+    font-size: 16px;
+  }
+  .more-popover {
+    left: 284px;
+  }
+}
+
+/* Wide screens: a side column beside the feed, like Instagram's, with what friends are up to
+   and people to know. Below 1280px it is not rendered and the friends row sits above the feed. */
+.home-aside {
+  display: none;
+}
+@media (min-width: 1280px) {
+  .app-shell:is([data-view="home"], [data-view="following"]) .content-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 24px;
+    padding-right: 40px;
+  }
+  .home-aside {
+    position: sticky;
+    top: 88px;
+    align-self: start;
+    display: grid;
+    gap: 28px;
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+    padding: 4px 4px 24px;
+    scrollbar-width: none;
+    color: var(--ink);
+  }
+}
+.home-aside-title {
+  margin: 0 0 10px;
+  font: 700 15px var(--ui);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.friends-now-list ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+.friends-now-list .friend-now {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 1px;
+  justify-items: start;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  text-align: left;
+}
+.friends-now-list .friend-now:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.friends-now-list .friend-now .avatar {
+  grid-row: 1 / 3;
+  width: 44px;
+  height: 44px;
+}
+.friends-now-list .friend-now strong {
+  font-size: 14px;
+}
+.friends-now-list .friend-now-text {
+  grid-column: 2 / 4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: left;
+}
+.friends-now-list .friend-now time {
+  grid-column: 3;
+  grid-row: 1;
+  font-size: 12px;
+  color: var(--muted);
+}
+.home-aside-people ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.home-aside-people li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-aside-person {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+}
+.home-aside-person:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.home-aside-person .avatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+.home-aside-person span {
+  min-width: 0;
+}
+.home-aside-person strong,
+.home-aside-person small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-aside-person strong {
+  font-size: 14px;
+}
+.home-aside-person small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.home-aside-follow {
+  flex: none;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--accent);
+  font: 700 13px var(--ui);
+}
+.home-aside-follow:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.home-aside-foot {
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
