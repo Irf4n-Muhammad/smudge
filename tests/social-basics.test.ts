@@ -198,3 +198,56 @@ test("share links show public posts and profiles to guests, nothing hidden", asy
   rejects(() => sharing.profile("budi"), "NOT_FOUND");
   void community;
 });
+
+test("a post made from another post's format counts as a version of the original", async () => {
+  const { social, publish } = await setup();
+  const original = publish("ana", "Tebak lagu");
+  const fork = (userId: string, fromId: string) => {
+    const from = social.post(fromId);
+    const draft = social.createDraft(as(userId), post("Mine"), from.remixOf ?? from.id);
+    return social.publish(as(userId), draft.id, 1);
+  };
+  const first = fork("budi", original.id);
+  const second = fork("citra", first.id);
+  // A version of a version still belongs to the original format.
+  assert.equal(second.remixOf, original.id);
+
+  const view = (id: string) => social.feed(as("dian")).find((p) => p.id === id)!;
+  assert.equal(view(original.id).versions, 2);
+  assert.equal(view(original.id).remix, undefined);
+  assert.deepEqual(view(second.id).remix, {
+    rootId: original.id,
+    index: 2,
+    count: 2,
+    root: { title: "Tebak lagu", author: { name: "ana", handle: "ana" } },
+  });
+
+  const page = social.format(as("dian"), second.id);
+  assert.equal(page.root?.id, original.id);
+  assert.deepEqual(
+    page.versions.map((p) => p.id),
+    [second.id, first.id],
+  );
+
+  // Versions someone cannot see are not counted for them, and a hidden original is not named.
+  social.viewFilter = (viewer, p) =>
+    viewer !== "dian" || (p.ownerId !== "citra" && p.ownerId !== "ana");
+  assert.equal(view(first.id).remix?.count, 1);
+  assert.equal(view(first.id).remix?.root, undefined);
+  assert.equal(social.format(as("dian"), original.id).root, null);
+});
+
+test("the client cannot set or clear which format a draft came from", async () => {
+  const { social, publish } = await setup();
+  const original = publish("ana", "Format");
+  const draft = social.createDraft(as("budi"), post("Mine"), original.id);
+  const forged = { ...post("Mine"), remixOf: "someone-else" };
+  assert.throws(() => social.createDraft(as("budi"), forged));
+  const next = social.updateDraft(as("budi"), draft.id, post("Changed"), 1);
+  assert.equal(next.remixOf, original.id);
+  const published = social.publish(as("budi"), draft.id, next.revision);
+  assert.equal(published.remixOf, original.id);
+  const editing = social.editPost(as("budi"), published.id);
+  assert.equal(editing.remixOf, original.id);
+  rejects(() => social.format(as("budi"), "missing"), "NOT_FOUND");
+});

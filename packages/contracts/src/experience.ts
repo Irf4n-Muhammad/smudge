@@ -183,6 +183,19 @@ export interface PostView {
   comments: number;
   saved: boolean;
   manifest: Experience["manifest"];
+  /** Set on a post made with another post's format: which version it is among those you can see. */
+  remix?: Remix | undefined;
+  /** Set on a format's original post once others have made versions of it that you can see. */
+  versions?: number | undefined;
+}
+export interface Remix {
+  /** The original post every version descends from, even a version of a version. */
+  rootId: string;
+  /** 1 for the first version made, counting only versions the viewer can see. */
+  index: number;
+  count: number;
+  /** Left out when the original is gone or hidden from the viewer. */
+  root?: { title: string; author: { name: string; handle: string } } | undefined;
 }
 export interface DraftView {
   id: string;
@@ -191,4 +204,6 @@ export interface DraftView {
   metadata: Metadata;
   revision: number;
   updatedAt: string;
+  /** The original post this draft took its format from. Set by the server, never by the client. */
+  remixOf?: string | undefined;
 }

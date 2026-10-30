@@ -56,6 +56,12 @@ import { IdentityHub } from "./identity-hub";
 import { MomentComposer } from "./moment-composer";
 import { DecorationsPanel } from "./decorations-panel";
 import type { DecoratedPost } from "./post-decor";
+
+interface FormatPage {
+  rootId: string;
+  root: DecoratedPost | null;
+  versions: DecoratedPost[];
+}
 import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
 import { Setup } from "./setup";
@@ -88,6 +94,8 @@ export function FormaApp() {
     [focusPost, setFocusPost] = useState<string | null>(null),
     [exploreQuery, setExploreQuery] = useState(""),
     [explored, setExplored] = useState<DecoratedPost[] | null>(null),
+    /** The format page: an original post and the versions others made of it. */
+    [formatPage, setFormatPage] = useState<FormatPage | null>(null),
     [auth, setAuth] = useState<AuthState | null>(null),
     [authDialog, setAuthDialog] = useState<AuthMode | null>(null),
     [resetToken, setResetToken] = useState<string | null>(null),
@@ -208,6 +216,8 @@ export function FormaApp() {
       setFocusPost(shared);
       setView("post");
     }
+    const format = new URLSearchParams(window.location.search).get("format");
+    if (format) void openFormat(format);
     const id = new URLSearchParams(window.location.search).get("draft");
     if (id) {
       setActiveDraft(id);
@@ -296,6 +306,21 @@ export function FormaApp() {
     setView("profile");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  async function loadFormat(id: string) {
+    try {
+      setFormatPage(await api<FormatPage>(`/formats/${encodeURIComponent(id)}`));
+    } catch {
+      setFormatPage({ rootId: id, root: null, versions: [] });
+    }
+  }
+  async function openFormat(id: string) {
+    setFormatPage(null);
+    setView("format");
+    setProfile(null);
+    window.history.replaceState(null, "", `/?format=${encodeURIComponent(id)}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    await loadFormat(id);
+  }
   function openPost(id: string) {
     setFocusPost(id);
     setView("post");
@@ -348,18 +373,27 @@ export function FormaApp() {
   const activeSide = boot?.sides.mine.find((s) => s.id === boot.sides.active);
   const inSide = !!activeSide && activeSide.id !== EVERYDAY;
   const selectedUser = profile ? boot?.users.find((u) => u.id === profile) : me;
-  const visible = (view === "explore" ? (explored ?? []) : posts).filter(
+  const listed =
+    view === "explore"
+      ? (explored ?? [])
+      : view === "format"
+        ? formatPage
+          ? [...(formatPage.root ? [formatPage.root] : []), ...formatPage.versions]
+          : []
+        : posts;
+  const visible = listed.filter(
     (p) =>
       (view !== "following" || boot?.following.includes(p.ownerId)) &&
       (view !== "saved" || p.saved) &&
       (view !== "post" || p.id === focusPost) &&
       (view !== "profile" || p.ownerId === (profile ?? boot?.actor.userId)) &&
-      `${p.metadata.title} ${p.metadata.caption} ${p.author.name}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
+      (view === "format" ||
+        `${p.metadata.title} ${p.metadata.caption} ${p.author.name}`
+          .toLowerCase()
+          .includes(query.toLowerCase())),
   );
   function navigate(next: string) {
-    if (view === "post") window.history.replaceState(null, "", "/");
+    if (view === "post" || view === "format") window.history.replaceState(null, "", "/");
     setView(next);
     setProfile(null);
     setMore(false);
@@ -379,7 +413,7 @@ export function FormaApp() {
   const tab =
     view === "profile" && profile && profile !== boot?.actor.userId
       ? ""
-      : view === "following" || view === "post"
+      : view === "following" || view === "post" || view === "format"
         ? "home"
         : view === "people"
           ? "explore"
@@ -684,7 +718,9 @@ export function FormaApp() {
                           ? "Sides"
                           : view === "post"
                             ? "Post"
-                            : view[0]?.toUpperCase() + view.slice(1)}
+                            : view === "format"
+                              ? "Format"
+                              : view[0]?.toUpperCase() + view.slice(1)}
             </strong>
           )}
           <div className="topbar-right">
@@ -839,6 +875,28 @@ export function FormaApp() {
                       <ArrowLeft size={15} /> Back to your feed
                     </button>
                   </section>
+                ) : view === "format" ? (
+                  <section className="single-post-heading format-heading">
+                    <button className="quiet-button" onClick={() => navigate("home")}>
+                      <ArrowLeft size={15} /> Back to your feed
+                    </button>
+                    {formatPage && visible.length > 0 && (
+                      <div>
+                        <span className="eyebrow">Format</span>
+                        <h1>
+                          {formatPage.root?.metadata.title ??
+                            formatPage.versions[0]?.remix?.root?.title ??
+                            "A format"}
+                        </h1>
+                        <p>
+                          {formatPage.root ? `By ${formatPage.root.author.name}. ` : ""}
+                          {formatPage.versions.length}{" "}
+                          {formatPage.versions.length === 1 ? "version" : "versions"} so far. Pick
+                          one and make it yours.
+                        </p>
+                      </div>
+                    )}
+                  </section>
                 ) : view === "profile" && selectedUser ? (
                   <section className="profile-heading">
                     <Avatar user={selectedUser} />
@@ -950,7 +1008,8 @@ export function FormaApp() {
                     }}
                   />
                 )}
-                {view === "explore" && explored === null && (
+                {((view === "explore" && explored === null) ||
+                  (view === "format" && formatPage === null)) && (
                   <div className="empty-state">
                     <span className="tiny-flower">✳</span>
                     <h2>Looking around…</h2>
@@ -974,7 +1033,8 @@ export function FormaApp() {
                 {!loading &&
                   !failure &&
                   visible.length === 0 &&
-                  (view !== "explore" || explored !== null) && (
+                  (view !== "explore" || explored !== null) &&
+                  (view !== "format" || formatPage !== null) && (
                     <div className="empty-state">
                       <Feather size={30} />
                       <h2>
@@ -984,14 +1044,16 @@ export function FormaApp() {
                             : "You’ve seen everyone already."
                           : view === "post"
                             ? "This post isn’t here anymore."
-                            : view === "saved"
-                              ? "Keep something you love."
-                              : "A little room for something new."}
+                            : view === "format"
+                              ? "This format isn’t here anymore."
+                              : view === "saved"
+                                ? "Keep something you love."
+                                : "A little room for something new."}
                       </h2>
                       <p>
                         {query
                           ? "Try a different search."
-                          : view === "post"
+                          : view === "post" || view === "format"
                             ? "It may have been deleted, or it isn’t shared with you."
                             : view === "saved"
                               ? "Tap the bookmark on a post to find it here."
@@ -1018,11 +1080,13 @@ export function FormaApp() {
                         onRefresh={async () => {
                           await refresh();
                           if (view === "explore") await loadExplore(exploreQuery);
+                          if (view === "format" && formatPage) await loadFormat(formatPage.rootId);
                         }}
                         notify={notify}
                         onFollow={() => void follow(post.ownerId)}
                         onProfile={() => openUser(post.ownerId)}
                         onUser={openUser}
+                        onFormat={(id) => void openFormat(id)}
                         onEdit={() => void editPost(post.id)}
                         openComments={view === "post"}
                         onReuse={async () => {

@@ -9,6 +9,7 @@ import { SocialService, AppError, GUEST } from "../../packages/core/src/social.j
 import type { Asset } from "../../packages/core/src/social.js";
 import type { Actor } from "../../packages/core/src/index.js";
 import { bridgeRequestSchema } from "../../packages/contracts/src/experience.js";
+import type { PostView } from "../../packages/contracts/src/experience.js";
 import { renderDocument, runtimeCspFor } from "../../packages/runtime/src/document.js";
 import { seed, seedSharedAssets } from "./seed.js";
 import { seedWorlds } from "./seed-worlds.js";
@@ -515,6 +516,12 @@ api.get("/api/feed", (_req, res) =>
       .map((p) => ({ ...p, ...sidesService.tag(p) })),
   ),
 );
+api.get("/api/formats/:id", (req, res) => {
+  const { root, versions, rootId } = service.format(actor(res), String(req.params.id));
+  const tag = (posts: PostView[]) =>
+    identity.decorate(actor(res), posts).map((p) => ({ ...p, ...sidesService.tag(p) }));
+  res.json({ rootId, root: root ? tag([root])[0] : null, versions: tag(versions) });
+});
 // Moments are for the people who care, so they are never pushed to strangers or search.
 api.get("/api/explore", (req, res) =>
   res.json(
@@ -994,15 +1001,19 @@ api.post("/api/posts/:id/reuse", (req, res) => {
   }
   const { side: _side, ...copied } = post.metadata;
   res.json(
-    service.createDraft(actor(res), {
-      package: pkg,
-      metadata: {
-        ...copied,
-        coverAssetId,
-        title: `${post.metadata.title} — remix`.slice(0, 100),
-        contributors: [],
+    service.createDraft(
+      actor(res),
+      {
+        package: pkg,
+        metadata: {
+          ...copied,
+          coverAssetId,
+          title: `${post.metadata.title} — remix`.slice(0, 100),
+          contributors: [],
+        },
       },
-    }),
+      post.remixOf ?? post.id,
+    ),
   );
 });
 // Website import reads outside pages on a person's behalf, so it is throttled hard.
