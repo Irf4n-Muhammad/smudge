@@ -45,6 +45,8 @@ import type { DraftView, PostView } from "../../../packages/contracts/src/experi
 import { api } from "./runtime";
 import { Avatar, ConfirmHost, Dialog } from "./ui";
 import { PostCard } from "./post-card";
+import { FillDialog } from "./fill-dialog";
+import type { FillField } from "./fill-dialog";
 import { Studio } from "./studio";
 import { SiteImport } from "./site-import";
 import { PostEditor } from "./post-editor";
@@ -96,6 +98,8 @@ export function FormaApp() {
     [explored, setExplored] = useState<DecoratedPost[] | null>(null),
     /** The format page: an original post and the versions others made of it. */
     [formatPage, setFormatPage] = useState<FormatPage | null>(null),
+    /** A fill-in format being made your own from its form. */
+    [filling, setFilling] = useState<{ post: DecoratedPost; fields: FillField[] } | null>(null),
     [auth, setAuth] = useState<AuthState | null>(null),
     [authDialog, setAuthDialog] = useState<AuthMode | null>(null),
     [resetToken, setResetToken] = useState<string | null>(null),
@@ -320,6 +324,11 @@ export function FormaApp() {
     window.history.replaceState(null, "", `/?format=${encodeURIComponent(id)}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
     await loadFormat(id);
+  }
+  async function reuse(id: string) {
+    const d = await api<DraftView>(`/posts/${id}/reuse`, {});
+    setActiveDraft(d.id);
+    setStudio(true);
   }
   function openPost(id: string) {
     setFocusPost(id);
@@ -1091,9 +1100,11 @@ export function FormaApp() {
                         openComments={view === "post"}
                         onReuse={async () => {
                           try {
-                            const d = await api<DraftView>(`/posts/${post.id}/reuse`, {});
-                            setActiveDraft(d.id);
-                            setStudio(true);
+                            const { fields } = await api<{ fields: FillField[] }>(
+                              `/posts/${post.id}/fields`,
+                            );
+                            if (fields.length) setFilling({ post, fields });
+                            else await reuse(post.id);
                           } catch (e) {
                             notify((e as Error).message);
                           }
@@ -1320,6 +1331,24 @@ export function FormaApp() {
             navigate("home");
             await refresh();
             notify("Published. Your imported page opens right in the feed.");
+          }}
+        />
+      )}
+      {filling && (
+        <FillDialog
+          post={filling.post}
+          fields={filling.fields}
+          onClose={() => setFilling(null)}
+          onCode={() => {
+            const id = filling.post.id;
+            setFilling(null);
+            reuse(id).catch((e: Error) => notify(e.message));
+          }}
+          onPosted={async (id) => {
+            setFilling(null);
+            await refresh();
+            openPost(id);
+            notify("Your version is up.");
           }}
         />
       )}

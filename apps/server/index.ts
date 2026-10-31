@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Store } from "../../packages/core/src/database.js";
 import { SocialService, AppError, GUEST } from "../../packages/core/src/social.js";
 import type { Asset } from "../../packages/core/src/social.js";
+import { fillPackage, readFill } from "../../packages/core/src/fill.js";
 import type { Actor } from "../../packages/core/src/index.js";
 import { bridgeRequestSchema } from "../../packages/contracts/src/experience.js";
 import type { PostView } from "../../packages/contracts/src/experience.js";
@@ -29,7 +30,7 @@ import { IdentityService } from "../../packages/core/src/identity.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
 import { seedIdentity } from "./seed-identity.js";
-import { seedSmudge } from "./seed-smudge.js";
+import { seedFillFormat, seedSmudge } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
 import { themeRoutes } from "./theme-routes.js";
@@ -165,6 +166,7 @@ if (config.demoContent) {
   seedIdentity(identity, service);
   seedProfiles(profiles);
   seedSmudge(service);
+  seedFillFormat(service);
   seedPhotos(service);
   // After the photo seed, which adds Dani and the photos on his page.
   seedDaniPage(profiles);
@@ -974,12 +976,13 @@ api.post("/api/drafts/:id/publish", (req, res) => {
   const { revision } = z.object({ revision: z.number().int() }).strict().parse(req.body);
   res.json(service.publish(actor(res), String(req.params.id), revision));
 });
-api.post("/api/posts/:id/reuse", (req, res) => {
-  const post = service.visiblePost(actor(res), String(req.params.id));
+/** A post someone may make their own version of, with its media copied into their namespace. */
+function copyForReuse(res: Response, id: string) {
+  const post = service.visiblePost(actor(res), id);
   // A moment's page only means something with its proof; copying it would launder the look.
   if (identity.isMoment(post.id)) throw new AppError("MOMENT_NOT_REUSABLE", 403);
   // Copy published media into the new creator's namespace, so private asset ACLs remain meaningful.
-  let pkg = structuredClone(post.package);
+  const pkg = structuredClone(post.package);
   let coverAssetId = post.metadata.coverAssetId;
   if (pkg.manifest.schemaVersion === 2) {
     const replacements = new Map<string, string>();
@@ -999,19 +1002,52 @@ api.post("/api/posts/:id/reuse", (req, res) => {
       for (const [before, after] of replacements)
         pkg.files[path] = pkg.files[path]!.replaceAll(`asset:${before}`, `asset:${after}`);
   }
-  const { side: _side, ...copied } = post.metadata;
+  const { side: _side, ...metadata } = post.metadata;
+  return { post, pkg, metadata: { ...metadata, coverAssetId, contributors: [] } };
+}
+api.post("/api/posts/:id/reuse", (req, res) => {
+  const { post, pkg, metadata } = copyForReuse(res, String(req.params.id));
   res.json(
     service.createDraft(
       actor(res),
       {
         package: pkg,
-        metadata: {
-          ...copied,
-          coverAssetId,
-          title: `${post.metadata.title} — remix`.slice(0, 100),
-          contributors: [],
-        },
+        metadata: { ...metadata, title: `${post.metadata.title} — remix`.slice(0, 100) },
       },
+      post.remixOf ?? post.id,
+    ),
+  );
+});
+/** The parts of a fill-in format anyone may change; empty when the post is not one. */
+api.get("/api/posts/:id/fields", (req, res) => {
+  const post = service.visiblePost(actor(res), String(req.params.id));
+  const fields = identity.isMoment(post.id) ? null : readFill(post.package);
+  res.json({
+    fields: (fields ?? []).map((f) => ({
+      ...f,
+      value: f.kind === "image" ? f.value.slice("asset:".length) : f.value,
+    })),
+  });
+});
+/** Your own version of a fill-in format, from the form: a draft ready to publish. */
+api.post("/api/posts/:id/fill", (req, res) => {
+  const { values } = z
+    .object({ values: z.record(z.string().max(2000)) })
+    .strict()
+    .parse(req.body);
+  const { post, pkg, metadata } = copyForReuse(res, String(req.params.id));
+  const fields = readFill(pkg) ?? [];
+  // A new photo must be the person's own upload; one left as it was is the format's, copied above.
+  for (const f of fields)
+    if (f.kind === "image" && values[f.key] !== undefined) {
+      const a = service.asset(actor(res), values[f.key]!);
+      if (a.ownerId !== actor(res).userId || !a.mime.startsWith("image/"))
+        throw new AppError("ASSET_NOT_ACCESSIBLE", 403);
+    }
+  res.json(
+    service.createDraft(
+      actor(res),
+      { package: fillPackage(pkg, values), metadata },
       post.remixOf ?? post.id,
     ),
   );
@@ -1151,6 +1187,7 @@ api.get("/api/spec", (_req, res) =>
       appearance:
         "forma.appearance.theme is light or dark. Style html[data-theme=dark] or listen for the forma:theme window event. Appearance updates do not reload the post.",
     },
+    fill: 'Optional fill-in format, so others can make their own version from a form without code: add smudge/fill.js containing window.smudgeFill = {"fields":[{"key":"q1","label":"Clue 1","kind":"text","value":"☔️🎤"}]}; (kind text ≤200, long ≤2000, or image with value asset:ID listed in manifest.assets; up to 30 fields), load it first with <script src="smudge/fill.js"></script>, then mark parts with data-fill="key" (text, or an img src) or read window.smudgeFill.values.key in your script.',
     stage:
       "Optional manifest.stage: {background,ink,nightBackground,nightInk,height}. Colors are six-digit hex; height is 560–960 CSS px. Declaring a stage enables edge-to-edge presentation. Use transparent body backgrounds so the host canvas continues behind your objects. Existing packages without a stage still work.",
     permissions:
