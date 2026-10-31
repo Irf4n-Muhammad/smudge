@@ -295,6 +295,22 @@ interface NotificationView {
   post: { id: string; title: string } | null;
   text?: string;
   youFollow: boolean;
+  answer?: { theirs: Said | null; yours: Said | null };
+}
+type Said = { pick: string | null; score: number | null; of: number | null };
+/** "3/3, beat your 2/3" or "picked Indomie". */
+function played(answer: NotificationView["answer"]) {
+  const theirs = answer?.theirs;
+  if (!theirs) return "";
+  if (theirs.score !== null && theirs.of) {
+    const yours = answer.yours;
+    const beat =
+      yours?.score !== null && yours?.of && theirs.score / theirs.of > yours.score! / yours.of
+        ? `, beat your ${yours.score}/${yours.of}`
+        : "";
+    return `: ${theirs.score}/${theirs.of}${beat}`;
+  }
+  return theirs.pick ? `: picked “${theirs.pick}”` : "";
 }
 function describe(n: NotificationView) {
   const title = n.post ? `“${n.post.title}”` : "your post";
@@ -311,6 +327,8 @@ function describe(n: NotificationView) {
       return `mentioned you on ${n.post ? title : "a post"}.`;
     case "reaction":
       return `left a sticker on ${title}.`;
+    case "answer":
+      return `played ${title}${played(n.answer)}.`;
     case "follow-request":
       return "asked to follow you.";
     case "follow-accepted":
@@ -420,10 +438,10 @@ export function NotificationsPanel({
               )}
               {n.text && <q className="notification-quote">{n.text}</q>}
             </p>
-            {n.type === "follow" && n.actor && !n.youFollow && (
+            {(n.type === "follow" || n.type === "answer") && n.actor && !n.youFollow && (
               <button
                 className="primary small"
-                aria-label={`Follow ${n.actor.name} back`}
+                aria-label={`Follow ${n.actor.name}${n.type === "follow" ? " back" : ""}`}
                 onClick={async () => {
                   await api(`/users/${n.actor!.id}/follow`, {});
                   setItems(
@@ -434,7 +452,7 @@ export function NotificationsPanel({
                   );
                 }}
               >
-                Follow back
+                {n.type === "follow" ? "Follow back" : "Follow"}
               </button>
             )}
             <time dateTime={n.createdAt}>{ago(n.createdAt)}</time>

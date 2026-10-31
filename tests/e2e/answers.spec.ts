@@ -38,6 +38,8 @@ test("a guest plays a shared quiz, then comes in and sees their score next to th
   await call(page, "POST", `/users/maya/follow`, {});
   const following = (await call(page, "GET", "/bootstrap")).body.following as string[];
   if (!following.includes("maya")) await call(page, "POST", `/users/maya/follow`, {});
+  // Alex does not follow Leo yet, so playing his post ends with an offer to.
+  if (following.includes("leo")) await call(page, "POST", `/users/leo/follow`, {});
 
   // A stranger opens the link from a story: no account, the quiz still plays.
   const guestContext = await browser.newContext({ baseURL: "http://127.0.0.1:3000" });
@@ -70,11 +72,29 @@ test("a guest plays a shared quiz, then comes in and sees their score next to th
   await expect(line).toContainText("3/3");
   await expect(line).toContainText("People who follow you see your answer.");
   await guest.screenshot({ path: "test-results/answers-friends.png" });
+  const offer = line.locator(".answer-follow");
+  await expect(offer).toContainText("Follow Leo to get their next one.");
+  await offer.scrollIntoViewIfNeeded();
+  await guest.screenshot({ path: "test-results/answers-follow-offer.png" });
+  await offer.getByRole("button", { name: "Follow" }).click();
+  await expect(offer).toHaveCount(0);
   // The answer moved to the account, so nothing is left waiting in the browser.
   expect(await guest.evaluate((id) => localStorage.getItem(`smudge-guest:${id}`), quiz.id)).toBe(
     null,
   );
   await guestContext.close();
+
+  // Leo hears who played his quiz and how they did, and can follow them from there.
+  await as("leo");
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: /^Notifications/ })
+    .filter({ visible: true })
+    .first()
+    .click();
+  const played = page.locator(".notification").filter({ hasText: "Alex Morgan played" });
+  await expect(played).toContainText("played “Guess the song from emoji”: 1/3.");
+  await page.screenshot({ path: "test-results/answers-notification.png" });
 
   // A post that does not take answers drops a claimed answer instead of storing it.
   const plain = feed.find((p) => p.metadata.title === "Saturday, up top");

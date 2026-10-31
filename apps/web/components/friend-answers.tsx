@@ -12,9 +12,18 @@ const said = (a: Answer) =>
 
 /**
  * Under a post that takes answers: what you and the people you follow answered, and how many
- * played in all. `version` bumps when you answer, so the line catches up.
+ * played in all. `version` bumps when you answer, so the line catches up. Once you've played a
+ * post by someone you don't follow yet, `follow` offers to, so their next one reaches you.
  */
-export function FriendAnswers({ postId, version }: { postId: string; version: number }) {
+export function FriendAnswers({
+  postId,
+  version,
+  follow,
+}: {
+  postId: string;
+  version: number;
+  follow?: { name: string; onFollow: () => void } | undefined;
+}) {
   const [answers, setAnswers] = useState<Answers | null>(null),
     [claimed, setClaimed] = useState(0);
   useEffect(() => {
@@ -56,6 +65,14 @@ export function FriendAnswers({ postId, version }: { postId: string; version: nu
         </span>
       </span>
       {answers.mine && <small>People who follow you see your answer.</small>}
+      {answers.mine && follow && (
+        <p className="answer-follow">
+          <span>Follow {follow.name} to get their next one.</span>
+          <button className="primary small" onClick={follow.onFollow}>
+            Follow
+          </button>
+        </p>
+      )}
     </div>
   );
 }

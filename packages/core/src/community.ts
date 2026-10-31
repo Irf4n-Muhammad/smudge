@@ -7,7 +7,7 @@ import {
 import type { NotificationType, PersonView } from "../../contracts/src/community.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
-import type { Publication, SocialEvent, SocialService } from "./social.js";
+import type { Answer, Publication, SocialEvent, SocialService } from "./social.js";
 
 interface Follow {
   userId: string;
@@ -50,6 +50,9 @@ interface Resolution {
   by: string;
   at: string;
 }
+
+const score = (a: Answer | undefined) =>
+  a ? { pick: a.pick ?? null, score: a.score ?? null, of: a.of ?? null } : null;
 
 /**
  * Blocking, suspension, deletion state, notifications, people search and moderation. Installs
@@ -180,6 +183,14 @@ export class CommunityService {
               .filter((c) => c.postId === n.postId && c.userId === n.actorId)
               .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.text
           : undefined;
+        // What they answered, beside the maker's own answer, so "beat your 2/3" needs no lookup.
+        const answer =
+          n.type === "answer" && n.postId && n.actorId
+            ? {
+                theirs: score(this.store.get<Answer>("answer", `${n.postId}:${n.actorId}`)),
+                yours: score(this.store.get<Answer>("answer", `${n.postId}:${me}`)),
+              }
+            : undefined;
         return {
           id: n.id,
           type: n.type,
@@ -188,6 +199,7 @@ export class CommunityService {
           actor: n.actorId ? publicUser(users.get(n.actorId)) : null,
           post: post ? { id: post.id, title: post.metadata.title } : null,
           ...(said ? { text: said.length > 140 ? `${said.slice(0, 139)}…` : said } : {}),
+          ...(answer ? { answer } : {}),
           youFollow: !!n.actorId && follows.some((f) => f.userId === me && f.target === n.actorId),
         };
       });

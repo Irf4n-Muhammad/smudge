@@ -39,6 +39,7 @@ export type NotificationType =
   | "reaction"
   | "reply"
   | "mention"
+  | "answer"
   | "partner-request"
   | "follow-request"
   | "follow-accepted"

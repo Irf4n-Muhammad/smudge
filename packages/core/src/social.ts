@@ -103,7 +103,7 @@ export function packageDigest(value: Experience) {
 export type SocialEvent =
   | { type: "follow"; actorId: string; targetId: string }
   | {
-      type: "like" | "comment" | "reaction" | "reply" | "mention";
+      type: "like" | "comment" | "reaction" | "reply" | "mention" | "answer";
       actorId: string;
       targetId: string;
       postId: string;
@@ -705,7 +705,12 @@ export class SocialService {
         ...value,
         at: new Date().toISOString(),
       };
-      this.store.transaction(() => this.store.put("answer", key, answer));
+      this.store.transaction(() => {
+        this.store.put("answer", key, answer);
+        // The maker hears who played; answering again refreshes the same notification.
+        if (!preview && post.ownerId !== actor.userId)
+          this.emit({ type: "answer", actorId: actor.userId, targetId: post.ownerId, postId });
+      });
       return this.answers(actor, postId);
     }
     if (method === "answers.read") return this.answers(actor, postId);

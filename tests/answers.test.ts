@@ -53,6 +53,27 @@ test("you see your own answer and those of people you follow; strangers only add
   assert.equal(social.answers({ userId: "dian" }, quiz.id).count, 3);
   assert.equal(social.answers({ userId: "dian" }, quiz.id).mine?.score, 2);
 });
+test("the maker hears who played and how, once per player, with a follow offer", async () => {
+  const { social, community, answer } = await setup();
+  answer("ana", { score: 2, of: 3 });
+  answer("budi", { score: 1, of: 3 });
+  answer("budi", { score: 3, of: 3 });
+  answer("citra", { pick: "Indomie" });
+  const played = community
+    .notifications({ userId: "ana" })
+    .filter((n) => n.type === "answer")
+    .map((n) => [n.actor?.id, n.answer?.theirs, n.answer?.yours?.score, n.youFollow]);
+  // Playing again refreshes budi's notification; the maker's own answer notifies nobody.
+  assert.deepEqual(played, [
+    ["citra", { pick: "Indomie", score: null, of: null }, 2, false],
+    ["budi", { pick: null, score: 3, of: 3 }, 2, false],
+  ]);
+  social.follow({ userId: "ana" }, "budi");
+  assert.equal(
+    community.notifications({ userId: "ana" }).find((n) => n.actor?.id === "budi")?.youFollow,
+    true,
+  );
+});
 
 test("answers are checked, need the capability, and go with the post or the account", async () => {
   const { store, social, community, quiz, answer } = await setup();

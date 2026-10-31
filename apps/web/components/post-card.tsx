@@ -393,7 +393,17 @@ export function PostCard({
             <GatheringMark post={post} />
           </div>
         )}
-        {takesAnswers && <FriendAnswers postId={post.id} version={answered} />}
+        {takesAnswers && (
+          <FriendAnswers
+            postId={post.id}
+            version={answered}
+            follow={
+              post.ownerId !== boot.actor.userId && !boot.following.includes(post.ownerId)
+                ? { name: post.author.name.split(" ")[0] ?? post.author.name, onFollow }
+                : undefined
+            }
+          />
+        )}
         {onFormat && <FormatMark post={post} onOpen={onFormat} />}
         <ReactionBar post={post} notify={notify} onChange={onRefresh} />
         <div className="post-actions">
