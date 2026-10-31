@@ -44,8 +44,11 @@ test("a guest plays a shared quiz, then comes in and sees their score next to th
   const guest = await guestContext.newPage();
   await guest.goto(`/p/${quiz.id}`);
   const frame = guest.locator(".share-post iframe").contentFrame();
-  await frame.locator('input[name="a1"]').fill("singin in the rain");
-  await frame.getByRole("button", { name: "Check my answers" }).click();
+  await expect(frame.locator("#clue")).toHaveText("☔️🎤💃");
+  await guest.screenshot({ path: "test-results/quiz-one-clue.png" });
+  await frame.getByRole("button", { name: "Singin' in the Rain" }).click();
+  await frame.getByRole("button", { name: "Let It Go" }).click();
+  await frame.getByRole("button", { name: "Octopus's Garden" }).click();
   await expect(frame.locator("#score")).toHaveText("1 / 3");
   const invite = guest.getByRole("link", { name: "See my friends’ answers" });
   await expect(invite).toBeVisible();
