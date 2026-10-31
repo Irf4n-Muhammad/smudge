@@ -62,6 +62,7 @@ export function sdkSource(nonce: string) {
       quiz:{read:()=>request('quiz.read'),answer:answers=>request('quiz.answer',{answers})},
       cat:{read:()=>request('cat.read'),feed:()=>request('cat.feed')},
       progress:{read:()=>request('viewer.progress.read'),write:value=>request('viewer.progress.write',value)},
+      answers:{set:value=>request('answers.write',value),read:()=>request('answers.read')},
       contributions:{list:()=>request('contributions.read'),add:value=>request('contributions.create',value)},
       poll:{read:()=>request('polls.read'),vote:option=>request('polls.vote',{option})},
       reactions:{read:()=>request('reactions.read'),place:sticker=>request('reactions.place',{sticker})},

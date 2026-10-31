@@ -441,7 +441,7 @@ export class CommunityService {
       if (f.userId === userId || f.target === userId) s.remove("follow", `${f.userId}:${f.target}`);
     for (const key of s.ids("follow-request"))
       if (key.split(":").includes(userId)) s.remove("follow-request", key);
-    for (const kind of ["like", "save", "reaction"])
+    for (const kind of ["like", "save", "reaction", "answer"])
       for (const r of s.all<{ postId: string; userId: string }>(kind))
         if (r.userId === userId) s.remove(kind, `${r.postId}:${r.userId}`);
     for (const b of s.all<{ userId: string; target: string }>("block"))
