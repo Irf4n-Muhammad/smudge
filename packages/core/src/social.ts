@@ -9,6 +9,7 @@ import {
 import type { DraftView, Experience, PostView, User } from "../../contracts/src/experience.js";
 import type { Actor } from "./index.js";
 import { Store } from "./database.js";
+import { normalizeFill } from "./fill.js";
 
 /**
  * Nobody is signed in. The viewer every audience rule is asked about for a share link
@@ -161,6 +162,7 @@ export class SocialService {
     const ownerId = this.actor(actor);
     const parsed = draftInputSchema.parse(input);
     this.checkAssets(actor, parsed.package, parsed.metadata.coverAssetId);
+    parsed.package = normalizeFill(parsed.package);
     if (parsed.metadata.contributors.some((id) => !this.store.get("user", id)))
       throw new AppError("UNKNOWN_CONTRIBUTOR");
     const draft: DraftView = {
@@ -191,6 +193,7 @@ export class SocialService {
     if (old.revision !== revision) throw new AppError("REVISION_CONFLICT", 409);
     const parsed = draftInputSchema.parse(input);
     this.checkAssets(actor, parsed.package, parsed.metadata.coverAssetId);
+    parsed.package = normalizeFill(parsed.package);
     if (parsed.metadata.contributors.some((id) => !this.store.get("user", id)))
       throw new AppError("UNKNOWN_CONTRIBUTOR");
     const next = { ...old, ...parsed, revision: revision + 1, updatedAt: new Date().toISOString() };

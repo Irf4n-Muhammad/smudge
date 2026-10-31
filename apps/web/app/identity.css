@@ -1218,3 +1218,14 @@
     padding: 22px 18px;
   }
 }
+.fill-form {
+  padding: 0 22px 22px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.fill-photo {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+}
