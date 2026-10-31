@@ -267,6 +267,17 @@
   width: min(720px, 100%);
   margin-inline: auto;
 }
+.format-heading > div {
+  margin-top: 16px;
+}
+.format-heading h1 {
+  margin: 4px 0 6px;
+  font-size: 28px;
+}
+.format-heading p {
+  margin: 0;
+  color: var(--muted);
+}
 .explore-heading {
   display: grid;
   gap: 8px;

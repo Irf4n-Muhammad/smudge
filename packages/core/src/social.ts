@@ -156,7 +156,8 @@ export class SocialService {
         throw new AppError("ASSET_NOT_ACCESSIBLE", 403);
     }
   }
-  createDraft(actor: Actor, input: unknown) {
+  /** `remixOf` is the original post whose format this draft reuses; only the server passes it. */
+  createDraft(actor: Actor, input: unknown, remixOf?: string) {
     const ownerId = this.actor(actor);
     const parsed = draftInputSchema.parse(input);
     this.checkAssets(actor, parsed.package, parsed.metadata.coverAssetId);
@@ -168,6 +169,7 @@ export class SocialService {
       ...parsed,
       revision: 1,
       updatedAt: new Date().toISOString(),
+      ...(remixOf ? { remixOf } : {}),
     };
     this.store.transaction(() => this.store.put("draft", draft.id, draft));
     return draft;
@@ -275,6 +277,7 @@ export class SocialService {
       metadata: post.metadata,
       revision: post.revision,
       updatedAt: new Date().toISOString(),
+      ...(post.remixOf ? { remixOf: post.remixOf } : {}),
     };
     this.store.transaction(() => {
       this.store.put("draft", draft.id, draft);
@@ -310,12 +313,68 @@ export class SocialService {
   }
   feed(actor: Actor): PostView[] {
     this.actor(actor);
-    const users = this.users();
-    return this.store
+    return this.views(
+      actor,
+      this.store
+        .all<Publication>("post")
+        .reverse()
+        .filter((p) => this.viewFilter(actor.userId, p) && this.feedFilter(actor.userId, p)),
+    );
+  }
+  /**
+   * A format and every version of it the viewer can see, newest version first. Ignores the
+   * active side: the page is about the format, not about where you are scrolling.
+   */
+  format(actor: Actor, id: string) {
+    this.actor(actor);
+    const root = this.store.get<Publication>("post", id);
+    const rootId = root?.remixOf ?? id;
+    const posts = this.store
       .all<Publication>("post")
       .reverse()
-      .filter((p) => this.viewFilter(actor.userId, p) && this.feedFilter(actor.userId, p))
-      .map((p) => ({
+      .filter((p) => (p.id === rootId || p.remixOf === rootId) && this.viewFilter(actor.userId, p));
+    if (!posts.length) throw new AppError("NOT_FOUND", 404);
+    const views = this.views(actor, posts);
+    return {
+      rootId,
+      root: views.find((p) => p.id === rootId) ?? null,
+      versions: views.filter((p) => p.id !== rootId),
+    };
+  }
+  private views(actor: Actor, posts: Publication[]): PostView[] {
+    const users = this.users();
+    // Versions of each format the viewer can see, oldest first, so a version's number never
+    // depends on where it sits in a list.
+    const versions = new Map<string, Publication[]>();
+    for (const p of this.store.all<Publication>("post"))
+      if (p.remixOf && this.viewFilter(actor.userId, p))
+        versions.set(p.remixOf, [...(versions.get(p.remixOf) ?? []), p]);
+    for (const list of versions.values())
+      list.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const remix = (p: Publication): PostView["remix"] => {
+      if (!p.remixOf) return undefined;
+      const list = versions.get(p.remixOf) ?? [];
+      const root = this.store.get<Publication>("post", p.remixOf);
+      const author =
+        root && this.viewFilter(actor.userId, root) && users.find((u) => u.id === root.ownerId);
+      return {
+        rootId: p.remixOf,
+        index: list.findIndex((v) => v.id === p.id) + 1,
+        count: list.length,
+        ...(root && author
+          ? {
+              root: {
+                title: root.metadata.title,
+                author: { name: author.name, handle: author.handle },
+              },
+            }
+          : {}),
+      };
+    };
+    return posts.map((p) => {
+      const count = versions.get(p.id)?.length ?? 0;
+      const r = remix(p);
+      return {
         id: p.id,
         ownerId: p.ownerId,
         revision: p.revision,
@@ -329,7 +388,10 @@ export class SocialService {
         liked: !!this.store.get("like", `${p.id}:${actor.userId}`),
         saved: !!this.store.get("save", `${p.id}:${actor.userId}`),
         comments: this.comments(p.id).length,
-      }));
+        ...(r ? { remix: r } : {}),
+        ...(count ? { versions: count } : {}),
+      };
+    });
   }
   /**
    * Without a query: posts from people you don't follow yet, liveliest first (likes and comments,

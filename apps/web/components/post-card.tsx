@@ -51,6 +51,7 @@ export function PostCard({
   onSkip,
   onEdit,
   onUser,
+  onFormat,
   openComments: startOpen = false,
 }: {
   post: DecoratedPost;
@@ -65,6 +66,8 @@ export function PostCard({
   onEdit?: () => void;
   /** Opens a profile from an @mention. */
   onUser?: (userId: string) => void;
+  /** Opens the page that gathers every version of a format, by its original post. */
+  onFormat?: (rootId: string) => void;
   /** Show comments from the start (a post opened from a notification or link). */
   openComments?: boolean;
 }) {
@@ -376,6 +379,7 @@ export function PostCard({
             <GatheringMark post={post} />
           </div>
         )}
+        {onFormat && <FormatMark post={post} onOpen={onFormat} />}
         <ReactionBar post={post} notify={notify} onChange={onRefresh} />
         <div className="post-actions">
           <div>
@@ -494,5 +498,24 @@ export function PostCard({
         />
       )}
     </article>
+  );
+}
+
+/** Where a post sits in its format: "Version 3 of Rina's format", or how many versions it has. */
+function FormatMark({ post, onOpen }: { post: DecoratedPost; onOpen: (rootId: string) => void }) {
+  const remix = post.remix;
+  if (!remix && !post.versions) return null;
+  const label = remix
+    ? `Version ${remix.index} of ${remix.root ? `${remix.root.author.name}’s “${remix.root.title}”` : "a format"}`
+    : `${post.versions} ${post.versions === 1 ? "version" : "versions"} of this format`;
+  return (
+    <div className="moment-line">
+      <button
+        className="moment-mark gathering-mark format-mark"
+        onClick={() => onOpen(remix?.rootId ?? post.id)}
+      >
+        <Layers size={13} /> {label}
+      </button>
+    </div>
   );
 }

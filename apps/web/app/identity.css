@@ -85,6 +85,17 @@
 .moment-mark.verified {
   color: #1f7a4d;
 }
+.format-mark {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.format-mark:hover {
+  text-decoration: underline;
+}
 .moment-cover {
   position: relative;
   display: block;
