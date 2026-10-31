@@ -33,8 +33,10 @@ test("anyone makes their own version of a fill-in format from a form, without th
     await page.goto(`/?post=${quiz.id}`);
     const card = page.locator(".post-card").first();
     await expect(card.locator("iframe").contentFrame().locator("h1")).toHaveText(
-      "Guess the song from emoji",
+      "My three most played songs this year. Can you guess them?",
     );
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: "test-results/quiz-feed-cover.png" });
     await card.getByRole("button", { name: "Use format" }).click();
 
     const dialog = page.getByRole("dialog");
@@ -52,6 +54,7 @@ test("anyone makes their own version of a fill-in format from a form, without th
     await expect(frame.locator("h1")).toHaveText("Tebak lagu ala Alex");
     // One clue at a time, picked with a tap; only what was changed is new.
     await expect(frame.locator("#clue")).toHaveText("🍕🍕🍕");
+    await frame.getByRole("button", { name: "Guess ▸" }).click();
     await frame.getByRole("button", { name: "Pizza Party" }).click();
     await expect(frame.locator("#clue")).toHaveText("🧊🧊👶");
     await frame.getByRole("button", { name: "Let It Go" }).click();

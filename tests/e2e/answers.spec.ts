@@ -44,8 +44,13 @@ test("a guest plays a shared quiz, then comes in and sees their score next to th
   const guest = await guestContext.newPage();
   await guest.goto(`/p/${quiz.id}`);
   const frame = guest.locator(".share-post iframe").contentFrame();
-  await expect(frame.locator("#clue")).toHaveText("☔️🎤💃");
+  // The first frame is Leo's challenge; the answers show up after a tap.
+  await expect(frame.locator("h1")).toHaveText(/most played songs/);
   await guest.waitForTimeout(500);
+  await guest.screenshot({ path: "test-results/quiz-cover.png" });
+  await frame.getByRole("button", { name: "Guess ▸" }).click();
+  await expect(frame.locator("#clue")).toHaveText("☔️🎤💃");
+  await guest.waitForTimeout(400);
   await guest.screenshot({ path: "test-results/quiz-one-clue.png" });
   await frame.getByRole("button", { name: "Singin' in the Rain" }).click();
   await guest.waitForTimeout(250);
