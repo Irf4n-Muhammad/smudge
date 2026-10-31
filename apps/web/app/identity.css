@@ -1229,3 +1229,15 @@
   object-fit: cover;
   border-radius: 8px;
 }
+.friend-answers {
+  display: grid;
+  gap: 2px;
+}
+.friend-answers .moment-mark strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.friend-answers small {
+  font-size: 10.5px;
+  color: var(--muted);
+}

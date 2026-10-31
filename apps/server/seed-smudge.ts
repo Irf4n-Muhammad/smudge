@@ -109,20 +109,33 @@ export function seedSmudge(service: SocialService) {
 /** A fill-in format: anyone can make their own round from a form, without touching the code. */
 const songQuiz = (() => {
   const fields = [
-    { key: "title", label: "Title", kind: "text", value: "Guess the song from emoji" },
+    {
+      key: "title",
+      label: "Title",
+      kind: "text",
+      value: "My three most played songs this year. Can you guess them?",
+    },
     { key: "photo", label: "Photo", kind: "image", value: `asset:${media.concert}` },
     { key: "q1", label: "Clue 1 (emoji)", kind: "text", value: "☔️🎤💃" },
     { key: "a1", label: "Answer 1", kind: "text", value: "Singin' in the Rain" },
+    { key: "x1", label: "Wrong answer 1a", kind: "text", value: "Purple Rain" },
+    { key: "y1", label: "Wrong answer 1b", kind: "text", value: "Dancing Queen" },
     { key: "q2", label: "Clue 2 (emoji)", kind: "text", value: "🧊🧊👶" },
     { key: "a2", label: "Answer 2", kind: "text", value: "Ice Ice Baby" },
+    { key: "x2", label: "Wrong answer 2a", kind: "text", value: "Let It Go" },
+    { key: "y2", label: "Wrong answer 2b", kind: "text", value: "Baby Shark" },
     { key: "q3", label: "Clue 3 (emoji)", kind: "text", value: "🟡🚢" },
     { key: "a3", label: "Answer 3", kind: "text", value: "Yellow Submarine" },
+    { key: "x3", label: "Wrong answer 3a", kind: "text", value: "Octopus's Garden" },
+    { key: "y3", label: "Wrong answer 3b", kind: "text", value: "Yellow" },
   ];
+  // The first frame is the maker's own challenge over their photo, with the friends who already
+  // played; the answers show up only after a tap. Then one clue at a time: a game, not a test.
   const pkg = page(
     "Guess the song from emoji",
-    `<script src="smudge/fill.js"></script><style>*{box-sizing:border-box;margin:0}body{background:#141018;color:#fff;font-family:${sans}}main{min-height:520px}.top{position:relative;height:190px;overflow:hidden}.top img{width:100%;height:100%;object-fit:cover;filter:brightness(.55)}.top h1{position:absolute;left:20px;right:20px;bottom:16px;font:400 40px/.95 ${condensed};text-transform:uppercase;color:#ffd23d}form{padding:16px 18px 20px;display:grid;gap:12px}.q{background:#221c2a;border-radius:16px;padding:12px 14px}.q b{display:block;font-size:34px;letter-spacing:.08em}.q input{width:100%;margin-top:8px;border:0;border-radius:10px;padding:10px;background:#fff;color:#141018}.q.right{outline:2px solid #7cf38f}.q.wrong{outline:2px solid #ff6b6b}.q small{display:block;margin-top:6px;opacity:.75}button{border:0;border-radius:16px;padding:14px;background:#ffd23d;color:#141018;font:400 22px ${condensed};letter-spacing:.03em}#score{text-align:center;font:400 28px ${condensed};color:#ffd23d}</style><main><div class="top"><img data-fill="photo" alt=""><h1 data-fill="title"></h1></div><form id="quiz"></form></main><script>const v=window.smudgeFill.values,keys=["1","2","3"],form=document.getElementById("quiz");const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,"");form.innerHTML=keys.map(k=>'<label class="q" id="q'+k+'"><b></b><input name="a'+k+'" placeholder="Your guess" autocomplete="off"><small></small></label>').join("")+'<button>Check my answers</button><p id="score"></p>';for(const k of keys)form.querySelector("#q"+k+" b").textContent=v["q"+k];function show(guesses){let n=0;for(const k of keys){const box=form.querySelector("#q"+k),ok=norm(guesses[k]||"")===norm(v["a"+k]);n+=ok;box.className="q "+(ok?"right":"wrong");box.querySelector("small").textContent=ok?"Yes!":"It was: "+v["a"+k];box.querySelector("input").value=guesses[k]||""}document.getElementById("score").textContent=n+" / "+keys.length}form.onsubmit=async e=>{e.preventDefault();const g={};for(const k of keys)g[k]=form["a"+k].value;show(g);try{await forma.progress.write({guesses:g})}catch{}};forma.progress.read().then(s=>{if(s.guesses)show(s.guesses)}).catch(()=>{});</script>`,
+    `<script src="smudge/fill.js"></script><style>*{box-sizing:border-box;margin:0}:root{--right:#22c55e;--wrong:#ef4444}body{background:#0e0f1a;color:#fff;font-family:${sans};overflow:hidden}main{position:relative;height:100vh;min-height:440px;overflow:hidden}.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:filter .4s}main:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0000 15%,#000000d9 72%);transition:background .4s}main.playing .bg{filter:brightness(.55)}main.playing:after{background:linear-gradient(180deg,#0006,#000000d9 80%)}.top{position:absolute;left:20px;right:20px;top:18px;z-index:1;display:none;align-items:center;gap:12px}main.playing .top{display:flex}#step{font:700 13px ${sans};font-variant-numeric:tabular-nums;white-space:nowrap}.track{flex:1;display:flex;gap:4px}.track i{flex:1;height:4px;border-radius:2px;background:#ffffff40;transition:background .25s}.track i.now{background:#fff}.track i.right{background:var(--right)}.track i.wrong{background:var(--wrong)}.in{position:absolute;left:20px;right:20px;bottom:22px;z-index:1;display:grid;gap:14px}#clue{font-size:60px;line-height:1;letter-spacing:.06em;animation:in .35s ease-out}h1{font:800 26px/1.15 ${sans};text-wrap:balance;text-shadow:0 1px 12px #0006}main.playing h1{display:none}.who{display:flex;align-items:center;gap:10px;font:600 13px/1.3 ${sans};color:#e6e6ee}.who:empty{display:none}.faces{display:flex;flex:none}.faces i{width:28px;height:28px;border-radius:50%;margin-left:-8px;border:2px solid #000;display:grid;place-items:center;font:800 12px ${sans};font-style:normal;color:#fff}.faces i:first-child{margin-left:0}.pill{justify-self:start;border:0;border-radius:999px;padding:13px 24px;background:#fff;color:#111;font:800 15px ${sans};cursor:pointer;transition:transform .1s}.pill:active{transform:scale(.96)}#game{display:grid;gap:8px}#game:empty{display:none}.opt{border:1px solid #ffffff2e;border-radius:14px;padding:14px 16px;background:#ffffff1f;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff;font:700 16px ${sans};text-align:left;cursor:pointer;transition:background .15s,border-color .15s,transform .1s,opacity .2s;animation:in .3s ease-out backwards}.opt:nth-child(2){animation-delay:.04s}.opt:nth-child(3){animation-delay:.08s}.opt:active{transform:scale(.98)}.opt.right{background:var(--right);border-color:var(--right)}.opt.wrong{background:var(--wrong);border-color:var(--wrong);animation:shake .35s}.opt.dim{opacity:.35}#score{font:800 64px/1 ${sans};letter-spacing:-.02em;font-variant-numeric:tabular-nums;animation:in .35s ease-out}.verdict{font:600 17px ${sans};color:#e6e6ee}@keyframes in{from{opacity:0;transform:translateY(8px)}}@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}</style><main><img class="bg" data-fill="photo" alt=""><div class="top"><span id="step"></span><div class="track" id="track"></div></div><div class="in" id="in"><div id="clue"></div><h1 data-fill="title"></h1><div id="game"></div><div class="who" id="who"></div><div id="act"></div></div></main><script>const v=window.smudgeFill.values,keys=["1","2","3"],main=document.querySelector("main"),$=id=>document.getElementById(id),verdicts=["Tough round. Make one of your own?","Close. Try again?","So close to perfect.","Perfect round."],tints=["#ff4fb8","#7c5cff","#14b8a6","#f59e0b","#3b82f6"];let i=0,n=0,busy=false,results=[],played=null;function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}function again(e){e.style.animation="none";void e.offsetWidth;e.style.animation=""}function pill(text,id,onclick){const b=el("button","pill",text);b.id=id;b.onclick=onclick;return b}function who(){const box=$("who");box.replaceChildren();if(!played)return;const people=played.friends.slice(0,3);const rest=played.count-played.friends.length-(played.mine&&!played.friends.some(f=>f.userId===played.mine.userId)?1:0);const bits=people.map(f=>f.name.split(" ")[0]+(typeof f.score==="number"?" "+f.score+"/"+f.of:""));if(rest>0)bits.push(rest+(people.length?" more":rest===1?" person played":" people played"));if(!bits.length)return;if(people.length){const faces=el("div","faces");people.forEach((f,j)=>{const c=el("i","",f.name.trim()[0]||"?");c.style.background=tints[j%tints.length];faces.append(c)});box.append(faces)}box.append(el("span","",bits.join(" · ")))}function paint(){$("track").replaceChildren(...keys.map((_,j)=>el("i",results[j]||(j===i?"now":""))));$("step").textContent=(Math.min(i,keys.length-1)+1)+" of "+keys.length}function cover(){main.classList.remove("playing");$("clue").textContent=v.q1;$("game").replaceChildren();who();$("act").replaceChildren(pill("Guess ▸","go",()=>{i=0;n=0;results=[];ask()}))}function done(score,saved){main.classList.add("playing");if(!results.length)results=keys.map((_,j)=>j<score?"right":"wrong");i=keys.length;paint();$("step").textContent="Done";const clue=$("clue");clue.replaceChildren();const sc=el("div","",score+" / "+keys.length);sc.id="score";clue.append(sc);$("game").replaceChildren(el("p","verdict",verdicts[score]));who();$("act").replaceChildren(pill("Play again","again",()=>{i=0;n=0;results=[];ask()}));if(saved)return;forma.progress.write({score}).catch(()=>{});forma.answers.set({score,of:keys.length}).then(a=>{if(a&&typeof a.count==="number"){played=a;who()}}).catch(()=>{})}function ask(){if(i>=keys.length)return done(n);main.classList.add("playing");paint();$("who").replaceChildren();$("act").replaceChildren();const k=keys[i],opts=[v["a"+k],v["x"+k],v["y"+k]],order=[0,1,2].map(j=>(j+i)%3),clue=$("clue"),game=$("game");clue.textContent=v["q"+k];again(clue);game.replaceChildren(...order.map(j=>{const b=el("button","opt",opts[j]);b.onclick=()=>{if(busy)return;busy=true;const right=j===0;n+=right?1:0;results[i]=right?"right":"wrong";paint();for(const o of game.children){if(o===b)o.classList.add(right?"right":"wrong");else if(o.textContent===opts[0])o.classList.add("right");else o.classList.add("dim")}setTimeout(()=>{busy=false;i++;ask()},right?600:1100)};return b}))}Promise.all([forma.progress.read().catch(()=>({})),forma.answers.read().catch(()=>null)]).then(([s,a])=>{if(a&&typeof a.count==="number")played=a;if(typeof s.score==="number")done(s.score,true);else cover()});</script>`,
     [media.concert],
-    ["viewer.progress.read", "viewer.progress.write"],
+    ["viewer.progress.read", "viewer.progress.write", "answers.write", "answers.read"],
   );
   pkg.files["smudge/fill.js"] = `window.smudgeFill = ${JSON.stringify({ fields })};\n`;
   return pkg;
@@ -143,6 +156,22 @@ export function seedFillFormat(service: SocialService) {
       coverAssetId: media.concert,
     },
   });
-  service.publish(actor, draft.id, draft.revision);
+  // A few of Leo's friends already played, so the first frame has someone to beat.
+  const played: [string, number][] = [
+    ["maya", 3],
+    ["dani", 0],
+    ["ines", 2],
+  ];
+  service.publish(actor, draft.id, draft.revision, (post) => {
+    for (const [userId, score] of played)
+      if (store.get("user", userId))
+        store.put("answer", `${post.id}:${userId}`, {
+          postId: post.id,
+          userId,
+          score,
+          of: 3,
+          at: post.createdAt,
+        });
+  });
   store.transaction(() => store.put("system", "seed-fill-format-v1", { complete: true }));
 }

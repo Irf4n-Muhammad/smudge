@@ -13,6 +13,8 @@ export const capabilities = [
   "reactions.place",
   "plan.read",
   "plan.join",
+  "answers.write",
+  "answers.read",
 ] as const;
 export const capability = z.enum(capabilities);
 export const manifestV2 = z

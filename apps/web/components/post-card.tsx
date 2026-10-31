@@ -40,6 +40,7 @@ import {
 } from "./post-decor";
 import type { DecoratedPost } from "./post-decor";
 import { glowFor } from "./gallery";
+import { FriendAnswers } from "./friend-answers";
 export function PostCard({
   post,
   boot,
@@ -79,7 +80,10 @@ export function PostCard({
     [menu, setMenu] = useState(false),
     [busy, setBusy] = useState(false),
     [full, setFull] = useState(false),
-    [reporting, setReporting] = useState(false);
+    [reporting, setReporting] = useState(false),
+    /** Bumps when you answer inside the post, so the answers line under it catches up. */
+    [answered, setAnswered] = useState(0);
+  const takesAnswers = (post.manifest.capabilities as string[]).includes("answers.write");
   const moment = post.moment;
   const action = async (kind: string) => {
     try {
@@ -347,6 +351,7 @@ export function PostCard({
               version={post.revision}
               height={stage?.height ?? (post.metadata.format === "scrapbook" ? 510 : 460)}
               onSkip={onSkip}
+              onAnswer={() => setAnswered((n) => n + 1)}
               clip
             />
           )}
@@ -367,7 +372,16 @@ export function PostCard({
         )}
       </div>
       <PostLink post={post} notify={notify} onOpenSelf={() => setFull(true)} />
-      {full && <FullScreenPost post={post} notify={notify} onClose={() => setFull(false)} />}
+      {full && (
+        <FullScreenPost
+          post={post}
+          notify={notify}
+          onClose={() => {
+            setFull(false);
+            setAnswered((n) => n + 1);
+          }}
+        />
+      )}
       <div className="post-body">
         {moment && (
           <div className="moment-line">
@@ -379,6 +393,7 @@ export function PostCard({
             <GatheringMark post={post} />
           </div>
         )}
+        {takesAnswers && <FriendAnswers postId={post.id} version={answered} />}
         {onFormat && <FormatMark post={post} onOpen={onFormat} />}
         <ReactionBar post={post} notify={notify} onChange={onRefresh} />
         <div className="post-actions">

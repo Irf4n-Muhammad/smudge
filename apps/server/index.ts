@@ -11,6 +11,7 @@ import { fillPackage, readFill } from "../../packages/core/src/fill.js";
 import type { Actor } from "../../packages/core/src/index.js";
 import { bridgeRequestSchema } from "../../packages/contracts/src/experience.js";
 import type { PostView } from "../../packages/contracts/src/experience.js";
+import { progressSchema } from "../../packages/contracts/src/experience.js";
 import { renderDocument, runtimeCspFor } from "../../packages/runtime/src/document.js";
 import { seed, seedSharedAssets } from "./seed.js";
 import { seedWorlds } from "./seed-worlds.js";
@@ -1018,6 +1019,31 @@ api.post("/api/posts/:id/reuse", (req, res) => {
     ),
   );
 });
+/** Your answer to a post, and the answers of people you follow; the card shows them under the post. */
+api.get("/api/posts/:id/answers", (req, res) => {
+  const post = service.visiblePost(actor(res), String(req.params.id));
+  res.json(service.answers(actor(res), post.id));
+});
+/**
+ * What someone did on a post as a guest, handed to their new account. It goes through the post's
+ * own capabilities, so it is checked exactly like playing it signed in; parts the post does not
+ * declare are dropped.
+ */
+api.post("/api/posts/:id/claim", (req, res) => {
+  const body = z
+    .object({ progress: z.unknown().optional(), answer: z.unknown().optional() })
+    .strict()
+    .parse(req.body);
+  const id = String(req.params.id);
+  const post = service.visiblePost(actor(res), id);
+  const declared = post.package.manifest.capabilities as string[];
+  // The answer is what the person came in for; progress that would not pass is left behind.
+  if (body.answer !== undefined && declared.includes("answers.write"))
+    service.capability(actor(res), id, "answers.write", body.answer);
+  if (declared.includes("viewer.progress.write") && progressSchema.safeParse(body.progress).success)
+    service.capability(actor(res), id, "viewer.progress.write", body.progress);
+  res.json(service.answers(actor(res), id));
+});
 /** The parts of a fill-in format anyone may change; empty when the post is not one. */
 api.get("/api/posts/:id/fields", (req, res) => {
   const post = service.visiblePost(actor(res), String(req.params.id));
@@ -1180,6 +1206,8 @@ api.get("/api/spec", (_req, res) =>
       "Upload JPEG/PNG/WebP via upload_media, add IDs to manifest.assets, reference asset:ID in HTML or CSS. Max 3 MB each.",
     sdk: {
       progress: "await forma.progress.read(); await forma.progress.write({page:2})",
+      answers:
+        "Declare answers.write (+ answers.read). await forma.answers.set({pick:'Indomie'}) or {score:2,of:3}; one answer per viewer, shown to the people who follow them. await forma.answers.read() → {count, mine, friends:[{name,handle,pick?,score?,of?}]}. Guests can play: their answer waits in the browser until they sign up.",
       contributions:
         "await forma.contributions.list(); await forma.contributions.add({text:'My memory'})",
       poll: "await forma.poll.read(); await forma.poll.vote(0)",

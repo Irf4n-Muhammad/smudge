@@ -5,6 +5,7 @@ import type { Experience } from "../../../packages/contracts/src/experience";
 import { RotateCcw, ArrowDown, AlertCircle } from "lucide-react";
 import { bridgeRequestSchema } from "../../../packages/contracts/src/experience";
 import { profileRequestSchema, profileSizeSchema } from "../../../packages/contracts/src/profile";
+import { guestCapability } from "./guest-answers";
 
 export async function api<T = any>(path: string, body?: unknown, method?: string): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -34,6 +35,7 @@ export function Runtime({
   onEdit,
   onReady,
   guest = false,
+  onAnswer,
   clip = false,
   owner = false,
 }: {
@@ -56,6 +58,8 @@ export function Runtime({
   onReady?: () => void;
   /** Opened from a share link without an account: read-only, through the public endpoints. */
   guest?: boolean;
+  /** The viewer answered inside the post (a guest's answer waits in this browser). */
+  onAnswer?: () => void;
   /** The viewer owns this page: the page may show its own hints for filling it in (ADR 0051). */
   owner?: boolean;
   /**
@@ -68,6 +72,8 @@ export function Runtime({
     frame = useRef<HTMLIFrameElement>(null);
   const openPost = useRef(onOpenPost);
   const socialChange = useRef(onSocialChange);
+  const answered = useRef(onAnswer);
+  answered.current = onAnswer;
   socialChange.current = onSocialChange;
   openPost.current = onOpenPost;
   const edit = useRef(onEdit);
@@ -214,12 +220,20 @@ export function Runtime({
       if (++requests > 20) return;
       const source = event.source as Window;
       try {
-        // Guests get read-only profile capabilities and none inside posts.
-        if (guest && kind !== "profile") throw new Error("SIGN_IN_REQUIRED");
-        const result = await api(guest ? "/public/capability" : "/capability", {
-          ticket: ticket.ticket,
-          request: parsed.data,
-        });
+        // Guests get read-only profile capabilities. Inside posts they may play: progress and
+        // answers stay in this browser until they make an account; anything else needs one.
+        const kept =
+          guest && kind !== "profile"
+            ? guestCapability(target, parsed.data.method, parsed.data.payload)
+            : undefined;
+        if (kept === null) throw new Error("SIGN_IN_REQUIRED");
+        const result: { value?: { postId?: unknown } } =
+          (kept as { value?: { postId?: unknown } } | undefined) ??
+          (await api(guest ? "/public/capability" : "/capability", {
+            ticket: ticket.ticket,
+            request: parsed.data,
+          }));
+        if (active && parsed.data.method === "answers.write") answered.current?.();
         if (
           active &&
           kind === "profile" &&
