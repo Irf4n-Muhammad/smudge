@@ -110,6 +110,19 @@ export const orgs: Org[] = [
   },
 ];
 export const orgById = (id: string) => orgs.find((o) => o.id === id);
+/** Organisations people start themselves join the demo list once the server loads them. */
+export const registerOrg = (org: Org) => {
+  if (!orgById(org.id)) orgs.push(org);
+  return org;
+};
+export const orgCreateSchema = z
+  .object({
+    name: z.string().trim().min(3).max(60),
+    /** Clubs (himpunan, UKM, fanbase) and events; campuses and workplaces prove membership by email. */
+    kind: z.enum(["club", "event"]).default("club"),
+    term: z.string().trim().min(2).max(20).optional(),
+  })
+  .strict();
 
 export const chapterKinds = [
   "education",

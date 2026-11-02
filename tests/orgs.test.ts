@@ -116,3 +116,35 @@ test("a post reads only the viewer's own memberships, and only when it declares 
   );
   assert.throws(() => social.capability({ userId: "maya" }, other.id, "org.read", undefined));
 });
+
+test("anyone can start an organisation and run it; a join link hands out member chapters for the term", async () => {
+  const { orgs, identity } = await setup();
+  const org = orgs.createOrg(
+    { userId: "dani" },
+    { name: "Himpunan Desain Lembayung", term: "2026/27" },
+  );
+  assert.match(org.id, /^himpunan-desain-lembayung/);
+  assert.equal(org.current, "2026/27");
+  assert.deepEqual(identity.orgAdmins(org.id), ["dani"]);
+  // The same name again gets its own address instead of taking over the first.
+  const twin = orgs.createOrg({ userId: "leo" }, { name: "Himpunan Desain Lembayung" });
+  assert.notEqual(twin.id, org.id);
+
+  const { code } = orgs.joinLink({ userId: "dani" }, org.id);
+  assert.equal(orgs.joinLink({ userId: "dani" }, org.id).code, code, "one link per term");
+  rejects(() => orgs.joinLink({ userId: "maya" }, org.id), "ORG_ADMIN_REQUIRED");
+  assert.equal(orgs.joinPreview(org.id, code).label, "Member, Himpunan Desain Lembayung 2026/27");
+  rejects(() => orgs.joinPreview("teater-senja", code), "INVITE_INVALID");
+
+  const chapter = identity.redeemInvite({ userId: "maya" }, { code });
+  assert.equal(chapter.orgId, org.id);
+  assert.equal(chapter.from, 2026);
+  assert.equal(orgs.publicPage(org.id).members, 1);
+  // A new term means a new link, so next year's members get next year's chapter.
+  orgs.startTerm({ userId: "dani" }, org.id, { label: "2027/28", from: 2027 });
+  assert.notEqual(orgs.joinLink({ userId: "dani" }, org.id).code, code);
+
+  orgs.createOrg({ userId: "dani" }, { name: "Second club" });
+  orgs.createOrg({ userId: "dani" }, { name: "Third club" });
+  rejects(() => orgs.createOrg({ userId: "dani" }, { name: "Fourth club" }), "TOO_MANY_ORGS");
+});

@@ -547,6 +547,12 @@ sideRoutes(
 identityRoutes(api, identity);
 // Organisations: terms, handover and the admin's view. The public face is under /api/public.
 const orgId = (value: unknown) => z.string().max(40).parse(value);
+api.post("/api/orgs", rateLimit({ windowMs: 60 * 60_000, max: 10 }), (req, res) =>
+  res.json(orgService.createOrg(actor(res), req.body)),
+);
+api.post("/api/orgs/:id/join-link", (req, res) =>
+  res.json(orgService.joinLink(actor(res), orgId(req.params.id))),
+);
 api.get("/api/orgs/:id/manage", (req, res) =>
   res.json(orgService.manage(actor(res), orgId(req.params.id))),
 );
@@ -909,6 +915,14 @@ api.get("/api/public/sides/:id/home", guestLimit, (req, res) =>
 );
 api.get("/api/public/orgs/:id", guestLimit, (req, res) =>
   res.json(orgService.publicPage(z.string().max(40).parse(req.params.id))),
+);
+api.get("/api/public/orgs/:id/join/:code", guestLimit, (req, res) =>
+  res.json(
+    orgService.joinPreview(
+      z.string().max(40).parse(req.params.id),
+      z.string().max(12).parse(req.params.code),
+    ),
+  ),
 );
 api.get("/api/public/posts/:id", guestLimit, (req, res) =>
   res.json(sharing.post(String(req.params.id))),

@@ -59,3 +59,29 @@ test("an organisation's page: public terms for anyone, and its admin starts a te
   await page.goto("/o/teater-senja");
   await expect(page.getByRole("region", { name: "Manage" })).toContainText("Run by @leopark");
 });
+
+test("a himpunan starts itself on Smudge and members join from one link", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  await as(page, "dani");
+  await page.goto("/o/new");
+  await page.getByLabel("Name").fill("Himpunan Desain Lembayung");
+  await page.getByLabel("First term").fill("2026/27");
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.getByRole("heading", { name: "Himpunan Desain Lembayung" })).toBeVisible();
+  await expect(page.locator(".org-terms li.open")).toHaveText(/2026\/27/);
+  const manage = page.getByRole("region", { name: "Manage" });
+  await manage.getByRole("button", { name: "Get join link" }).click();
+  const link = await manage.getByLabel("Join link").inputValue();
+  expect(link).toMatch(/\/o\/himpunan-desain-lembayung[\w-]*\?join=[A-Z0-9]{10}$/);
+
+  await as(page, "maya");
+  await page.goto(link);
+  const join = page.getByRole("region", { name: "Join" });
+  await expect(join).toContainText("Member, Himpunan Desain Lembayung 2026/27");
+  await page.screenshot({ path: "test-results/org-join.png" });
+  await join.getByRole("button", { name: "Join" }).click();
+  await expect(page.getByRole("status")).toContainText("You joined.");
+  await expect(page.locator(".org-hero")).toContainText("1 person");
+  await expect(page).not.toHaveURL(/join=/);
+});

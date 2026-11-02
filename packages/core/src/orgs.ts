@@ -4,10 +4,12 @@ import {
   collections,
   handoverSchema,
   orgById,
+  orgCreateSchema,
   orgs,
+  registerOrg,
   termStartSchema,
 } from "../../contracts/src/identity.js";
-import type { Chapter, Term } from "../../contracts/src/identity.js";
+import type { Chapter, Org, Term } from "../../contracts/src/identity.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
 import type { SocialService } from "./social.js";
@@ -27,6 +29,7 @@ export class OrgService {
   ) {
     social.capabilityHandlers["org.read"] = (actor, _postId, payload, preview) =>
       preview ? { memberships: [] } : this.memberships(actor, payload);
+    for (const org of this.store.all<Org>("org")) registerOrg(org);
   }
   private get store() {
     return this.social.store;
@@ -83,6 +86,70 @@ export class OrgService {
         return { id, name: u?.name ?? id, handle: u?.handle ?? "" };
       }),
     };
+  }
+  /**
+   * Someone starts their own organisation (a himpunan, a UKM, a fanbase) and runs it. A few per
+   * person, so names can't be squatted in bulk.
+   */
+  createOrg(actor: Actor, input: unknown) {
+    const userId = this.social.actor(actor);
+    const parsed = orgCreateSchema.parse(input);
+    const started = this.store.all<Org>("org").filter((o) => o.admins[0] === userId);
+    if (started.length >= 3) throw new AppError("TOO_MANY_ORGS", 429);
+    const base =
+      parsed.name
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 32)
+        .replace(/-+$/, "") || "org";
+    let id = base;
+    for (let n = 2; orgById(id) || id === "new"; n++) id = `${base}-${n}`;
+    const org: Org = { id, name: parsed.name, kind: parsed.kind, domains: [], admins: [userId] };
+    this.store.transaction(() => this.store.put("org", id, org));
+    registerOrg(org);
+    if (parsed.term) {
+      const [from] = parsed.term.match(/\d{4}/) ?? [String(this.now().getFullYear())];
+      this.startTerm(actor, id, { label: parsed.term, from: Number(from) });
+    }
+    return this.publicPage(id);
+  }
+  /**
+   * One link the admin puts in an IG story or a group chat: whoever opens it and joins gets a
+   * member chapter for the current term, issued by the organisation.
+   */
+  joinLink(actor: Actor, orgId: string) {
+    const userId = this.requireAdmin(actor, orgId);
+    const org = this.org(orgId);
+    const term = this.terms(orgId).find((t) => !t.locked);
+    const key = `${orgId}:${term?.id ?? "none"}`;
+    const known = this.store.get<{ code: string }>("org-join", key);
+    const open = known && this.store.get<{ used: number; uses: number }>("invite", known.code);
+    if (known && open && open.used < open.uses) return { code: known.code };
+    const invite = this.identity.createInvite(
+      { userId },
+      {
+        orgId,
+        kind: "member",
+        label: `Member, ${org.name}${term ? ` ${term.label}` : ""}`,
+        period: term ? { from: term.from, ...(term.to === undefined ? {} : { to: term.to }) } : {},
+        uses: 500,
+      },
+    );
+    this.store.transaction(() => this.store.put("org-join", key, { code: invite.code }));
+    return { code: invite.code };
+  }
+  /** What a join link offers, shown before someone signs in. */
+  joinPreview(orgId: string, code: string) {
+    this.org(orgId);
+    const invite = this.store.get<{ orgId: string; label: string; used: number; uses: number }>(
+      "invite",
+      code.toUpperCase(),
+    );
+    if (!invite || invite.orgId !== orgId || invite.used >= invite.uses)
+      throw new AppError("INVITE_INVALID", 404);
+    return { label: invite.label };
   }
   /** A new term begins; the one before it is locked, never deleted. */
   startTerm(actor: Actor, orgId: string, input: unknown) {

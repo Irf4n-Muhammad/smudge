@@ -72,6 +72,7 @@ import { FriendsNow } from "./friends-now";
 import { SideHome, SideResults, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
+import { takeReturnPath } from "./org-page";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
   const wide = useWide();
@@ -158,6 +159,12 @@ export function FormaApp() {
         state = await authApi<AuthState>("/auth/state");
       }
       setAuth(state);
+      // Came from an organisation's join link: once signed in, go back there to join.
+      const back = state.signedIn ? takeReturnPath() : null;
+      if (back) {
+        window.location.assign(back);
+        return;
+      }
       if (!state.signedIn) {
         setBoot(null);
         setPosts([]);

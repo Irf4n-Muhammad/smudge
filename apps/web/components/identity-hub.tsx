@@ -291,6 +291,9 @@ export function IdentityHub({
           notify={notify}
         />
       )}
+      <p className="fineprint">
+        Run a himpunan, UKM or fanbase? <a href="/o/new">Start an organisation</a>
+      </p>
     </section>
   );
 }
