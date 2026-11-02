@@ -1527,3 +1527,97 @@
   padding: 2px;
   cursor: pointer;
 }
+.org-oprec {
+  border-radius: 18px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  background: linear-gradient(135deg, #fff6d6, #ffe3ea);
+  border: 1px solid var(--line);
+}
+.org-oprec h2,
+.org-oprec p {
+  margin: 0;
+}
+.org-oprec-tag {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #d6456b;
+}
+.org-oprec-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.org-oprec-roles li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+}
+.org-oprec-status {
+  font-weight: 700;
+}
+.org-form textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+}
+.org-applicants {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.org-applicants li {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.org-proven {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.org-answer {
+  margin: 0;
+  font-size: 13px;
+}
+.org-answer small {
+  display: block;
+  color: var(--muted);
+}
+.org-decide {
+  display: flex;
+  gap: 8px;
+}
+.org-decided {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.org-decided.accepted {
+  color: #2f9e5b;
+}
+.org-decided.declined {
+  color: var(--muted);
+}
+.org-create label {
+  flex: 0 0 auto;
+}
+.org-oprec h2 {
+  font-size: 20px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: inherit;
+}

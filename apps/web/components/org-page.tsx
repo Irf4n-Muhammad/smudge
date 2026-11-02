@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, Check, Clock, Lock, Megaphone, X } from "lucide-react";
 import { api } from "./runtime";
+import { signedInOrSignIn } from "./return-path";
+import { OprecAdmin, OprecPublic, type OprecView } from "./oprec-panel";
 
 type TermView = { id: string; label: string; from: number; to?: number; locked: boolean };
 interface OrgView {
@@ -15,18 +17,6 @@ interface OrgView {
 }
 type Manage = OrgView & { admins: { id: string; name: string; handle: string }[] };
 const kinds = { campus: "Campus", workplace: "Workplace", club: "Club", event: "Event" };
-const RETURN = "smudge-return";
-
-/** A join link opened before signing in: sign in, then come back here to join. */
-export function takeReturnPath() {
-  try {
-    const path = localStorage.getItem(RETURN);
-    localStorage.removeItem(RETURN);
-    return path?.startsWith("/o/") ? path : null;
-  } catch {
-    return null;
-  }
-}
 const joinErrors: Record<string, string> = {
   INVITE_ALREADY_USED: "You already joined.",
   INVITE_EXHAUSTED: "This link is full. Ask the admin for a new one.",
@@ -43,6 +33,7 @@ export function OrgPage({ id }: { id: string }) {
   const [note, setNote] = useState("");
   const [join, setJoin] = useState<{ code: string; label: string } | null>(null);
   const [rooms, setRooms] = useState<RoomTab[]>([]);
+  const [oprec, setOprec] = useState<OprecView | null>(null);
   const load = useCallback(async () => {
     try {
       setOrg(await api<OrgView>(`/public/orgs/${encodeURIComponent(id)}`));
@@ -53,6 +44,13 @@ export function OrgPage({ id }: { id: string }) {
     // Only the admin gets an answer here; everyone else just sees the public page.
     setManage(await api<Manage>(`/orgs/${encodeURIComponent(id)}/manage`).catch(() => null));
     setRooms(await api<RoomTab[]>(`/orgs/${encodeURIComponent(id)}/rooms`).catch(() => []));
+    setOprec(
+      (
+        await api<{ oprec: OprecView | null }>(
+          `/public/orgs/${encodeURIComponent(id)}/oprec`,
+        ).catch(() => ({ oprec: null }))
+      ).oprec,
+    );
     const code = new URLSearchParams(window.location.search).get("join");
     if (code)
       setJoin(
@@ -135,8 +133,12 @@ export function OrgPage({ id }: { id: string }) {
           notify={setNote}
         />
       )}
+      {oprec && (
+        <OprecPublic org={org} oprec={oprec} admin={!!manage} onDone={load} notify={setNote} />
+      )}
       {rooms.length > 0 && <Room orgId={org.id} rooms={rooms} notify={setNote} />}
       {manage && <Admin org={manage} onDone={load} notify={setNote} />}
+      {manage && <OprecAdmin orgId={org.id} oprec={oprec} onDone={load} notify={setNote} />}
       {note && (
         <p className="org-note" role="status">
           {note}
@@ -278,16 +280,7 @@ function JoinPanel({
         onClick={async () => {
           setBusy(true);
           try {
-            const state = await fetch("/api/auth/state").then((r) => r.json());
-            if (!state.signedIn) {
-              try {
-                localStorage.setItem(RETURN, window.location.pathname + window.location.search);
-              } catch {
-                /* the link still works, they just paste it again */
-              }
-              window.location.assign("/");
-              return;
-            }
+            if (!(await signedInOrSignIn())) return;
             const chapter = await api<{ label: string }>("/identity/invites/redeem", {
               code: join.code,
             });

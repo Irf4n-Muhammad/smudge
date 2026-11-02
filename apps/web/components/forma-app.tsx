@@ -72,7 +72,7 @@ import { FriendsNow } from "./friends-now";
 import { SideHome, SideResults, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
-import { takeReturnPath } from "./org-page";
+import { takeReturnPath } from "./return-path";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
   const wide = useWide();

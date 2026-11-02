@@ -233,6 +233,48 @@ export interface RoomPost {
   text: string;
   createdAt: string;
 }
+/** Open recruitment: an organisation asks for people for its term, by division. */
+export const oprecCreateSchema = z
+  .object({
+    title: z.string().trim().min(3).max(80),
+    roles: z.array(z.string().trim().min(2).max(40)).min(1).max(8),
+    questions: z.array(z.string().trim().min(3).max(160)).max(5).default([]),
+    closes: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  })
+  .strict()
+  .refine(
+    (o) => new Set(o.roles.map((r) => r.toLowerCase())).size === o.roles.length,
+    "ROLE_TWICE",
+  );
+export const oprecApplySchema = z
+  .object({
+    role: z.string().trim().min(2).max(40),
+    answers: z.array(z.string().trim().max(1000)).max(5).default([]),
+  })
+  .strict();
+export const oprecDecideSchema = z.object({ accept: z.boolean() }).strict();
+export interface Oprec {
+  id: string;
+  orgId: string;
+  termId: string;
+  title: string;
+  roles: string[];
+  questions: string[];
+  closes: string;
+  open: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+export interface OprecApplication {
+  id: string;
+  oprecId: string;
+  userId: string;
+  role: string;
+  answers: string[];
+  status: "applied" | "accepted" | "declined";
+  createdAt: string;
+  decidedAt?: string | undefined;
+}
 export const inviteCreateSchema = z
   .object({
     orgId: z.string().max(40),

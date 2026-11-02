@@ -29,6 +29,7 @@ import {
 import { seedProfiles, seedDaniPage, seedInesPosts, profileTemplates } from "./seed-profiles.js";
 import { IdentityService } from "../../packages/core/src/identity.js";
 import { OrgService } from "../../packages/core/src/orgs.js";
+import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
@@ -119,6 +120,7 @@ const identity = new IdentityService(
   config.mail.provider === "inbox",
 );
 const orgService = new OrgService(service, identity, clock);
+const oprecs = new OprecService(service, identity, orgService, clock);
 const accounts = new AccountService(
   service,
   identity,
@@ -579,6 +581,33 @@ api.delete("/api/orgs/:id/rooms/:term/state/:item", (req, res) =>
     ),
   ),
 );
+// Open recruitment: apply with your profile; accepted means a chapter from the organisation.
+api.post("/api/orgs/:id/oprec", (req, res) =>
+  res.json(oprecs.create(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/oprec/:oprec/close", (req, res) =>
+  res.json(oprecs.close(actor(res), orgId(req.params.id), orgId(req.params.oprec))),
+);
+api.post("/api/orgs/:id/oprec/:oprec/apply", roomLimit, (req, res) =>
+  res.json(oprecs.apply(actor(res), orgId(req.params.id), orgId(req.params.oprec), req.body)),
+);
+api.get("/api/orgs/:id/oprec/:oprec/mine", (req, res) =>
+  res.json(oprecs.mine(actor(res), orgId(req.params.id), orgId(req.params.oprec))),
+);
+api.get("/api/orgs/:id/oprec/:oprec/applications", (req, res) =>
+  res.json(oprecs.list(actor(res), orgId(req.params.id), orgId(req.params.oprec))),
+);
+api.post("/api/orgs/:id/oprec/:oprec/applications/:app/decide", (req, res) =>
+  res.json(
+    oprecs.decide(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.oprec),
+      orgId(req.params.app),
+      req.body,
+    ),
+  ),
+);
 api.post("/api/orgs/:id/join-link", (req, res) =>
   res.json(orgService.joinLink(actor(res), orgId(req.params.id))),
 );
@@ -947,6 +976,9 @@ api.get("/api/public/orgs/:id", guestLimit, (req, res) => {
   opens.count("org", page.id);
   res.json(page);
 });
+api.get("/api/public/orgs/:id/oprec", guestLimit, (req, res) =>
+  res.json({ oprec: oprecs.current(z.string().max(40).parse(req.params.id)) }),
+);
 api.get("/api/public/orgs/:id/join/:code", guestLimit, (req, res) =>
   res.json(
     orgService.joinPreview(

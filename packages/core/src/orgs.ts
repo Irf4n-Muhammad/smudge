@@ -36,12 +36,12 @@ export class OrgService {
   private get store() {
     return this.social.store;
   }
-  private org(id: string) {
+  org(id: string) {
     const org = orgById(id);
     if (!org) throw new AppError("NOT_FOUND", 404);
     return org;
   }
-  private requireAdmin(actor: Actor, orgId: string) {
+  requireAdmin(actor: Actor, orgId: string) {
     const userId = this.social.actor(actor);
     this.org(orgId);
     if (!this.identity.orgAdmins(orgId).includes(userId))

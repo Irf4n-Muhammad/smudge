@@ -91,7 +91,7 @@ test("a term's room: the admin pins what's true now, members talk, outsiders see
 }) => {
   await page.goto("/");
   await page.locator(".post-card").first().waitFor();
-  await as(page, "dani");
+  await as(page, "ines");
   await page.goto("/o/new");
   await page.getByLabel("Name").fill("Klub Fotografi Senja");
   await page.getByLabel("First term").fill("2026/27");
