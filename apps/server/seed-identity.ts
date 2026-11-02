@@ -128,3 +128,27 @@ function seedTripTheme(social: SocialService) {
     store.put("system", "seed-trip-theme-v1", { at: new Date().toISOString() });
   });
 }
+
+/** Teater Senja has run for years: last term locked, this one open, Maya running it. */
+export function seedOrgTerms(social: SocialService) {
+  const store = social.store;
+  if (store.get("system", "seed-org-terms-v1") || !store.get("user", "maya")) return;
+  const at = new Date().toISOString();
+  store.transaction(() => {
+    for (const [label, from, to, locked] of [
+      ["2024/25", 2024, 2025, true],
+      ["2025/26", 2025, 2026, false],
+    ] as const)
+      store.put("term", `teater-senja-${from}`, {
+        id: `teater-senja-${from}`,
+        orgId: "teater-senja",
+        label,
+        from,
+        to,
+        locked,
+        createdBy: "maya",
+        createdAt: at,
+      });
+    store.put("system", "seed-org-terms-v1", { at });
+  });
+}

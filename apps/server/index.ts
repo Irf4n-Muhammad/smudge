@@ -28,9 +28,10 @@ import {
 } from "../../packages/contracts/src/profile.js";
 import { seedProfiles, seedDaniPage, seedInesPosts, profileTemplates } from "./seed-profiles.js";
 import { IdentityService } from "../../packages/core/src/identity.js";
+import { OrgService } from "../../packages/core/src/orgs.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
-import { seedIdentity } from "./seed-identity.js";
+import { seedIdentity, seedOrgTerms } from "./seed-identity.js";
 import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
@@ -113,6 +114,7 @@ const identity = new IdentityService(
   clock,
   config.mail.provider === "inbox",
 );
+const orgService = new OrgService(service, identity, clock);
 const accounts = new AccountService(
   service,
   identity,
@@ -165,6 +167,7 @@ setInterval(() => digest.run(), 5 * 60_000).unref();
 const profiles = new ProfileService(service);
 if (config.demoContent) {
   seedIdentity(identity, service);
+  seedOrgTerms(service);
   seedProfiles(profiles);
   seedSmudge(service);
   seedFillFormat(service);
@@ -542,6 +545,20 @@ sideRoutes(
   config.publicUrl.origin,
 );
 identityRoutes(api, identity);
+// Organisations: terms, handover and the admin's view. The public face is under /api/public.
+const orgId = (value: unknown) => z.string().max(40).parse(value);
+api.get("/api/orgs/:id/manage", (req, res) =>
+  res.json(orgService.manage(actor(res), orgId(req.params.id))),
+);
+api.post("/api/orgs/:id/terms", (req, res) =>
+  res.json(orgService.startTerm(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/terms/:term/lock", (req, res) =>
+  res.json(orgService.lockTerm(actor(res), orgId(req.params.id), orgId(req.params.term))),
+);
+api.post("/api/orgs/:id/handover", (req, res) =>
+  res.json(orgService.handover(actor(res), orgId(req.params.id), req.body)),
+);
 themeRoutes(api, studio, rateLimit({ windowMs: 60 * 60_000, max: 20 }));
 communityRoutes(api, community, messages, privacy, accounts, clearSession, authLimit);
 // Google sign-in. The state and PKCE verifier live in a short-lived cookie scoped to the
@@ -889,6 +906,9 @@ api.get("/api/public/sides/:id", guestLimit, (req, res) => {
 // A side's link (ADR 0035): the home of an open side for someone without an account.
 api.get("/api/public/sides/:id/home", guestLimit, (req, res) =>
   res.json(sharing.side(z.string().max(40).parse(req.params.id))),
+);
+api.get("/api/public/orgs/:id", guestLimit, (req, res) =>
+  res.json(orgService.publicPage(z.string().max(40).parse(req.params.id))),
 );
 api.get("/api/public/posts/:id", guestLimit, (req, res) =>
   res.json(sharing.post(String(req.params.id))),

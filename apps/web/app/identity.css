@@ -1252,3 +1252,123 @@
   background: var(--soft, rgba(0, 0, 0, 0.04));
   font-size: 13px;
 }
+
+/* Organisation page: the public face, and the admin's part below it. */
+.org-page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  display: grid;
+  gap: 22px;
+}
+.org-brand {
+  font-weight: 800;
+  color: var(--ink);
+  text-decoration: none;
+}
+.org-hero {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(150deg, #2f3a31, var(--green));
+  color: #fff;
+}
+.org-hero h1 {
+  margin: 0;
+  font-size: 22px;
+}
+.org-hero p {
+  margin: 4px 0 0;
+  opacity: 0.85;
+  font-size: 13px;
+}
+.org-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff3;
+  font-weight: 800;
+  font-size: 22px;
+  flex: none;
+}
+.org-page h2 {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.org-terms,
+.org-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.org-terms li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.org-terms li.locked {
+  background: var(--line);
+  color: var(--muted);
+}
+.org-now {
+  font-size: 11px;
+  font-weight: 600;
+}
+.org-admin {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+  background: var(--white);
+}
+.org-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.org-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+.org-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  flex: 1 1 160px;
+}
+.org-form input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.org-note {
+  margin: 0;
+  font-size: 13px;
+}
+.org-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  font-size: 13px;
+}

@@ -1,0 +1,118 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Store } from "../packages/core/src/database.js";
+import { SocialService } from "../packages/core/src/social.js";
+import { IdentityService } from "../packages/core/src/identity.js";
+import { OrgService } from "../packages/core/src/orgs.js";
+import { renderMoment } from "../apps/server/moments.js";
+
+const rejects = (fn: () => unknown, code: string) =>
+  assert.throws(fn, (e: { code?: string }) => e.code === code);
+
+async function setup() {
+  const store = await Store.open(join(mkdtempSync(join(tmpdir(), "forma-orgs-")), "db.sqlite"));
+  store.transaction(() => {
+    for (const id of ["maya", "leo", "dani"])
+      store.put("user", id, { id, name: id, handle: id, initials: "X", color: "#fff", bio: "" });
+  });
+  const social = new SocialService(store);
+  const identity = new IdentityService(
+    social,
+    renderMoment,
+    () => new Date("2026-11-02T10:00:00Z"),
+  );
+  const orgs = new OrgService(social, identity, () => new Date("2026-11-02T10:00:00Z"));
+  return { store, social, identity, orgs };
+}
+
+test("a new term locks the last one; only the organisation's admin can start or lock terms", async () => {
+  const { orgs } = await setup();
+  // Teater Senja is run by Maya in the demo list.
+  orgs.startTerm({ userId: "maya" }, "teater-senja", { label: "2025/26", from: 2025, to: 2026 });
+  orgs.startTerm({ userId: "maya" }, "teater-senja", { label: "2026/27", from: 2026, to: 2027 });
+  const terms = orgs.terms("teater-senja");
+  assert.deepEqual(
+    terms.map((t) => [t.label, t.locked]),
+    [
+      ["2026/27", false],
+      ["2025/26", true],
+    ],
+  );
+  assert.equal(orgs.publicPage("teater-senja").current, "2026/27");
+  rejects(
+    () => orgs.startTerm({ userId: "leo" }, "teater-senja", { label: "x/y", from: 2026 }),
+    "ORG_ADMIN_REQUIRED",
+  );
+  rejects(
+    () => orgs.startTerm({ userId: "maya" }, "teater-senja", { label: "2026/27", from: 2026 }),
+    "TERM_EXISTS",
+  );
+  assert.throws(() =>
+    orgs.startTerm({ userId: "maya" }, "teater-senja", { label: "bad", from: 2027, to: 2026 }),
+  );
+});
+
+test("a handover moves the admin role without a password, and the outgoing admin keeps a chapter", async () => {
+  const { orgs, identity } = await setup();
+  orgs.startTerm({ userId: "maya" }, "teater-senja", { label: "2025/26", from: 2025, to: 2026 });
+  const done = orgs.handover({ userId: "maya" }, "teater-senja", { handle: "@Leo", role: "Ketua" });
+  assert.equal(done.admin.id, "leo");
+  assert.deepEqual(identity.orgAdmins("teater-senja"), ["leo"]);
+  assert.equal(done.chapter.label, "Ketua, Teater Senja 2025/26");
+  assert.equal(done.chapter.from, 2025);
+  // Maya no longer runs it; Leo does, and he can start the next term.
+  rejects(() => orgs.manage({ userId: "maya" }, "teater-senja"), "ORG_ADMIN_REQUIRED");
+  assert.equal(orgs.manage({ userId: "leo" }, "teater-senja").admins[0]?.handle, "leo");
+  orgs.startTerm({ userId: "leo" }, "teater-senja", { label: "2026/27", from: 2026 });
+  rejects(
+    () => orgs.handover({ userId: "leo" }, "teater-senja", { handle: "leo" }),
+    "HANDOVER_TO_SELF",
+  );
+  rejects(
+    () => orgs.handover({ userId: "leo" }, "teater-senja", { handle: "nobody" }),
+    "INVALID_USER",
+  );
+});
+
+test("a post reads only the viewer's own memberships, and only when it declares org.read", async () => {
+  const { orgs, social } = await setup();
+  orgs.startTerm({ userId: "maya" }, "teater-senja", { label: "2025/26", from: 2025, to: 2026 });
+  orgs.handover({ userId: "maya" }, "teater-senja", { handle: "leo" });
+  const pkg = (capabilities: string[]) => ({
+    package: {
+      manifest: {
+        schemaVersion: 2 as const,
+        runtimeVersion: "web-v1" as const,
+        name: "Presale",
+        entrypoint: "index.html",
+        capabilities,
+        assets: [],
+      },
+      files: { "index.html": "<h1>Presale</h1>" },
+    },
+    metadata: { title: "Presale", format: "custom" as const, caption: "", contributors: [] },
+  });
+  const draft = social.createDraft({ userId: "leo" }, pkg(["org.read"]));
+  const post = social.publish({ userId: "leo" }, draft.id, 1);
+  const maya = social.capability({ userId: "maya" }, post.id, "org.read", undefined) as {
+    memberships: { orgId: string; admin: boolean; roles: { label: string }[] }[];
+  };
+  assert.deepEqual(
+    maya.memberships.map((m) => [m.orgId, m.admin, m.roles.map((r) => r.label)]),
+    [["teater-senja", false, ["Admin, Teater Senja 2025/26"]]],
+  );
+  // Dani belongs nowhere, and nobody's chapters leak into his answer.
+  const dani = social.capability({ userId: "dani" }, post.id, "org.read", undefined) as {
+    memberships: unknown[];
+  };
+  assert.deepEqual(dani.memberships, []);
+  const other = social.publish(
+    { userId: "leo" },
+    social.createDraft({ userId: "leo" }, pkg([])).id,
+    1,
+  );
+  assert.throws(() => social.capability({ userId: "maya" }, other.id, "org.read", undefined));
+});

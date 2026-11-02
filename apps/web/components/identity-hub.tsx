@@ -698,6 +698,13 @@ function InviteAdmin({
   return (
     <section className="invite-admin">
       <span className="eyebrow">YOU MANAGE {orgs.map((o) => o.name.toUpperCase()).join(", ")}</span>
+      <p className="org-links">
+        {orgs.map((o) => (
+          <a key={o.id} href={`/o/${encodeURIComponent(o.id)}`}>
+            {o.name}: page, terms, handover ↗
+          </a>
+        ))}
+      </p>
       <form
         className="identity-form"
         onSubmit={async (e) => {

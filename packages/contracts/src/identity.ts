@@ -161,6 +161,29 @@ export const emailConfirmSchema = z
     audience: audienceSchema.default("circle"),
   })
   .strict();
+/** A new term (kepengurusan) of an organisation, such as "2025/26". Starting one locks the last. */
+export const termStartSchema = z
+  .object({ label: z.string().trim().min(2).max(20), from: year, to: year.optional() })
+  .strict()
+  .refine((t) => t.to === undefined || t.to >= t.from, "TERM_ENDS_BEFORE_START");
+/** Handing an organisation to its next admin: no shared password, and the outgoing one keeps a chapter. */
+export const handoverSchema = z
+  .object({
+    handle: z.string().trim().min(1).max(40),
+    role: z.string().trim().min(2).max(60).default("Admin"),
+  })
+  .strict();
+export interface Term {
+  id: string;
+  orgId: string;
+  label: string;
+  from: number;
+  to?: number | undefined;
+  /** A past term: readable, closed to changes, still on its people's pages. */
+  locked: boolean;
+  createdBy: string;
+  createdAt: string;
+}
 export const inviteCreateSchema = z
   .object({
     orgId: z.string().max(40),
