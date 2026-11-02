@@ -32,7 +32,7 @@ import { OrgService } from "../../packages/core/src/orgs.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
-import { seedIdentity, seedOrgTerms } from "./seed-identity.js";
+import { seedIdentity, seedOrgRooms, seedOrgTerms } from "./seed-identity.js";
 import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
@@ -172,6 +172,7 @@ const profiles = new ProfileService(service);
 if (config.demoContent) {
   seedIdentity(identity, service);
   seedOrgTerms(service);
+  seedOrgRooms(service);
   seedProfiles(profiles);
   seedSmudge(service);
   seedFillFormat(service);
@@ -553,6 +554,30 @@ identityRoutes(api, identity);
 const orgId = (value: unknown) => z.string().max(40).parse(value);
 api.post("/api/orgs", rateLimit({ windowMs: 60 * 60_000, max: 10 }), (req, res) =>
   res.json(orgService.createOrg(actor(res), req.body)),
+);
+// A term's room: members only; a locked term is read only.
+const roomLimit = rateLimit({ windowMs: 60_000, max: 30 });
+api.get("/api/orgs/:id/rooms", (req, res) =>
+  res.json(orgService.rooms(actor(res), orgId(req.params.id))),
+);
+api.get("/api/orgs/:id/rooms/:term", (req, res) =>
+  res.json(orgService.room(actor(res), orgId(req.params.id), orgId(req.params.term))),
+);
+api.post("/api/orgs/:id/rooms/:term/posts", roomLimit, (req, res) =>
+  res.json(orgService.post(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.post("/api/orgs/:id/rooms/:term/state", roomLimit, (req, res) =>
+  res.json(orgService.setState(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.delete("/api/orgs/:id/rooms/:term/state/:item", (req, res) =>
+  res.json(
+    orgService.removeState(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      orgId(req.params.item),
+    ),
+  ),
 );
 api.post("/api/orgs/:id/join-link", (req, res) =>
   res.json(orgService.joinLink(actor(res), orgId(req.params.id))),

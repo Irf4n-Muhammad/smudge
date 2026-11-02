@@ -7,9 +7,11 @@ import {
   orgCreateSchema,
   orgs,
   registerOrg,
+  roomPostSchema,
+  roomStateSchema,
   termStartSchema,
 } from "../../contracts/src/identity.js";
-import type { Chapter, Org, Term } from "../../contracts/src/identity.js";
+import type { Chapter, Org, RoomPost, RoomStateItem, Term } from "../../contracts/src/identity.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
 import type { SocialService } from "./social.js";
@@ -252,5 +254,117 @@ export class OrgService {
           };
         }),
     };
+  }
+
+  private term(orgId: string, termId: string) {
+    const term = this.store.get<Term>("term", termId);
+    if (!term || term.orgId !== orgId) throw new AppError("NOT_FOUND", 404);
+    return term;
+  }
+  /**
+   * Who may enter a term's room: today's admins, whoever ran it, and the people the organisation
+   * placed in that term (a member or title chapter whose years cover it). A chapter with no
+   * years counts for the current term only.
+   */
+  private inRoom(userId: string, term: Term) {
+    if (this.identity.orgAdmins(term.orgId).includes(userId) || term.createdBy === userId)
+      return true;
+    return this.members(term.orgId).some(
+      (c) =>
+        c.ownerId === userId &&
+        (c.from === undefined
+          ? !term.locked
+          : c.from <= term.from &&
+            (c.to === "now" || (c.to === undefined ? c.from === term.from : c.to >= term.from))),
+    );
+  }
+  /** The rooms this person can open, newest term first. */
+  rooms(actor: Actor, orgId: string) {
+    const userId = this.social.actor(actor);
+    return this.terms(orgId)
+      .filter((t) => this.inRoom(userId, t))
+      .map(({ id, label, locked }) => ({ id, label, locked }));
+  }
+  room(actor: Actor, orgId: string, termId: string) {
+    const userId = this.social.actor(actor);
+    const term = this.term(orgId, termId);
+    if (!this.inRoom(userId, term)) throw new AppError("NOT_A_MEMBER", 403);
+    const admin = this.identity.orgAdmins(orgId).includes(userId);
+    const users = new Map(this.store.all<User>("user").map((u) => [u.id, u]));
+    const who = (id: string) => {
+      const u = users.get(id);
+      return { id, name: u?.name ?? "Someone", handle: u?.handle ?? "" };
+    };
+    const posts = this.store
+      .all<RoomPost>("room-post")
+      .filter((p) => p.termId === termId)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const view = (p: RoomPost) => ({ ...p, author: who(p.userId) });
+    const state = this.store.get<{ items: RoomStateItem[] }>("room-state", termId)?.items ?? [];
+    return {
+      term: { id: term.id, label: term.label, locked: term.locked },
+      admin,
+      canPost: !term.locked,
+      state: [...state].sort((a, b) => (a.when ?? "9999").localeCompare(b.when ?? "9999")),
+      announcements: posts
+        .filter((p) => p.kind === "announcement")
+        .slice(-20)
+        .reverse()
+        .map(view),
+      messages: posts
+        .filter((p) => p.kind === "message")
+        .slice(-100)
+        .map(view),
+    };
+  }
+  private openRoom(actor: Actor, orgId: string, termId: string) {
+    const userId = this.social.actor(actor);
+    const term = this.term(orgId, termId);
+    if (!this.inRoom(userId, term)) throw new AppError("NOT_A_MEMBER", 403);
+    if (term.locked) throw new AppError("TERM_LOCKED", 409);
+    return { userId, term, admin: this.identity.orgAdmins(orgId).includes(userId) };
+  }
+  /** Admins keep the state on top current; a locked term's state stays as it was left. */
+  setState(actor: Actor, orgId: string, termId: string, input: unknown) {
+    const { userId, admin } = this.openRoom(actor, orgId, termId);
+    if (!admin) throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    const parsed = roomStateSchema.parse(input);
+    const items = this.store.get<{ items: RoomStateItem[] }>("room-state", termId)?.items ?? [];
+    if (items.length >= 30) throw new AppError("ROOM_STATE_FULL", 409);
+    const item: RoomStateItem = {
+      id: randomUUID(),
+      kind: parsed.kind,
+      text: parsed.text,
+      ...(parsed.when ? { when: parsed.when } : {}),
+      by: userId,
+      at: this.now().toISOString(),
+    };
+    this.store.transaction(() => this.store.put("room-state", termId, { items: [...items, item] }));
+    return item;
+  }
+  removeState(actor: Actor, orgId: string, termId: string, itemId: string) {
+    const { admin } = this.openRoom(actor, orgId, termId);
+    if (!admin) throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    const items = this.store.get<{ items: RoomStateItem[] }>("room-state", termId)?.items ?? [];
+    this.store.transaction(() =>
+      this.store.put("room-state", termId, { items: items.filter((i) => i.id !== itemId) }),
+    );
+    return { removed: items.length - items.filter((i) => i.id !== itemId).length };
+  }
+  /** Announcements are the admins'; anyone in the room talks. A locked term is read only. */
+  post(actor: Actor, orgId: string, termId: string, input: unknown) {
+    const { userId, admin } = this.openRoom(actor, orgId, termId);
+    const parsed = roomPostSchema.parse(input);
+    if (parsed.kind === "announcement" && !admin) throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    const post: RoomPost = {
+      id: randomUUID(),
+      termId,
+      userId,
+      kind: parsed.kind,
+      text: parsed.text,
+      createdAt: this.now().toISOString(),
+    };
+    this.store.transaction(() => this.store.put("room-post", post.id, post));
+    return post;
   }
 }

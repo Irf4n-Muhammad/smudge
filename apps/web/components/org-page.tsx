@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Lock } from "lucide-react";
+import { CalendarDays, Check, Clock, Lock, Megaphone, X } from "lucide-react";
 import { api } from "./runtime";
 
 type TermView = { id: string; label: string; from: number; to?: number; locked: boolean };
@@ -42,6 +42,7 @@ export function OrgPage({ id }: { id: string }) {
   const [manage, setManage] = useState<Manage | null>(null);
   const [note, setNote] = useState("");
   const [join, setJoin] = useState<{ code: string; label: string } | null>(null);
+  const [rooms, setRooms] = useState<RoomTab[]>([]);
   const load = useCallback(async () => {
     try {
       setOrg(await api<OrgView>(`/public/orgs/${encodeURIComponent(id)}`));
@@ -51,6 +52,7 @@ export function OrgPage({ id }: { id: string }) {
     }
     // Only the admin gets an answer here; everyone else just sees the public page.
     setManage(await api<Manage>(`/orgs/${encodeURIComponent(id)}/manage`).catch(() => null));
+    setRooms(await api<RoomTab[]>(`/orgs/${encodeURIComponent(id)}/rooms`).catch(() => []));
     const code = new URLSearchParams(window.location.search).get("join");
     if (code)
       setJoin(
@@ -133,6 +135,7 @@ export function OrgPage({ id }: { id: string }) {
           notify={setNote}
         />
       )}
+      {rooms.length > 0 && <Room orgId={org.id} rooms={rooms} notify={setNote} />}
       {manage && <Admin org={manage} onDone={load} notify={setNote} />}
       {note && (
         <p className="org-note" role="status">
@@ -367,5 +370,247 @@ export function CreateOrg() {
         </p>
       )}
     </main>
+  );
+}
+
+type RoomTab = { id: string; label: string; locked: boolean };
+type Who = { id: string; name: string; handle: string };
+type RoomPostView = {
+  id: string;
+  kind: "announcement" | "message";
+  text: string;
+  createdAt: string;
+  author: Who;
+};
+interface RoomView {
+  term: RoomTab;
+  admin: boolean;
+  canPost: boolean;
+  state: { id: string; kind: "schedule" | "decision" | "deadline"; text: string; when?: string }[];
+  announcements: RoomPostView[];
+  messages: RoomPostView[];
+}
+const stateIcon = { schedule: CalendarDays, decision: Check, deadline: Clock };
+const stateName = { schedule: "Schedule", decision: "Decided", deadline: "Due" };
+const shortDate = (d: string) =>
+  new Date(`${d}T00:00:00`).toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+const time = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+/**
+ * A term's room. What's true now sits on top (schedule, decisions, deadlines) for whoever
+ * doesn't follow the talk; admins' announcements next; the conversation underneath. A past
+ * term stays readable and takes no new posts.
+ */
+function Room({
+  orgId,
+  rooms,
+  notify,
+}: {
+  orgId: string;
+  rooms: RoomTab[];
+  notify: (s: string) => void;
+}) {
+  const [termId, setTermId] = useState(rooms.find((r) => !r.locked)?.id ?? rooms[0]!.id);
+  const [room, setRoom] = useState<RoomView | null>(null);
+  const [text, setText] = useState("");
+  const [announce, setAnnounce] = useState(false);
+  const [stateKind, setStateKind] = useState<"schedule" | "decision" | "deadline">("schedule");
+  const [stateText, setStateText] = useState("");
+  const [stateWhen, setStateWhen] = useState("");
+  const base = `/orgs/${encodeURIComponent(orgId)}/rooms/${encodeURIComponent(termId)}`;
+  const load = useCallback(async () => {
+    try {
+      setRoom(await api<RoomView>(base));
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }, [base, notify]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const run = async (work: () => Promise<unknown>) => {
+    try {
+      await work();
+      await load();
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  };
+  return (
+    <section className="org-room" aria-label="Room">
+      <div className="org-room-head">
+        <h2>Room</h2>
+        {rooms.length > 1 && (
+          <div className="org-room-tabs" role="tablist" aria-label="Terms">
+            {rooms.map((r) => (
+              <button
+                key={r.id}
+                role="tab"
+                aria-selected={r.id === termId}
+                className={r.id === termId ? "selected" : ""}
+                onClick={() => setTermId(r.id)}
+              >
+                {r.label}
+                {r.locked && <Lock size={11} aria-label="locked" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {room && (
+        <>
+          {room.term.locked && (
+            <p className="org-hint">
+              This term is locked. Everything stays readable; nothing new can be added.
+            </p>
+          )}
+          <div className="org-room-state" aria-label="Now">
+            {room.state.length === 0 && (
+              <p className="org-hint">Nothing scheduled or decided yet.</p>
+            )}
+            {room.state.map((item) => {
+              const Icon = stateIcon[item.kind];
+              return (
+                <div key={item.id} className={`org-state ${item.kind}`}>
+                  <Icon size={14} aria-hidden="true" />
+                  <span className="org-state-kind">{stateName[item.kind]}</span>
+                  <span className="org-state-text">{item.text}</span>
+                  {item.when && <span className="org-state-when">{shortDate(item.when)}</span>}
+                  {room.admin && room.canPost && (
+                    <button
+                      className="org-state-remove"
+                      aria-label={`Remove ${item.text}`}
+                      onClick={() =>
+                        void run(() => api(`${base}/state/${item.id}`, undefined, "DELETE"))
+                      }
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {room.admin && room.canPost && (
+              <form
+                className="org-form org-state-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void run(async () => {
+                    await api(`${base}/state`, {
+                      kind: stateKind,
+                      text: stateText,
+                      ...(stateWhen ? { when: stateWhen } : {}),
+                    });
+                    setStateText("");
+                    setStateWhen("");
+                  });
+                }}
+              >
+                <label>
+                  Add to the top
+                  <select
+                    value={stateKind}
+                    onChange={(e) => setStateKind(e.target.value as typeof stateKind)}
+                  >
+                    <option value="schedule">Schedule</option>
+                    <option value="decision">Decision</option>
+                    <option value="deadline">Deadline</option>
+                  </select>
+                </label>
+                <label>
+                  What
+                  <input
+                    required
+                    minLength={2}
+                    maxLength={200}
+                    value={stateText}
+                    onChange={(e) => setStateText(e.target.value)}
+                  />
+                </label>
+                <label>
+                  When
+                  <input
+                    type="date"
+                    value={stateWhen}
+                    onChange={(e) => setStateWhen(e.target.value)}
+                  />
+                </label>
+                <button className="primary small">Add</button>
+              </form>
+            )}
+          </div>
+          {room.announcements.length > 0 && (
+            <section className="org-announcements" aria-label="Announcements">
+              {room.announcements.map((a) => (
+                <article key={a.id} className="org-announcement">
+                  <Megaphone size={14} aria-hidden="true" />
+                  <div>
+                    <p>{a.text}</p>
+                    <small>
+                      {a.author.name} · {time(a.createdAt)}
+                    </small>
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
+          <ol className="org-messages" aria-label="Conversation">
+            {room.messages.map((m) => (
+              <li key={m.id}>
+                <strong>{m.author.name}</strong> <small>{time(m.createdAt)}</small>
+                <p>{m.text}</p>
+              </li>
+            ))}
+            {room.messages.length === 0 && (
+              <li className="org-hint">No one has said anything yet.</li>
+            )}
+          </ol>
+          {room.canPost && (
+            <form
+              className="org-form org-composer"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void run(async () => {
+                  await api(`${base}/posts`, { kind: announce ? "announcement" : "message", text });
+                  setText("");
+                  setAnnounce(false);
+                });
+              }}
+            >
+              <label>
+                {announce ? "Announcement" : "Message"}
+                <input
+                  required
+                  maxLength={1000}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                />
+              </label>
+              {room.admin && (
+                <label className="org-check">
+                  <input
+                    type="checkbox"
+                    checked={announce}
+                    onChange={(e) => setAnnounce(e.target.checked)}
+                  />
+                  Announce
+                </label>
+              )}
+              <button className="primary small">Send</button>
+            </form>
+          )}
+        </>
+      )}
+    </section>
   );
 }

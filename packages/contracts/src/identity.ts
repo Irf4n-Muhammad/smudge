@@ -197,6 +197,42 @@ export interface Term {
   createdBy: string;
   createdAt: string;
 }
+/**
+ * A term's room. The state on top (schedule, decisions, deadlines) is for whoever doesn't follow
+ * the conversation; announcements come from admins; members talk underneath.
+ */
+export const roomStateSchema = z
+  .object({
+    kind: z.enum(["schedule", "decision", "deadline"]),
+    text: z.string().trim().min(2).max(200),
+    when: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+  })
+  .strict();
+export const roomPostSchema = z
+  .object({
+    kind: z.enum(["announcement", "message"]).default("message"),
+    text: z.string().trim().min(1).max(1000),
+  })
+  .strict();
+export interface RoomStateItem {
+  id: string;
+  kind: "schedule" | "decision" | "deadline";
+  text: string;
+  when?: string | undefined;
+  by: string;
+  at: string;
+}
+export interface RoomPost {
+  id: string;
+  termId: string;
+  userId: string;
+  kind: "announcement" | "message";
+  text: string;
+  createdAt: string;
+}
 export const inviteCreateSchema = z
   .object({
     orgId: z.string().max(40),

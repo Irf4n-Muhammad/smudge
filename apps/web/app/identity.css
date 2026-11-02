@@ -1409,3 +1409,121 @@
   font-weight: 700;
   text-align: right;
 }
+.org-room {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+  background: var(--white);
+}
+.org-room-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.org-room-head h2 {
+  margin: 0;
+}
+.org-room-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.org-room-tabs button {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+.org-room-tabs button.selected {
+  background: var(--ink, #141210);
+  color: var(--white);
+}
+.org-room-state {
+  display: grid;
+  gap: 6px;
+}
+.org-state {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--line) 40%, transparent);
+  font-size: 13px;
+}
+.org-state-kind {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.org-state-when {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.org-state.deadline .org-state-kind {
+  color: #d6456b;
+}
+.org-announcements {
+  display: grid;
+  gap: 8px;
+}
+.org-announcement {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid #ff4f7b;
+  background: color-mix(in srgb, #ff4f7b 8%, transparent);
+  border-radius: 0 12px 12px 0;
+}
+.org-announcement p {
+  margin: 0 0 4px;
+}
+.org-announcement small,
+.org-messages small {
+  color: var(--muted);
+}
+.org-messages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  font-size: 14px;
+}
+.org-messages p {
+  margin: 2px 0 0;
+}
+.org-check {
+  flex: 0 0 auto !important;
+  display: flex !important;
+  align-items: center;
+  gap: 6px !important;
+}
+@media (max-width: 520px) {
+  .org-state {
+    grid-template-columns: auto 1fr auto;
+  }
+  .org-state-kind {
+    display: none;
+  }
+}
+.org-state-remove {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 2px;
+  cursor: pointer;
+}

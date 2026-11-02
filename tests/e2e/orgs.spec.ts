@@ -85,3 +85,51 @@ test("a himpunan starts itself on Smudge and members join from one link", async 
   await expect(page.locator(".org-hero")).toContainText("1 person");
   await expect(page).not.toHaveURL(/join=/);
 });
+
+test("a term's room: the admin pins what's true now, members talk, outsiders see nothing", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  await as(page, "dani");
+  await page.goto("/o/new");
+  await page.getByLabel("Name").fill("Klub Fotografi Senja");
+  await page.getByLabel("First term").fill("2026/27");
+  await page.getByRole("button", { name: "Start" }).click();
+  const room = page.getByRole("region", { name: "Room" });
+  await expect(room).toContainText("Nothing scheduled or decided yet.");
+  await room.getByLabel("Add to the top").selectOption("deadline");
+  await room.getByLabel("What").fill("Kumpulin foto lomba");
+  await room.getByLabel("When").fill("2026-11-20");
+  await room.getByRole("button", { name: "Add" }).click();
+  await expect(room.locator(".org-state")).toContainText("Kumpulin foto lomba");
+  await room.getByLabel("Message").fill("Hunting foto Sabtu jam 6 pagi di Kota Tua.");
+  await room.getByLabel("Announce").check();
+  await room.getByRole("button", { name: "Send" }).click();
+  await expect(room.getByRole("region", { name: "Announcements" })).toContainText("Hunting foto");
+  const manage = page.getByRole("region", { name: "Manage" });
+  await manage.getByRole("button", { name: "Get join link" }).click();
+  const link = await manage.getByLabel("Join link").inputValue();
+  const orgPath = new URL(link).pathname;
+
+  // Leo hasn't joined: the page is public, the room isn't.
+  await as(page, "leo");
+  await page.goto(orgPath);
+  await expect(page.getByRole("heading", { name: "Klub Fotografi Senja" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Room" })).toHaveCount(0);
+
+  // Maya joins from the link and the room opens with what she missed on top.
+  await as(page, "maya");
+  await page.goto(link);
+  await page.getByRole("region", { name: "Join" }).getByRole("button", { name: "Join" }).click();
+  const hers = page.getByRole("region", { name: "Room" });
+  await expect(hers.locator(".org-state")).toContainText("Kumpulin foto lomba");
+  await expect(hers).toContainText("Hunting foto Sabtu");
+  await expect(hers.getByLabel("Announce", { exact: true })).toHaveCount(0);
+  await hers.getByLabel("Message").fill("Ikut! Bawa lensa 50mm.");
+  await hers.getByRole("button", { name: "Send" }).click();
+  await expect(hers.getByRole("list", { name: "Conversation" })).toContainText(
+    "Ikut! Bawa lensa 50mm.",
+  );
+  await page.screenshot({ path: "test-results/org-room.png", fullPage: true });
+});

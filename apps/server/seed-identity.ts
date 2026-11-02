@@ -152,3 +152,76 @@ export function seedOrgTerms(social: SocialService) {
     store.put("system", "seed-org-terms-v1", { at });
   });
 }
+
+/** Teater Senja's current room, so the demo has a schedule, an announcement and people talking. */
+export function seedOrgRooms(social: SocialService) {
+  const store = social.store;
+  if (store.get("system", "seed-org-rooms-v1") || !store.get("term", "teater-senja-2025")) return;
+  const now = Date.now();
+  const ago = (hours: number) => new Date(now - hours * 3_600_000).toISOString();
+  const day = (days: number) => new Date(now + days * 86_400_000).toISOString().slice(0, 10);
+  const term = "teater-senja-2025";
+  store.transaction(() => {
+    for (const ownerId of ["leo", "dani"])
+      store.put("chapter", `seed-ts-member-${ownerId}`, {
+        id: `seed-ts-member-${ownerId}`,
+        ownerId,
+        kind: "member",
+        label: "Member, Teater Senja 2025/26",
+        orgId: "teater-senja",
+        from: 2025,
+        to: 2026,
+        method: "invite",
+        audience: "circle",
+        createdAt: ago(200),
+      });
+    store.put("room-state", term, {
+      items: [
+        {
+          id: "seed-s1",
+          kind: "schedule",
+          text: "Latihan rutin, Aula B, 16.00",
+          when: day(2),
+          by: "maya",
+          at: ago(30),
+        },
+        {
+          id: "seed-s2",
+          kind: "decision",
+          text: "Pentas akhir tahun: \u201cRumah Kertas\u201d. Final.",
+          by: "maya",
+          at: ago(20),
+        },
+        {
+          id: "seed-s3",
+          kind: "deadline",
+          text: "Kumpulin ukuran kostum ke Dani",
+          when: day(5),
+          by: "maya",
+          at: ago(10),
+        },
+      ],
+    });
+    const posts: [string, string, "announcement" | "message", string, number][] = [
+      [
+        "seed-p1",
+        "maya",
+        "announcement",
+        "Naskah Rumah Kertas udah di-share. Baca babak 1 sebelum latihan Kamis ya.",
+        26,
+      ],
+      ["seed-p2", "leo", "message", "Babak 1 yang versi revisi atau yang lama?", 25],
+      ["seed-p3", "maya", "message", "Revisi. Yang lama udah nggak dipake.", 24],
+      [
+        "seed-p4",
+        "dani",
+        "message",
+        "Kostum gw yang ambil ukurannya, kirim aja ke gw sebelum tenggat.",
+        9,
+      ],
+    ];
+    for (const [id, userId, kind, text, hours] of posts)
+      store.put("room-post", id, { id, termId: term, userId, kind, text, createdAt: ago(hours) });
+    store.put("system", "seed-org-rooms-v1", { at: ago(0) });
+  });
+}

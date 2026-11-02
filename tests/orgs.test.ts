@@ -148,3 +148,57 @@ test("anyone can start an organisation and run it; a join link hands out member 
   orgs.createOrg({ userId: "dani" }, { name: "Third club" });
   rejects(() => orgs.createOrg({ userId: "dani" }, { name: "Fourth club" }), "TOO_MANY_ORGS");
 });
+
+test("a term's room: members only, state and announcements by admins, and a locked term is read only", async () => {
+  const { orgs, identity } = await setup();
+  const org = orgs.createOrg({ userId: "dani" }, { name: "Room test club", term: "2026/27" });
+  const [term] = orgs.terms(org.id);
+  const { code } = orgs.joinLink({ userId: "dani" }, org.id);
+  identity.redeemInvite({ userId: "maya" }, { code });
+
+  // Leo never joined: no room for him, and nothing leaks.
+  assert.deepEqual(orgs.rooms({ userId: "leo" }, org.id), []);
+  rejects(() => orgs.room({ userId: "leo" }, org.id, term!.id), "NOT_A_MEMBER");
+  rejects(() => orgs.post({ userId: "leo" }, org.id, term!.id, { text: "hi" }), "NOT_A_MEMBER");
+
+  orgs.setState({ userId: "dani" }, org.id, term!.id, {
+    kind: "deadline",
+    text: "Kumpulin CV",
+    when: "2026-11-10",
+  });
+  rejects(
+    () => orgs.setState({ userId: "maya" }, org.id, term!.id, { kind: "decision", text: "Mine" }),
+    "ORG_ADMIN_REQUIRED",
+  );
+  orgs.post({ userId: "dani" }, org.id, term!.id, { kind: "announcement", text: "Rapat Kamis" });
+  rejects(
+    () => orgs.post({ userId: "maya" }, org.id, term!.id, { kind: "announcement", text: "x" }),
+    "ORG_ADMIN_REQUIRED",
+  );
+  orgs.post({ userId: "maya" }, org.id, term!.id, { text: "Siap" });
+  const room = orgs.room({ userId: "maya" }, org.id, term!.id);
+  assert.equal(room.admin, false);
+  assert.deepEqual(
+    room.state.map((s) => s.text),
+    ["Kumpulin CV"],
+  );
+  assert.deepEqual(
+    room.announcements.map((a) => a.text),
+    ["Rapat Kamis"],
+  );
+  assert.deepEqual(
+    room.messages.map((m) => [m.author.id, m.text]),
+    [["maya", "Siap"]],
+  );
+
+  // Next term: Maya's chapter was for 2026/27, so she still reads that room but can't add to it,
+  // and the new term's room isn't hers until she joins again.
+  orgs.startTerm({ userId: "dani" }, org.id, { label: "2027/28", from: 2027 });
+  assert.deepEqual(
+    orgs.rooms({ userId: "maya" }, org.id).map((r) => [r.label, r.locked]),
+    [["2026/27", true]],
+  );
+  assert.equal(orgs.room({ userId: "maya" }, org.id, term!.id).canPost, false);
+  rejects(() => orgs.post({ userId: "maya" }, org.id, term!.id, { text: "late" }), "TERM_LOCKED");
+  assert.equal(orgs.rooms({ userId: "dani" }, org.id).length, 2);
+});
