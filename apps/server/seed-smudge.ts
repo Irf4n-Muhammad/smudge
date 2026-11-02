@@ -141,6 +141,84 @@ const songQuiz = (() => {
   return pkg;
 })();
 
+/** A tier list: one item at a time, tapped into a tier, then set beside the maker's and friends'. */
+const tierList = (() => {
+  const items = [
+    ["🥞 Martabak manis", "S"],
+    ["🌶️ Seblak", "C"],
+    ["🍜 Bakso", "A"],
+    ["🍳 Nasi goreng", "A"],
+    ["🍢 Sate padang", "S"],
+    ["🧋 Es teh jumbo", "B"],
+  ];
+  const fields = [
+    {
+      key: "title",
+      label: "Title",
+      kind: "text",
+      value: "My street food tier list. Fight me.",
+    },
+    ...items.flatMap(([item, tier], i) => [
+      { key: `item${i + 1}`, label: `Item ${i + 1}`, kind: "text", value: item },
+      {
+        key: `tier${i + 1}`,
+        label: `My tier for item ${i + 1} (S, A, B or C)`,
+        kind: "text",
+        value: tier,
+      },
+    ]),
+  ];
+  const pkg = page(
+    "Street food tier list",
+    `<script src="smudge/fill.js"></script><style>*{box-sizing:border-box;margin:0}:root{--S:#ff6b4a;--A:#ff9f43;--B:#f6c453;--C:#9c8f86}body{background:#1b1220;color:#fff;font-family:${sans};overflow:hidden}main{position:relative;height:100vh;min-height:440px;overflow:hidden;background:radial-gradient(circle at 80% 0%,#5a2a3a 0,transparent 60%),linear-gradient(170deg,#2a1730,#1b1220)}.in{position:absolute;left:20px;right:20px;bottom:22px;top:22px;display:flex;flex-direction:column;justify-content:flex-end;gap:14px}.row{display:flex;flex-wrap:wrap;gap:8px}.chip{border-radius:999px;padding:7px 11px;background:#ffffff1a;font:700 13px ${sans}}h1{font:800 27px/1.15 ${sans};text-wrap:balance}.who{font:600 13px/1.3 ${sans};color:#e8dfe6}.who:empty{display:none}.pill{align-self:flex-start;border:0;border-radius:999px;padding:13px 24px;background:#fff;color:#1b1220;font:800 15px ${sans};cursor:pointer}.pill:active{transform:scale(.96)}.top{display:flex;align-items:center;gap:12px;font:700 13px ${sans}}.track{flex:1;display:flex;gap:4px}.track i{flex:1;height:4px;border-radius:2px;background:#ffffff33}.track i.on{background:#fff}.item{font:800 34px/1.15 ${sans};text-align:center;margin:auto 0;animation:in .3s ease-out}.tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.t{border:0;border-radius:16px;padding:18px 0;font:900 24px ${sans};color:#1b1220;cursor:pointer;transition:transform .1s}.t:active{transform:scale(.94)}.board{display:grid;gap:6px}.line{display:flex;gap:8px;align-items:center}.line b{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#1b1220;font:900 15px ${sans};flex:none}.line .row{gap:5px}.line .chip{padding:5px 9px;font-size:12px}.vs{font:600 13.5px/1.4 ${sans};color:#f1e8ee}.vs strong{color:#fff}@keyframes in{from{opacity:0;transform:translateY(8px)}}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}</style><main><div class="in" id="in"></div></main><script>const v=window.smudgeFill.values,tiers=["S","A","B","C"],items=[];for(let k=1;k<=12;k++){const it=(v["item"+k]||"").trim();if(it)items.push({item:it.slice(0,40),maker:(v["tier"+k]||"").trim().toUpperCase()})}const box=document.getElementById("in");let placed=[],played=null;function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}function pill(x,f){const b=el("button","pill",x);b.onclick=f;return b}function first(name){return String(name||"").split(" ")[0]}function same(a,b){let n=0;for(const p of a){const q=b.find(x=>x.item===p.item);if(q&&q.tier===p.tier)n++}return n}function fight(a,b){let worst=null,gap=0;for(const p of a){const q=b.find(x=>x.item===p.item);if(!q)continue;const d=Math.abs(tiers.indexOf(p.tier)-tiers.indexOf(q.tier));if(d>gap){gap=d;worst={item:p.item,mine:p.tier,theirs:q.tier}}}return worst}function whoLine(){if(!played)return "";const names=played.friends.filter(f=>f.placed).slice(0,3).map(f=>first(f.name));const rest=played.count-names.length;const bits=names.slice();if(rest>0)bits.push(rest+(names.length?" more":rest===1?" person ranked":" people ranked"));return bits.length?bits.join(" · ")+(names.length?" ranked it":""):""}function cover(){box.replaceChildren();const r=el("div","row");items.forEach(i=>r.append(el("span","chip",i.item)));box.append(r,el("h1","",v.title||"Tier list"),el("div","who",whoLine()),pill("Rank ▸",()=>{placed=[];ask()}))}function ask(){const k=placed.length;if(k>=items.length)return done(false);box.replaceChildren();const top=el("div","top");const tr=el("div","track");items.forEach((_,j)=>tr.append(el("i",j<=k?"on":"")));top.append(el("span","",(k+1)+" of "+items.length),tr);const it=el("div","item",items[k].item);const g=el("div","tiers");tiers.forEach(t=>{const b=el("button","t",t);b.style.background="var(--"+t+")";b.onclick=()=>{placed.push({item:items[k].item,tier:t});ask()};g.append(b)});box.append(top,it,g)}function board(list){const b=el("div","board");tiers.forEach(t=>{const these=list.filter(p=>p.tier===t);if(!these.length)return;const line=el("div","line");const badge=el("b","",t);badge.style.background="var(--"+t+")";const r=el("div","row");these.forEach(p=>r.append(el("span","chip",p.item)));line.append(badge,r);b.append(line)});return b}function compare(){const out=el("div","vs");const maker=items.filter(i=>tiers.includes(i.maker)).map(i=>({item:i.item,tier:i.maker}));const lines=[];const friends=played?played.friends.filter(f=>f.placed&&(!played.mine||f.userId!==played.mine.userId)):[];const self=maker.length?friends.find(f=>same(f.placed,maker)===maker.length&&f.placed.length===maker.length):null;if(maker.length)lines.push([self?first(self.name)+" (who made it)":"the maker",same(placed,maker),maker.length,fight(placed,maker)]);friends.filter(f=>f!==self).slice(0,2).forEach(f=>{lines.push([first(f.name),same(placed,f.placed),f.placed.length,fight(placed,f.placed)])});lines.forEach(([who,n,of,f],j)=>{const p=el("p");const s=el("strong","",who.charAt(0).toUpperCase()+who.slice(1));p.append(s,document.createTextNode(" agrees on "+n+" of "+of+(f?". Fight: "+f.item+" ("+f.mine+" vs "+f.theirs+")":".")));out.append(p)});return out}function done(saved){box.replaceChildren();box.append(board(placed),compare(),pill("Rank again",()=>{placed=[];ask()}));if(saved)return;const best=placed.find(p=>p.tier==="S")||placed[0];forma.progress.write({placed}).catch(()=>{});forma.answers.set({pick:best.item,placed}).then(a=>{if(a&&typeof a.count==="number"){played=a;done(true)}}).catch(()=>{})}Promise.all([forma.progress.read().catch(()=>({})),forma.answers.read().catch(()=>null)]).then(([s,a])=>{if(a&&typeof a.count==="number")played=a;if(Array.isArray(s.placed)&&s.placed.length===items.length){placed=s.placed;done(true)}else cover()});</script>`,
+    [],
+    ["viewer.progress.read", "viewer.progress.write", "answers.write", "answers.read"],
+  );
+  pkg.files["smudge/fill.js"] = `window.smudgeFill = ${JSON.stringify({ fields })};\n`;
+  return pkg;
+})();
+
+export function seedTierList(service: SocialService) {
+  const store = service.store;
+  if (store.get("system", "seed-tier-list-v1") || !store.get("user", "maya")) return;
+  const actor = { userId: "maya" };
+  const draft = service.createDraft(actor, {
+    package: tierList,
+    metadata: {
+      title: "Street food tier list",
+      caption: "Rank them, then see who you'd fight with. Make your own list after.",
+      format: "custom",
+      contributors: [],
+    },
+  });
+  // Maya and two friends already ranked, so the end has someone to agree or fight with.
+  const ranked: [string, string[]][] = [
+    ["maya", ["S", "C", "A", "A", "S", "B"]],
+    ["leo", ["A", "S", "B", "A", "S", "C"]],
+    ["dani", ["S", "B", "S", "B", "A", "A"]],
+  ];
+  const names = [
+    "🥞 Martabak manis",
+    "🌶️ Seblak",
+    "🍜 Bakso",
+    "🍳 Nasi goreng",
+    "🍢 Sate padang",
+    "🧋 Es teh jumbo",
+  ];
+  service.publish(actor, draft.id, draft.revision, (post) => {
+    for (const [userId, tiers] of ranked)
+      if (store.get("user", userId))
+        store.put("answer", `${post.id}:${userId}`, {
+          postId: post.id,
+          userId,
+          pick: names[tiers.indexOf("S")] ?? names[0],
+          placed: names.map((item, i) => ({ item, tier: tiers[i] })),
+          at: post.createdAt,
+        });
+  });
+  store.transaction(() => store.put("system", "seed-tier-list-v1", { complete: true }));
+}
+
 export function seedFillFormat(service: SocialService) {
   const store = service.store;
   if (store.get("system", "seed-fill-format-v1") || !store.get("user", "leo")) return;

@@ -92,3 +92,24 @@ test("answers are checked, need the capability, and go with the post or the acco
   social.deletePost({ userId: "ana" }, quiz.id);
   assert.equal(store.all("answer").length, 0);
 });
+test("a tier list keeps where each item went, and friends see it to compare", async () => {
+  const { social, quiz, answer } = await setup();
+  social.follow({ userId: "dian" }, "budi");
+  const placed = [
+    { item: "Seblak", tier: "S" },
+    { item: "Bakso", tier: "C" },
+  ];
+  answer("budi", { pick: "Seblak", placed });
+  const view = social.answers({ userId: "dian" }, quiz.id);
+  assert.deepEqual(view.friends[0]?.placed, placed);
+  // One place per item; an empty ranking is not an answer.
+  assert.throws(() =>
+    answer("dian", {
+      placed: [
+        { item: "Seblak", tier: "S" },
+        { item: "Seblak", tier: "A" },
+      ],
+    }),
+  );
+  assert.throws(() => answer("dian", { placed: [] }));
+});

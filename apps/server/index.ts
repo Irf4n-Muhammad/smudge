@@ -31,7 +31,7 @@ import { IdentityService } from "../../packages/core/src/identity.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
 import { seedIdentity } from "./seed-identity.js";
-import { seedFillFormat, seedSmudge } from "./seed-smudge.js";
+import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
 import { themeRoutes } from "./theme-routes.js";
@@ -168,6 +168,7 @@ if (config.demoContent) {
   seedProfiles(profiles);
   seedSmudge(service);
   seedFillFormat(service);
+  seedTierList(service);
   seedPhotos(service);
   // After the photo seed, which adds Dani and the photos on his page.
   seedDaniPage(profiles);

@@ -40,6 +40,8 @@ export interface Answer {
   pick?: string | undefined;
   score?: number | undefined;
   of?: number | undefined;
+  /** A ranking post, such as a tier list: where the viewer put each item. */
+  placed?: { item: string; tier: string }[] | undefined;
   at: string;
 }
 export const answerSchema = z
@@ -48,9 +50,28 @@ export const answerSchema = z
     pick: z.string().trim().min(1).max(80).optional(),
     score: z.number().int().min(0).max(1000).optional(),
     of: z.number().int().min(1).max(1000).optional(),
+    placed: z
+      .array(
+        z
+          .object({
+            item: z.string().trim().min(1).max(40),
+            tier: z.string().trim().min(1).max(4),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(12)
+      .optional(),
   })
   .strict()
-  .refine((a) => a.pick !== undefined || a.score !== undefined, "ANSWER_EMPTY")
+  .refine(
+    (a) => a.pick !== undefined || a.score !== undefined || a.placed !== undefined,
+    "ANSWER_EMPTY",
+  )
+  .refine(
+    (a) => !a.placed || new Set(a.placed.map((p) => p.item)).size === a.placed.length,
+    "PLACED_TWICE",
+  )
   .refine((a) => (a.score === undefined) === (a.of === undefined), "SCORE_NEEDS_OF")
   .refine((a) => a.score === undefined || a.of === undefined || a.score <= a.of, "SCORE_OVER_OF");
 export interface Asset {
@@ -517,6 +538,7 @@ export class SocialService {
         handle: u?.handle ?? "",
         ...(a.pick !== undefined ? { pick: a.pick } : {}),
         ...(a.score !== undefined ? { score: a.score, of: a.of } : {}),
+        ...(a.placed !== undefined ? { placed: a.placed } : {}),
       };
     };
     const mine = all.find((a) => a.userId === me);
