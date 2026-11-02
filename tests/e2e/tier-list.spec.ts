@@ -42,4 +42,10 @@ test("a tier list: tap each item into a tier, then see who agrees and where you'
   await expect(frame.locator(".vs")).toContainText("Leo agrees on 5 of 6");
   await page.screenshot({ path: "test-results/tier-end.png" });
   await expect(card.locator(".friend-answers")).toContainText("You");
+
+  // Their list as a story picture, with the link back to this post.
+  const download = page.waitForEvent("download");
+  await card.getByRole("button", { name: "Share to story" }).click();
+  await (await download).saveAs("test-results/tier-story.png");
+  await expect(card.locator(".friend-answers")).toContainText("Picture saved and link copied");
 });

@@ -1,10 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Users } from "lucide-react";
+import { Share2, Users } from "lucide-react";
 import { api } from "./runtime";
 import { answersChanged } from "./guest-answers";
+import { shareTierStory } from "./tier-story";
 
-type Answer = { userId: string; name: string; pick?: string; score?: number; of?: number };
+type Answer = {
+  userId: string;
+  name: string;
+  pick?: string;
+  score?: number;
+  of?: number;
+  placed?: { item: string; tier: string }[];
+};
 type Answers = { count: number; mine: Answer | null; friends: Answer[] };
 
 const said = (a: Answer) =>
@@ -19,13 +27,17 @@ export function FriendAnswers({
   postId,
   version,
   follow,
+  title,
 }: {
   postId: string;
   version: number;
+  /** The post's title, for the story picture of a ranking. */
+  title?: string;
   follow?: { name: string; onFollow: () => void } | undefined;
 }) {
   const [answers, setAnswers] = useState<Answers | null>(null),
-    [claimed, setClaimed] = useState(0);
+    [claimed, setClaimed] = useState(0),
+    [shared, setShared] = useState("");
   useEffect(() => {
     const changed = (e: Event) => {
       if ((e as CustomEvent<string>).detail === postId) setClaimed((n) => n + 1);
@@ -65,6 +77,32 @@ export function FriendAnswers({
         </span>
       </span>
       {answers.mine && <small>People who follow you see your answer.</small>}
+      {answers.mine?.placed && answers.mine.placed.length > 0 && (
+        <p className="answer-follow">
+          <span>{shared || "Put your list on your story. The link brings people here."}</span>
+          <button
+            className="primary small"
+            onClick={async () => {
+              try {
+                const how = await shareTierStory({
+                  postId,
+                  title: title ?? "My tier list",
+                  placed: answers.mine!.placed!,
+                });
+                setShared(
+                  how === "shared"
+                    ? "Shared."
+                    : "Picture saved and link copied. Add the link as a sticker on your story.",
+                );
+              } catch (e) {
+                if ((e as Error).name !== "AbortError") setShared((e as Error).message);
+              }
+            }}
+          >
+            <Share2 size={13} /> Share to story
+          </button>
+        </p>
+      )}
       {answers.mine && follow && (
         <p className="answer-follow">
           <span>Follow {follow.name} to get their next one.</span>
