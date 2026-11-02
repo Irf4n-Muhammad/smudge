@@ -29,6 +29,7 @@ import {
 import { seedProfiles, seedDaniPage, seedInesPosts, profileTemplates } from "./seed-profiles.js";
 import { IdentityService } from "../../packages/core/src/identity.js";
 import { OrgService } from "../../packages/core/src/orgs.js";
+import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
 import { seedIdentity, seedOrgTerms } from "./seed-identity.js";
@@ -95,6 +96,9 @@ process.on("exit", () => {
   } catch {}
 });
 const store = await Store.open(resolve(dataDir, "forma.sqlite"));
+// Opens of public posts and organisation pages, counted per day with no visitor id.
+const opens = new OpenCounter(store);
+setInterval(() => opens.flush(), 60_000).unref();
 const service = new SocialService(store);
 seedSharedAssets(service);
 if (config.demoContent) {
@@ -913,9 +917,11 @@ api.get("/api/public/sides/:id", guestLimit, (req, res) => {
 api.get("/api/public/sides/:id/home", guestLimit, (req, res) =>
   res.json(sharing.side(z.string().max(40).parse(req.params.id))),
 );
-api.get("/api/public/orgs/:id", guestLimit, (req, res) =>
-  res.json(orgService.publicPage(z.string().max(40).parse(req.params.id))),
-);
+api.get("/api/public/orgs/:id", guestLimit, (req, res) => {
+  const page = orgService.publicPage(z.string().max(40).parse(req.params.id));
+  opens.count("org", page.id);
+  res.json(page);
+});
 api.get("/api/public/orgs/:id/join/:code", guestLimit, (req, res) =>
   res.json(
     orgService.joinPreview(
@@ -924,9 +930,29 @@ api.get("/api/public/orgs/:id/join/:code", guestLimit, (req, res) =>
     ),
   ),
 );
-api.get("/api/public/posts/:id", guestLimit, (req, res) =>
-  res.json(sharing.post(String(req.params.id))),
-);
+api.get("/api/public/posts/:id", guestLimit, (req, res) => {
+  const post = sharing.post(String(req.params.id));
+  opens.count("post", post.id);
+  res.json(post);
+});
+// The trial's numbers, for moderators: counts only, never who.
+api.get("/api/trial", (req, res) => {
+  if (!isAdmin(actor(res).userId)) throw new AppError("FORBIDDEN", 403);
+  const ids = (v: unknown) =>
+    z
+      .string()
+      .max(400)
+      .optional()
+      .parse(v)
+      ?.split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .slice(0, 10) ?? [];
+  res.json({
+    posts: ids(req.query.post).map((id) => ({ id, ...postTrial(store, opens, id) })),
+    orgs: ids(req.query.org).map((id) => ({ id, ...orgTrial(store, opens, id) })),
+  });
+});
 api.get("/api/public/posts/:id/cover", guestLimit, (req, res) => {
   const asset = sharing.cover(String(req.params.id));
   res.type(asset.mime).send(Buffer.from(asset.base64, "base64"));
@@ -1397,6 +1423,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const)
   process.on(signal, () => {
     apiServer.close();
     runtimeServer.close();
+    opens.flush();
     store.close();
     process.exit(0);
   });

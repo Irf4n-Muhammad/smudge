@@ -1394,3 +1394,18 @@
   margin: 0;
   font-size: 13px;
 }
+.trial-funnel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 14px;
+}
+.trial-funnel dt {
+  color: var(--muted);
+}
+.trial-funnel dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
