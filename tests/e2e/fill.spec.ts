@@ -33,15 +33,17 @@ test("anyone makes their own version of a fill-in format from a form, without th
     await page.goto(`/?post=${quiz.id}`);
     const card = page.locator(".post-card").first();
     await expect(card.locator("iframe").contentFrame().locator("h1")).toHaveText(
-      "Guess the song from emoji",
+      "My three most played songs this year. Can you guess them?",
     );
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: "test-results/quiz-feed-cover.png" });
     await card.getByRole("button", { name: "Use format" }).click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByLabel("Clue 1 (emoji)")).toHaveValue("☔️🎤💃");
     await dialog.getByLabel("Title").fill("Tebak lagu ala Alex");
     await dialog.getByLabel("Clue 1 (emoji)").fill("🍕🍕🍕");
-    await dialog.getByLabel("Answer 1").fill("Pizza Party");
+    await dialog.getByLabel("Answer 1", { exact: true }).fill("Pizza Party");
     await page.screenshot({ path: "test-results/fill-form.png" });
     await dialog.getByRole("button", { name: "Post my version" }).click();
 
@@ -50,11 +52,13 @@ test("anyone makes their own version of a fill-in format from a form, without th
     const version = page.locator(".post-card").first();
     const frame = version.locator("iframe").contentFrame();
     await expect(frame.locator("h1")).toHaveText("Tebak lagu ala Alex");
-    await expect(frame.locator("#q1 b")).toHaveText("🍕🍕🍕");
-    // Only what was changed is new; the rest is the format's.
-    await expect(frame.locator("#q2 b")).toHaveText("🧊🧊👶");
-    await frame.locator('input[name="a1"]').fill("pizza party");
-    await frame.getByRole("button", { name: "Check my answers" }).click();
+    // One clue at a time, picked with a tap; only what was changed is new.
+    await expect(frame.locator("#clue")).toHaveText("🍕🍕🍕");
+    await frame.getByRole("button", { name: "Guess ▸" }).click();
+    await frame.getByRole("button", { name: "Pizza Party" }).click();
+    await expect(frame.locator("#clue")).toHaveText("🧊🧊👶");
+    await frame.getByRole("button", { name: "Let It Go" }).click();
+    await frame.getByRole("button", { name: "Octopus's Garden" }).click();
     await expect(frame.locator("#score")).toHaveText("1 / 3");
     await expect(
       version.getByRole("button", { name: /Version \d+ of .*Guess the song/ }),

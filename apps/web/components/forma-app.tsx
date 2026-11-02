@@ -46,6 +46,7 @@ import { api } from "./runtime";
 import { Avatar, ConfirmHost, Dialog } from "./ui";
 import { PostCard } from "./post-card";
 import { FillDialog } from "./fill-dialog";
+import { claimGuestAnswers } from "./guest-answers";
 import type { FillField } from "./fill-dialog";
 import { Studio } from "./studio";
 import { SiteImport } from "./site-import";
@@ -232,6 +233,12 @@ export function FormaApp() {
     const easy = new URLSearchParams(window.location.search).get("postDraft");
     if (easy) setPostEditor({ draftId: easy });
   }, [refresh]);
+  // Played a shared post as a guest, then came in: once someone is signed in, the answer kept in
+  // this browser joins their account.
+  const signedInAs = boot?.actor.userId;
+  useEffect(() => {
+    if (signedInAs && focusPost) void claimGuestAnswers(focusPost).catch(() => undefined);
+  }, [signedInAs, focusPost]);
   const loadExplore = useCallback(async (q: string) => {
     try {
       setExplored(await api<DecoratedPost[]>(`/explore?q=${encodeURIComponent(q)}`));
@@ -338,11 +345,16 @@ export function FormaApp() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   async function signedIn(fresh: boolean) {
+    // Signed up from a post someone shared: what they did there as a guest moves to the account,
+    // and they land back on that post instead of the feed.
+    const back = view === "post" ? focusPost : null;
     setStudio(false);
     setProfile(null);
     window.history.replaceState(null, "", "/");
+    if (back) await claimGuestAnswers(back).catch(() => undefined);
     await refresh();
-    navigate("home");
+    if (back) openPost(back);
+    else navigate("home");
     // Close the dialog only once the landing view is set, so nothing tapped meanwhile is undone.
     setAuthDialog(null);
     if (fresh) setWelcome(true);

@@ -5,6 +5,7 @@ import type { ProfilePackage } from "../../../packages/contracts/src/profile";
 import type { Experience } from "../../../packages/contracts/src/experience";
 import type { SideHome } from "../../../packages/contracts/src/sides";
 import { api, Runtime } from "./runtime";
+import { hasGuestAnswer } from "./guest-answers";
 import { Avatar } from "./ui";
 import { CommentList } from "./comments";
 import type { CommentItem } from "./comments";
@@ -72,7 +73,16 @@ function ShareBar() {
   );
 }
 type SideLanding = { id: string; name: string; tagline: string; accent: string };
-function Invite({ name, side }: { name: string; side?: SideLanding | null }) {
+function Invite({
+  name,
+  side,
+  postId,
+}: {
+  name: string;
+  side?: SideLanding | null;
+  /** On a post's page: signing up comes back to that post. */
+  postId?: string;
+}) {
   if (side)
     return (
       <section
@@ -92,7 +102,7 @@ function Invite({ name, side }: { name: string; side?: SideLanding | null }) {
     <section className="share-cta">
       <h2>Say something to {name}</h2>
       <p>Join Smudge to like, comment and make a page that looks like you.</p>
-      <a href="/">Join Smudge</a>
+      <a href={postId ? `/?post=${encodeURIComponent(postId)}` : "/"}>Join Smudge</a>
     </section>
   );
 }
@@ -108,9 +118,22 @@ function Missing({ what }: { what: string }) {
   );
 }
 
+/** After a guest plays: the one thing an account adds, which is seeing how friends answered. */
+function AnswerInvite({ postId }: { postId: string }) {
+  return (
+    <section className="share-cta share-answered">
+      <h2>See how your friends answered</h2>
+      <p>Make an account and your answer is kept. You land back on this post, next to theirs.</p>
+      <a href={`/?post=${encodeURIComponent(postId)}`}>See my friends’ answers</a>
+    </section>
+  );
+}
+
 export function SharedPost({ id }: { id: string }) {
   const guest = useMemberRedirect(`/?post=${encodeURIComponent(id)}`);
   const [post, setPost] = useState<SharedPostView | null | "missing">(null);
+  const [answered, setAnswered] = useState(false);
+  useEffect(() => setAnswered(hasGuestAnswer(id)), [id]);
   useEffect(() => {
     if (!guest) return;
     api<SharedPostView>(`/public/posts/${encodeURIComponent(id)}`)
@@ -133,6 +156,7 @@ export function SharedPost({ id }: { id: string }) {
         <article className="share-post" aria-label={`${post.title} by ${post.author.name}`}>
           <Runtime
             guest
+            onAnswer={() => setAnswered(true)}
             target={post.id}
             version={post.revision}
             height={post.stage?.height ?? 460}
@@ -162,7 +186,11 @@ export function SharedPost({ id }: { id: string }) {
             )}
           </div>
         </article>
-        <Invite name={post.author.name} />
+        {answered ? (
+          <AnswerInvite postId={post.id} />
+        ) : (
+          <Invite name={post.author.name} postId={post.id} />
+        )}
       </main>
     </div>
   );

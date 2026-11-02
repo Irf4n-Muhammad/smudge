@@ -7,7 +7,7 @@ import {
 import type { NotificationType, PersonView } from "../../contracts/src/community.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
-import type { Publication, SocialEvent, SocialService } from "./social.js";
+import type { Answer, Publication, SocialEvent, SocialService } from "./social.js";
 
 interface Follow {
   userId: string;
@@ -50,6 +50,9 @@ interface Resolution {
   by: string;
   at: string;
 }
+
+const score = (a: Answer | undefined) =>
+  a ? { pick: a.pick ?? null, score: a.score ?? null, of: a.of ?? null } : null;
 
 /**
  * Blocking, suspension, deletion state, notifications, people search and moderation. Installs
@@ -180,6 +183,14 @@ export class CommunityService {
               .filter((c) => c.postId === n.postId && c.userId === n.actorId)
               .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.text
           : undefined;
+        // What they answered, beside the maker's own answer, so "beat your 2/3" needs no lookup.
+        const answer =
+          n.type === "answer" && n.postId && n.actorId
+            ? {
+                theirs: score(this.store.get<Answer>("answer", `${n.postId}:${n.actorId}`)),
+                yours: score(this.store.get<Answer>("answer", `${n.postId}:${me}`)),
+              }
+            : undefined;
         return {
           id: n.id,
           type: n.type,
@@ -188,6 +199,7 @@ export class CommunityService {
           actor: n.actorId ? publicUser(users.get(n.actorId)) : null,
           post: post ? { id: post.id, title: post.metadata.title } : null,
           ...(said ? { text: said.length > 140 ? `${said.slice(0, 139)}…` : said } : {}),
+          ...(answer ? { answer } : {}),
           youFollow: !!n.actorId && follows.some((f) => f.userId === me && f.target === n.actorId),
         };
       });
@@ -441,7 +453,7 @@ export class CommunityService {
       if (f.userId === userId || f.target === userId) s.remove("follow", `${f.userId}:${f.target}`);
     for (const key of s.ids("follow-request"))
       if (key.split(":").includes(userId)) s.remove("follow-request", key);
-    for (const kind of ["like", "save", "reaction"])
+    for (const kind of ["like", "save", "reaction", "answer"])
       for (const r of s.all<{ postId: string; userId: string }>(kind))
         if (r.userId === userId) s.remove(kind, `${r.postId}:${r.userId}`);
     for (const b of s.all<{ userId: string; target: string }>("block"))

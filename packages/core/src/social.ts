@@ -33,6 +33,47 @@ export interface Publication extends DraftView {
   /** Set when the owner republishes the post's draft; the post keeps its id and place. */
   editedAt?: string | undefined;
 }
+/** What a viewer chose or scored on a post, through `answers.write`. One per viewer and post. */
+export interface Answer {
+  postId: string;
+  userId: string;
+  pick?: string | undefined;
+  score?: number | undefined;
+  of?: number | undefined;
+  /** A ranking post, such as a tier list: where the viewer put each item. */
+  placed?: { item: string; tier: string }[] | undefined;
+  at: string;
+}
+export const answerSchema = z
+  .object({
+    /** A short word or phrase: the option picked, the item ranked first. */
+    pick: z.string().trim().min(1).max(80).optional(),
+    score: z.number().int().min(0).max(1000).optional(),
+    of: z.number().int().min(1).max(1000).optional(),
+    placed: z
+      .array(
+        z
+          .object({
+            item: z.string().trim().min(1).max(40),
+            tier: z.string().trim().min(1).max(4),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(12)
+      .optional(),
+  })
+  .strict()
+  .refine(
+    (a) => a.pick !== undefined || a.score !== undefined || a.placed !== undefined,
+    "ANSWER_EMPTY",
+  )
+  .refine(
+    (a) => !a.placed || new Set(a.placed.map((p) => p.item)).size === a.placed.length,
+    "PLACED_TWICE",
+  )
+  .refine((a) => (a.score === undefined) === (a.of === undefined), "SCORE_NEEDS_OF")
+  .refine((a) => a.score === undefined || a.of === undefined || a.score <= a.of, "SCORE_OVER_OF");
 export interface Asset {
   id: string;
   ownerId: string;
@@ -83,7 +124,7 @@ export function packageDigest(value: Experience) {
 export type SocialEvent =
   | { type: "follow"; actorId: string; targetId: string }
   | {
-      type: "like" | "comment" | "reaction" | "reply" | "mention";
+      type: "like" | "comment" | "reaction" | "reply" | "mention" | "answer";
       actorId: string;
       targetId: string;
       postId: string;
@@ -293,7 +334,7 @@ export class SocialService {
     this.ownPost(actor, id);
     this.store.transaction(() => {
       this.store.remove("post", id);
-      for (const kind of ["like", "save", "report", "progress", "vote"])
+      for (const kind of ["like", "save", "report", "progress", "vote", "answer"])
         for (const key of this.store.ids(kind))
           if (key.startsWith(`${id}:`)) this.store.remove(kind, key);
       for (const kind of ["comment", "contribution"])
@@ -480,6 +521,35 @@ export class SocialService {
     });
     return { active: !exists };
   }
+  /**
+   * Your answer to a post and those of the people you follow. Answers are shown to followers only,
+   * like a like with words; how many answered in all is the only thing strangers learn.
+   */
+  answers(actor: Actor, postId: string) {
+    const me = this.actor(actor);
+    const all = this.store.all<Answer>("answer").filter((a) => a.postId === postId);
+    const following = new Set(this.following(actor));
+    const users = this.users();
+    const view = (a: Answer) => {
+      const u = users.find((x) => x.id === a.userId);
+      return {
+        userId: a.userId,
+        name: u?.name ?? "Someone",
+        handle: u?.handle ?? "",
+        ...(a.pick !== undefined ? { pick: a.pick } : {}),
+        ...(a.score !== undefined ? { score: a.score, of: a.of } : {}),
+        ...(a.placed !== undefined ? { placed: a.placed } : {}),
+      };
+    };
+    const mine = all.find((a) => a.userId === me);
+    return {
+      count: all.length,
+      mine: mine ? view(mine) : null,
+      friends: all
+        .filter((a) => following.has(a.userId) && users.some((u) => u.id === a.userId))
+        .map(view),
+    };
+  }
   following(actor: Actor) {
     return this.store
       .all<{ userId: string; target: string }>("follow")
@@ -649,6 +719,23 @@ export class SocialService {
         selected: this.store.get<{ option: number }>("vote", key)?.option ?? null,
       };
     }
+    if (method === "answers.write") {
+      const value = answerSchema.parse(payload);
+      const answer: Answer = {
+        postId,
+        userId: actor.userId,
+        ...value,
+        at: new Date().toISOString(),
+      };
+      this.store.transaction(() => {
+        this.store.put("answer", key, answer);
+        // The maker hears who played; answering again refreshes the same notification.
+        if (!preview && post.ownerId !== actor.userId)
+          this.emit({ type: "answer", actorId: actor.userId, targetId: post.ownerId, postId });
+      });
+      return this.answers(actor, postId);
+    }
+    if (method === "answers.read") return this.answers(actor, postId);
     const handler = this.capabilityHandlers[method];
     if (handler) return handler(actor, preview ? "" : post.id, payload, preview);
     throw new AppError("METHOD_NOT_SUPPORTED");

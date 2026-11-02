@@ -5,6 +5,8 @@ import type { Experience } from "../../../packages/contracts/src/experience";
 import { RotateCcw, ArrowDown, AlertCircle } from "lucide-react";
 import { bridgeRequestSchema } from "../../../packages/contracts/src/experience";
 import { profileRequestSchema, profileSizeSchema } from "../../../packages/contracts/src/profile";
+import { guestCapability } from "./guest-answers";
+import { holdFeed, joinFeedFocus } from "./feed-focus";
 
 export async function api<T = any>(path: string, body?: unknown, method?: string): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -34,6 +36,7 @@ export function Runtime({
   onEdit,
   onReady,
   guest = false,
+  onAnswer,
   clip = false,
   owner = false,
 }: {
@@ -56,6 +59,8 @@ export function Runtime({
   onReady?: () => void;
   /** Opened from a share link without an account: read-only, through the public endpoints. */
   guest?: boolean;
+  /** The viewer answered inside the post (a guest's answer waits in this browser). */
+  onAnswer?: () => void;
   /** The viewer owns this page: the page may show its own hints for filling it in (ADR 0051). */
   owner?: boolean;
   /**
@@ -68,6 +73,8 @@ export function Runtime({
     frame = useRef<HTMLIFrameElement>(null);
   const openPost = useRef(onOpenPost);
   const socialChange = useRef(onSocialChange);
+  const answered = useRef(onAnswer);
+  answered.current = onAnswer;
   socialChange.current = onSocialChange;
   openPost.current = onOpenPost;
   const edit = useRef(onEdit);
@@ -86,6 +93,15 @@ export function Runtime({
     [error, setError] = useState(""),
     [ready, setReady] = useState(false),
     [retry, setRetry] = useState(0);
+  // Feed windows run only while they are the post in focus; everything else always runs.
+  const [live, setLive] = useState(!clip);
+  const liveNow = useRef(live);
+  liveNow.current = live;
+  useEffect(() => {
+    if (!clip) return kind === "post" && !preview ? holdFeed() : undefined;
+    if (!container.current) return;
+    return joinFeedFocus(container.current, setLive);
+  }, [clip, kind, preview]);
   useEffect(() => {
     // A profile is the current page, not a feed tile. Keep its canvas and unsaved work mounted
     // across editor scroll/viewport changes; only feed posts need viewport-based disposal.
@@ -172,6 +188,11 @@ export function Runtime({
             { type: "forma:editing", nonce: ticket.nonce, on: editingNow.current },
             "*",
           );
+        if (!liveNow.current)
+          frame.current?.contentWindow?.postMessage(
+            { type: "forma:activity", nonce: ticket.nonce, active: false },
+            "*",
+          );
         setReady(true);
         return;
       }
@@ -214,12 +235,20 @@ export function Runtime({
       if (++requests > 20) return;
       const source = event.source as Window;
       try {
-        // Guests get read-only profile capabilities and none inside posts.
-        if (guest && kind !== "profile") throw new Error("SIGN_IN_REQUIRED");
-        const result = await api(guest ? "/public/capability" : "/capability", {
-          ticket: ticket.ticket,
-          request: parsed.data,
-        });
+        // Guests get read-only profile capabilities. Inside posts they may play: progress and
+        // answers stay in this browser until they make an account; anything else needs one.
+        const kept =
+          guest && kind !== "profile"
+            ? guestCapability(target, parsed.data.method, parsed.data.payload)
+            : undefined;
+        if (kept === null) throw new Error("SIGN_IN_REQUIRED");
+        const result: { value?: { postId?: unknown } } =
+          (kept as { value?: { postId?: unknown } } | undefined) ??
+          (await api(guest ? "/public/capability" : "/capability", {
+            ticket: ticket.ticket,
+            request: parsed.data,
+          }));
+        if (active && parsed.data.method === "answers.write") answered.current?.();
         if (
           active &&
           kind === "profile" &&
@@ -265,6 +294,13 @@ export function Runtime({
       readyNow.current?.();
   }, [ready, error, measuredHeight, autoHeight, kind]);
   useEffect(() => {
+    if (ticket && ready)
+      frame.current?.contentWindow?.postMessage(
+        { type: "forma:activity", nonce: ticket.nonce, active: live },
+        "*",
+      );
+  }, [ticket, ready, live]);
+  useEffect(() => {
     if (ticket && preview)
       frame.current?.contentWindow?.postMessage(
         { type: "forma:editing", nonce: ticket.nonce, on: editing },
@@ -298,6 +334,7 @@ export function Runtime({
         } as CSSProperties
       }
       data-ready={ready}
+      data-live={live}
     >
       {!error && ticket && visible && (
         <iframe
