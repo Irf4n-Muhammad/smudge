@@ -3,9 +3,42 @@ export function sdkSource(nonce: string) {
   return `(()=>{
     const nonce=${JSON.stringify(nonce)}, pending=new Map();
     let resizeObserver, resizeTimer, lastHeight=0;
+    // A feed post out of focus holds still: its timers and frames wait, animations and media pause.
+    const later=setTimeout.bind(window), stopLater=clearTimeout.bind(window), every=setInterval.bind(window), frame=requestAnimationFrame.bind(window), stopFrame=cancelAnimationFrame.bind(window);
+    const held=new Map(), frames=new Map();
+    let paused=false, frameId=0;
+    window.setTimeout=function(fn,ms,...args){
+      if(typeof fn!=='function')return later(fn,ms,...args);
+      const id=later(()=>{if(paused)held.set(id,()=>fn(...args));else fn(...args)},ms);
+      return id;
+    };
+    window.clearTimeout=id=>{held.delete(id);stopLater(id)};
+    window.setInterval=function(fn,ms,...args){
+      if(typeof fn!=='function')return every(fn,ms,...args);
+      return every(()=>{if(!paused)fn(...args)},ms);
+    };
+    window.requestAnimationFrame=fn=>{
+      if(!paused)return frame(fn);
+      const id=-(++frameId);frames.set(id,fn);return id;
+    };
+    window.cancelAnimationFrame=id=>{frames.delete(id);stopFrame(id)};
+    function setActive(active){
+      if(paused===!active)return;
+      paused=!active;
+      document.documentElement.dataset.active=active?'on':'off';
+      let style=document.getElementById('forma-pause-policy');
+      if(!style){style=document.createElement('style');style.id='forma-pause-policy';document.head.append(style)}
+      style.textContent=paused?'*,*::before,*::after{animation-play-state:paused!important}':'';
+      if(paused)document.querySelectorAll('video,audio').forEach(m=>m.pause());
+      else{
+        const waiting=[...held.values()],drawing=[...frames.values()];held.clear();frames.clear();
+        waiting.forEach(fn=>later(fn,0));drawing.forEach(fn=>frame(fn));
+      }
+      window.dispatchEvent(new CustomEvent('forma:activity',{detail:{active}}));
+    }
     function measure(){
-      clearTimeout(resizeTimer);
-      resizeTimer=setTimeout(()=>{
+      stopLater(resizeTimer);
+      resizeTimer=later(()=>{
         const height=Math.max(600,Math.min(8000,Math.ceil(document.body.getBoundingClientRect().height)));
         if(height!==lastHeight){lastHeight=height;parent.postMessage({type:'forma:size',nonce,height},'*')}
       },100);
@@ -42,19 +75,21 @@ export function sdkSource(nonce: string) {
         }
         window.dispatchEvent(new CustomEvent('forma:editing',{detail:{on:event.data.on}}));
       }
+      if(event.data.type==='forma:activity' && typeof event.data.active==='boolean')setActive(event.data.active);
       if(event.data.type==='forma:result'){
         const p=pending.get(event.data.id);if(!p)return;
-        clearTimeout(p.timer);pending.delete(event.data.id);
+        stopLater(p.timer);pending.delete(event.data.id);
         event.data.error?p.reject(new Error(event.data.error)):p.resolve(event.data.value);
       }
     });
     const request=(method,payload)=>new Promise((resolve,reject)=>{
       const id=crypto.randomUUID();
-      const timer=setTimeout(()=>{pending.delete(id);reject(new Error('Request timed out'));},10000);
+      const timer=later(()=>{pending.delete(id);reject(new Error('Request timed out'));},10000);
       pending.set(id,{resolve,reject,timer});
       parent.postMessage({nonce,request:{type:'forma:request',id,method,...(payload===undefined?{}:{payload})}},'*');
     });
     Object.defineProperty(window,'forma',{value:Object.freeze({
+      get active(){return !paused},
       appearance:{get theme(){return document.documentElement.dataset.theme||'light'},get season(){return document.documentElement.dataset.season||'paint'}},
       profile:{poll:{read:()=>request('profile.poll.read'),vote:option=>request('profile.poll.vote',{option})},read:()=>request('profile.read'),cover:postId=>request('profile.cover',{postId}),openPost:postId=>request('profile.openPost',{postId}),social:{read:()=>request('profile.social.read'),toggle:input=>request('profile.social.toggle',input)},wall:{read:()=>request('profile.wall.read'),add:value=>request('profile.wall.add',value),remove:noteId=>request('profile.wall.remove',{noteId}),report:(noteId,reason)=>request('profile.wall.report',reason===undefined?{noteId}:{noteId,reason})}},
       edit:{get active(){return document.documentElement.dataset.editing==='on'},select:field=>{if(document.documentElement.dataset.editing==='on'&&/^[a-z][a-z0-9-]{0,30}$/.test(String(field)))parent.postMessage({type:'forma:edit',nonce,field:String(field)},'*')}},

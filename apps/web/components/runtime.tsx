@@ -6,6 +6,7 @@ import { RotateCcw, ArrowDown, AlertCircle } from "lucide-react";
 import { bridgeRequestSchema } from "../../../packages/contracts/src/experience";
 import { profileRequestSchema, profileSizeSchema } from "../../../packages/contracts/src/profile";
 import { guestCapability } from "./guest-answers";
+import { holdFeed, joinFeedFocus } from "./feed-focus";
 
 export async function api<T = any>(path: string, body?: unknown, method?: string): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -92,6 +93,15 @@ export function Runtime({
     [error, setError] = useState(""),
     [ready, setReady] = useState(false),
     [retry, setRetry] = useState(0);
+  // Feed windows run only while they are the post in focus; everything else always runs.
+  const [live, setLive] = useState(!clip);
+  const liveNow = useRef(live);
+  liveNow.current = live;
+  useEffect(() => {
+    if (!clip) return kind === "post" && !preview ? holdFeed() : undefined;
+    if (!container.current) return;
+    return joinFeedFocus(container.current, setLive);
+  }, [clip, kind, preview]);
   useEffect(() => {
     // A profile is the current page, not a feed tile. Keep its canvas and unsaved work mounted
     // across editor scroll/viewport changes; only feed posts need viewport-based disposal.
@@ -176,6 +186,11 @@ export function Runtime({
         if (preview)
           frame.current?.contentWindow?.postMessage(
             { type: "forma:editing", nonce: ticket.nonce, on: editingNow.current },
+            "*",
+          );
+        if (!liveNow.current)
+          frame.current?.contentWindow?.postMessage(
+            { type: "forma:activity", nonce: ticket.nonce, active: false },
             "*",
           );
         setReady(true);
@@ -279,6 +294,13 @@ export function Runtime({
       readyNow.current?.();
   }, [ready, error, measuredHeight, autoHeight, kind]);
   useEffect(() => {
+    if (ticket && ready)
+      frame.current?.contentWindow?.postMessage(
+        { type: "forma:activity", nonce: ticket.nonce, active: live },
+        "*",
+      );
+  }, [ticket, ready, live]);
+  useEffect(() => {
     if (ticket && preview)
       frame.current?.contentWindow?.postMessage(
         { type: "forma:editing", nonce: ticket.nonce, on: editing },
@@ -312,6 +334,7 @@ export function Runtime({
         } as CSSProperties
       }
       data-ready={ready}
+      data-live={live}
     >
       {!error && ticket && visible && (
         <iframe
