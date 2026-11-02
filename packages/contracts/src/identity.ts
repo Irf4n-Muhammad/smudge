@@ -110,6 +110,19 @@ export const orgs: Org[] = [
   },
 ];
 export const orgById = (id: string) => orgs.find((o) => o.id === id);
+/** Organisations people start themselves join the demo list once the server loads them. */
+export const registerOrg = (org: Org) => {
+  if (!orgById(org.id)) orgs.push(org);
+  return org;
+};
+export const orgCreateSchema = z
+  .object({
+    name: z.string().trim().min(3).max(60),
+    /** Clubs (student societies, fan clubs) and events; campuses and workplaces prove membership by email. */
+    kind: z.enum(["club", "event"]).default("club"),
+    term: z.string().trim().min(2).max(20).optional(),
+  })
+  .strict();
 
 export const chapterKinds = [
   "education",
@@ -161,6 +174,107 @@ export const emailConfirmSchema = z
     audience: audienceSchema.default("circle"),
   })
   .strict();
+/** A new term (kepengurusan) of an organisation, such as "2025/26". Starting one locks the last. */
+export const termStartSchema = z
+  .object({ label: z.string().trim().min(2).max(20), from: year, to: year.optional() })
+  .strict()
+  .refine((t) => t.to === undefined || t.to >= t.from, "TERM_ENDS_BEFORE_START");
+/** Handing an organisation to its next admin: no shared password, and the outgoing one keeps a chapter. */
+export const handoverSchema = z
+  .object({
+    handle: z.string().trim().min(1).max(40),
+    role: z.string().trim().min(2).max(60).default("Admin"),
+  })
+  .strict();
+export interface Term {
+  id: string;
+  orgId: string;
+  label: string;
+  from: number;
+  to?: number | undefined;
+  /** A past term: readable, closed to changes, still on its people's pages. */
+  locked: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+/**
+ * A term's room. The state on top (schedule, decisions, deadlines) is for whoever doesn't follow
+ * the conversation; announcements come from admins; members talk underneath.
+ */
+export const roomStateSchema = z
+  .object({
+    kind: z.enum(["schedule", "decision", "deadline"]),
+    text: z.string().trim().min(2).max(200),
+    when: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+  })
+  .strict();
+export const roomPostSchema = z
+  .object({
+    kind: z.enum(["announcement", "message"]).default("message"),
+    text: z.string().trim().min(1).max(1000),
+  })
+  .strict();
+export interface RoomStateItem {
+  id: string;
+  kind: "schedule" | "decision" | "deadline";
+  text: string;
+  when?: string | undefined;
+  by: string;
+  at: string;
+}
+export interface RoomPost {
+  id: string;
+  termId: string;
+  userId: string;
+  kind: "announcement" | "message";
+  text: string;
+  createdAt: string;
+}
+/** Open recruitment: an organisation asks for people for its term, by division. */
+export const oprecCreateSchema = z
+  .object({
+    title: z.string().trim().min(3).max(80),
+    roles: z.array(z.string().trim().min(2).max(40)).min(1).max(8),
+    questions: z.array(z.string().trim().min(3).max(160)).max(5).default([]),
+    closes: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  })
+  .strict()
+  .refine(
+    (o) => new Set(o.roles.map((r) => r.toLowerCase())).size === o.roles.length,
+    "ROLE_TWICE",
+  );
+export const oprecApplySchema = z
+  .object({
+    role: z.string().trim().min(2).max(40),
+    answers: z.array(z.string().trim().max(1000)).max(5).default([]),
+  })
+  .strict();
+export const oprecDecideSchema = z.object({ accept: z.boolean() }).strict();
+export interface Oprec {
+  id: string;
+  orgId: string;
+  termId: string;
+  title: string;
+  roles: string[];
+  questions: string[];
+  closes: string;
+  open: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+export interface OprecApplication {
+  id: string;
+  oprecId: string;
+  userId: string;
+  role: string;
+  answers: string[];
+  status: "applied" | "accepted" | "declined";
+  createdAt: string;
+  decidedAt?: string | undefined;
+}
 export const inviteCreateSchema = z
   .object({
     orgId: z.string().max(40),

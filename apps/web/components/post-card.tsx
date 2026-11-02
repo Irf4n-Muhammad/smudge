@@ -396,6 +396,7 @@ export function PostCard({
         {takesAnswers && (
           <FriendAnswers
             postId={post.id}
+            title={post.metadata.title}
             version={answered}
             follow={
               post.ownerId !== boot.actor.userId && !boot.following.includes(post.ownerId)

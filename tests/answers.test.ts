@@ -96,18 +96,18 @@ test("a tier list keeps where each item went, and friends see it to compare", as
   const { social, quiz, answer } = await setup();
   social.follow({ userId: "dian" }, "budi");
   const placed = [
-    { item: "Seblak", tier: "S" },
-    { item: "Bakso", tier: "C" },
+    { item: "Spicy ramen", tier: "S" },
+    { item: "Smash burger", tier: "C" },
   ];
-  answer("budi", { pick: "Seblak", placed });
+  answer("budi", { pick: "Spicy ramen", placed });
   const view = social.answers({ userId: "dian" }, quiz.id);
   assert.deepEqual(view.friends[0]?.placed, placed);
   // One place per item; an empty ranking is not an answer.
   assert.throws(() =>
     answer("dian", {
       placed: [
-        { item: "Seblak", tier: "S" },
-        { item: "Seblak", tier: "A" },
+        { item: "Spicy ramen", tier: "S" },
+        { item: "Spicy ramen", tier: "A" },
       ],
     }),
   );

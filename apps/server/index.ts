@@ -28,9 +28,12 @@ import {
 } from "../../packages/contracts/src/profile.js";
 import { seedProfiles, seedDaniPage, seedInesPosts, profileTemplates } from "./seed-profiles.js";
 import { IdentityService } from "../../packages/core/src/identity.js";
+import { OrgService } from "../../packages/core/src/orgs.js";
+import { OprecService } from "../../packages/core/src/oprec.js";
+import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
-import { seedIdentity } from "./seed-identity.js";
+import { seedIdentity, seedOrgRooms, seedOrgCompany, seedOrgTerms } from "./seed-identity.js";
 import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
@@ -94,6 +97,9 @@ process.on("exit", () => {
   } catch {}
 });
 const store = await Store.open(resolve(dataDir, "forma.sqlite"));
+// Opens of public posts and organisation pages, counted per day with no visitor id.
+const opens = new OpenCounter(store);
+setInterval(() => opens.flush(), 60_000).unref();
 const service = new SocialService(store);
 seedSharedAssets(service);
 if (config.demoContent) {
@@ -113,6 +119,8 @@ const identity = new IdentityService(
   clock,
   config.mail.provider === "inbox",
 );
+const orgService = new OrgService(service, identity, clock);
+const oprecs = new OprecService(service, identity, orgService, clock);
 const accounts = new AccountService(
   service,
   identity,
@@ -165,6 +173,9 @@ setInterval(() => digest.run(), 5 * 60_000).unref();
 const profiles = new ProfileService(service);
 if (config.demoContent) {
   seedIdentity(identity, service);
+  seedOrgTerms(service);
+  seedOrgRooms(service);
+  seedOrgCompany(service);
   seedProfiles(profiles);
   seedSmudge(service);
   seedFillFormat(service);
@@ -542,6 +553,77 @@ sideRoutes(
   config.publicUrl.origin,
 );
 identityRoutes(api, identity);
+// Organisations: terms, handover and the admin's view. The public face is under /api/public.
+const orgId = (value: unknown) => z.string().max(40).parse(value);
+api.post("/api/orgs", rateLimit({ windowMs: 60 * 60_000, max: 10 }), (req, res) =>
+  res.json(orgService.createOrg(actor(res), req.body)),
+);
+// A term's room: members only; a locked term is read only.
+const roomLimit = rateLimit({ windowMs: 60_000, max: 30 });
+api.get("/api/orgs/:id/rooms", (req, res) =>
+  res.json(orgService.rooms(actor(res), orgId(req.params.id))),
+);
+api.get("/api/orgs/:id/rooms/:term", (req, res) =>
+  res.json(orgService.room(actor(res), orgId(req.params.id), orgId(req.params.term))),
+);
+api.post("/api/orgs/:id/rooms/:term/posts", roomLimit, (req, res) =>
+  res.json(orgService.post(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.post("/api/orgs/:id/rooms/:term/state", roomLimit, (req, res) =>
+  res.json(orgService.setState(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.delete("/api/orgs/:id/rooms/:term/state/:item", (req, res) =>
+  res.json(
+    orgService.removeState(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      orgId(req.params.item),
+    ),
+  ),
+);
+// Open recruitment: apply with your profile; accepted means a chapter from the organisation.
+api.post("/api/orgs/:id/oprec", (req, res) =>
+  res.json(oprecs.create(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/oprec/:oprec/close", (req, res) =>
+  res.json(oprecs.close(actor(res), orgId(req.params.id), orgId(req.params.oprec))),
+);
+api.post("/api/orgs/:id/oprec/:oprec/apply", roomLimit, (req, res) =>
+  res.json(oprecs.apply(actor(res), orgId(req.params.id), orgId(req.params.oprec), req.body)),
+);
+api.get("/api/orgs/:id/oprec/:oprec/mine", (req, res) =>
+  res.json(oprecs.mine(actor(res), orgId(req.params.id), orgId(req.params.oprec))),
+);
+api.get("/api/orgs/:id/oprec/:oprec/applications", (req, res) =>
+  res.json(oprecs.list(actor(res), orgId(req.params.id), orgId(req.params.oprec))),
+);
+api.post("/api/orgs/:id/oprec/:oprec/applications/:app/decide", (req, res) =>
+  res.json(
+    oprecs.decide(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.oprec),
+      orgId(req.params.app),
+      req.body,
+    ),
+  ),
+);
+api.post("/api/orgs/:id/join-link", (req, res) =>
+  res.json(orgService.joinLink(actor(res), orgId(req.params.id))),
+);
+api.get("/api/orgs/:id/manage", (req, res) =>
+  res.json(orgService.manage(actor(res), orgId(req.params.id))),
+);
+api.post("/api/orgs/:id/terms", (req, res) =>
+  res.json(orgService.startTerm(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/terms/:term/lock", (req, res) =>
+  res.json(orgService.lockTerm(actor(res), orgId(req.params.id), orgId(req.params.term))),
+);
+api.post("/api/orgs/:id/handover", (req, res) =>
+  res.json(orgService.handover(actor(res), orgId(req.params.id), req.body)),
+);
 themeRoutes(api, studio, rateLimit({ windowMs: 60 * 60_000, max: 20 }));
 communityRoutes(api, community, messages, privacy, accounts, clearSession, authLimit);
 // Google sign-in. The state and PKCE verifier live in a short-lived cookie scoped to the
@@ -890,9 +972,45 @@ api.get("/api/public/sides/:id", guestLimit, (req, res) => {
 api.get("/api/public/sides/:id/home", guestLimit, (req, res) =>
   res.json(sharing.side(z.string().max(40).parse(req.params.id))),
 );
-api.get("/api/public/posts/:id", guestLimit, (req, res) =>
-  res.json(sharing.post(String(req.params.id))),
+api.get("/api/public/orgs/:id", guestLimit, (req, res) => {
+  const page = orgService.publicPage(z.string().max(40).parse(req.params.id));
+  opens.count("org", page.id);
+  res.json(page);
+});
+api.get("/api/public/orgs/:id/oprec", guestLimit, (req, res) =>
+  res.json({ oprec: oprecs.current(z.string().max(40).parse(req.params.id)) }),
 );
+api.get("/api/public/orgs/:id/join/:code", guestLimit, (req, res) =>
+  res.json(
+    orgService.joinPreview(
+      z.string().max(40).parse(req.params.id),
+      z.string().max(12).parse(req.params.code),
+    ),
+  ),
+);
+api.get("/api/public/posts/:id", guestLimit, (req, res) => {
+  const post = sharing.post(String(req.params.id));
+  opens.count("post", post.id);
+  res.json(post);
+});
+// The trial's numbers, for moderators: counts only, never who.
+api.get("/api/trial", (req, res) => {
+  if (!isAdmin(actor(res).userId)) throw new AppError("FORBIDDEN", 403);
+  const ids = (v: unknown) =>
+    z
+      .string()
+      .max(400)
+      .optional()
+      .parse(v)
+      ?.split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .slice(0, 10) ?? [];
+  res.json({
+    posts: ids(req.query.post).map((id) => ({ id, ...postTrial(store, opens, id) })),
+    orgs: ids(req.query.org).map((id) => ({ id, ...orgTrial(store, opens, id) })),
+  });
+});
 api.get("/api/public/posts/:id/cover", guestLimit, (req, res) => {
   const asset = sharing.cover(String(req.params.id));
   res.type(asset.mime).send(Buffer.from(asset.base64, "base64"));
@@ -1363,6 +1481,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const)
   process.on(signal, () => {
     apiServer.close();
     runtimeServer.close();
+    opens.flush();
     store.close();
     process.exit(0);
   });

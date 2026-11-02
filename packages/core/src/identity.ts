@@ -345,8 +345,18 @@ export class IdentityService {
     });
   }
 
+  /** Who runs an organisation now: a handover replaces the list it started with. */
+  orgAdmins(orgId: string) {
+    const org = orgById(orgId);
+    if (!org) throw new AppError("NOT_FOUND", 404);
+    return this.store.get<{ admins: string[] }>("org-admins", orgId)?.admins ?? org.admins;
+  }
   adminOrgs(userId: string) {
-    return orgs.filter((o) => o.admins.includes(userId));
+    return orgs.filter((o) => this.orgAdmins(o.id).includes(userId));
+  }
+  /** An organisation hands someone a chapter directly (handover, terms), as an invite would. */
+  grantChapter(chapter: Omit<Chapter, "id" | "createdAt">) {
+    return this.addChapter(chapter);
   }
   createInvite(actor: Actor, input: unknown) {
     const userId = this.social.actor(actor);
