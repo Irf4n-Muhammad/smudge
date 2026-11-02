@@ -301,6 +301,7 @@ export class OrgService {
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const view = (p: RoomPost) => ({ ...p, author: who(p.userId) });
     const state = this.store.get<{ items: RoomStateItem[] }>("room-state", termId)?.items ?? [];
+    this.markSeen(userId, termId);
     return {
       term: { id: term.id, label: term.label, locked: term.locked },
       admin,
@@ -316,6 +317,18 @@ export class OrgService {
         .slice(-100)
         .map(view),
     };
+  }
+  /**
+   * Which days someone opened a room, so the trial can tell readers who come back from people
+   * who looked once. Written at most once a day per person.
+   */
+  private markSeen(userId: string, termId: string) {
+    const key = `${termId}:${userId}`;
+    const today = this.now().toISOString().slice(0, 10);
+    const seen = this.store.get<{ days: string[] }>("room-seen", key);
+    if (seen?.days.includes(today)) return;
+    const days = [...(seen?.days ?? []), today].slice(-60);
+    this.store.transaction(() => this.store.put("room-seen", key, { days }));
   }
   private openRoom(actor: Actor, orgId: string, termId: string) {
     const userId = this.social.actor(actor);

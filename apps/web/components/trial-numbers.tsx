@@ -20,6 +20,12 @@ interface Numbers {
     opensByDay: ByDay;
     joined: number;
     joinedByDay: ByDay;
+    applied: number;
+    accepted: number;
+    appliedNewAccounts: number;
+    roomReaders: number;
+    roomReturning: number;
+    roomTalkers: number;
     newAccounts: number;
     cameBack: number;
   }[];
@@ -135,6 +141,27 @@ export function TrialNumbers() {
             <dd>
               {o.cameBack}
               {pct(o.cameBack, o.joined)}
+            </dd>
+            <dt>Applied to the oprec</dt>
+            <dd>{o.applied}</dd>
+            <dt>Made an account to apply</dt>
+            <dd>
+              {o.appliedNewAccounts}
+              {pct(o.appliedNewAccounts, o.applied)}
+            </dd>
+            <dt>Accepted</dt>
+            <dd>{o.accepted}</dd>
+            <dt>Opened a room</dt>
+            <dd>{o.roomReaders}</dd>
+            <dt>Opened a room on 2+ days</dt>
+            <dd>
+              {o.roomReturning}
+              {pct(o.roomReturning, o.roomReaders)}
+            </dd>
+            <dt>Said something in a room</dt>
+            <dd>
+              {o.roomTalkers}
+              {pct(o.roomTalkers, o.roomReaders)}
             </dd>
           </dl>
           <p className="org-hint">Joined by day: {days(o.joinedByDay)}</p>

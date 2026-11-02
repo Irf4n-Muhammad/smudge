@@ -66,4 +66,29 @@ test("the trial counts opens, plays, sign-ups, returns and own versions, without
   assert.equal(org.cameBack, 1);
   assert.deepEqual(org.joinedByDay, { "2026-11-03": 1 });
   assert.throws(() => orgTrial(store, opens, "nowhere"));
+
+  // Oprec and room numbers.
+  store.transaction(() => {
+    store.put("term", "ts-1", { id: "ts-1", orgId: "teater-senja" });
+    store.put("oprec", "op-1", { id: "op-1", orgId: "teater-senja" });
+    store.put("oprec-application", "a1", {
+      oprecId: "op-1",
+      userId: "rani",
+      status: "accepted",
+      createdAt: "2026-11-03T08:30:00Z",
+    });
+    store.put("oprec-application", "a2", {
+      oprecId: "op-1",
+      userId: "leo",
+      status: "applied",
+      createdAt: "2026-11-03T09:30:00Z",
+    });
+    store.put("room-seen", "ts-1:rani", { days: ["2026-11-03", "2026-11-05"] });
+    store.put("room-seen", "ts-1:leo", { days: ["2026-11-03"] });
+    store.put("room-seen", "other-term:leo", { days: ["2026-11-04"] });
+    store.put("room-post", "p1", { termId: "ts-1", userId: "rani" });
+  });
+  const more = orgTrial(store, opens, "teater-senja");
+  assert.deepEqual([more.applied, more.accepted, more.appliedNewAccounts], [2, 1, 1]);
+  assert.deepEqual([more.roomReaders, more.roomReturning, more.roomTalkers], [2, 1, 1]);
 });

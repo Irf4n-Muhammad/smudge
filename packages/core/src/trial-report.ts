@@ -104,6 +104,14 @@ export function postTrial(store: Store, counter: OpenCounter, postId: string): P
 }
 
 export interface OrgTrial {
+  /** Open recruitment: applied, accepted, and applicants who made an account to apply. */
+  applied: number;
+  accepted: number;
+  appliedNewAccounts: number;
+  /** Rooms: people who opened one, opened one on two days or more, and said something. */
+  roomReaders: number;
+  roomReturning: number;
+  roomTalkers: number;
   opens: number;
   opensByDay: Record<string, number>;
   joined: number;
@@ -129,7 +137,50 @@ export function orgTrial(store: Store, counter: OpenCounter, orgId: string): Org
   const joinedByDay: Record<string, number> = {};
   for (const at of first.values()) joinedByDay[day(at)] = (joinedByDay[day(at)] ?? 0) + 1;
   const opensByDay = counter.opens("org", orgId);
+  const oprecIds = new Set(
+    store
+      .all<{ id: string; orgId: string }>("oprec")
+      .filter((o) => o.orgId === orgId)
+      .map((o) => o.id),
+  );
+  const applications = store
+    .all<{
+      oprecId: string;
+      userId: string;
+      status: string;
+      createdAt: string;
+    }>("oprec-application")
+    .filter((a) => oprecIds.has(a.oprecId));
+  const termIds = new Set(
+    store
+      .all<{ id: string; orgId: string }>("term")
+      .filter((t) => t.orgId === orgId)
+      .map((t) => t.id),
+  );
+  const daysByUser = new Map<string, Set<string>>();
+  for (const key of store.ids("room-seen")) {
+    const [termId, userId] = key.split(":") as [string, string];
+    if (!termIds.has(termId)) continue;
+    const days = daysByUser.get(userId) ?? new Set<string>();
+    for (const d of store.get<{ days: string[] }>("room-seen", key)!.days) days.add(d);
+    daysByUser.set(userId, days);
+  }
+  const talkers = new Set(
+    store
+      .all<{ termId: string; userId: string }>("room-post")
+      .filter((p) => termIds.has(p.termId))
+      .map((p) => p.userId),
+  );
   return {
+    applied: new Set(applications.map((a) => a.userId)).size,
+    accepted: new Set(applications.filter((a) => a.status === "accepted").map((a) => a.userId))
+      .size,
+    appliedNewAccounts: applications.filter((a) =>
+      newAccount(store, a.userId, new Date(Date.parse(a.createdAt) - 86_400_000).toISOString()),
+    ).length,
+    roomReaders: daysByUser.size,
+    roomReturning: [...daysByUser.values()].filter((d) => d.size >= 2).length,
+    roomTalkers: talkers.size,
     opens: Object.values(opensByDay).reduce((n, x) => n + x, 0),
     opensByDay,
     joined: first.size,

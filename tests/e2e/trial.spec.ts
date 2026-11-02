@@ -24,9 +24,10 @@ test("the trial page shows a moderator the counts for a post and an organisation
   const post = page.getByRole("region", { name: "Post Street food tier list" });
   await expect(post).toContainText("Opened from a link2");
   await expect(post).toContainText("Played to the end, with an account");
-  await expect(page.getByRole("region", { name: "Organisation teater-senja" })).toContainText(
-    "Joined from the link",
-  );
+  const org = page.getByRole("region", { name: "Organisation teater-senja" });
+  await expect(org).toContainText("Joined from the link");
+  await expect(org).toContainText("Applied to the oprec");
+  await expect(org).toContainText("Opened a room on 2+ days");
   await page.screenshot({ path: "test-results/trial.png" });
 
   // Anyone else gets nothing.
