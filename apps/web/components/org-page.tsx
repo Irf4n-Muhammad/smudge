@@ -299,7 +299,7 @@ function JoinPanel({
   );
 }
 
-/** Start an organisation: a himpunan, a UKM or a fanbase. Whoever starts it runs it. */
+/** Start an organisation: a club, a society or a fan club. Whoever starts it runs it. */
 export function CreateOrg() {
   const year = new Date().getFullYear();
   const [name, setName] = useState("");
@@ -347,7 +347,7 @@ export function CreateOrg() {
         <label>
           Kind
           <select value={kind} onChange={(e) => setKind(e.target.value as "club" | "event")}>
-            <option value="club">Club, himpunan, fanbase</option>
+            <option value="club">Club, society or fan club</option>
             <option value="event">Event</option>
           </select>
         </label>

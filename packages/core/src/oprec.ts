@@ -13,7 +13,7 @@ import { AppError } from "./social.js";
 import type { SocialService } from "./social.js";
 
 /**
- * Open recruitment (oprec) for a term. Applicants apply with the profile they already have
+ * Open recruitment for a term (rush week, freshers' fair). Applicants apply with the profile they already have
  * instead of retyping it into a form; the committee sees their proven chapters; whoever is
  * accepted gets a chapter from the organisation, which also opens the term's room to them.
  */

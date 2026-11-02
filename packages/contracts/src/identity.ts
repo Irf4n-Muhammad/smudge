@@ -118,7 +118,7 @@ export const registerOrg = (org: Org) => {
 export const orgCreateSchema = z
   .object({
     name: z.string().trim().min(3).max(60),
-    /** Clubs (himpunan, UKM, fanbase) and events; campuses and workplaces prove membership by email. */
+    /** Clubs (student societies, fan clubs) and events; campuses and workplaces prove membership by email. */
     kind: z.enum(["club", "event"]).default("club"),
     term: z.string().trim().min(2).max(20).optional(),
   })

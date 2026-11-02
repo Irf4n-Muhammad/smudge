@@ -292,7 +292,7 @@ export function IdentityHub({
         />
       )}
       <p className="fineprint">
-        Run a himpunan, UKM or fanbase? <a href="/o/new">Start an organisation</a>
+        Run a club, society or fan club? <a href="/o/new">Start an organisation</a>
       </p>
     </section>
   );

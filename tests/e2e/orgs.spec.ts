@@ -60,25 +60,27 @@ test("an organisation's page: public terms for anyone, and its admin starts a te
   await expect(page.getByRole("region", { name: "Manage" })).toContainText("Run by @leopark");
 });
 
-test("a himpunan starts itself on Smudge and members join from one link", async ({ page }) => {
+test("a student society starts itself on Smudge and members join from one link", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.locator(".post-card").first().waitFor();
   await as(page, "dani");
   await page.goto("/o/new");
-  await page.getByLabel("Name").fill("Himpunan Desain Lembayung");
+  await page.getByLabel("Name").fill("Lembayung Design Society");
   await page.getByLabel("First term").fill("2026/27");
   await page.getByRole("button", { name: "Start" }).click();
-  await expect(page.getByRole("heading", { name: "Himpunan Desain Lembayung" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lembayung Design Society" })).toBeVisible();
   await expect(page.locator(".org-terms li.open")).toHaveText(/2026\/27/);
   const manage = page.getByRole("region", { name: "Manage" });
   await manage.getByRole("button", { name: "Get join link" }).click();
   const link = await manage.getByLabel("Join link").inputValue();
-  expect(link).toMatch(/\/o\/himpunan-desain-lembayung[\w-]*\?join=[A-Z0-9]{10}$/);
+  expect(link).toMatch(/\/o\/lembayung-design-society[\w-]*\?join=[A-Z0-9]{10}$/);
 
   await as(page, "maya");
   await page.goto(link);
   const join = page.getByRole("region", { name: "Join" });
-  await expect(join).toContainText("Member, Himpunan Desain Lembayung 2026/27");
+  await expect(join).toContainText("Member, Lembayung Design Society 2026/27");
   await page.screenshot({ path: "test-results/org-join.png" });
   await join.getByRole("button", { name: "Join" }).click();
   await expect(page.getByRole("status")).toContainText("You joined.");
@@ -93,20 +95,20 @@ test("a term's room: the admin pins what's true now, members talk, outsiders see
   await page.locator(".post-card").first().waitFor();
   await as(page, "ines");
   await page.goto("/o/new");
-  await page.getByLabel("Name").fill("Klub Fotografi Senja");
+  await page.getByLabel("Name").fill("Senja Photography Club");
   await page.getByLabel("First term").fill("2026/27");
   await page.getByRole("button", { name: "Start" }).click();
   const room = page.getByRole("region", { name: "Room" });
   await expect(room).toContainText("Nothing scheduled or decided yet.");
   await room.getByLabel("Add to the top").selectOption("deadline");
-  await room.getByLabel("What").fill("Kumpulin foto lomba");
+  await room.getByLabel("What").fill("Contest photos due");
   await room.getByLabel("When").fill("2026-11-20");
   await room.getByRole("button", { name: "Add" }).click();
-  await expect(room.locator(".org-state")).toContainText("Kumpulin foto lomba");
-  await room.getByLabel("Message").fill("Hunting foto Sabtu jam 6 pagi di Kota Tua.");
+  await expect(room.locator(".org-state")).toContainText("Contest photos due");
+  await room.getByLabel("Message").fill("Photo walk Saturday 6am, Old Town.");
   await room.getByLabel("Announce").check();
   await room.getByRole("button", { name: "Send" }).click();
-  await expect(room.getByRole("region", { name: "Announcements" })).toContainText("Hunting foto");
+  await expect(room.getByRole("region", { name: "Announcements" })).toContainText("Photo walk");
   const manage = page.getByRole("region", { name: "Manage" });
   await manage.getByRole("button", { name: "Get join link" }).click();
   const link = await manage.getByLabel("Join link").inputValue();
@@ -115,7 +117,7 @@ test("a term's room: the admin pins what's true now, members talk, outsiders see
   // Leo hasn't joined: the page is public, the room isn't.
   await as(page, "leo");
   await page.goto(orgPath);
-  await expect(page.getByRole("heading", { name: "Klub Fotografi Senja" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Senja Photography Club" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Room" })).toHaveCount(0);
 
   // Maya joins from the link and the room opens with what she missed on top.
@@ -123,13 +125,13 @@ test("a term's room: the admin pins what's true now, members talk, outsiders see
   await page.goto(link);
   await page.getByRole("region", { name: "Join" }).getByRole("button", { name: "Join" }).click();
   const hers = page.getByRole("region", { name: "Room" });
-  await expect(hers.locator(".org-state")).toContainText("Kumpulin foto lomba");
-  await expect(hers).toContainText("Hunting foto Sabtu");
+  await expect(hers.locator(".org-state")).toContainText("Contest photos due");
+  await expect(hers).toContainText("Photo walk Saturday");
   await expect(hers.getByLabel("Announce", { exact: true })).toHaveCount(0);
-  await hers.getByLabel("Message").fill("Ikut! Bawa lensa 50mm.");
+  await hers.getByLabel("Message").fill("I'm in! Bringing the 50mm.");
   await hers.getByRole("button", { name: "Send" }).click();
   await expect(hers.getByRole("list", { name: "Conversation" })).toContainText(
-    "Ikut! Bawa lensa 50mm.",
+    "I'm in! Bringing the 50mm.",
   );
   await page.screenshot({ path: "test-results/org-room.png", fullPage: true });
 });

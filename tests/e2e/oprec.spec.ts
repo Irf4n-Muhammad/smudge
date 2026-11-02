@@ -11,26 +11,26 @@ const as = (page: Page, userId: string) =>
     userId,
   );
 
-test("an oprec: open it, apply with your profile, share the twibbon, get accepted into the room", async ({
+test("open recruitment: open it, apply with your profile, share the twibbon, get accepted into the room", async ({
   page,
 }) => {
   await page.goto("/");
   await page.locator(".post-card").first().waitFor();
   await as(page, "dani");
   await page.goto("/o/new");
-  await page.getByLabel("Name").fill("BEM Lembayung");
+  await page.getByLabel("Name").fill("Lembayung Student Union");
   await page.getByLabel("First term").fill("2026/27");
   await page.getByRole("button", { name: "Start" }).click();
-  await expect(page.getByRole("heading", { name: "BEM Lembayung" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lembayung Student Union" })).toBeVisible();
   const orgPath = new URL(page.url()).pathname;
 
   const open = page.getByRole("region", { name: "Recruitment" });
-  await open.getByLabel("Title").fill("Oprec Panitia Ospek 2026");
-  await open.getByLabel("Divisions, separated by commas").fill("Acara, Humas, Logistik");
-  await open.getByLabel("Questions, one per line (up to 5)").fill("Kenapa mau ikut?");
+  await open.getByLabel("Title").fill("Orientation Week Crew 2026");
+  await open.getByLabel("Divisions, separated by commas").fill("Events, Comms, Logistics");
+  await open.getByLabel("Questions, one per line (up to 5)").fill("Why do you want to join?");
   await open.getByRole("button", { name: "Open recruitment" }).click();
   await expect(page.getByRole("region", { name: "Open recruitment" })).toContainText(
-    "Oprec Panitia Ospek 2026",
+    "Orientation Week Crew 2026",
   );
 
   // Maya applies with her profile: one choice and one answer, nothing retyped.
@@ -39,10 +39,10 @@ test("an oprec: open it, apply with your profile, share the twibbon, get accepte
   const oprec = page.getByRole("region", { name: "Open recruitment" });
   await expect(oprec).toContainText("0 people applied");
   await page.screenshot({ path: "test-results/oprec-open.png", fullPage: true });
-  await oprec.getByLabel("Division").selectOption("Acara");
-  await oprec.getByLabel("Kenapa mau ikut?").fill("Pernah jadi ketua acara teater.");
+  await oprec.getByLabel("Division").selectOption("Events");
+  await oprec.getByLabel("Why do you want to join?").fill("I ran events for my theatre club.");
   await oprec.getByRole("button", { name: "Apply" }).click();
-  await expect(oprec).toContainText("You applied for Acara");
+  await expect(oprec).toContainText("You applied for Events");
   const download = page.waitForEvent("download");
   await oprec.getByRole("button", { name: "Share to story" }).click();
   await (await download).saveAs("test-results/oprec-story.png");
@@ -53,7 +53,7 @@ test("an oprec: open it, apply with your profile, share the twibbon, get accepte
   await page.goto(orgPath);
   const applicants = page.getByRole("region", { name: "Applicants" });
   await expect(applicants).toContainText("Maya");
-  await expect(applicants).toContainText("Pernah jadi ketua acara teater.");
+  await expect(applicants).toContainText("I ran events for my theatre club.");
   await expect(applicants).toContainText("Member, Teater Senja");
   await page.screenshot({ path: "test-results/oprec-applicants.png", fullPage: true });
   await applicants.getByRole("button", { name: "Accept" }).click();
@@ -63,11 +63,13 @@ test("an oprec: open it, apply with your profile, share the twibbon, get accepte
   await as(page, "maya");
   await page.goto(orgPath);
   await expect(page.getByRole("region", { name: "Open recruitment" })).toContainText(
-    "You’re in: Acara",
+    "You’re in: Events",
   );
   await expect(page.getByRole("region", { name: "Room" })).toBeVisible();
   const chapters = await page.evaluate(() =>
     fetch("/api/users/maya/chapters").then((r) => r.json()),
   );
-  expect(chapters.map((c: { label: string }) => c.label)).toContain("Acara, BEM Lembayung 2026/27");
+  expect(chapters.map((c: { label: string }) => c.label)).toContain(
+    "Events, Lembayung Student Union 2026/27",
+  );
 });

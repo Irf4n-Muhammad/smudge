@@ -121,19 +121,19 @@ test("anyone can start an organisation and run it; a join link hands out member 
   const { orgs, identity } = await setup();
   const org = orgs.createOrg(
     { userId: "dani" },
-    { name: "Himpunan Desain Lembayung", term: "2026/27" },
+    { name: "Lembayung Design Society", term: "2026/27" },
   );
-  assert.match(org.id, /^himpunan-desain-lembayung/);
+  assert.match(org.id, /^lembayung-design-society/);
   assert.equal(org.current, "2026/27");
   assert.deepEqual(identity.orgAdmins(org.id), ["dani"]);
   // The same name again gets its own address instead of taking over the first.
-  const twin = orgs.createOrg({ userId: "leo" }, { name: "Himpunan Desain Lembayung" });
+  const twin = orgs.createOrg({ userId: "leo" }, { name: "Lembayung Design Society" });
   assert.notEqual(twin.id, org.id);
 
   const { code } = orgs.joinLink({ userId: "dani" }, org.id);
   assert.equal(orgs.joinLink({ userId: "dani" }, org.id).code, code, "one link per term");
   rejects(() => orgs.joinLink({ userId: "maya" }, org.id), "ORG_ADMIN_REQUIRED");
-  assert.equal(orgs.joinPreview(org.id, code).label, "Member, Himpunan Desain Lembayung 2026/27");
+  assert.equal(orgs.joinPreview(org.id, code).label, "Member, Lembayung Design Society 2026/27");
   rejects(() => orgs.joinPreview("teater-senja", code), "INVITE_INVALID");
 
   const chapter = identity.redeemInvite({ userId: "maya" }, { code });
@@ -163,32 +163,35 @@ test("a term's room: members only, state and announcements by admins, and a lock
 
   orgs.setState({ userId: "dani" }, org.id, term!.id, {
     kind: "deadline",
-    text: "Kumpulin CV",
+    text: "CVs due",
     when: "2026-11-10",
   });
   rejects(
     () => orgs.setState({ userId: "maya" }, org.id, term!.id, { kind: "decision", text: "Mine" }),
     "ORG_ADMIN_REQUIRED",
   );
-  orgs.post({ userId: "dani" }, org.id, term!.id, { kind: "announcement", text: "Rapat Kamis" });
+  orgs.post({ userId: "dani" }, org.id, term!.id, {
+    kind: "announcement",
+    text: "Meeting Thursday",
+  });
   rejects(
     () => orgs.post({ userId: "maya" }, org.id, term!.id, { kind: "announcement", text: "x" }),
     "ORG_ADMIN_REQUIRED",
   );
-  orgs.post({ userId: "maya" }, org.id, term!.id, { text: "Siap" });
+  orgs.post({ userId: "maya" }, org.id, term!.id, { text: "On it" });
   const room = orgs.room({ userId: "maya" }, org.id, term!.id);
   assert.equal(room.admin, false);
   assert.deepEqual(
     room.state.map((s) => s.text),
-    ["Kumpulin CV"],
+    ["CVs due"],
   );
   assert.deepEqual(
     room.announcements.map((a) => a.text),
-    ["Rapat Kamis"],
+    ["Meeting Thursday"],
   );
   assert.deepEqual(
     room.messages.map((m) => [m.author.id, m.text]),
-    [["maya", "Siap"]],
+    [["maya", "On it"]],
   );
 
   // Next term: Maya's chapter was for 2026/27, so she still reads that room but can't add to it,

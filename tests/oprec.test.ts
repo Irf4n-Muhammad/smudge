@@ -27,9 +27,9 @@ test("an oprec: apply with your profile, the committee decides, accepted means a
   const org = orgs.createOrg({ userId: "dani" }, { name: "Oprec test club", term: "2026/27" });
   const [term] = orgs.terms(org.id);
   const input = {
-    title: "Oprec Panitia Ospek",
-    roles: ["Acara", "Humas"],
-    questions: ["Kenapa mau ikut?"],
+    title: "Orientation Week Crew",
+    roles: ["Events", "Comms"],
+    questions: ["Why do you want to join?"],
     closes: "2026-11-16",
   };
   rejects(() => oprecs.create({ userId: "leo" }, org.id, input), "ORG_ADMIN_REQUIRED");
@@ -44,36 +44,36 @@ test("an oprec: apply with your profile, the committee decides, accepted means a
   identity.grantChapter({
     ownerId: "maya",
     kind: "title",
-    label: "Ketua Panitia, Festival Kampus 2025",
+    label: "Chair, Campus Festival 2025",
     from: 2025,
     method: "invite",
     audience: "public",
   });
   const app = oprecs.apply({ userId: "maya" }, org.id, oprec.id, {
-    role: "acara",
-    answers: ["Pernah pegang acara"],
+    role: "events",
+    answers: ["I ran events before"],
   });
-  assert.equal(app.role, "Acara", "the division is named the organisation's way");
+  assert.equal(app.role, "Events", "the division is named the organisation's way");
   rejects(
-    () => oprecs.apply({ userId: "maya" }, org.id, oprec.id, { role: "Humas" }),
+    () => oprecs.apply({ userId: "maya" }, org.id, oprec.id, { role: "Comms" }),
     "ALREADY_APPLIED",
   );
   rejects(
-    () => oprecs.apply({ userId: "leo" }, org.id, oprec.id, { role: "Dapur" }),
+    () => oprecs.apply({ userId: "leo" }, org.id, oprec.id, { role: "Kitchen" }),
     "ROLE_UNKNOWN",
   );
-  const leo = oprecs.apply({ userId: "leo" }, org.id, oprec.id, { role: "Humas" });
+  const leo = oprecs.apply({ userId: "leo" }, org.id, oprec.id, { role: "Comms" });
   assert.equal(oprecs.current(org.id)?.applicants, 2);
 
   // The committee sees what each applicant has proven, without them filling it in again.
   rejects(() => oprecs.list({ userId: "maya" }, org.id, oprec.id), "ORG_ADMIN_REQUIRED");
   const list = oprecs.list({ userId: "dani" }, org.id, oprec.id);
   assert.deepEqual(list.applications.find((a) => a.userId === "maya")?.proven, [
-    "Ketua Panitia, Festival Kampus 2025",
+    "Chair, Campus Festival 2025",
   ]);
 
   const accepted = oprecs.decide({ userId: "dani" }, org.id, oprec.id, app.id, { accept: true });
-  assert.equal(accepted.chapter?.label, "Acara, Oprec test club 2026/27");
+  assert.equal(accepted.chapter?.label, "Events, Oprec test club 2026/27");
   assert.equal(accepted.chapter?.from, 2026);
   rejects(
     () => oprecs.decide({ userId: "dani" }, org.id, oprec.id, app.id, { accept: false }),
@@ -81,7 +81,7 @@ test("an oprec: apply with your profile, the committee decides, accepted means a
   );
   oprecs.decide({ userId: "dani" }, org.id, oprec.id, leo.id, { accept: false });
   assert.deepEqual(oprecs.mine({ userId: "leo" }, org.id, oprec.id), {
-    role: "Humas",
+    role: "Comms",
     status: "declined",
   });
   // Accepted opens the term's room; declined doesn't.
@@ -94,7 +94,7 @@ test("an oprec: apply with your profile, the committee decides, accepted means a
   oprecs.close({ userId: "dani" }, org.id, oprec.id);
   assert.equal(oprecs.current(org.id), null);
   rejects(
-    () => oprecs.apply({ userId: "ines" }, org.id, oprec.id, { role: "Acara" }),
+    () => oprecs.apply({ userId: "ines" }, org.id, oprec.id, { role: "Events" }),
     "OPREC_CLOSED",
   );
 });

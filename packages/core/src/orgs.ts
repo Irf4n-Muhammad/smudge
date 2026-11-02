@@ -90,7 +90,7 @@ export class OrgService {
     };
   }
   /**
-   * Someone starts their own organisation (a himpunan, a UKM, a fanbase) and runs it. A few per
+   * Someone starts their own organisation (a student society, a fan club) and runs it. A few per
    * person, so names can't be squatted in bulk.
    */
   createOrg(actor: Actor, input: unknown) {
