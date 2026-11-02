@@ -205,3 +205,40 @@ test("a term's room: members only, state and announcements by admins, and a lock
   rejects(() => orgs.post({ userId: "maya" }, org.id, term!.id, { text: "late" }), "TERM_LOCKED");
   assert.equal(orgs.rooms({ userId: "dani" }, org.id).length, 2);
 });
+
+test("the page lists each term's company from public chapters, titles first; the room knows your role", async () => {
+  const { orgs, store } = await setup();
+  const org = orgs.createOrg({ userId: "dani" }, { name: "Company test club", term: "2026/27" });
+  const [term] = orgs.terms(org.id);
+  const chapter = (id: string, ownerId: string, kind: string, label: string, audience: string) =>
+    store.put("chapter", id, {
+      id,
+      ownerId,
+      kind,
+      label,
+      orgId: org.id,
+      from: 2026,
+      to: 2027,
+      method: "invite",
+      audience,
+      createdAt: `2026-11-0${id.length % 9}T00:00:00Z`,
+    });
+  store.transaction(() => {
+    chapter("c1", "maya", "member", "Member, Company test club 2026/27", "public");
+    chapter("c22", "leo", "title", "Director, Company test club 2026/27", "public");
+    chapter("c333", "maya", "title", "Stage manager, Company test club 2026/27", "circle");
+  });
+  const page = orgs.publicPage(org.id);
+  assert.equal(page.since, 2026);
+  // Leo's title comes first; Maya shows as a member, since her stage manager title isn't public.
+  assert.deepEqual(
+    page.company[0]!.people.map((p) => [p.id, p.role]),
+    [
+      ["leo", "Director"],
+      ["maya", "Member"],
+    ],
+  );
+  // In the room, Maya sees her own title whatever its audience; the admin without one is Admin.
+  assert.equal(orgs.room({ userId: "maya" }, org.id, term!.id).you.role, "Stage manager");
+  assert.equal(orgs.room({ userId: "dani" }, org.id, term!.id).you.role, "Admin");
+});

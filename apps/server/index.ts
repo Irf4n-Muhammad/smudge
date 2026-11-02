@@ -33,7 +33,7 @@ import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
-import { seedIdentity, seedOrgRooms, seedOrgTerms } from "./seed-identity.js";
+import { seedIdentity, seedOrgRooms, seedOrgCompany, seedOrgTerms } from "./seed-identity.js";
 import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
@@ -175,6 +175,7 @@ if (config.demoContent) {
   seedIdentity(identity, service);
   seedOrgTerms(service);
   seedOrgRooms(service);
+  seedOrgCompany(service);
   seedProfiles(profiles);
   seedSmudge(service);
   seedFillFormat(service);

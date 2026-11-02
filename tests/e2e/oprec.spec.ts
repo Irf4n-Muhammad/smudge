@@ -24,6 +24,7 @@ test("open recruitment: open it, apply with your profile, share the twibbon, get
   await expect(page.getByRole("heading", { name: "Lembayung Student Union" })).toBeVisible();
   const orgPath = new URL(page.url()).pathname;
 
+  await page.getByRole("button", { name: "Edit page" }).click();
   const open = page.getByRole("region", { name: "Recruitment" });
   await open.getByLabel("Title").fill("Orientation Week Crew 2026");
   await open.getByLabel("Divisions, separated by commas").fill("Events, Comms, Logistics");
@@ -46,11 +47,12 @@ test("open recruitment: open it, apply with your profile, share the twibbon, get
   const download = page.waitForEvent("download");
   await oprec.getByRole("button", { name: "Share to story" }).click();
   await (await download).saveAs("test-results/oprec-story.png");
-  await expect(page.getByRole("region", { name: "Room" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Backstage" })).toHaveCount(0);
 
   // The committee reads her proven chapters and accepts.
   await as(page, "dani");
   await page.goto(orgPath);
+  await page.getByRole("button", { name: "Edit page" }).click();
   const applicants = page.getByRole("region", { name: "Applicants" });
   await expect(applicants).toContainText("Maya");
   await expect(applicants).toContainText("I ran events for my theatre club.");
@@ -65,6 +67,7 @@ test("open recruitment: open it, apply with your profile, share the twibbon, get
   await expect(page.getByRole("region", { name: "Open recruitment" })).toContainText(
     "You’re in: Events",
   );
+  await page.getByRole("tab", { name: "Backstage" }).click();
   await expect(page.getByRole("region", { name: "Room" })).toBeVisible();
   const chapters = await page.evaluate(() =>
     fetch("/api/users/maya/chapters").then((r) => r.json()),

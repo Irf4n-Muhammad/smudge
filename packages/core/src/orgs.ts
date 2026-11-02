@@ -60,16 +60,51 @@ export class OrgService {
       .all<Chapter>("chapter")
       .filter((c) => c.orgId === orgId && (c.kind === "member" || c.kind === "title"));
   }
-  /** What anyone may see: the organisation, its terms, and how many people it has held. */
+  /**
+   * Who the organisation placed in a term, by the chapters that cover it, with the role their
+   * chapter names ("Director, Teater Senja 2025/26" is a director). Titles come before members.
+   */
+  private placed(term: Term, only?: (c: Chapter) => boolean) {
+    const byPerson = new Map<string, Chapter>();
+    for (const c of this.members(term.orgId))
+      if (covers(c, term) && (!only || only(c))) {
+        const held = byPerson.get(c.ownerId);
+        if (!held || (held.kind === "member" && c.kind === "title")) byPerson.set(c.ownerId, c);
+      }
+    return [...byPerson.values()].sort(
+      (a, b) =>
+        Number(b.kind === "title") - Number(a.kind === "title") ||
+        a.createdAt.localeCompare(b.createdAt),
+    );
+  }
+  /**
+   * What anyone may see: the organisation, its terms, how many people it has held, and each
+   * term's company as far as those people made their chapter public.
+   */
   publicPage(orgId: string) {
     const org = this.org(orgId);
     const people = new Set(this.members(orgId).map((c) => c.ownerId));
     const terms = this.terms(orgId);
+    const users = new Map(this.store.all<User>("user").map((u) => [u.id, u]));
+    const since = Math.min(
+      ...terms.map((t) => t.from),
+      ...this.members(orgId).flatMap((c) => (c.from === undefined ? [] : [c.from])),
+    );
     return {
       id: org.id,
       name: org.name,
       kind: org.kind,
       members: people.size,
+      since: Number.isFinite(since) ? since : null,
+      company: terms.slice(0, 12).map((t) => ({
+        termId: t.id,
+        people: this.placed(t, (c) => c.audience === "public")
+          .slice(0, 60)
+          .flatMap((c) => {
+            const u = users.get(c.ownerId);
+            return u ? [{ ...personOf(u), role: roleOf(c.label) }] : [];
+          }),
+      })),
       terms: terms.map(({ id, label, from, to, locked }) => ({ id, label, from, to, locked })),
       current: terms.find((t) => !t.locked)?.label ?? null,
       collections: collections
@@ -269,14 +304,7 @@ export class OrgService {
   private inRoom(userId: string, term: Term) {
     if (this.identity.orgAdmins(term.orgId).includes(userId) || term.createdBy === userId)
       return true;
-    return this.members(term.orgId).some(
-      (c) =>
-        c.ownerId === userId &&
-        (c.from === undefined
-          ? !term.locked
-          : c.from <= term.from &&
-            (c.to === "now" || (c.to === undefined ? c.from === term.from : c.to >= term.from))),
-    );
+    return this.members(term.orgId).some((c) => c.ownerId === userId && covers(c, term));
   }
   /** The rooms this person can open, newest term first. */
   rooms(actor: Actor, orgId: string) {
@@ -302,8 +330,18 @@ export class OrgService {
     const view = (p: RoomPost) => ({ ...p, author: who(p.userId) });
     const state = this.store.get<{ items: RoomStateItem[] }>("room-state", termId)?.items ?? [];
     this.markSeen(userId, termId);
+    const mine = this.placed(term, (c) => c.ownerId === userId)[0];
+    const me = users.get(userId);
     return {
       term: { id: term.id, label: term.label, locked: term.locked },
+      you: {
+        ...(me ? personOf(me) : { id: userId, name: "You", handle: "", initials: "", color: "" }),
+        role: mine ? roleOf(mine.label) : admin ? "Admin" : null,
+      },
+      people: new Set([
+        ...this.placed(term).map((c) => c.ownerId),
+        ...this.identity.orgAdmins(orgId),
+      ]).size,
       admin,
       canPost: !term.locked,
       state: [...state].sort((a, b) => (a.when ?? "9999").localeCompare(b.when ?? "9999")),
@@ -380,4 +418,26 @@ export class OrgService {
     this.store.transaction(() => this.store.put("room-post", post.id, post));
     return post;
   }
+}
+
+/** A chapter covers a term when its years do; one with no years counts for the open term only. */
+function covers(c: Chapter, term: Term) {
+  return c.from === undefined
+    ? !term.locked
+    : c.from <= term.from &&
+        (c.to === "now" || (c.to === undefined ? c.from === term.from : c.to >= term.from));
+}
+/** "Stage manager, Teater Senja 2025/26" → "Stage manager". */
+function roleOf(label: string) {
+  return label.split(",")[0]!.trim();
+}
+function personOf(u: User) {
+  return {
+    id: u.id,
+    name: u.name,
+    handle: u.handle,
+    initials: u.initials,
+    color: u.color,
+    ...(u.avatarAssetId ? { avatarAssetId: u.avatarAssetId } : {}),
+  };
 }

@@ -225,3 +225,30 @@ export function seedOrgRooms(social: SocialService) {
     store.put("system", "seed-org-rooms-v1", { at: ago(0) });
   });
 }
+
+/** Teater Senja's company this term, public on their pages, so its page has a cast list. */
+export function seedOrgCompany(social: SocialService) {
+  const store = social.store;
+  if (store.get("system", "seed-org-company-v1") || !store.get("term", "teater-senja-2025")) return;
+  const at = new Date().toISOString();
+  store.transaction(() => {
+    for (const [ownerId, role] of [
+      ["maya", "Director"],
+      ["dani", "Stage manager"],
+      ["leo", "Ensemble"],
+    ] as const)
+      store.put("chapter", `seed-ts-title-${ownerId}`, {
+        id: `seed-ts-title-${ownerId}`,
+        ownerId,
+        kind: "title",
+        label: `${role}, Teater Senja 2025/26`,
+        orgId: "teater-senja",
+        from: 2025,
+        to: 2026,
+        method: "invite",
+        audience: "public",
+        createdAt: at,
+      });
+    store.put("system", "seed-org-company-v1", { at });
+  });
+}
