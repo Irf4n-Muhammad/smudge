@@ -106,6 +106,8 @@ test("a term's room as Backstage: the admin keeps the call sheet, members talk f
   await page.getByRole("button", { name: "Start" }).click();
   await page.getByRole("tab", { name: "Backstage" }).click();
   const room = page.getByRole("region", { name: "Room" });
+  await expect(room).toContainText("Nothing coming up yet.");
+  await room.getByRole("button", { name: "Call sheet", exact: true }).click();
   await expect(room).toContainText("Nothing scheduled or decided yet.");
   await room.getByRole("button", { name: "+ Add to the call sheet" }).click();
   await room.getByLabel("Kind").selectOption("deadline");
@@ -143,6 +145,8 @@ test("a term's room as Backstage: the admin keeps the call sheet, members talk f
   await expect(page.getByRole("status")).toContainText("You joined.");
   await page.getByRole("tab", { name: "Backstage" }).click();
   const hers = page.getByRole("region", { name: "Room" });
+  await expect(hers.locator(".op-star")).toContainText("Contest photos due");
+  await hers.getByRole("button", { name: "Call sheet", exact: true }).click();
   await expect(hers.locator(".org-state")).toContainText("Contest photos due");
   await expect(hers).toContainText("Photo walk Saturday");
   await hers.locator(".op-talk-line").click();
