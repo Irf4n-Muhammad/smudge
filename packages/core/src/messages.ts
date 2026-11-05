@@ -180,6 +180,38 @@ export class MessageService {
     });
     return this.groupView(me, group);
   }
+  /**
+   * A group that grows out of something people already shared, such as a finished term: it
+   * starts with whoever opened it, and the others join by choice. The caller checks who may.
+   */
+  openCircle(ownerId: string, name: string) {
+    const group: Group = {
+      id: randomUUID(),
+      name: name.trim().slice(0, 60),
+      ownerId,
+      members: [ownerId],
+      createdAt: this.now().toISOString(),
+    };
+    this.store.transaction(() => {
+      this.store.put("group", group.id, group);
+      this.store.put("group-read", `${group.id}:${ownerId}`, { at: group.createdAt });
+    });
+    return group.id;
+  }
+  /** Joining a circle someone opened, for a person the caller already let in. */
+  joinCircle(groupId: string, userId: string) {
+    const group = this.store.get<Group>("group", groupId);
+    if (!group) throw new AppError("NOT_FOUND", 404);
+    if (group.members.includes(userId)) return;
+    if (group.members.length >= maxMembers) throw new AppError("GROUP_FULL", 409);
+    this.store.transaction(() =>
+      this.store.put("group", groupId, { ...group, members: [...group.members, userId] }),
+    );
+  }
+  /** Who is in a circle now, or null once its last member left. */
+  circleMembers(groupId: string) {
+    return this.store.get<Group>("group", groupId)?.members ?? null;
+  }
   /** People you may add to a group: the ones you could message directly. */
   groupCandidates(actor: Actor) {
     const me = this.social.actor(actor);

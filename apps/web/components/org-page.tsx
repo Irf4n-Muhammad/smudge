@@ -100,7 +100,13 @@ interface RoomView {
   canPost: boolean;
   state: StateItem[];
   announcements: RoomPostView[];
+  talk: boolean;
   messages: RoomPostView[];
+  /** Only for the people of a finished term: their circle, or a name to start one. */
+  circle:
+    | { name: null }
+    | { name: string; groupId: string; people: number; joined: boolean; startedBy: string }
+    | null;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -625,18 +631,34 @@ function Backstage({
           )}
         </div>
       )}
-      <button className="op-talk-line" onClick={() => setTalk(true)}>
-        <span className="op-talk-who">{last ? last.author.name[0] : "…"}</span>
-        <span className="op-talk-text">
-          <b>Talk</b>
-          <span>
-            {last
-              ? `${firstName(last.author.name)}: ${last.text}`
-              : "No one has said anything yet."}
+      {room.talk ? (
+        <button className="op-talk-line" onClick={() => setTalk(true)}>
+          <span className="op-talk-who">{last ? last.author.name[0] : "…"}</span>
+          <span className="op-talk-text">
+            <b>Talk</b>
+            <span>
+              {last
+                ? `${firstName(last.author.name)}: ${last.text}`
+                : "No one has said anything yet."}
+            </span>
           </span>
-        </span>
-        {room.messages.length > 0 && <u>{room.messages.length}</u>}
-      </button>
+          {room.messages.length > 0 && <u>{room.messages.length}</u>}
+        </button>
+      ) : (
+        <p className="op-talk-shut">
+          <Lock size={13} aria-hidden="true" /> The talk stays with the people of {room.term.label}.
+        </p>
+      )}
+      {room.circle && (
+        <AfterTerm
+          org={org}
+          term={room.term}
+          circle={room.circle}
+          base={base}
+          reload={reload}
+          notify={notify}
+        />
+      )}
       {talk && (
         <Talk
           words={words}
@@ -654,6 +676,101 @@ function Backstage({
               );
           }}
         />
+      )}
+    </section>
+  );
+}
+
+/**
+ * A term is over. The organisation moves on to its next committee, but the people who were there
+ * may keep talking as a circle of their own, outside the organisation. Nobody is put in it.
+ */
+function AfterTerm({
+  org,
+  term,
+  circle,
+  base,
+  reload,
+  notify,
+}: {
+  org: OrgView;
+  term: RoomTab;
+  circle: NonNullable<RoomView["circle"]>;
+  base: string;
+  reload: () => Promise<void>;
+  notify: (s: string) => void;
+}) {
+  const [name, setName] = useState(`${org.name} ${term.label}`.slice(0, 60));
+  const [busy, setBusy] = useState(false);
+  const go = async (path: string, body: unknown) => {
+    setBusy(true);
+    try {
+      const { groupId } = await api<{ groupId: string }>(path, body);
+      await reload();
+      return groupId;
+    } catch (e) {
+      notify((e as Error).message);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  };
+  const open = (groupId: string) => `/?group=${encodeURIComponent(groupId)}`;
+  return (
+    <section className="op-after" aria-label="After this term">
+      <small>{term.label} IS OVER</small>
+      {circle.name === null ? (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const id = await go(`${base}/circle`, { name });
+            if (id) notify("Your circle is open. The others can join from here.");
+          }}
+        >
+          <b>Keep talking as a circle?</b>
+          <p>
+            {org.name} moves on to its next committee. You and the others from {term.label} can
+            carry on in a group of your own. The organisation and its next admins won’t see it.
+          </p>
+          <label>
+            <span className="sr-only">Circle name</span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              minLength={2}
+              maxLength={60}
+              required
+            />
+          </label>
+          <button className="op-ink" disabled={busy}>
+            Start the circle
+          </button>
+        </form>
+      ) : (
+        <>
+          <b>{circle.name}</b>
+          <p>
+            {circle.joined
+              ? `Your circle from ${term.label}. ${circle.people} ${circle.people === 1 ? "person" : "people"} in it.`
+              : `${firstName(circle.startedBy)} kept ${term.label} going as a circle. ${circle.people} ${circle.people === 1 ? "person has" : "people have"} joined.`}
+          </p>
+          {circle.joined ? (
+            <a className="op-ink" href={open(circle.groupId)}>
+              Open in Messages
+            </a>
+          ) : (
+            <button
+              className="op-ink"
+              disabled={busy}
+              onClick={async () => {
+                const id = await go(`${base}/circle/join`, {});
+                if (id) window.location.href = open(id);
+              }}
+            >
+              Join the circle
+            </button>
+          )}
+        </>
       )}
     </section>
   );

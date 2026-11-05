@@ -5,6 +5,7 @@ import {
   handoverSchema,
   orgById,
   orgCreateSchema,
+  circleStartSchema,
   orgLookSchema,
   orgs,
   registerOrg,
@@ -25,6 +26,19 @@ import { AppError } from "./social.js";
 import type { SocialService } from "./social.js";
 import type { IdentityService } from "./identity.js";
 
+/** The group chats a finished term can turn into. Wired by the server. */
+export interface Circles {
+  openCircle(ownerId: string, name: string): string;
+  joinCircle(groupId: string, userId: string): void;
+  circleMembers(groupId: string): string[] | null;
+}
+interface TermCircle {
+  groupId: string;
+  name: string;
+  startedBy: string;
+  at: string;
+}
+
 /**
  * Organisations as a place of their own: a public face anyone can open, terms (kepengurusan)
  * where the past ones are locked but stay on their people's pages, and a handover that moves
@@ -32,6 +46,7 @@ import type { IdentityService } from "./identity.js";
  * through `org.read`; nobody else's.
  */
 export class OrgService {
+  circles: Circles | undefined;
   constructor(
     private readonly social: SocialService,
     private readonly identity: IdentityService,
@@ -322,9 +337,24 @@ export class OrgService {
    * years counts for the current term only.
    */
   private inRoom(userId: string, term: Term) {
-    if (this.identity.orgAdmins(term.orgId).includes(userId) || term.createdBy === userId)
-      return true;
-    return this.members(term.orgId).some((c) => c.ownerId === userId && covers(c, term));
+    return this.identity.orgAdmins(term.orgId).includes(userId) || this.wasThere(userId, term);
+  }
+  /** Who was part of a term: whoever ran it and the people placed in it. */
+  private wasThere(userId: string, term: Term) {
+    return (
+      term.createdBy === userId ||
+      this.members(term.orgId).some((c) => c.ownerId === userId && covers(c, term))
+    );
+  }
+  /**
+   * A term's talk belongs to the people who were there. Today's admins run the open term, so
+   * they read its talk; a locked term's talk stays with its own people, never the next committee.
+   */
+  private hearsTalk(userId: string, term: Term) {
+    return (
+      this.wasThere(userId, term) ||
+      (!term.locked && this.identity.orgAdmins(term.orgId).includes(userId))
+    );
   }
   /** The rooms this person can open, newest term first. */
   rooms(actor: Actor, orgId: string) {
@@ -352,6 +382,9 @@ export class OrgService {
     this.markSeen(userId, termId);
     const mine = this.placed(term, (c) => c.ownerId === userId)[0];
     const me = users.get(userId);
+    const talk = this.hearsTalk(userId, term);
+    const circle = this.circleOf(term);
+    const inCircle = circle ? (this.circles?.circleMembers(circle.groupId) ?? []) : [];
     return {
       term: { id: term.id, label: term.label, locked: term.locked },
       you: {
@@ -370,11 +403,58 @@ export class OrgService {
         .slice(-20)
         .reverse()
         .map(view),
-      messages: posts
-        .filter((p) => p.kind === "message")
-        .slice(-100)
-        .map(view),
+      talk,
+      messages: talk
+        ? posts
+            .filter((p) => p.kind === "message")
+            .slice(-100)
+            .map(view)
+        : [],
+      // Once a term is over, the people who were there may keep talking as a circle of their own.
+      circle:
+        term.locked && this.wasThere(userId, term)
+          ? circle
+            ? {
+                name: circle.name,
+                groupId: circle.groupId,
+                people: inCircle.length,
+                joined: inCircle.includes(userId),
+                startedBy: who(circle.startedBy).name,
+              }
+            : { name: null }
+          : null,
     };
+  }
+  private circleOf(term: Term) {
+    const circle = this.store.get<TermCircle>("term-circle", term.id);
+    // A circle whose last member left is gone; the term may start another.
+    return circle && this.circles?.circleMembers(circle.groupId) ? circle : undefined;
+  }
+  /**
+   * A term is over and its people want to keep going: one of them opens a circle, a group chat
+   * of its own outside the organisation. Nobody is added; the others join if they want to.
+   */
+  startCircle(actor: Actor, orgId: string, termId: string, input: unknown) {
+    const userId = this.social.actor(actor);
+    const term = this.term(orgId, termId);
+    if (!term.locked) throw new AppError("TERM_STILL_OPEN", 409);
+    if (!this.wasThere(userId, term)) throw new AppError("NOT_A_MEMBER", 403);
+    if (!this.circles) throw new AppError("CIRCLES_OFF", 503);
+    if (this.circleOf(term)) return this.joinCircle(actor, orgId, termId);
+    const { name } = circleStartSchema.parse(input);
+    const groupId = this.circles.openCircle(userId, name);
+    const circle: TermCircle = { groupId, name, startedBy: userId, at: this.now().toISOString() };
+    this.store.transaction(() => this.store.put("term-circle", term.id, circle));
+    return { groupId };
+  }
+  joinCircle(actor: Actor, orgId: string, termId: string) {
+    const userId = this.social.actor(actor);
+    const term = this.term(orgId, termId);
+    if (!this.wasThere(userId, term)) throw new AppError("NOT_A_MEMBER", 403);
+    const circle = this.circleOf(term);
+    if (!circle || !this.circles) throw new AppError("NOT_FOUND", 404);
+    this.circles.joinCircle(circle.groupId, userId);
+    return { groupId: circle.groupId };
   }
   /**
    * Which days someone opened a room, so the trial can tell readers who come back from people

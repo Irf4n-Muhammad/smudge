@@ -145,6 +145,9 @@ export const orgLookSchema = z
   .strict();
 export type OrgLook = z.infer<typeof orgLookSchema>;
 
+/** A finished term's people keep talking as a circle; they name it. */
+export const circleStartSchema = z.object({ name: z.string().trim().min(2).max(60) }).strict();
+
 export const chapterKinds = [
   "education",
   "work",

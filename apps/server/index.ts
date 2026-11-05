@@ -33,7 +33,13 @@ import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
-import { seedIdentity, seedOrgRooms, seedOrgCompany, seedOrgTerms } from "./seed-identity.js";
+import {
+  seedIdentity,
+  seedOrgRooms,
+  seedOrgCompany,
+  seedOrgPastTerm,
+  seedOrgTerms,
+} from "./seed-identity.js";
 import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
@@ -164,6 +170,7 @@ accounts.erasers.push((userId) => momentDay.erase(userId));
 momentDay.cardFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 const messages = new MessageService(service, community, clock);
+orgService.circles = messages;
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
 if (deliver) startMailWorker(store, deliver);
@@ -176,6 +183,7 @@ if (config.demoContent) {
   seedOrgTerms(service);
   seedOrgRooms(service);
   seedOrgCompany(service);
+  seedOrgPastTerm(service);
   seedProfiles(profiles);
   seedSmudge(service);
   seedFillFormat(service);
@@ -620,6 +628,14 @@ api.post("/api/orgs/:id/terms", (req, res) =>
 );
 api.post("/api/orgs/:id/terms/:term/lock", (req, res) =>
   res.json(orgService.lockTerm(actor(res), orgId(req.params.id), orgId(req.params.term))),
+);
+api.post("/api/orgs/:id/rooms/:term/circle", roomLimit, (req, res) =>
+  res.json(
+    orgService.startCircle(actor(res), orgId(req.params.id), orgId(req.params.term), req.body),
+  ),
+);
+api.post("/api/orgs/:id/rooms/:term/circle/join", (req, res) =>
+  res.json(orgService.joinCircle(actor(res), orgId(req.params.id), orgId(req.params.term))),
 );
 api.put("/api/orgs/:id/look", (req, res) =>
   res.json(orgService.setLook(actor(res), orgId(req.params.id), req.body)),

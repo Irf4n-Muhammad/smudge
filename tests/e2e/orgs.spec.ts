@@ -193,3 +193,30 @@ test("an organisation picks its own look in Edit page, and guests see it", async
   await guest.screenshot({ path: "test-results/org-look-matchday.png" });
   await guestContext.close();
 });
+
+test("a finished term's people keep talking as a circle, and the others join by choice", async ({
+  page,
+}) => {
+  const openPast = async () => {
+    await page.goto("/o/teater-senja");
+    await page.getByRole("tab", { name: "Backstage" }).click();
+    await page.locator(".op-term select").selectOption({ label: "2024/25 · locked" });
+  };
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  await as(page, "maya");
+  await openPast();
+  const after = page.getByRole("region", { name: "After this term" });
+  await expect(after).toContainText("Keep talking as a circle?");
+  await after.getByLabel("Circle name").fill("Closing night crew");
+  await after.getByRole("button", { name: "Start the circle" }).click();
+  await expect(after.getByRole("link", { name: "Open in Messages" })).toBeVisible();
+
+  // Dani was there too: he sees Maya's circle and joins it, landing in Messages.
+  await as(page, "dani");
+  await openPast();
+  await expect(after).toContainText("Maya kept 2024/25 going as a circle");
+  await after.getByRole("button", { name: "Join the circle" }).click();
+  await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
+  await expect(page.getByText("2 people").first()).toBeVisible();
+});

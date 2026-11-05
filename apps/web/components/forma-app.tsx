@@ -107,6 +107,7 @@ export function FormaApp() {
     [resetToken, setResetToken] = useState<string | null>(null),
     [badges, setBadges] = useState({ notifications: 0, messages: 0 }),
     [messageTo, setMessageTo] = useState<string | null>(null),
+    [messageGroup, setMessageGroup] = useState<string | null>(null),
     [more, setMore] = useState(false),
     [feedMenu, setFeedMenu] = useState(false),
     /** Just signed up: a photo and a few people before the first feed. */
@@ -239,6 +240,13 @@ export function FormaApp() {
     // the easy editor.
     const easy = new URLSearchParams(window.location.search).get("postDraft");
     if (easy) setPostEditor({ draftId: easy });
+    // A group opened from elsewhere, such as a finished term's circle, lands in Messages.
+    const group = new URLSearchParams(window.location.search).get("group");
+    if (group) {
+      setMessageGroup(group);
+      setView("messages");
+      window.history.replaceState(null, "", "/");
+    }
   }, [refresh]);
   // Played a shared post as a guest, then came in: once someone is signed in, the answer kept in
   // this browser joins their account.
@@ -841,8 +849,9 @@ export function FormaApp() {
               />
             ) : view === "messages" && boot ? (
               <MessagesPanel
-                key={`${boot.actor.userId}:${messageTo ?? ""}`}
+                key={`${boot.actor.userId}:${messageTo ?? ""}:${messageGroup ?? ""}`}
                 initialUser={messageTo}
+                initialGroup={messageGroup}
                 meId={boot.actor.userId}
                 notify={notify}
                 onRead={refreshBadges}

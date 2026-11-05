@@ -8,6 +8,8 @@ import { SocialService } from "../packages/core/src/social.js";
 import { IdentityService } from "../packages/core/src/identity.js";
 import { OrgService } from "../packages/core/src/orgs.js";
 import { renderMoment } from "../apps/server/moments.js";
+import { CommunityService } from "../packages/core/src/community.js";
+import { MessageService } from "../packages/core/src/messages.js";
 
 const rejects = (fn: () => unknown, code: string) =>
   assert.throws(fn, (e: { code?: string }) => e.code === code);
@@ -25,7 +27,10 @@ async function setup() {
     () => new Date("2026-11-02T10:00:00Z"),
   );
   const orgs = new OrgService(social, identity, () => new Date("2026-11-02T10:00:00Z"));
-  return { store, social, identity, orgs };
+  const community = new CommunityService(social, () => false);
+  const messages = new MessageService(social, community, () => new Date("2026-11-02T10:00:00Z"));
+  orgs.circles = messages;
+  return { store, social, identity, orgs, messages };
 }
 
 test("a new term locks the last one; only the organisation's admin can start or lock terms", async () => {
@@ -273,4 +278,66 @@ test("an organisation picks its own look, colour and words; only its admin can, 
     { look: "matchday", css: "body{}" },
   ])
     assert.throws(() => orgs.setLook({ userId: "maya" }, "teater-senja", bad));
+});
+
+test("a finished term's talk stays with its people, who may keep going as a circle of their own", async () => {
+  const { orgs, identity, messages } = await setup();
+  const org = orgs.createOrg({ userId: "dani" }, { name: "Makrab Committee", term: "2026/27" });
+  const term = orgs.terms(org.id)[0]!;
+  identity.redeemInvite({ userId: "maya" }, orgs.joinLink({ userId: "dani" }, org.id));
+  orgs.post({ userId: "maya" }, org.id, term.id, { text: "See you at the venue" });
+  orgs.post({ userId: "dani" }, org.id, term.id, { kind: "announcement", text: "Thanks all" });
+  // While it's open there's nothing to keep going yet.
+  assert.equal(orgs.room({ userId: "maya" }, org.id, term.id).circle, null);
+  rejects(
+    () => orgs.startCircle({ userId: "maya" }, org.id, term.id, { name: "Makrab crew" }),
+    "TERM_STILL_OPEN",
+  );
+
+  // The term ends and Leo, who was never in it, takes over the organisation.
+  orgs.startTerm({ userId: "dani" }, org.id, { label: "2027/28", from: 2027 });
+  orgs.handover({ userId: "dani" }, org.id, { handle: "leo" });
+  const asLeo = orgs.room({ userId: "leo" }, org.id, term.id);
+  assert.equal(asLeo.talk, false);
+  assert.deepEqual(asLeo.messages, [], "the next committee doesn't read the old talk");
+  assert.deepEqual(
+    asLeo.announcements.map((a) => a.text),
+    ["Thanks all"],
+  );
+  assert.equal(asLeo.circle, null);
+  rejects(
+    () => orgs.startCircle({ userId: "leo" }, org.id, term.id, { name: "Mine" }),
+    "NOT_A_MEMBER",
+  );
+  const asMaya = orgs.room({ userId: "maya" }, org.id, term.id);
+  assert.equal(asMaya.talk, true);
+  assert.deepEqual(asMaya.circle, { name: null });
+
+  // Maya keeps it going; nobody is added, Dani joins by choice, Leo can't.
+  const { groupId } = orgs.startCircle({ userId: "maya" }, org.id, term.id, {
+    name: "Makrab crew",
+  });
+  assert.deepEqual(messages.circleMembers(groupId), ["maya"]);
+  assert.deepEqual(orgs.room({ userId: "dani" }, org.id, term.id).circle, {
+    name: "Makrab crew",
+    groupId,
+    people: 1,
+    joined: false,
+    startedBy: "maya",
+  });
+  orgs.joinCircle({ userId: "dani" }, org.id, term.id);
+  rejects(() => orgs.joinCircle({ userId: "leo" }, org.id, term.id), "NOT_A_MEMBER");
+  assert.deepEqual(messages.circleMembers(groupId), ["maya", "dani"]);
+  // A second start joins the circle that's there instead of making another.
+  assert.equal(
+    orgs.startCircle({ userId: "dani" }, org.id, term.id, { name: "Other" }).groupId,
+    groupId,
+  );
+  // It's an ordinary group chat now, outside the organisation.
+  messages.sendToGroup({ userId: "dani" }, groupId, { text: "Reunion?" });
+  assert.deepEqual(
+    messages.groupThread({ userId: "maya" }, groupId).messages.map((m) => m.text),
+    ["Reunion?"],
+  );
+  rejects(() => messages.groupThread({ userId: "leo" }, groupId), "NOT_FOUND");
 });
