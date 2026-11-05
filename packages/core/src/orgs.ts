@@ -5,13 +5,21 @@ import {
   handoverSchema,
   orgById,
   orgCreateSchema,
+  orgLookSchema,
   orgs,
   registerOrg,
   roomPostSchema,
   roomStateSchema,
   termStartSchema,
 } from "../../contracts/src/identity.js";
-import type { Chapter, Org, RoomPost, RoomStateItem, Term } from "../../contracts/src/identity.js";
+import type {
+  Chapter,
+  Org,
+  OrgLook,
+  RoomPost,
+  RoomStateItem,
+  Term,
+} from "../../contracts/src/identity.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
 import type { SocialService } from "./social.js";
@@ -110,7 +118,19 @@ export class OrgService {
       collections: collections
         .filter((c) => c.orgId === orgId)
         .map((c) => ({ id: c.id, name: c.name, stamps: c.stamps.length })),
+      look: this.look(orgId),
     };
+  }
+  /** The page's look. Until the admin picks one, every organisation starts as a playbill. */
+  look(orgId: string): OrgLook {
+    return this.store.get<OrgLook>("org-look", orgId) ?? { look: "playbill" };
+  }
+  /** The admin picks a look, a colour and the page's own words. Leaving a word out resets it. */
+  setLook(actor: Actor, orgId: string, input: unknown) {
+    this.requireAdmin(actor, orgId);
+    const look = orgLookSchema.parse(input);
+    this.store.transaction(() => this.store.put("org-look", orgId, look));
+    return look;
   }
   /** The admin's side: the same page plus who runs it now. */
   manage(actor: Actor, orgId: string) {

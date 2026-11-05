@@ -1779,7 +1779,7 @@
 .op-hero em {
   display: block;
   font: italic 400 24px var(--op-serif);
-  color: #ffd9a0;
+  color: var(--op-glow, #ffd9a0);
   margin-top: 10px;
 }
 .op-tags {
@@ -1823,7 +1823,7 @@
 .op-ticket-l small {
   font: 700 9px var(--op-mono);
   letter-spacing: 0.14em;
-  color: #8a5a2a;
+  color: var(--op-sub, #8a5a2a);
 }
 .op-ticket-l b {
   display: block;
@@ -1833,12 +1833,12 @@
 .op-ticket-l span {
   display: block;
   font: 500 11.5px var(--ui);
-  color: #6b5a48;
+  color: var(--op-muted, #6b5a48);
   margin-top: 5px;
 }
 .op-ticket-r {
   width: 92px;
-  border-left: 2px dashed #c9b48e;
+  border-left: 2px dashed var(--op-rule, #c9b48e);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1867,7 +1867,7 @@
 .op-ticket-r small {
   font: 700 8.5px var(--op-mono);
   letter-spacing: 0.12em;
-  color: #8a5a2a;
+  color: var(--op-sub, #8a5a2a);
 }
 
 /* open recruitment as an audition notice, the join invite the same paper */
@@ -1911,7 +1911,7 @@
 }
 .op .org-oprec .org-hint,
 .op .org-join p {
-  color: #6b5a48;
+  color: var(--op-muted, #6b5a48);
 }
 .op .org-oprec-roles li {
   background: none;
@@ -1925,7 +1925,7 @@
 .op .org-oprec input,
 .op .org-oprec select {
   background: #fffaf0;
-  border-color: #c9b48e;
+  border-color: var(--op-rule, #c9b48e);
 }
 .op .org-oprec .primary,
 .op .org-join .primary {
@@ -2007,7 +2007,7 @@
 }
 .op-cast em {
   font: italic 400 17px var(--op-serif);
-  color: #ffd9a0;
+  color: var(--op-glow, #ffd9a0);
   text-align: right;
 }
 .op-quiet {
@@ -2028,7 +2028,7 @@
   border: 0;
 }
 .op:has(.op-back) {
-  background: #1a1210;
+  background: var(--op-room, #1a1210);
 }
 .op-back-head {
   padding-top: 64px;
@@ -2136,7 +2136,11 @@
   left: 22px;
   right: 22px;
   height: 12px;
-  background: repeating-linear-gradient(90deg, transparent 0 10px, #1a1210 10px 16px);
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 10px,
+    var(--op-room, #1a1210) 10px 16px
+  );
 }
 .op-sheet-head {
   display: flex;
@@ -2152,10 +2156,10 @@
 .op-sheet-head small {
   font: 700 9.5px var(--op-mono);
   letter-spacing: 0.1em;
-  color: #8a5a2a;
+  color: var(--op-sub, #8a5a2a);
 }
 .op-sheet-empty {
-  color: #6b5a48;
+  color: var(--op-muted, #6b5a48);
   font-size: 13px;
   padding: 12px 0 6px;
   margin: 0;
@@ -2166,7 +2170,7 @@
   gap: 8px;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px dotted #c9b48e;
+  border-bottom: 1px dotted var(--op-rule, #c9b48e);
   background: none;
   border-radius: 0;
 }
@@ -2223,7 +2227,7 @@
 .op-add select {
   font: 14px var(--ui);
   padding: 8px 10px;
-  border: 1px solid #c9b48e;
+  border: 1px solid var(--op-rule, #c9b48e);
   border-radius: 8px;
   background: #fffaf0;
   color: var(--op-ink);
@@ -2339,7 +2343,7 @@
 .op-talk-head small {
   font: 700 9.5px var(--op-mono);
   letter-spacing: 0.1em;
-  color: #8a5a2a;
+  color: var(--op-sub, #8a5a2a);
 }
 .op-back-btn {
   display: inline-flex;
@@ -2443,7 +2447,7 @@
   flex: 1;
   height: 44px;
   border-radius: 22px;
-  border: 1.5px solid #c9b48e;
+  border: 1.5px solid var(--op-rule, #c9b48e);
   background: #fffaf0;
   padding: 0 16px;
   font: 14px var(--ui);
@@ -2464,7 +2468,7 @@
   align-items: center;
   gap: 6px;
   font: 600 12px var(--ui);
-  color: #6b5a48;
+  color: var(--op-muted, #6b5a48);
 }
 
 /* the dock, like every Smudge page */
@@ -2489,6 +2493,7 @@
   color: #eee;
   background: none;
   border: 0;
+  white-space: nowrap;
 }
 .op-dock button[aria-selected="true"] {
   background: #f3efe8;
@@ -2523,4 +2528,235 @@
 .op .op-msgs {
   max-height: none;
   min-height: 0;
+}
+
+/* looks: the admin picks a starting look; its own colour arrives as --op-gold */
+.op[data-look="matchday"] {
+  --op-plum: #08170f;
+  --op-curtain: #1b6538;
+  --op-curtain2: #217543;
+  --op-cream: #f3f6f0;
+  --op-paper: #f3f6f0;
+  --op-ink: #0b1a11;
+  --op-gold: #ffd23f;
+  --op-red: #d7263d;
+  --op-dim: #a6bcab;
+  --op-sub: #2b6a43;
+  --op-muted: #4b6253;
+  --op-rule: #b5c7b9;
+  --op-glow: var(--op-gold);
+  --op-room: #0a140e;
+  --op-serif: var(--op-big);
+}
+.op[data-look="matchday"] .op-curtain {
+  background:
+    radial-gradient(circle at 50% 24%, transparent 0 58px, #ffffff73 59px 61px, transparent 62px),
+    linear-gradient(
+      transparent calc(24% - 1px),
+      #ffffff73 calc(24% - 1px) calc(24% + 1px),
+      transparent calc(24% + 1px)
+    ),
+    repeating-linear-gradient(var(--op-curtain) 0 38px, var(--op-curtain2) 38px 76px);
+}
+.op[data-look="matchday"] .op-curtain::before {
+  height: 100%;
+  clip-path: none;
+  background:
+    radial-gradient(ellipse 30% 40% at 8% 0, #ffffff59, transparent 70%),
+    radial-gradient(ellipse 30% 40% at 92% 0, #ffffff59, transparent 70%);
+}
+.op[data-look="matchday"] .op-hero h1 {
+  font-style: italic;
+  transform: skewX(-6deg);
+}
+.op[data-look="matchday"] .op-hero em,
+.op[data-look="matchday"] .op-bill h2 {
+  font: 800 15px var(--op-big);
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.op[data-look="matchday"] .op-bill h2 {
+  font-size: 20px;
+}
+.op[data-look="matchday"] .op-ticket {
+  transform: none;
+  border-radius: 6px;
+}
+.op[data-look="matchday"] .op-ticket-l b {
+  font: 800 21px/1.1 var(--op-big);
+}
+.op[data-look="matchday"] .op-ticket-r {
+  background: var(--op-ink);
+  color: var(--op-gold);
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+}
+.op[data-look="matchday"] .op-ticket-r small {
+  color: var(--op-gold);
+}
+.op[data-look="matchday"] .op-ticket-r::before,
+.op[data-look="matchday"] .op-ticket-r::after {
+  display: none;
+}
+
+.op[data-look="noticeboard"] {
+  --op-plum: #142038;
+  --op-curtain: #b4834f;
+  --op-curtain2: #9d6e3f;
+  --op-cream: #fbf7ee;
+  --op-paper: #fffdf6;
+  --op-ink: #142038;
+  --op-gold: #ff6b35;
+  --op-red: #e63946;
+  --op-dim: #a8b3c9;
+  --op-sub: #33507a;
+  --op-muted: #5a6680;
+  --op-rule: #c8cfdc;
+  --op-glow: #ffd8c2;
+  --op-room: #0f1729;
+  --op-serif: "Caveat Brush", var(--op-big);
+}
+.op[data-look="noticeboard"] .op-curtain {
+  background:
+    radial-gradient(circle at 20% 30%, #00000026 0 1.5px, transparent 2px) 0 0 / 9px 9px,
+    radial-gradient(circle at 70% 60%, #ffffff1f 0 1.5px, transparent 2px) 0 0 / 13px 13px,
+    linear-gradient(135deg, var(--op-curtain), var(--op-curtain2));
+}
+.op[data-look="noticeboard"] .op-curtain::before {
+  inset: 0;
+  height: auto;
+  clip-path: none;
+  background: none;
+  border: 12px solid #6e4a2a;
+  box-shadow: inset 0 0 30px #0006;
+}
+.op[data-look="noticeboard"] .op-curtain::after {
+  background: linear-gradient(transparent 70%, var(--op-plum));
+}
+.op[data-look="noticeboard"] .op-hero-text {
+  margin: 78px 22px 40px;
+  padding: 26px 22px 22px;
+  background: var(--op-paper);
+  color: var(--op-ink);
+  transform: rotate(-1.5deg);
+  box-shadow: 0 16px 30px -14px #000c;
+}
+.op[data-look="noticeboard"] .op-hero-text::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff8, transparent 45%), var(--op-gold);
+  box-shadow: 0 3px 4px #0007;
+  transform: translateX(-50%);
+}
+.op[data-look="noticeboard"] .op-hero h1 {
+  color: var(--op-ink);
+  text-shadow: none;
+}
+.op[data-look="noticeboard"] .op-hero em {
+  color: var(--op-gold);
+  font-style: normal;
+  font-size: 26px;
+}
+.op[data-look="noticeboard"] .op-hero .op-kick {
+  color: var(--op-sub);
+}
+.op[data-look="noticeboard"] .op-tags span {
+  background: none;
+  border-color: var(--op-rule);
+  color: var(--op-ink);
+}
+.op[data-look="noticeboard"] .op-bill h2 {
+  font-style: normal;
+}
+.op[data-look="noticeboard"] .op-ticket {
+  border-radius: 2px;
+  transform: rotate(1deg);
+}
+.op[data-look="noticeboard"] .op-ticket-l b {
+  font: 400 28px/1 var(--op-serif);
+}
+
+/* picking a look, in Edit page */
+.op-looks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.op-look {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: var(--surface-2, #0000000d);
+  color: inherit;
+  font: 600 12px var(--ui);
+  text-align: left;
+}
+.op-look[aria-pressed="true"] {
+  border-color: currentColor;
+}
+.op-look i {
+  display: block;
+  height: 54px;
+  border-radius: 8px;
+}
+.op-look i.playbill {
+  background: repeating-linear-gradient(90deg, #5e0f1d 0 8px, #7a1626 8px 13px, #4a0b16 13px 17px);
+}
+.op-look i.matchday {
+  background:
+    linear-gradient(transparent 49%, #fff9 49% 53%, transparent 53%),
+    repeating-linear-gradient(#1b6538 0 9px, #217543 9px 18px);
+}
+.op-look i.noticeboard {
+  background:
+    linear-gradient(#fffdf6, #fffdf6) 50% 50% / 46% 56% no-repeat,
+    linear-gradient(135deg, #b4834f, #9d6e3f);
+}
+.op-look small {
+  font-weight: 400;
+  opacity: 0.7;
+}
+.op-look-colour {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.op-look-colour input[type="color"] {
+  width: 44px;
+  height: 32px;
+  padding: 2px;
+  border-radius: 8px;
+}
+.op-look-form h2 {
+  margin: 0;
+}
+.op-look-form .op-looks {
+  margin: 0;
+}
+.op-look-form > label {
+  display: grid;
+  gap: 6px;
+  font: 600 13px var(--ui);
+}
+.op-look-form > label.op-look-colour {
+  display: flex;
+}
+.op-look-form > .primary {
+  justify-self: start;
+}
+.op-look-form > label input:not([type="color"]) {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font: 500 15px var(--ui);
 }

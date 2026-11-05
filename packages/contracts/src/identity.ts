@@ -124,6 +124,27 @@ export const orgCreateSchema = z
   })
   .strict();
 
+/**
+ * How an organisation's page looks: a starting look it picks (a theatre's playbill, a club's
+ * matchday programme, a society's noticeboard), its own colour, and its own words for the
+ * members' tab and the people of each term. The admin sets it; anyone sees it.
+ */
+export const orgLooks = ["playbill", "matchday", "noticeboard"] as const;
+export type OrgLookName = (typeof orgLooks)[number];
+export const orgLookSchema = z
+  .object({
+    look: z.enum(orgLooks),
+    accent: z
+      .string()
+      .regex(/^#[0-9a-f]{6}$/i)
+      .transform((c) => c.toLowerCase())
+      .optional(),
+    inside: z.string().trim().min(2).max(20).optional(),
+    company: z.string().trim().min(2).max(30).optional(),
+  })
+  .strict();
+export type OrgLook = z.infer<typeof orgLookSchema>;
+
 export const chapterKinds = [
   "education",
   "work",

@@ -6,6 +6,7 @@ import { signedInOrSignIn } from "./return-path";
 import { OprecAdmin, OprecPublic, type OprecView } from "./oprec-panel";
 import { Avatar, Dialog } from "./ui";
 import type { User } from "../../../packages/contracts/src/experience";
+import type { OrgLook, OrgLookName } from "../../../packages/contracts/src/identity";
 
 type TermView = { id: string; label: string; from: number; to?: number; locked: boolean };
 type Person = Pick<User, "id" | "name" | "handle" | "initials" | "color" | "avatarAssetId">;
@@ -19,6 +20,7 @@ interface OrgView {
   terms: TermView[];
   current: string | null;
   collections: { id: string; name: string; stamps: number }[];
+  look: OrgLook;
 }
 type Manage = OrgView & { admins: { id: string; name: string; handle: string }[] };
 const kinds = { campus: "Campus", workplace: "Workplace", club: "Club", event: "Event" };
@@ -27,6 +29,54 @@ const joinErrors: Record<string, string> = {
   INVITE_EXHAUSTED: "This link is full. Ask the admin for a new one.",
   INVITE_INVALID: "This link doesn’t work anymore. Ask the admin for a new one.",
 };
+
+/** Each starting look brings its own words; the organisation can rename the two that matter most. */
+const looks: Record<
+  OrgLookName,
+  {
+    name: string;
+    fits: string;
+    inside: string;
+    company: string;
+    next: string;
+    open: string;
+    sheet: string;
+  }
+> = {
+  playbill: {
+    name: "Playbill",
+    fits: "Theatre, choir, film",
+    inside: "Backstage",
+    company: "The company",
+    next: "NEXT UP",
+    open: "Open the call sheet",
+    sheet: "Call sheet",
+  },
+  matchday: {
+    name: "Matchday",
+    fits: "Clubs, teams, supporters",
+    inside: "Dressing room",
+    company: "The squad",
+    next: "NEXT FIXTURE",
+    open: "Open the team sheet",
+    sheet: "Team sheet",
+  },
+  noticeboard: {
+    name: "Noticeboard",
+    fits: "Societies, committees, BEM",
+    inside: "Secretariat",
+    company: "The committee",
+    next: "COMING UP",
+    open: "Open the agenda",
+    sheet: "Agenda",
+  },
+};
+type Words = (typeof looks)[OrgLookName];
+const wordsOf = (look: OrgLook): Words => ({
+  ...looks[look.look],
+  ...(look.inside ? { inside: look.inside } : {}),
+  ...(look.company ? { company: look.company } : {}),
+});
 
 type RoomTab = { id: string; label: string; locked: boolean };
 type RoomPostView = {
@@ -161,8 +211,15 @@ export function OrgPage({ id }: { id: string }) {
     );
   if (!org) return <main className="op" aria-busy="true" />;
   const backstage = rooms.length > 0 && tab === "backstage";
+  const words = wordsOf(org.look);
   return (
-    <main className="op">
+    <main
+      className="op"
+      data-look={org.look.look}
+      style={
+        org.look.accent ? ({ "--op-gold": org.look.accent } as React.CSSProperties) : undefined
+      }
+    >
       <nav className="op-top">
         <a className="op-round" href="/" aria-label="Back to Smudge">
           <ArrowLeft size={16} />
@@ -176,6 +233,7 @@ export function OrgPage({ id }: { id: string }) {
       {backstage && room ? (
         <Backstage
           org={org}
+          words={words}
           rooms={rooms}
           room={room}
           onTerm={setTermId}
@@ -185,6 +243,7 @@ export function OrgPage({ id }: { id: string }) {
       ) : (
         <PlayPage
           org={org}
+          words={words}
           next={room && !room.term.locked ? nextUp(room.state) : undefined}
           onNext={() => setTab("backstage")}
           oprecSlot={
@@ -221,13 +280,14 @@ export function OrgPage({ id }: { id: string }) {
             Page
           </button>
           <button role="tab" aria-selected={backstage} onClick={() => setTab("backstage")}>
-            Backstage
+            {words.inside}
           </button>
         </div>
       )}
       {editing && manage && (
         <Dialog title={`Edit ${org.name}`} onClose={() => setEditing(false)} wide>
           <div className="op-editor">
+            <LookEditor org={manage} onDone={load} notify={setNote} />
             <Admin org={manage} onDone={load} notify={setNote} />
             <OprecAdmin orgId={org.id} oprec={oprec} onDone={load} notify={setNote} />
           </div>
@@ -245,11 +305,13 @@ export function OrgPage({ id }: { id: string }) {
 /** The page anyone sees: a playbill of the organisation. */
 function PlayPage({
   org,
+  words,
   next,
   onNext,
   oprecSlot,
 }: {
   org: OrgView;
+  words: Words;
   next?: StateItem | undefined;
   onNext: () => void;
   oprecSlot: React.ReactNode;
@@ -287,9 +349,11 @@ function PlayPage({
         {next && (
           <button className="op-ticket" onClick={onNext}>
             <span className="op-ticket-l">
-              <small>NEXT UP · {org.current ?? ""}</small>
+              <small>
+                {words.next} · {org.current ?? ""}
+              </small>
               <b>{next.text}</b>
-              <span>Open the call sheet</span>
+              <span>{words.open}</span>
             </span>
             <span className="op-ticket-r">
               <b>{daysUntil(next.when!)}</b>
@@ -300,7 +364,7 @@ function PlayPage({
         {oprecSlot}
         {org.terms.length > 0 && (
           <section className="op-bill" aria-label="Terms">
-            <h2>The company</h2>
+            <h2>{words.company}</h2>
             <ul className="org-terms" role="tablist" aria-label="Seasons">
               {org.terms.map((t) => (
                 <li key={t.id} className={t.locked ? "locked" : "open"}>
@@ -360,6 +424,7 @@ function PlayPage({
  */
 function Backstage({
   org,
+  words,
   rooms,
   room,
   onTerm,
@@ -367,6 +432,7 @@ function Backstage({
   notify,
 }: {
   org: OrgView;
+  words: Words;
   rooms: RoomTab[];
   room: RoomView;
   onTerm: (id: string) => void;
@@ -397,8 +463,10 @@ function Backstage({
   return (
     <section className="op-back" aria-label="Room">
       <header className="op-back-head">
-        <span className="op-kick">{org.name.toUpperCase()} · BACKSTAGE</span>
-        <h1>Backstage</h1>
+        <span className="op-kick">
+          {org.name.toUpperCase()} · {words.inside.toUpperCase()}
+        </span>
+        <h1>{words.inside}</h1>
         <div className="op-you">
           <Avatar user={asUser(room.you)} />
           <div>
@@ -446,9 +514,9 @@ function Backstage({
           )}
         </section>
       )}
-      <section className="op-sheet" aria-label="Call sheet" ref={sheet}>
+      <section className="op-sheet" aria-label={words.sheet} ref={sheet}>
         <div className="op-sheet-head">
-          <b>Call sheet</b>
+          <b>{words.sheet}</b>
           <small>{room.term.label}</small>
         </div>
         {calls.length === 0 && decided.length === 0 && (
@@ -523,7 +591,7 @@ function Backstage({
             </form>
           ) : (
             <button className="op-add-open" onClick={() => setAdding(true)}>
-              + Add to the call sheet
+              + Add to the {words.sheet.toLowerCase()}
             </button>
           ))}
       </section>
@@ -571,6 +639,7 @@ function Backstage({
       </button>
       {talk && (
         <Talk
+          words={words}
           room={room}
           base={base}
           next={next}
@@ -595,6 +664,7 @@ function Backstage({
  * Escape, a swipe in from the left edge, or the call-sheet strip on top.
  */
 function Talk({
+  words,
   room,
   base,
   next,
@@ -602,6 +672,7 @@ function Talk({
   notify,
   onClose,
 }: {
+  words: Words;
   room: RoomView;
   base: string;
   next?: StateItem | undefined;
@@ -654,7 +725,7 @@ function Talk({
     >
       <header className="op-talk-head">
         <button className="op-back-btn" onClick={() => leave()}>
-          <ChevronLeft size={15} /> Backstage
+          <ChevronLeft size={15} /> {words.inside}
         </button>
         <small>
           {room.term.label} · {room.people} {room.people === 1 ? "PERSON" : "PEOPLE"}
@@ -665,7 +736,7 @@ function Talk({
         <button className="op-strip" onClick={() => leave(true)}>
           <b>{sheetDate(next.when!)}</b>
           <span>{next.text}</span>
-          <i>Call sheet ↑</i>
+          <i>{words.sheet} ↑</i>
         </button>
       )}
       <ol className="op-msgs org-messages" aria-label="Conversation">
@@ -728,6 +799,97 @@ function Talk({
         </form>
       )}
     </div>
+  );
+}
+
+/** Edit page, first: how the page looks and what it calls things. */
+function LookEditor({
+  org,
+  onDone,
+  notify,
+}: {
+  org: Manage;
+  onDone: () => Promise<void>;
+  notify: (s: string) => void;
+}) {
+  const [look, setLook] = useState<OrgLookName>(org.look.look);
+  const [accent, setAccent] = useState(org.look.accent ?? "");
+  const [inside, setInside] = useState(org.look.inside ?? "");
+  const [company, setCompany] = useState(org.look.company ?? "");
+  const base = looks[look];
+  return (
+    <form
+      className="org-admin op-look-form"
+      aria-label="Look"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        try {
+          await api(
+            `/orgs/${encodeURIComponent(org.id)}/look`,
+            {
+              look,
+              ...(accent ? { accent } : {}),
+              ...(inside.trim() ? { inside: inside.trim() } : {}),
+              ...(company.trim() ? { company: company.trim() } : {}),
+            },
+            "PUT",
+          );
+          notify("The page has its new look.");
+          await onDone();
+        } catch (err) {
+          notify((err as Error).message);
+        }
+      }}
+    >
+      <h2>Look</h2>
+      <div className="op-looks" role="group" aria-label="Starting look">
+        {(Object.keys(looks) as OrgLookName[]).map((id) => (
+          <button
+            key={id}
+            type="button"
+            className="op-look"
+            aria-pressed={look === id}
+            onClick={() => setLook(id)}
+          >
+            <i className={id} aria-hidden="true" />
+            {looks[id].name}
+            <small>{looks[id].fits}</small>
+          </button>
+        ))}
+      </div>
+      <label className="op-look-colour">
+        Your colour
+        <input
+          type="color"
+          value={accent || "#e8b44a"}
+          onChange={(e) => setAccent(e.target.value)}
+        />
+        {accent && (
+          <button type="button" className="small" onClick={() => setAccent("")}>
+            Use the look’s own
+          </button>
+        )}
+      </label>
+      <label>
+        Members’ tab
+        <input
+          value={inside}
+          placeholder={base.inside}
+          onChange={(e) => setInside(e.target.value)}
+          maxLength={20}
+        />
+      </label>
+      <label>
+        The people of each term
+        <input
+          value={company}
+          placeholder={base.company}
+          onChange={(e) => setCompany(e.target.value)}
+          maxLength={30}
+        />
+      </label>
+      <button className="primary small">Save look</button>
+    </form>
   );
 }
 

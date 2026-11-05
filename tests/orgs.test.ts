@@ -242,3 +242,35 @@ test("the page lists each term's company from public chapters, titles first; the
   assert.equal(orgs.room({ userId: "maya" }, org.id, term!.id).you.role, "Stage manager");
   assert.equal(orgs.room({ userId: "dani" }, org.id, term!.id).you.role, "Admin");
 });
+
+test("an organisation picks its own look, colour and words; only its admin can, and anyone sees it", async () => {
+  const { orgs } = await setup();
+  assert.deepEqual(orgs.publicPage("teater-senja").look, { look: "playbill" });
+  rejects(
+    () => orgs.setLook({ userId: "leo" }, "teater-senja", { look: "matchday" }),
+    "ORG_ADMIN_REQUIRED",
+  );
+  orgs.setLook({ userId: "maya" }, "teater-senja", {
+    look: "noticeboard",
+    accent: "#FF0066",
+    inside: "Sekre",
+    company: "Pengurus",
+  });
+  assert.deepEqual(orgs.publicPage("teater-senja").look, {
+    look: "noticeboard",
+    accent: "#ff0066",
+    inside: "Sekre",
+    company: "Pengurus",
+  });
+  // Leaving a word out goes back to the look's own.
+  orgs.setLook({ userId: "maya" }, "teater-senja", { look: "matchday" });
+  assert.deepEqual(orgs.publicPage("teater-senja").look, { look: "matchday" });
+  // A colour is a colour, not CSS, and looks come from the list.
+  for (const bad of [
+    { look: "matchday", accent: "red; background:url(x)" },
+    { look: "vaporwave" },
+    { look: "matchday", inside: "x".repeat(21) },
+    { look: "matchday", css: "body{}" },
+  ])
+    assert.throws(() => orgs.setLook({ userId: "maya" }, "teater-senja", bad));
+});

@@ -160,3 +160,36 @@ test("a term's room as Backstage: the admin keeps the call sheet, members talk f
   await expect(hers).toBeVisible();
   await page.screenshot({ path: "test-results/org-room.png", fullPage: true });
 });
+
+test("an organisation picks its own look in Edit page, and guests see it", async ({
+  page,
+  browser,
+}) => {
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  await as(page, "leo");
+  const org = await page.evaluate(() =>
+    fetch("/api/orgs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Harbour Rovers", term: "2026/27" }),
+    }).then((r) => r.json()),
+  );
+  await page.goto(`/o/${org.id}`);
+  await expect(page.locator("main.op")).toHaveAttribute("data-look", "playbill");
+  await page.getByRole("button", { name: "Edit page" }).click();
+  const look = page.getByRole("form", { name: "Look" });
+  await look.getByRole("button", { name: /Matchday/ }).click();
+  await look.getByLabel("The people of each term").fill("First team");
+  await look.getByRole("button", { name: "Save look" }).click();
+  await expect(page.getByRole("status")).toHaveText("The page has its new look.");
+  await expect(page.locator("main.op")).toHaveAttribute("data-look", "matchday");
+
+  const guestContext = await browser.newContext({ baseURL: "http://127.0.0.1:3000" });
+  const guest = await guestContext.newPage();
+  await guest.goto(`/o/${org.id}`);
+  await expect(guest.locator("main.op")).toHaveAttribute("data-look", "matchday");
+  await expect(guest.getByRole("region", { name: "Terms" })).toContainText("First team");
+  await guest.screenshot({ path: "test-results/org-look-matchday.png" });
+  await guestContext.close();
+});

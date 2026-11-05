@@ -621,6 +621,9 @@ api.post("/api/orgs/:id/terms", (req, res) =>
 api.post("/api/orgs/:id/terms/:term/lock", (req, res) =>
   res.json(orgService.lockTerm(actor(res), orgId(req.params.id), orgId(req.params.term))),
 );
+api.put("/api/orgs/:id/look", (req, res) =>
+  res.json(orgService.setLook(actor(res), orgId(req.params.id), req.body)),
+);
 api.post("/api/orgs/:id/handover", (req, res) =>
   res.json(orgService.handover(actor(res), orgId(req.params.id), req.body)),
 );
