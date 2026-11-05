@@ -227,8 +227,21 @@ export class IdentityService {
     const viewer = this.social.actor(actor);
     this.user(ownerId);
     const circle = this.inCircle(viewer, ownerId);
-    return this.chapters(ownerId).filter((c) => c.audience === "public" || circle);
+    return this.chapters(ownerId)
+      .filter((c) => c.audience === "public" || circle)
+      .filter((c) => viewer === ownerId || this.chapterGates.every((gate) => gate(viewer, c)))
+      .map((c) => {
+        const line = c.kind === "title" ? this.chapterLine?.(c) : undefined;
+        return line ? { ...c, line } : c;
+      });
   }
+  /**
+   * Organisations decide who else sees their chapters: a private organisation's stay with its own
+   * people. The owner always sees all of theirs.
+   */
+  chapterGates: ((viewerId: string, chapter: Chapter) => boolean)[] = [];
+  /** Where a title sits in its line ("the 7th Head of Comms"), set by the organisations. */
+  chapterLine: ((chapter: Chapter) => { n: number; role: string } | undefined) | undefined;
   /** Told about every new chapter inside its transaction (sides: an organisation's side opens). */
   chapterListeners: ((chapter: Chapter) => void)[] = [];
   private addChapter(chapter: Omit<Chapter, "id" | "createdAt">) {

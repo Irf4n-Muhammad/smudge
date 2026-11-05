@@ -643,6 +643,34 @@ api.put("/api/orgs/:id/look", (req, res) =>
 api.post("/api/orgs/:id/handover", (req, res) =>
   res.json(orgService.handover(actor(res), orgId(req.params.id), req.body)),
 );
+api.put("/api/orgs/:id/visibility", (req, res) =>
+  res.json(orgService.setVisibility(actor(res), orgId(req.params.id), req.body)),
+);
+// Events: each one a crew stamp the admin gives to the people who ran it.
+api.get("/api/orgs/:id/events", (req, res) => {
+  orgService.requireAdmin(actor(res), orgId(req.params.id));
+  res.json(orgService.events(orgId(req.params.id)));
+});
+api.post("/api/orgs/:id/events", roomLimit, (req, res) =>
+  res.json(orgService.createEvent(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/events/:stamp/award", roomLimit, (req, res) =>
+  res.json(
+    orgService.awardCrew(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body),
+  ),
+);
+// Posts written together: a member drafts, an admin sends it out as the organisation.
+api.get("/api/orgs/:id/posts", (req, res) =>
+  res.json(orgService.posts(actor(res), orgId(req.params.id))),
+);
+api.post("/api/orgs/:id/posts", roomLimit, (req, res) =>
+  res.json(orgService.submitPost(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/posts/:post/review", (req, res) =>
+  res.json(
+    orgService.reviewPost(actor(res), orgId(req.params.id), orgId(req.params.post), req.body),
+  ),
+);
 themeRoutes(api, studio, rateLimit({ windowMs: 60 * 60_000, max: 20 }));
 communityRoutes(api, community, messages, privacy, accounts, clearSession, authLimit);
 // Google sign-in. The state and PKCE verifier live in a short-lived cookie scoped to the
@@ -992,13 +1020,19 @@ api.get("/api/public/sides/:id/home", guestLimit, (req, res) =>
   res.json(sharing.side(z.string().max(40).parse(req.params.id))),
 );
 api.get("/api/public/orgs/:id", guestLimit, (req, res) => {
-  const page = orgService.publicPage(z.string().max(40).parse(req.params.id));
+  const join = typeof req.query.join === "string" ? req.query.join.slice(0, 12) : undefined;
+  const page = orgService.publicPage(
+    z.string().max(40).parse(req.params.id),
+    signedIn(res)?.userId,
+    join,
+  );
   opens.count("org", page.id);
   res.json(page);
 });
-api.get("/api/public/orgs/:id/oprec", guestLimit, (req, res) =>
-  res.json({ oprec: oprecs.current(z.string().max(40).parse(req.params.id)) }),
-);
+api.get("/api/public/orgs/:id/oprec", guestLimit, (req, res) => {
+  const id = z.string().max(40).parse(req.params.id);
+  res.json({ oprec: orgService.canSee(id, signedIn(res)?.userId) ? oprecs.current(id) : null });
+});
 api.get("/api/public/orgs/:id/join/:code", guestLimit, (req, res) =>
   res.json(
     orgService.joinPreview(

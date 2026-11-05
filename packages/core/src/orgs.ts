@@ -1,13 +1,20 @@
 import { randomUUID } from "node:crypto";
 import type { User } from "../../contracts/src/experience.js";
 import {
+  collectionById,
   collections,
+  crewAwardSchema,
+  crewEventSchema,
   handoverSchema,
   orgById,
   orgCreateSchema,
   circleStartSchema,
   orgLookSchema,
+  orgPostReviewSchema,
+  orgPostSchema,
+  orgVisibilitySchema,
   orgs,
+  registerCollection,
   registerOrg,
   roomPostSchema,
   roomStateSchema,
@@ -15,8 +22,11 @@ import {
 } from "../../contracts/src/identity.js";
 import type {
   Chapter,
+  Collection,
   Org,
   OrgLook,
+  OrgPost,
+  OrgVisibility,
   RoomPost,
   RoomStateItem,
   Term,
@@ -55,6 +65,14 @@ export class OrgService {
     social.capabilityHandlers["org.read"] = (actor, _postId, payload, preview) =>
       preview ? { memberships: [] } : this.memberships(actor, payload);
     for (const org of this.store.all<Org>("org")) registerOrg(org);
+    for (const collection of this.store.all<Collection>("collection"))
+      registerCollection(collection);
+    // A private organisation's chapters stay with its own people.
+    identity.chapterGates.push(
+      (viewerId, c) =>
+        !c.orgId || this.visibility(c.orgId) !== "private" || this.isOwn(viewerId, c.orgId),
+    );
+    identity.chapterLine = (c) => this.lineOf(c);
   }
   private get store() {
     return this.social.store;
@@ -104,8 +122,28 @@ export class OrgService {
    * What anyone may see: the organisation, its terms, how many people it has held, and each
    * term's company as far as those people made their chapter public.
    */
-  publicPage(orgId: string) {
+  publicPage(orgId: string, viewerId?: string, joinCode?: string) {
     const org = this.org(orgId);
+    if (!this.canSee(orgId, viewerId)) {
+      // Someone holding a join link may see enough of a private organisation to join it.
+      if (joinCode && this.validJoin(orgId, joinCode))
+        return {
+          id: org.id,
+          name: org.name,
+          kind: org.kind,
+          visibility: this.visibility(orgId),
+          members: 0,
+          since: null,
+          company: [],
+          terms: [],
+          current: null,
+          collections: [],
+          posts: [],
+          lines: [],
+          look: this.look(orgId),
+        };
+      throw new AppError("NOT_FOUND", 404);
+    }
     const people = new Set(this.members(orgId).map((c) => c.ownerId));
     const terms = this.terms(orgId);
     const users = new Map(this.store.all<User>("user").map((u) => [u.id, u]));
@@ -133,8 +171,265 @@ export class OrgService {
       collections: collections
         .filter((c) => c.orgId === orgId)
         .map((c) => ({ id: c.id, name: c.name, stamps: c.stamps.length })),
+      visibility: this.visibility(orgId),
+      // What the organisation published, as itself. Who drafted it stays inside.
+      posts: this.orgPosts(orgId)
+        .filter((p) => p.status === "published")
+        .slice(0, 10)
+        .map((p) => ({ id: p.id, text: p.text, at: p.reviewedAt ?? p.createdAt })),
+      lines: this.publicLines(orgId, users),
       look: this.look(orgId),
     };
+  }
+
+  // Who finds it ----------------------------------------------------------------------------
+  visibility(orgId: string): OrgVisibility {
+    return (
+      this.store.get<{ visibility: OrgVisibility }>("org-visibility", orgId)?.visibility ?? "public"
+    );
+  }
+  setVisibility(actor: Actor, orgId: string, input: unknown) {
+    this.requireAdmin(actor, orgId);
+    const { visibility } = orgVisibilitySchema.parse(input);
+    this.store.transaction(() => this.store.put("org-visibility", orgId, { visibility }));
+    return { visibility };
+  }
+  /** One of the organisation's own: an admin, or someone it placed by a chapter, past or present. */
+  private isOwn(userId: string, orgId: string) {
+    return (
+      this.identity.orgAdmins(orgId).includes(userId) ||
+      this.members(orgId).some((c) => c.ownerId === userId)
+    );
+  }
+  /** A private organisation is there only for its own people; to anyone else it doesn't exist. */
+  canSee(orgId: string, viewerId?: string) {
+    return this.visibility(orgId) !== "private" || (!!viewerId && this.isOwn(viewerId, orgId));
+  }
+  private validJoin(orgId: string, code: string) {
+    const invite = this.store.get<{ orgId: string; used: number; uses: number }>(
+      "invite",
+      code.toUpperCase(),
+    );
+    return !!invite && invite.orgId === orgId && invite.used < invite.uses;
+  }
+
+  // The line of each title ------------------------------------------------------------------
+  /**
+   * Every title the organisation gave, by role, in the order people first held it: the line a
+   * new Head of Comms joins as its seventh.
+   */
+  private lines(orgId: string) {
+    const byRole = new Map<string, { role: string; chapters: Chapter[] }>();
+    for (const c of this.members(orgId)) {
+      if (c.kind !== "title") continue;
+      const role = roleOf(c.label);
+      const line = byRole.get(role.toLowerCase()) ?? { role, chapters: [] };
+      line.chapters.push(c);
+      byRole.set(role.toLowerCase(), line);
+    }
+    const year = (c: Chapter) => c.from ?? Number(c.createdAt.slice(0, 4));
+    for (const line of byRole.values()) {
+      const seen = new Set<string>();
+      line.chapters = line.chapters
+        .sort((a, b) => year(a) - year(b) || a.createdAt.localeCompare(b.createdAt))
+        .filter((c) => !seen.has(c.ownerId) && seen.add(c.ownerId));
+    }
+    return byRole;
+  }
+  lineOf(chapter: Chapter) {
+    if (chapter.kind !== "title" || !chapter.orgId || !orgById(chapter.orgId)) return undefined;
+    const line = this.lines(chapter.orgId).get(roleOf(chapter.label).toLowerCase());
+    const n = line ? line.chapters.findIndex((c) => c.ownerId === chapter.ownerId) + 1 : 0;
+    return line && n > 0 ? { n, role: line.role } : undefined;
+  }
+  /** The lines as anyone may see them: only the people who made that title public, numbered. */
+  private publicLines(orgId: string, users: Map<string, User>) {
+    return [...this.lines(orgId).values()]
+      .map((line) => ({
+        role: line.role,
+        holders: line.chapters
+          .map((c, i) => ({ c, n: i + 1 }))
+          .filter(({ c }) => c.audience === "public" && users.has(c.ownerId))
+          .slice(-30)
+          .map(({ c, n }) => ({
+            ...personOf(users.get(c.ownerId)!),
+            n,
+            ...(c.from === undefined ? {} : { from: c.from }),
+          })),
+      }))
+      .filter((line) => line.holders.length > 0)
+      .slice(0, 12);
+  }
+
+  // Crew stamps -----------------------------------------------------------------------------
+  private crewId(orgId: string) {
+    return `crew-${orgId}`.slice(0, 40);
+  }
+  /** The organisation's own events, each a crew stamp, with how many people hold it. */
+  events(orgId: string) {
+    this.org(orgId);
+    const collection = collectionById(this.crewId(orgId));
+    if (!collection) return { collection: null, events: [] };
+    const held = this.store
+      .all<Chapter>("chapter")
+      .filter((c) => c.kind === "stamp" && c.collection === collection.id);
+    return {
+      collection: collection.id,
+      events: collection.stamps.map((st) => ({
+        ...st,
+        crew: held.filter((c) => c.stamp === st.id).length,
+      })),
+    };
+  }
+  /** The admin adds an event; its crew stamp goes to the people who ran it. */
+  createEvent(actor: Actor, orgId: string, input: unknown) {
+    this.requireAdmin(actor, orgId);
+    const org = this.org(orgId);
+    const { name } = crewEventSchema.parse(input);
+    const id = this.crewId(orgId);
+    const collection: Collection = collectionById(id) ?? {
+      id,
+      name: `${org.name} crew`,
+      orgId,
+      stamps: [],
+    };
+    if (collection.stamps.length >= 100) throw new AppError("CREW_FULL", 409);
+    const base = slug(name, "event");
+    let stampId = base;
+    for (let n = 2; collection.stamps.some((st) => st.id === stampId); n++)
+      stampId = `${base}-${n}`;
+    const next = { ...collection, stamps: [...collection.stamps, { id: stampId, name }] };
+    this.store.transaction(() => this.store.put("collection", id, next));
+    registerCollection(next);
+    return { collection: id, stamp: { id: stampId, name } };
+  }
+  /**
+   * The admin gives an event's crew stamp to the people who ran it. Only the organisation's own
+   * people can get one, and once each: a stamp comes from something done, never from a like.
+   */
+  awardCrew(actor: Actor, orgId: string, stampId: string, input: unknown) {
+    this.requireAdmin(actor, orgId);
+    const collection = collectionById(this.crewId(orgId));
+    const stamp = collection?.stamps.find((st) => st.id === stampId);
+    if (!collection || !stamp) throw new AppError("NOT_FOUND", 404);
+    const { handles } = crewAwardSchema.parse(input);
+    const users = this.store.all<User>("user");
+    const term = this.terms(orgId).find((t) => !t.locked);
+    const holds = new Set(
+      this.store
+        .all<Chapter>("chapter")
+        .filter((c) => c.kind === "stamp" && c.collection === collection.id && c.stamp === stampId)
+        .map((c) => c.ownerId),
+    );
+    const awarded: string[] = [];
+    const skipped: { handle: string; why: "unknown" | "not-a-member" | "already" }[] = [];
+    this.store.transaction(() => {
+      for (const raw of new Set(handles.map((h) => h.replace(/^@/, "").toLowerCase()))) {
+        const user = users.find((u) => u.handle.toLowerCase() === raw);
+        if (!user) skipped.push({ handle: raw, why: "unknown" });
+        else if (!this.isOwn(user.id, orgId)) skipped.push({ handle: raw, why: "not-a-member" });
+        else if (holds.has(user.id)) skipped.push({ handle: raw, why: "already" });
+        else {
+          this.identity.grantChapter({
+            ownerId: user.id,
+            kind: "stamp",
+            label: `Crew, ${stamp.name}`,
+            orgId,
+            collection: collection.id,
+            stamp: stamp.id,
+            ...(term ? { from: term.from } : {}),
+            method: "invite",
+            audience: this.visibility(orgId) === "private" ? "circle" : "public",
+          });
+          holds.add(user.id);
+          awarded.push(user.handle);
+        }
+      }
+    });
+    return { awarded, skipped };
+  }
+
+  // Posts written together ------------------------------------------------------------------
+  private orgPosts(orgId: string) {
+    return this.store
+      .all<OrgPost>("org-post")
+      .filter((p) => p.orgId === orgId)
+      .sort((a, b) => (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt));
+  }
+  /** Who may write as the organisation: its admins and the people of its open term. */
+  private writes(userId: string, orgId: string) {
+    const term = this.terms(orgId).find((t) => !t.locked);
+    return (
+      this.identity.orgAdmins(orgId).includes(userId) || (!!term && this.wasThere(userId, term))
+    );
+  }
+  /** The drafts waiting (all of them for admins, your own otherwise) and what went out. */
+  posts(actor: Actor, orgId: string) {
+    const userId = this.social.actor(actor);
+    this.org(orgId);
+    if (!this.writes(userId, orgId)) throw new AppError("NOT_A_MEMBER", 403);
+    const admin = this.identity.orgAdmins(orgId).includes(userId);
+    const users = new Map(this.store.all<User>("user").map((u) => [u.id, u]));
+    const view = (p: OrgPost) => {
+      const u = users.get(p.authorId);
+      return {
+        ...p,
+        author: { id: p.authorId, name: u?.name ?? "Someone", handle: u?.handle ?? "" },
+      };
+    };
+    const all = this.orgPosts(orgId);
+    return {
+      admin,
+      pending: all
+        .filter((p) => p.status === "pending" && (admin || p.authorId === userId))
+        .map(view),
+      published: all
+        .filter((p) => p.status === "published")
+        .slice(0, 20)
+        .map(view),
+    };
+  }
+  /**
+   * A member drafts a post for the organisation; it waits for an admin. An admin's own post goes
+   * out at once. Nobody needs the organisation's password.
+   */
+  submitPost(actor: Actor, orgId: string, input: unknown) {
+    const userId = this.social.actor(actor);
+    this.org(orgId);
+    if (!this.writes(userId, orgId)) throw new AppError("NOT_A_MEMBER", 403);
+    const { text } = orgPostSchema.parse(input);
+    const admin = this.identity.orgAdmins(orgId).includes(userId);
+    const waiting = this.orgPosts(orgId).filter(
+      (p) => p.status === "pending" && p.authorId === userId,
+    );
+    if (!admin && waiting.length >= 5) throw new AppError("POSTS_WAITING", 429);
+    const at = this.now().toISOString();
+    const post: OrgPost = {
+      id: randomUUID(),
+      orgId,
+      authorId: userId,
+      text,
+      status: admin ? "published" : "pending",
+      createdAt: at,
+      ...(admin ? { reviewedBy: userId, reviewedAt: at } : {}),
+    };
+    this.store.transaction(() => this.store.put("org-post", post.id, post));
+    return post;
+  }
+  reviewPost(actor: Actor, orgId: string, postId: string, input: unknown) {
+    const userId = this.requireAdmin(actor, orgId);
+    const post = this.store.get<OrgPost>("org-post", postId);
+    if (!post || post.orgId !== orgId) throw new AppError("NOT_FOUND", 404);
+    if (post.status !== "pending") throw new AppError("POST_NOT_PENDING", 409);
+    const { approve } = orgPostReviewSchema.parse(input);
+    const next: OrgPost = {
+      ...post,
+      status: approve ? "published" : "declined",
+      reviewedBy: userId,
+      reviewedAt: this.now().toISOString(),
+    };
+    this.store.transaction(() => this.store.put("org-post", post.id, next));
+    return next;
   }
   /** The page's look. Until the admin picks one, every organisation starts as a playbill. */
   look(orgId: string): OrgLook {
@@ -149,10 +444,10 @@ export class OrgService {
   }
   /** The admin's side: the same page plus who runs it now. */
   manage(actor: Actor, orgId: string) {
-    this.requireAdmin(actor, orgId);
+    const userId = this.requireAdmin(actor, orgId);
     const users = this.store.all<User>("user");
     return {
-      ...this.publicPage(orgId),
+      ...this.publicPage(orgId, userId),
       admins: this.identity.orgAdmins(orgId).map((id) => {
         const u = users.find((x) => x.id === id);
         return { id, name: u?.name ?? id, handle: u?.handle ?? "" };
@@ -168,14 +463,7 @@ export class OrgService {
     const parsed = orgCreateSchema.parse(input);
     const started = this.store.all<Org>("org").filter((o) => o.admins[0] === userId);
     if (started.length >= 3) throw new AppError("TOO_MANY_ORGS", 429);
-    const base =
-      parsed.name
-        .toLowerCase()
-        .normalize("NFKD")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 32)
-        .replace(/-+$/, "") || "org";
+    const base = slug(parsed.name, "org");
     let id = base;
     for (let n = 2; orgById(id) || id === "new"; n++) id = `${base}-${n}`;
     const org: Org = { id, name: parsed.name, kind: parsed.kind, domains: [], admins: [userId] };
@@ -526,6 +814,17 @@ function covers(c: Chapter, term: Term) {
     ? !term.locked
     : c.from <= term.from &&
         (c.to === "now" || (c.to === undefined ? c.from === term.from : c.to >= term.from));
+}
+function slug(name: string, fallback: string) {
+  return (
+    name
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 32)
+      .replace(/-+$/, "") || fallback
+  );
 }
 /** "Stage manager, Teater Senja 2025/26" → "Stage manager". */
 function roleOf(label: string) {

@@ -1,12 +1,29 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ChevronLeft, Lock, Pencil, Send, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronLeft,
+  Library,
+  Lock,
+  Megaphone,
+  Pencil,
+  Send,
+  Stamp,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { api } from "./runtime";
 import { signedInOrSignIn } from "./return-path";
 import { OprecAdmin, OprecPublic, type OprecView } from "./oprec-panel";
 import { Avatar, Dialog } from "./ui";
 import type { User } from "../../../packages/contracts/src/experience";
-import type { OrgLook, OrgLookName } from "../../../packages/contracts/src/identity";
+import type {
+  OrgLook,
+  OrgLookName,
+  OrgPost,
+  OrgVisibility,
+} from "../../../packages/contracts/src/identity";
 
 type TermView = { id: string; label: string; from: number; to?: number; locked: boolean };
 type Person = Pick<User, "id" | "name" | "handle" | "initials" | "color" | "avatarAssetId">;
@@ -20,9 +37,22 @@ interface OrgView {
   terms: TermView[];
   current: string | null;
   collections: { id: string; name: string; stamps: number }[];
+  visibility: OrgVisibility;
+  posts: { id: string; text: string; at: string }[];
+  /** Each title's line: who held it, numbered from the first. */
+  lines: { role: string; holders: (Person & { n: number; from?: number })[] }[];
   look: OrgLook;
 }
 type Manage = OrgView & { admins: { id: string; name: string; handle: string }[] };
+const visibilityNote: Record<OrgVisibility, string> = {
+  public: "Anyone can find the page now.",
+  link: "Only people with the link will find the page.",
+  private: "The page is hidden. Only your own people see it, and join links still work.",
+};
+const ordinal = (n: number) => {
+  const tail = n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th");
+  return `${n}${tail}`;
+};
 const kinds = { campus: "Campus", workplace: "Workplace", club: "Club", event: "Event" };
 const joinErrors: Record<string, string> = {
   INVITE_ALREADY_USED: "You already joined.",
@@ -78,6 +108,7 @@ const wordsOf = (look: OrgLook): Words => ({
   ...(look.company ? { company: look.company } : {}),
 });
 
+type Tool = "sheet" | "posts" | "crew" | "archive";
 type RoomTab = { id: string; label: string; locked: boolean };
 type RoomPostView = {
   id: string;
@@ -153,8 +184,13 @@ export function OrgPage({ id }: { id: string }) {
   const [tab, setTab] = useState<"page" | "backstage">("page");
   const [editing, setEditing] = useState(false);
   const load = useCallback(async () => {
+    const code = new URLSearchParams(window.location.search).get("join");
     try {
-      setOrg(await api<OrgView>(`/public/orgs/${encodeURIComponent(id)}`));
+      setOrg(
+        await api<OrgView>(
+          `/public/orgs/${encodeURIComponent(id)}${code ? `?join=${encodeURIComponent(code)}` : ""}`,
+        ),
+      );
     } catch {
       setOrg("missing");
       return;
@@ -175,7 +211,6 @@ export function OrgPage({ id }: { id: string }) {
         ).catch(() => ({ oprec: null }))
       ).oprec,
     );
-    const code = new URLSearchParams(window.location.search).get("join");
     if (code)
       setJoin(
         await api<{ label: string }>(
@@ -406,6 +441,25 @@ function PlayPage({
             )}
           </section>
         )}
+        {org.posts.length > 0 && (
+          <section className="op-bill" aria-label="Updates">
+            <h2>Updates</h2>
+            <ul className="op-updates">
+              {org.posts.map((p) => (
+                <li key={p.id}>
+                  <small>{clock(p.at).toUpperCase()}</small>
+                  <p>{p.text}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {org.lines.length > 0 && (
+          <section className="op-bill" aria-label="Lines">
+            <h2>The line</h2>
+            <Lines lines={org.lines} />
+          </section>
+        )}
         {org.collections.length > 0 && (
           <section className="op-bill" aria-label="Stamp collections">
             <h2>Stamps</h2>
@@ -413,7 +467,9 @@ function PlayPage({
               {org.collections.map((c) => (
                 <li key={c.id}>
                   <span>{c.name}</span>
-                  <em>{c.stamps} stamps</em>
+                  <em>
+                    {c.stamps} {c.stamps === 1 ? "stamp" : "stamps"}
+                  </em>
                 </li>
               ))}
             </ul>
@@ -446,6 +502,7 @@ function Backstage({
   notify: (s: string) => void;
 }) {
   const [talk, setTalk] = useState(false);
+  const [tool, setTool] = useState<Tool | null>(null);
   const [adding, setAdding] = useState(false);
   const [stateKind, setStateKind] = useState<StateItem["kind"]>("schedule");
   const [stateText, setStateText] = useState("");
@@ -466,6 +523,13 @@ function Backstage({
   const [pinned, ...earlier] = room.announcements;
   const last = room.messages[room.messages.length - 1];
   const edit = room.admin && room.canPost;
+  const tools: [Tool, string, LucideIcon][] = [
+    ["sheet", words.sheet, CalendarDays],
+    ["posts", "Posts", Megaphone],
+    ...(room.admin ? [["crew", "Crew stamps", Stamp] as [Tool, string, LucideIcon]] : []),
+    ["archive", "Archive", Library],
+  ];
+  const openTool = (key: Tool) => setTool((t) => (t === key ? null : key));
   return (
     <section className="op-back" aria-label="Room">
       <header className="op-back-head">
@@ -497,140 +561,37 @@ function Backstage({
           </p>
         )}
       </header>
-      {pinned && (
-        <section className="op-pin org-announcements" aria-label="Announcements">
-          <article className="org-announcement">
-            <small>PINNED · {firstName(pinned.author.name)?.toUpperCase()}</small>
-            <p>{pinned.text}</p>
-          </article>
-          {earlier.length > 0 && (
-            <details>
-              <summary>
-                {earlier.length} earlier {earlier.length === 1 ? "note" : "notes"}
-              </summary>
-              {earlier.map((a) => (
-                <article key={a.id} className="org-announcement">
-                  <p>{a.text}</p>
-                  <small>
-                    {a.author.name} · {clock(a.createdAt)}
-                  </small>
-                </article>
-              ))}
-            </details>
-          )}
-        </section>
+      {next ? (
+        <button className="op-star" onClick={() => setTool("sheet")}>
+          <small>
+            {words.next} · {sheetDate(next.when!)}
+          </small>
+          <b>{next.text}</b>
+          <span>
+            {daysUntil(next.when!) === 0
+              ? "Today"
+              : `In ${daysUntil(next.when!)} ${daysUntil(next.when!) === 1 ? "day" : "days"}`}
+          </span>
+        </button>
+      ) : pinned ? (
+        <button className="op-star" onClick={() => setTool("sheet")}>
+          <small>PINNED · {firstName(pinned.author.name)?.toUpperCase()}</small>
+          <b>{pinned.text}</b>
+        </button>
+      ) : (
+        <p className="op-star empty">
+          Nothing coming up yet.
+          {edit ? ` Put the next thing on the ${words.sheet.toLowerCase()}.` : ""}
+        </p>
       )}
-      <section className="op-sheet" aria-label={words.sheet} ref={sheet}>
-        <div className="op-sheet-head">
-          <b>{words.sheet}</b>
-          <small>{room.term.label}</small>
-        </div>
-        {calls.length === 0 && decided.length === 0 && (
-          <p className="op-sheet-empty">Nothing scheduled or decided yet.</p>
-        )}
-        {calls.map((item) => (
-          <div key={item.id} className={`op-row org-state ${item.kind}`}>
-            <time>{item.when ? sheetDate(item.when) : "SOON"}</time>
-            <div>
-              <b>{item.text}</b>
-              {item.kind === "deadline" && <small>Due</small>}
-            </div>
-            {edit && (
-              <button
-                className="op-remove"
-                aria-label={`Remove ${item.text}`}
-                onClick={() => void run(() => api(`${base}/state/${item.id}`, undefined, "DELETE"))}
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
+      <nav className="op-tools" aria-label="Tools">
+        {tools.map(([key, label, Icon]) => (
+          <button key={key} aria-pressed={tool === key} onClick={() => openTool(key)}>
+            <Icon size={17} aria-hidden="true" />
+            {label}
+          </button>
         ))}
-        {edit &&
-          (adding ? (
-            <form
-              className="op-add"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void run(async () => {
-                  await api(`${base}/state`, {
-                    kind: stateKind,
-                    text: stateText,
-                    ...(stateWhen ? { when: stateWhen } : {}),
-                  });
-                  setStateText("");
-                  setStateWhen("");
-                  setAdding(false);
-                });
-              }}
-            >
-              <label>
-                Kind
-                <select
-                  value={stateKind}
-                  onChange={(e) => setStateKind(e.target.value as StateItem["kind"])}
-                >
-                  <option value="schedule">Schedule</option>
-                  <option value="deadline">Deadline</option>
-                  <option value="decision">Decision</option>
-                </select>
-              </label>
-              <label>
-                What
-                <input
-                  required
-                  minLength={2}
-                  maxLength={200}
-                  value={stateText}
-                  onChange={(e) => setStateText(e.target.value)}
-                />
-              </label>
-              <label>
-                When
-                <input
-                  type="date"
-                  value={stateWhen}
-                  onChange={(e) => setStateWhen(e.target.value)}
-                />
-              </label>
-              <button className="op-ink">Add</button>
-            </form>
-          ) : (
-            <button className="op-add-open" onClick={() => setAdding(true)}>
-              + Add to the {words.sheet.toLowerCase()}
-            </button>
-          ))}
-      </section>
-      {(decided.length > 0 || next) && (
-        <div className="op-duo">
-          {decided.map((d) => (
-            <div key={d.id} className="op-card org-state decision">
-              <small>DECIDED</small>
-              <b>{d.text}</b>
-              {edit && (
-                <button
-                  className="op-remove"
-                  aria-label={`Remove ${d.text}`}
-                  onClick={() => void run(() => api(`${base}/state/${d.id}`, undefined, "DELETE"))}
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          ))}
-          {next && (
-            <div className="op-card">
-              <small>COUNTDOWN</small>
-              <b>
-                {daysUntil(next.when!) === 0
-                  ? "Today"
-                  : `${daysUntil(next.when!)} ${daysUntil(next.when!) === 1 ? "day" : "days"}`}
-              </b>
-              <span>{next.text}</span>
-            </div>
-          )}
-        </div>
-      )}
+      </nav>
       {room.talk ? (
         <button className="op-talk-line" onClick={() => setTalk(true)}>
           <span className="op-talk-who">{last ? last.author.name[0] : "…"}</span>
@@ -649,6 +610,140 @@ function Backstage({
           <Lock size={13} aria-hidden="true" /> The talk stays with the people of {room.term.label}.
         </p>
       )}
+      {tool === "sheet" && (
+        <>
+          {pinned && (
+            <section className="op-pin org-announcements" aria-label="Announcements">
+              <article className="org-announcement">
+                <small>PINNED · {firstName(pinned.author.name)?.toUpperCase()}</small>
+                <p>{pinned.text}</p>
+              </article>
+              {earlier.length > 0 && (
+                <details>
+                  <summary>
+                    {earlier.length} earlier {earlier.length === 1 ? "note" : "notes"}
+                  </summary>
+                  {earlier.map((a) => (
+                    <article key={a.id} className="org-announcement">
+                      <p>{a.text}</p>
+                      <small>
+                        {a.author.name} · {clock(a.createdAt)}
+                      </small>
+                    </article>
+                  ))}
+                </details>
+              )}
+            </section>
+          )}
+          <section className="op-sheet" aria-label={words.sheet} ref={sheet}>
+            <div className="op-sheet-head">
+              <b>{words.sheet}</b>
+              <small>{room.term.label}</small>
+            </div>
+            {calls.length === 0 && decided.length === 0 && (
+              <p className="op-sheet-empty">Nothing scheduled or decided yet.</p>
+            )}
+            {calls.map((item) => (
+              <div key={item.id} className={`op-row org-state ${item.kind}`}>
+                <time>{item.when ? sheetDate(item.when) : "SOON"}</time>
+                <div>
+                  <b>{item.text}</b>
+                  {item.kind === "deadline" && <small>Due</small>}
+                </div>
+                {edit && (
+                  <button
+                    className="op-remove"
+                    aria-label={`Remove ${item.text}`}
+                    onClick={() =>
+                      void run(() => api(`${base}/state/${item.id}`, undefined, "DELETE"))
+                    }
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            ))}
+            {edit &&
+              (adding ? (
+                <form
+                  className="op-add"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void run(async () => {
+                      await api(`${base}/state`, {
+                        kind: stateKind,
+                        text: stateText,
+                        ...(stateWhen ? { when: stateWhen } : {}),
+                      });
+                      setStateText("");
+                      setStateWhen("");
+                      setAdding(false);
+                    });
+                  }}
+                >
+                  <label>
+                    Kind
+                    <select
+                      value={stateKind}
+                      onChange={(e) => setStateKind(e.target.value as StateItem["kind"])}
+                    >
+                      <option value="schedule">Schedule</option>
+                      <option value="deadline">Deadline</option>
+                      <option value="decision">Decision</option>
+                    </select>
+                  </label>
+                  <label>
+                    What
+                    <input
+                      required
+                      minLength={2}
+                      maxLength={200}
+                      value={stateText}
+                      onChange={(e) => setStateText(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    When
+                    <input
+                      type="date"
+                      value={stateWhen}
+                      onChange={(e) => setStateWhen(e.target.value)}
+                    />
+                  </label>
+                  <button className="op-ink">Add</button>
+                </form>
+              ) : (
+                <button className="op-add-open" onClick={() => setAdding(true)}>
+                  + Add to the {words.sheet.toLowerCase()}
+                </button>
+              ))}
+          </section>
+          {decided.length > 0 && (
+            <div className="op-duo">
+              {decided.map((d) => (
+                <div key={d.id} className="op-card org-state decision">
+                  <small>DECIDED</small>
+                  <b>{d.text}</b>
+                  {edit && (
+                    <button
+                      className="op-remove"
+                      aria-label={`Remove ${d.text}`}
+                      onClick={() =>
+                        void run(() => api(`${base}/state/${d.id}`, undefined, "DELETE"))
+                      }
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      {tool === "posts" && <OrgPosts org={org} notify={notify} />}
+      {tool === "crew" && room.admin && <CrewStamps org={org} notify={notify} />}
+      {tool === "archive" && <Archive org={org} words={words} />}
       {room.circle && (
         <AfterTerm
           org={org}
@@ -669,6 +764,7 @@ function Backstage({
           notify={notify}
           onClose={(toSheet) => {
             setTalk(false);
+            if (toSheet) setTool("sheet");
             if (toSheet)
               window.setTimeout(
                 () => sheet.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
@@ -919,6 +1015,300 @@ function Talk({
   );
 }
 
+/** Posts written together: anyone in the term drafts, an admin sends it out as the organisation. */
+function OrgPosts({ org, notify }: { org: OrgView; notify: (s: string) => void }) {
+  type PostView = OrgPost & { author: { id: string; name: string; handle: string } };
+  const [view, setView] = useState<{
+    admin: boolean;
+    pending: PostView[];
+    published: PostView[];
+  } | null>(null);
+  const [text, setText] = useState("");
+  const base = `/orgs/${encodeURIComponent(org.id)}/posts`;
+  const load = useCallback(async () => {
+    try {
+      setView(await api(base));
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }, [base, notify]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const run = async (work: () => Promise<unknown>, done: string) => {
+    try {
+      await work();
+      notify(done);
+      await load();
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  };
+  if (!view) return null;
+  return (
+    <section className="op-panel" aria-label="Posts">
+      <div className="op-panel-head">
+        <b>Posts as {org.name}</b>
+        <small>{view.admin ? "You can send these out" : "An admin sends it out"}</small>
+      </div>
+      <form
+        className="op-panel-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void run(
+            async () => {
+              await api(base, { text });
+              setText("");
+            },
+            view.admin ? "Posted on the page." : "Sent to the admins for a look.",
+          );
+        }}
+      >
+        <label className="sr-only" htmlFor="op-draft">
+          Draft
+        </label>
+        <textarea
+          id="op-draft"
+          required
+          minLength={2}
+          maxLength={1000}
+          rows={3}
+          value={text}
+          placeholder={`Write something for ${org.name}'s page`}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <button className="op-ink">{view.admin ? "Post" : "Send for approval"}</button>
+      </form>
+      {view.pending.length > 0 && (
+        <ul className="op-list" aria-label="Waiting">
+          {view.pending.map((p) => (
+            <li key={p.id}>
+              <small>WAITING · {firstName(p.author.name).toUpperCase()}</small>
+              <p>{p.text}</p>
+              {view.admin && (
+                <div className="op-list-actions">
+                  <button
+                    className="op-ink"
+                    onClick={() =>
+                      void run(
+                        () => api(`${base}/${p.id}/review`, { approve: true }),
+                        "Posted on the page.",
+                      )
+                    }
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="op-plain"
+                    onClick={() =>
+                      void run(
+                        () => api(`${base}/${p.id}/review`, { approve: false }),
+                        "Declined. It stays off the page.",
+                      )
+                    }
+                  >
+                    Decline
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {view.published.length > 0 && (
+        <ul className="op-list" aria-label="Posted">
+          {view.published.map((p) => (
+            <li key={p.id}>
+              <small>
+                POSTED · {clock(p.reviewedAt ?? p.createdAt).toUpperCase()} · BY{" "}
+                {firstName(p.author.name).toUpperCase()}
+              </small>
+              <p>{p.text}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** Crew stamps: each event the organisation ran, a stamp for the people who made it happen. */
+function CrewStamps({ org, notify }: { org: OrgView; notify: (s: string) => void }) {
+  const [events, setEvents] = useState<{ id: string; name: string; crew: number }[] | null>(null);
+  const [name, setName] = useState("");
+  const [giving, setGiving] = useState<string | null>(null);
+  const [handles, setHandles] = useState("");
+  const base = `/orgs/${encodeURIComponent(org.id)}/events`;
+  const load = useCallback(async () => {
+    try {
+      setEvents((await api<{ events: { id: string; name: string; crew: number }[] }>(base)).events);
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }, [base, notify]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (!events) return null;
+  return (
+    <section className="op-panel" aria-label="Crew stamps">
+      <div className="op-panel-head">
+        <b>Crew stamps</b>
+        <small>One per event, for the people who ran it</small>
+      </div>
+      <form
+        className="op-panel-form row"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          try {
+            await api(base, { name });
+            setName("");
+            notify(`“${name}” has its crew stamp.`);
+            await load();
+          } catch (err) {
+            notify((err as Error).message);
+          }
+        }}
+      >
+        <label className="sr-only" htmlFor="op-event">
+          Event
+        </label>
+        <input
+          id="op-event"
+          required
+          minLength={2}
+          maxLength={60}
+          value={name}
+          placeholder="Founders' Fest 2026"
+          onChange={(e) => setName(e.target.value)}
+        />
+        <button className="op-ink">Add event</button>
+      </form>
+      {events.length === 0 ? (
+        <p className="op-quiet">No events yet.</p>
+      ) : (
+        <ul className="op-list">
+          {events.map((ev) => (
+            <li key={ev.id}>
+              <small>
+                {ev.crew === 0
+                  ? "NO CREW YET"
+                  : `${ev.crew} ${ev.crew === 1 ? "PERSON HOLDS" : "PEOPLE HOLD"} IT`}
+              </small>
+              <p>{ev.name}</p>
+              {giving === ev.id ? (
+                <form
+                  className="op-panel-form row"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    try {
+                      const { awarded, skipped } = await api<{
+                        awarded: string[];
+                        skipped: { handle: string; why: string }[];
+                      }>(`${base}/${encodeURIComponent(ev.id)}/award`, {
+                        handles: handles.split(/[\s,]+/).filter(Boolean),
+                      });
+                      notify(
+                        [
+                          awarded.length
+                            ? `Stamped ${awarded.map((h) => `@${h}`).join(", ")}.`
+                            : "",
+                          skipped.length
+                            ? `Skipped ${skipped.map((x) => `@${x.handle} (${skipReason[x.why] ?? x.why})`).join(", ")}.`
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" "),
+                      );
+                      setHandles("");
+                      setGiving(null);
+                      await load();
+                    } catch (err) {
+                      notify((err as Error).message);
+                    }
+                  }}
+                >
+                  <label className="sr-only" htmlFor={`op-crew-${ev.id}`}>
+                    Handles
+                  </label>
+                  <input
+                    id={`op-crew-${ev.id}`}
+                    required
+                    value={handles}
+                    placeholder="@ana @leo"
+                    onChange={(e) => setHandles(e.target.value)}
+                  />
+                  <button className="op-ink">Give</button>
+                </form>
+              ) : (
+                <button className="op-plain" onClick={() => setGiving(ev.id)}>
+                  Give to the crew
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+const skipReason: Record<string, string> = {
+  unknown: "not on Smudge",
+  "not-a-member": "not in the organisation",
+  already: "already has it",
+};
+
+/** The archive: every term, and the line of each title from the first who held it. */
+function Archive({ org, words }: { org: OrgView; words: Words }) {
+  return (
+    <section className="op-panel" aria-label="Archive">
+      <div className="op-panel-head">
+        <b>Archive</b>
+        <small>
+          {org.terms.length} {org.terms.length === 1 ? "term" : "terms"}
+          {org.since ? ` since ${org.since}` : ""}
+        </small>
+      </div>
+      <Lines lines={org.lines} />
+      <ul className="op-list">
+        {org.terms.map((t) => (
+          <li key={t.id}>
+            <small>{t.locked ? "LOCKED" : "NOW"}</small>
+            <p>
+              {t.label} · {org.company.find((c) => c.termId === t.id)?.people.length ?? 0} in{" "}
+              {words.company.toLowerCase()}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Each title's line, newest holder first: "Head of Comms, 7th: Ana". */
+function Lines({ lines }: { lines: OrgView["lines"] }) {
+  if (lines.length === 0) return null;
+  return (
+    <div className="op-lines">
+      {lines.map((line) => (
+        <div key={line.role} className="op-line">
+          <b>{line.role}</b>
+          <ol>
+            {[...line.holders].reverse().map((h) => (
+              <li key={h.id}>
+                <a href={`/u/${encodeURIComponent(h.handle)}`}>
+                  <i>{ordinal(h.n)}</i> {h.name}
+                  {h.from ? <small>{h.from}</small> : null}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Edit page, first: how the page looks and what it calls things. */
 function LookEditor({
   org,
@@ -1039,6 +1429,27 @@ function Admin({
       <p className="org-hint">
         Only admins see this. Run by {org.admins.map((a) => `@${a.handle}`).join(", ")}.
       </p>
+      <label className="org-form op-visibility">
+        Who finds it
+        <select
+          value={org.visibility}
+          onChange={(e) =>
+            void run(
+              () =>
+                api(
+                  `/orgs/${encodeURIComponent(org.id)}/visibility`,
+                  { visibility: e.target.value },
+                  "PUT",
+                ),
+              visibilityNote[e.target.value as OrgVisibility],
+            )
+          }
+        >
+          <option value="public">Public: anyone can find the page</option>
+          <option value="link">Link only: off search, open to anyone with the link</option>
+          <option value="private">Private: only its own people know it exists</option>
+        </select>
+      </label>
       <div className="org-form org-join-link">
         <button
           type="button"

@@ -117,7 +117,7 @@ export class OprecService {
   }
   /** The committee's list: each applicant with the chapters they show the world. */
   list(actor: Actor, orgId: string, oprecId: string) {
-    this.orgs.requireAdmin(actor, orgId);
+    const adminId = this.orgs.requireAdmin(actor, orgId);
     const oprec = this.oprec(orgId, oprecId);
     const users = new Map(this.store.all<User>("user").map((u) => [u.id, u]));
     return {
@@ -130,7 +130,12 @@ export class OprecService {
           proven: this.store
             .all<Chapter>("chapter")
             .filter(
-              (c) => c.ownerId === a.userId && c.audience === "public" && c.kind !== "together",
+              (c) =>
+                c.ownerId === a.userId &&
+                c.audience === "public" &&
+                c.kind !== "together" &&
+                // A private organisation's chapters stay with its own people.
+                (!c.orgId || this.orgs.canSee(c.orgId, adminId)),
             )
             .map((c) => c.label),
         };
