@@ -637,6 +637,21 @@ html[data-theme="dark"] .classic-post .runtime {
   padding: 14px 18px;
   border-radius: 18px;
   background: color-mix(in srgb, var(--accent) 12%, transparent);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.profile-default .profile-default-hint .text-button {
+  min-height: 40px;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
 }
 .profile-default .profile-default-grid {
   display: grid;

@@ -330,7 +330,7 @@ export function ProfilePage({
                       if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
                     }}
                   >
-                    {editing ? "View published profile" : "Customize profile"}
+                    {editing ? "Back to my profile" : "Edit the code (advanced)"}
                   </button>
                 ) : pageFollows || v2 ? null : (
                   <button disabled={busy} className="profile-primary" onClick={() => void follow()}>
@@ -392,15 +392,13 @@ export function ProfilePage({
           // Plain profiles: the one action that matters stays in the header; the rest is ☰.
           <>
             {mine ? (
-              <button
-                className="profile-primary"
-                onClick={(e) => {
-                  setEditing((v) => !v);
-                  if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
-                }}
-              >
-                {editing ? "View published profile" : "Customize profile"}
-              </button>
+              // The code editor is for the few who want it: it waits in ☰, and only the way back
+              // out of it sits in the header. Everyone else edits with Edit profile.
+              editing && (
+                <button className="profile-primary" onClick={() => setEditing(false)}>
+                  Back to my profile
+                </button>
+              )
             ) : (
               <button disabled={busy} className="profile-primary" onClick={() => void follow()}>
                 {boot.following.includes(ownerId)
@@ -413,6 +411,16 @@ export function ProfilePage({
             <details className="profile-more">
               <summary aria-label="More options">☰</summary>
               <div className="profile-more-menu profile-control-actions">
+                {mine && !editing && (
+                  <button
+                    onClick={(e) => {
+                      e.currentTarget.closest("details")?.removeAttribute("open");
+                      setEditing(true);
+                    }}
+                  >
+                    Edit the code (advanced)
+                  </button>
+                )}
                 <button
                   aria-pressed={motion}
                   onClick={() => {

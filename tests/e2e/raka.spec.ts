@@ -206,7 +206,7 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
   await api(page, "/session", { userId: "raka" });
   await page.reload();
   await page.getByLabel("Profile options", { exact: true }).click();
-  await page.getByRole("button", { name: "Customize profile" }).click();
+  await page.getByRole("button", { name: "Edit the code (advanced)" }).click();
   const initial = (await api(page, "/profile-history")).data.state;
   try {
     await page.getByRole("button", { name: "Edit a copy of live profile", exact: true }).click();
@@ -273,7 +273,7 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
     await clickSettled(page.getByRole("button", { name: "Publish profile", exact: true }));
     await expect(page.getByRole("status")).toContainText("Profile published");
     await page.getByLabel("Profile options", { exact: true }).click();
-    await clickSettled(page.getByRole("button", { name: "View published profile" }));
+    await clickSettled(page.getByRole("button", { name: "Back to my profile" }));
     await expect(frame.locator("#relay-contributors")).toContainText(`${before + 1} contributions`);
   } finally {
     const state = (await api(page, "/profile-history")).data.state;

@@ -23,7 +23,7 @@ test("public room and comic profiles open real owner posts, follow and honor vis
   await page.goto("/?profile=maya");
   const frame = page.locator(".profile-world").frameLocator("iframe");
   await expect(frame.getByRole("heading", { name: "Maya Chen’s room" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Customize profile" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit the code (advanced)" })).toHaveCount(0);
   const follow = page.getByRole("button", { name: /^(Follow|Unfollow)$/ });
   const before = await follow.innerText();
   await follow.click();
@@ -61,7 +61,8 @@ test("profile editor saves, previews, publishes, imports and restores immutable 
   page,
 }) => {
   await page.goto("/?profile=you");
-  await page.getByRole("button", { name: "Customize profile" }).click();
+  await page.getByLabel("More options", { exact: true }).click();
+  await page.getByRole("button", { name: "Edit the code (advanced)" }).click();
   const initial = (await request(page, "/profile-history")).data.state;
   // The single-file room opens straight in the source editor; modular starters open visually.
   await page.getByLabel("Profile starting point").selectOption("room");
@@ -82,14 +83,15 @@ test("profile editor saves, previews, publishes, imports and restores immutable 
   await page.getByRole("button", { name: "Publish profile", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Profile published");
   const first = (await request(page, "/profile-history")).data.state;
-  await page.getByRole("button", { name: "View published profile" }).click();
+  await page.getByRole("button", { name: "Back to my profile" }).click();
   await expect(
     page
       .locator(".profile-world")
       .frameLocator("iframe")
       .getByRole("heading", { name: "My personal workshop" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Customize profile" }).click();
+  await page.getByLabel("More options", { exact: true }).click();
+  await page.getByRole("button", { name: "Edit the code (advanced)" }).click();
   const pkg = {
     manifest: {
       kind: "profile",
@@ -121,7 +123,7 @@ test("profile editor saves, previews, publishes, imports and restores immutable 
   expect((await request(page, "/profile-history")).data.state.publicationId).toBe(
     first.publicationId,
   );
-  await page.getByRole("button", { name: "View published profile" }).click();
+  await page.getByRole("button", { name: "Back to my profile" }).click();
   await expect(
     page
       .locator(".profile-world")

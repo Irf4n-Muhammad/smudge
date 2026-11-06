@@ -22,9 +22,12 @@ async function editor(page: Page, owner: string) {
   );
   await page.goto("/?profile=" + owner);
   const state = await (await response).json();
-  if (state.manifest?.schemaVersion === 2)
-    await page.getByLabel("Profile options", { exact: true }).click();
-  await page.getByRole("button", { name: "Customize profile", exact: true }).click();
+  await page
+    .getByLabel(state.manifest?.schemaVersion === 2 ? "Profile options" : "More options", {
+      exact: true,
+    })
+    .click();
+  await page.getByRole("button", { name: "Edit the code (advanced)", exact: true }).click();
 }
 test.use({ actionTimeout: 15000 });
 test("A shares a mod, B mixes it with Raka and publishes, C votes and revisits the same result", async ({

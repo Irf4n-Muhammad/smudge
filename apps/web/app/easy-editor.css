@@ -194,15 +194,69 @@
   gap: 6px;
   margin-top: 8px;
 }
-.easy-dots i {
+.easy-dots i,
+.easy-dots button {
   width: 9px;
   height: 9px;
+  padding: 0;
+  border: 0;
   border-radius: 9px;
   background: var(--line);
+  cursor: pointer;
+  transition: width 0.2s;
 }
-.easy-dots i.on {
+.easy-dots i.on,
+.easy-dots button.on {
   width: 30px;
   background: var(--ink);
+}
+/* The row with arrows on either side for a mouse; a finger just swipes. */
+.easy-rail {
+  position: relative;
+}
+.easy-vibes {
+  cursor: grab;
+}
+.easy-vibes:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.easy-vibes.dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
+}
+.rail-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-top: -24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 8px 20px -10px rgb(0 0 0 / 45%);
+  cursor: pointer;
+}
+.rail-arrow.prev {
+  left: max(8px, calc(50% - 230px));
+}
+.rail-arrow.next {
+  right: max(8px, calc(50% - 230px));
+}
+.easy-rail .rail-arrow:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (hover: none) {
+  .rail-arrow {
+    display: none;
+  }
 }
 .easy-pick-actions {
   position: sticky;
