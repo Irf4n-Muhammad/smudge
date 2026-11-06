@@ -77,7 +77,9 @@ import { SpotifyService, spotifyStart } from "./spotify.js";
 import type { NowView } from "../../packages/contracts/src/now.js";
 import type { Publication } from "../../packages/core/src/social.js";
 import { importSite } from "./site-import.js";
-import { frameCheck } from "./site-fetch.js";
+import { frameCheck, readSiteText, siteStatus } from "./site-fetch.js";
+import { resolveTxt } from "node:dns/promises";
+import { OwnSiteService } from "../../packages/core/src/own-site.js";
 import { SharingService } from "../../packages/core/src/sharing.js";
 import { MediaService, maxVideoBytes } from "../../packages/core/src/media.js";
 
@@ -1375,6 +1377,47 @@ api.get("/api/frame-check", frameLimit, async (req, res) => {
   res.json({
     frameable: await frameCheck(url, config.publicUrl.origin, { allowHosts: importAllowHosts }),
   });
+});
+// Your own website as your profile: set it, prove the domain is yours, or stop using it.
+const ownSites = new OwnSiteService(
+  service,
+  {
+    readText: (url) => readSiteText(url, { allowHosts: importAllowHosts }),
+    txt: async (name) => (await resolveTxt(name)).map((parts) => parts.join("")),
+  },
+  { allowHttpHosts: importAllowHosts },
+);
+accounts.erasers.push((userId) => ownSites.erase(userId));
+const siteLimit = rateLimit({ windowMs: 10 * 60_000, max: 30 });
+api.get("/api/me/site", (_req, res) => res.json({ site: ownSites.mine(actor(res)) }));
+api.post("/api/me/site", siteLimit, (req, res) =>
+  res.json({ site: ownSites.set(actor(res), req.body) }),
+);
+api.post("/api/me/site/verify", siteLimit, async (_req, res) =>
+  res.json({ site: await ownSites.verify(actor(res)) }),
+);
+api.delete("/api/me/site", (_req, res) => res.json(ownSites.remove(actor(res))));
+// Whether a profile is a website right now. Answers are kept a minute so visits don't hammer it.
+const siteSeen = new Map<string, { at: number; status: Awaited<ReturnType<typeof siteStatus>> }>();
+api.get("/api/profiles/:ownerId/site", frameLimit, async (req, res) => {
+  const ownerId = String(req.params.ownerId);
+  community.assertVisibleUser(actor(res), ownerId);
+  await ownSites.recheck(ownerId).catch(() => undefined);
+  const site = ownSites.public(ownerId);
+  if (!site) return res.json({ site: null, status: null });
+  const key = `${ownerId}:${site.url}`;
+  let seen = siteSeen.get(key);
+  if (!seen || Date.now() - seen.at > 60_000) {
+    seen = {
+      at: Date.now(),
+      status: await siteStatus(site.url, config.publicUrl.origin, {
+        allowHosts: importAllowHosts,
+      }),
+    };
+    if (siteSeen.size > 2000) siteSeen.clear();
+    siteSeen.set(key, seen);
+  }
+  res.json({ site, status: seen.status });
 });
 api.post("/api/validate", (req, res) => res.json(service.validate(req.body)));
 api.post("/api/assets", (req, res) => res.json(service.upload(actor(res), req.body)));
