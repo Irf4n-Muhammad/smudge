@@ -472,8 +472,10 @@ api.get("/api/bootstrap", (_req, res) =>
     sides: sidesService.me(actor(res)),
   }),
 );
-const authLimit = rateLimit({ windowMs: 15 * 60_000, max: 30 });
-const signupLimit = rateLimit({ windowMs: 60 * 60_000, max: 10 });
+// The local playground is for trying sign-up over and over; real servers keep the tight limits.
+const authRoom = production ? 1 : 20;
+const authLimit = rateLimit({ windowMs: 15 * 60_000, max: 30 * authRoom });
+const signupLimit = rateLimit({ windowMs: 60 * 60_000, max: 10 * authRoom });
 const signedIn = (res: Response) => (res.locals.actor ? (res.locals.actor as Actor) : undefined);
 api.get("/api/auth/state", (_req, res) => {
   const current = signedIn(res);
