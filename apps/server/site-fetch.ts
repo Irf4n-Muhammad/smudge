@@ -58,11 +58,14 @@ export interface FetchOptions {
   /** host:port pairs a local trial may fetch from despite the rules above. Never in production. */
   allowHosts?: string[];
   timeoutMs?: number;
+  /** Stop once the headers arrive; the body is never read. */
+  headersOnly?: boolean;
 }
 interface Fetched {
   url: URL;
   type: string;
   body: Buffer;
+  headers: http.IncomingHttpHeaders;
 }
 
 async function resolveSafe(url: URL, allow: boolean) {
@@ -118,6 +121,7 @@ export async function safeGet(
       location?: string;
       type: string;
       body: Buffer;
+      headers: http.IncomingHttpHeaders;
     }>((resolve, reject) => {
       const left = deadline - Date.now();
       if (left <= 0) return reject(new AppError("SITE_TOO_SLOW", 422));
@@ -143,6 +147,7 @@ export async function safeGet(
               location: response.headers.location,
               type,
               body: Buffer.alloc(0),
+              headers: response.headers,
             });
           }
           if (status !== 200) {
@@ -152,6 +157,10 @@ export async function safeGet(
           if (!accept(type)) {
             response.resume();
             return reject(new AppError("SITE_NOT_A_PAGE", 422));
+          }
+          if (options.headersOnly) {
+            response.destroy();
+            return resolve({ status, type, body: Buffer.alloc(0), headers: response.headers });
           }
           const declared = Number(response.headers["content-length"] ?? 0);
           if (declared > maxBytes) {
@@ -167,7 +176,9 @@ export async function safeGet(
               reject(new AppError("SITE_TOO_LARGE", 422));
             } else chunks.push(chunk);
           });
-          response.on("end", () => resolve({ status, type, body: Buffer.concat(chunks) }));
+          response.on("end", () =>
+            resolve({ status, type, body: Buffer.concat(chunks), headers: response.headers }),
+          );
           response.on("error", () => reject(new AppError("SITE_REFUSED", 422)));
         },
       );
@@ -181,7 +192,7 @@ export async function safeGet(
       next = new URL(result.location, url).href;
       continue;
     }
-    return { url, type: result.type, body: result.body };
+    return { url, type: result.type, body: result.body, headers: result.headers };
   }
   throw new AppError("SITE_TOO_MANY_REDIRECTS", 422);
 }
@@ -230,6 +241,53 @@ export async function fetchPhoto(raw: string, options: FetchOptions = {}) {
       .webp({ quality: 76 })
       .toBuffer();
     return out.length <= 900_000 ? out : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether a page's headers let `origin` show it in a frame: X-Frame-Options and the CSP
+ * frame-ancestors directive, which wins when both are sent.
+ */
+export function allowsFraming(headers: http.IncomingHttpHeaders, origin: string) {
+  const csp = [headers["content-security-policy"] ?? []].flat().join(";");
+  const directive = csp
+    .split(/[;,]/)
+    .map((d) => d.trim().split(/\s+/))
+    .find((d) => d[0]?.toLowerCase() === "frame-ancestors");
+  if (directive) {
+    const me = new URL(origin);
+    return directive.slice(1).some((raw) => {
+      const source = raw.toLowerCase();
+      if (source === "*") return true;
+      if (source.startsWith("'")) return false;
+      if (/^[a-z][a-z0-9+.-]*:$/.test(source)) return me.protocol === source;
+      const match = /^(?:([a-z][a-z0-9+.-]*):\/\/)?(\*\.)?([^/:]+)(?::(\d+|\*))?/.exec(source);
+      if (!match) return false;
+      const [, scheme, wild, host, port] = match;
+      if (scheme && `${scheme}:` !== me.protocol) return false;
+      if (port && port !== "*" && port !== (me.port || (me.protocol === "https:" ? "443" : "80")))
+        return false;
+      return wild ? me.hostname.endsWith(`.${host}`) : me.hostname === host;
+    });
+  }
+  const xfo = String(headers["x-frame-options"] ?? "").trim();
+  return !xfo;
+}
+
+/**
+ * Asks an outside page whether it may open inside Smudge. Null when the page could not be asked
+ * (blocked bots, timeouts); the sheet then just tries.
+ */
+export async function frameCheck(raw: string, origin: string, options: FetchOptions = {}) {
+  try {
+    const page = await safeGet(raw, 1, () => true, {
+      ...options,
+      headersOnly: true,
+      timeoutMs: options.timeoutMs ?? 5000,
+    });
+    return allowsFraming(page.headers, origin);
   } catch {
     return null;
   }

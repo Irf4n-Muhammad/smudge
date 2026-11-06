@@ -77,6 +77,7 @@ import { SpotifyService, spotifyStart } from "./spotify.js";
 import type { NowView } from "../../packages/contracts/src/now.js";
 import type { Publication } from "../../packages/core/src/social.js";
 import { importSite } from "./site-import.js";
+import { frameCheck } from "./site-fetch.js";
 import { SharingService } from "../../packages/core/src/sharing.js";
 import { MediaService, maxVideoBytes } from "../../packages/core/src/media.js";
 
@@ -1367,6 +1368,14 @@ const importAllowHosts = production
 api.post("/api/imports", importLimit, async (req, res) =>
   res.json(await importSite(service, actor(res), req.body, { allowHosts: importAllowHosts })),
 );
+// Whether an outside page lets itself open in the in-app sheet; only its headers are read.
+const frameLimit = rateLimit({ windowMs: 60_000, max: 30 });
+api.get("/api/frame-check", frameLimit, async (req, res) => {
+  const url = String(req.query.url ?? "").slice(0, 500);
+  res.json({
+    frameable: await frameCheck(url, config.publicUrl.origin, { allowHosts: importAllowHosts }),
+  });
+});
 api.post("/api/validate", (req, res) => res.json(service.validate(req.body)));
 api.post("/api/assets", (req, res) => res.json(service.upload(actor(res), req.body)));
 // Videos arrive as the raw file, not base64 JSON, and are kept as files (see MediaService).
