@@ -738,29 +738,6 @@ export function FormaApp() {
                     <strong>Following</strong>
                     <small>Only people you follow</small>
                   </button>
-                  <span className="feed-menu-label">Ways to browse</span>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setFeedMenu(false);
-                      setBreakout(true);
-                      window.history.replaceState(null, "", "/?mode=breakout");
-                      window.scrollTo(0, 0);
-                    }}
-                  >
-                    <strong>Break the frame</strong>
-                    <small>Posts float free on one long page</small>
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setFeedMenu(false);
-                      changeMode(true);
-                    }}
-                  >
-                    <strong>Enter hyperspace</strong>
-                    <small>Fly through posts in orbit</small>
-                  </button>
                 </div>
               )}
             </div>
