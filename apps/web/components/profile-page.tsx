@@ -636,7 +636,7 @@ export function ProfilePage({
                 </header>
                 {mine && (
                   <p className="profile-default-hint">
-                    Make this page yours: a painted wall, a comic, a scrapbook.{" "}
+                    Make this page yours: a giant painted name, or you cut out in front of it.{" "}
                     <button className="text-button" onClick={() => setEasy(true)}>
                       Pick a style
                     </button>

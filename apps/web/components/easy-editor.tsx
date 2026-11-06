@@ -84,37 +84,16 @@ const accents = [
 ] as const;
 type Sheet = "field" | "colors" | "section" | "order" | null;
 
-/** The starting points people pick from, shown as pictures of real profiles built with them. */
+/**
+ * The starting points people pick from, shown as pictures of real profiles built with them. Only
+ * the two newest looks are offered; pages already made with an older one keep working.
+ */
 const vibes = [
   {
     key: "smudge",
     name: "Paint wall",
     image: "/vibes/paint-wall.jpg",
     note: "A giant painted name, tap-to-throw paint and sections you pick.",
-  },
-  {
-    key: "raka",
-    name: "Ink & Paper",
-    image: "/vibes/ink-paper.jpg",
-    note: "Hand-drawn comic with a drawing wall friends add to.",
-  },
-  {
-    key: "basic",
-    name: "Essentials",
-    image: "/vibes/essentials.jpg",
-    note: "Clean and simple. Your name, your posts.",
-  },
-  {
-    key: "room",
-    name: "Room",
-    image: "/vibes/room.jpg",
-    note: "A little room with your photos pinned up.",
-  },
-  {
-    key: "comic",
-    name: "Comic",
-    image: "/vibes/comic.jpg",
-    note: "Your posts laid out like a vertical comic.",
   },
   {
     key: "track",

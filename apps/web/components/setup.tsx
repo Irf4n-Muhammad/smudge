@@ -11,32 +11,17 @@ interface Vibe {
   name: string;
   colours: { key: string; colors: string[] }[];
 }
-/** Pictures of real pages built with each vibe, and a plainer name than the template's. */
+/** The two looks a new page can start from, with pictures of real pages built with them. */
 const looks: Record<string, { name: string; image: string; note: string }> = {
   smudge: {
     name: "Paint wall",
     image: "/vibes/paint-wall.jpg",
     note: "A giant painted name and sections you pick.",
   },
-  raka: {
-    name: "Ink & Paper",
-    image: "/vibes/ink-paper.jpg",
-    note: "Hand-drawn comic with a drawing wall friends add to.",
-  },
-  basic: {
-    name: "Essentials",
-    image: "/vibes/essentials.jpg",
-    note: "Clean. Your name, your posts.",
-  },
-  room: {
-    name: "Room",
-    image: "/vibes/room.jpg",
-    note: "A little room with your photos pinned up.",
-  },
-  comic: {
-    name: "Comic",
-    image: "/vibes/comic.jpg",
-    note: "Your posts laid out like a vertical comic.",
+  track: {
+    name: "Track",
+    image: "/vibes/track.jpg",
+    note: "Cream ground, one lime, and you cut out in front of your name.",
   },
 };
 const colourNames: Record<string, string> = {
