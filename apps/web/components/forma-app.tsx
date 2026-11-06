@@ -348,10 +348,15 @@ export function FormaApp() {
     window.scrollTo({ top: 0, behavior: "smooth" });
     await loadFormat(id);
   }
-  async function reuse(id: string) {
+  async function reuse(id: string, code = false) {
     const d = await api<DraftView>(`/posts/${id}/reuse`, {});
-    setActiveDraft(d.id);
-    setStudio(true);
+    setEditingPost(false);
+    if (code) {
+      setActiveDraft(d.id);
+      setStudio(true);
+    }
+    // Otherwise the copy opens in the easy editor, which hands a post made in code to the studio.
+    else setPostEditor({ draftId: d.id });
   }
   function openPost(id: string) {
     setFocusPost(id);
@@ -1391,7 +1396,7 @@ export function FormaApp() {
           onCode={() => {
             const id = filling.post.id;
             setFilling(null);
-            reuse(id).catch((e: Error) => notify(e.message));
+            reuse(id, true).catch((e: Error) => notify(e.message));
           }}
           onPosted={async (id) => {
             setFilling(null);
