@@ -1,4 +1,5 @@
 "use client";
+import { PictureRail, RailDots } from "./rail";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "../../../packages/contracts/src/experience";
 import type {
@@ -83,37 +84,16 @@ const accents = [
 ] as const;
 type Sheet = "field" | "colors" | "section" | "order" | null;
 
-/** The starting points people pick from, shown as pictures of real profiles built with them. */
+/**
+ * The starting points people pick from, shown as pictures of real profiles built with them. Only
+ * the two newest looks are offered; pages already made with an older one keep working.
+ */
 const vibes = [
   {
     key: "smudge",
     name: "Paint wall",
     image: "/vibes/paint-wall.jpg",
     note: "A giant painted name, tap-to-throw paint and sections you pick.",
-  },
-  {
-    key: "raka",
-    name: "Ink & Paper",
-    image: "/vibes/ink-paper.jpg",
-    note: "Hand-drawn comic with a drawing wall friends add to.",
-  },
-  {
-    key: "basic",
-    name: "Essentials",
-    image: "/vibes/essentials.jpg",
-    note: "Clean and simple. Your name, your posts.",
-  },
-  {
-    key: "room",
-    name: "Room",
-    image: "/vibes/room.jpg",
-    note: "A little room with your photos pinned up.",
-  },
-  {
-    key: "comic",
-    name: "Comic",
-    image: "/vibes/comic.jpg",
-    note: "Your posts laid out like a vertical comic.",
   },
   {
     key: "track",
@@ -483,49 +463,19 @@ export function EasyEditor({
           Pick your <em>vibe,</em>
         </h1>
         <p className="easy-sub">We fill it with your stuff. Swipe to try others.</p>
-        <div
-          className="easy-vibes"
-          role="listbox"
-          aria-label="Profile vibes"
-          onScroll={(e) => {
-            // Swiping picks the card nearest the middle.
-            const row = e.currentTarget;
-            const mid = row.scrollLeft + row.clientWidth / 2;
-            let best = 0;
-            Array.from(row.children).forEach((c, i) => {
-              const el = c as HTMLElement;
-              const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid);
-              const b = row.children[best] as HTMLElement;
-              if (d < Math.abs(b.offsetLeft + b.offsetWidth / 2 - mid)) best = i;
-            });
-            if (best !== vibe) setVibe(best);
-          }}
-        >
-          {vibes.map((v, i) => (
-            <button
-              key={v.key}
-              role="option"
-              aria-selected={i === vibe}
-              aria-label={v.name}
-              className={`easy-vibe ${i === vibe ? "on" : ""}`}
-              onClick={(e) => {
-                setVibe(i);
-                e.currentTarget.scrollIntoView({ inline: "center", block: "nearest" });
-              }}
-            >
-              <img src={v.image} alt="" />
-            </button>
-          ))}
-        </div>
-        <div className="easy-vibe-name">
-          <strong>{current.name}</strong>
-          <span>{current.note}</span>
-          <span className="easy-dots" aria-hidden="true">
-            {vibes.map((v, i) => (
-              <i key={v.key} className={i === vibe ? "on" : ""} />
-            ))}
-          </span>
-        </div>
+        <PictureRail
+          label="Profile vibes"
+          items={vibes}
+          index={vibe}
+          setIndex={setVibe}
+          below={(goTo) => (
+            <div className="easy-vibe-name">
+              <strong>{current.name}</strong>
+              <span>{current.note}</span>
+              <RailDots names={vibes.map((v) => v.name)} index={vibe} goTo={goTo} />
+            </div>
+          )}
+        />
         {message && (
           <p className="easy-message" role="status">
             {message}

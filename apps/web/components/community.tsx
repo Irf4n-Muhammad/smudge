@@ -477,18 +477,20 @@ interface Thread {
 }
 export function MessagesPanel({
   initialUser,
+  initialGroup = null,
   meId,
   notify,
   onRead,
 }: {
   initialUser: string | null;
+  initialGroup?: string | null;
   meId: string;
   notify: (m: string) => void;
   onRead: () => void;
 }) {
   const [list, setList] = useState<Conversation[]>([]),
     [groups, setGroups] = useState<GroupSummary[]>([]),
-    [group, setGroup] = useState<string | null>(null),
+    [group, setGroup] = useState<string | null>(initialGroup),
     [creating, setCreating] = useState(false),
     [open, setOpen] = useState<string | null>(initialUser),
     [thread, setThread] = useState<Thread | null>(null),

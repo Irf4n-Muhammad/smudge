@@ -1,8 +1,9 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpRight, Lock, Send, X } from "lucide-react";
+import { api } from "./runtime";
 
 /**
  * The in-app page sheet: a large pop-up with a visible gap above it, so the feed stays in view
@@ -54,16 +55,29 @@ export function PageSheet({
         <header className="page-sheet-bar">
           <span className="page-sheet-grab" aria-hidden="true" />
           <div className="page-sheet-site">
-            <strong>{title}</strong>
+            {/* An outside page leads with its site, like a browser's address bar. */}
+            <strong>{href ? site : title}</strong>
             <small>
               {made ? (
                 <span className="made-tag">Made in Smudge</span>
               ) : (
                 <Lock size={11} aria-hidden="true" />
               )}
-              <span>{site}</span>
+              <span>{href ? pathOf(href, site, title) : site}</span>
             </small>
           </div>
+          {href && (
+            <a
+              className="page-sheet-button"
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open in browser"
+              title="Open in browser"
+            >
+              <ArrowUpRight size={17} />
+            </a>
+          )}
           <button className="page-sheet-button" aria-label="Share" onClick={() => void share()}>
             <Send size={17} />
           </button>
@@ -77,22 +91,37 @@ export function PageSheet({
           </button>
         </header>
         <div className="page-sheet-body">{children}</div>
-        {href && (
-          <footer className="page-sheet-foot">
-            <span>Page stays blank? Some sites don’t allow apps to show them.</span>
-            <a href={href} target="_blank" rel="noopener noreferrer">
-              Open in browser <ArrowUpRight size={14} />
-            </a>
-          </footer>
-        )}
       </div>
     </div>,
     document.body,
   );
 }
 
-/** An outside https page inside the sheet, isolated from Smudge's own origin and session. */
+/**
+ * An outside https page inside the sheet, isolated from Smudge's own origin and session. Sites
+ * that refuse to be shown inside other sites get a plain way out instead of a blank frame.
+ */
 export function OutsidePage({ url, title }: { url: string; title: string }) {
+  const [refused, setRefused] = useState(false);
+  useEffect(() => {
+    let gone = false;
+    api<{ frameable: boolean | null }>(`/frame-check?url=${encodeURIComponent(url)}`)
+      .then((r) => !gone && setRefused(r.frameable === false))
+      .catch(() => undefined);
+    return () => {
+      gone = true;
+    };
+  }, [url]);
+  if (refused)
+    return (
+      <div className="outside-refused">
+        <strong>{hostOf(url)} doesn’t open inside apps.</strong>
+        <p>The site asks to be opened on its own. It opens in a new tab and Smudge stays here.</p>
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          Open {hostOf(url)} <ArrowUpRight size={15} />
+        </a>
+      </div>
+    );
   return (
     <iframe
       className="outside-page"
@@ -103,4 +132,18 @@ export function OutsidePage({ url, title }: { url: string; title: string }) {
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
     />
   );
+}
+
+/** The address line under the site: the page's path, or the post's title for a site's home. */
+function pathOf(href: string, site: string, title: string) {
+  const rest = href.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+  return rest === site ? title : rest;
+}
+
+function hostOf(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }

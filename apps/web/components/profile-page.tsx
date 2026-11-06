@@ -330,7 +330,7 @@ export function ProfilePage({
                       if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
                     }}
                   >
-                    {editing ? "View published profile" : "Customize profile"}
+                    {editing ? "Back to my profile" : "Edit the code (advanced)"}
                   </button>
                 ) : pageFollows || v2 ? null : (
                   <button disabled={busy} className="profile-primary" onClick={() => void follow()}>
@@ -392,15 +392,13 @@ export function ProfilePage({
           // Plain profiles: the one action that matters stays in the header; the rest is ☰.
           <>
             {mine ? (
-              <button
-                className="profile-primary"
-                onClick={(e) => {
-                  setEditing((v) => !v);
-                  if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
-                }}
-              >
-                {editing ? "View published profile" : "Customize profile"}
-              </button>
+              // The code editor is for the few who want it: it waits in ☰, and only the way back
+              // out of it sits in the header. Everyone else edits with Edit profile.
+              editing && (
+                <button className="profile-primary" onClick={() => setEditing(false)}>
+                  Back to my profile
+                </button>
+              )
             ) : (
               <button disabled={busy} className="profile-primary" onClick={() => void follow()}>
                 {boot.following.includes(ownerId)
@@ -413,6 +411,16 @@ export function ProfilePage({
             <details className="profile-more">
               <summary aria-label="More options">☰</summary>
               <div className="profile-more-menu profile-control-actions">
+                {mine && !editing && (
+                  <button
+                    onClick={(e) => {
+                      e.currentTarget.closest("details")?.removeAttribute("open");
+                      setEditing(true);
+                    }}
+                  >
+                    Edit the code (advanced)
+                  </button>
+                )}
                 <button
                   aria-pressed={motion}
                   onClick={() => {
@@ -628,7 +636,7 @@ export function ProfilePage({
                 </header>
                 {mine && (
                   <p className="profile-default-hint">
-                    Make this page yours: a painted wall, a comic, a scrapbook.{" "}
+                    Make this page yours: a giant painted name, or you cut out in front of it.{" "}
                     <button className="text-button" onClick={() => setEasy(true)}>
                       Pick a style
                     </button>
@@ -966,103 +974,111 @@ function ProfileEditor({
   return (
     <section className="profile-editor" aria-label="Profile editor">
       <aside className="profile-editor-sidebar">
-        <h1>Your profile, your rules.</h1>
-        <ProfileModLibrary
-          draft={draft}
-          actorId={owner.id}
-          disabled={busy || dirty || visualDirty}
-          onInstalled={async (next, mixed) => {
-            const previous = draft;
-            select(next);
-            if (mixed && previous) {
-              setUndoPackage(previous.package);
-              setUndoIdentity(
-                previous.identity ?? {
-                  name: owner.name,
-                  bio: owner.bio,
-                  avatarAssetId: owner.avatarAssetId ?? null,
-                },
-              );
-              setUndoLabel("Undo last part change");
-            }
-            await load();
-            setPreview(true);
-            setMessage("Mod installed in your private draft. Preview it, then publish when ready.");
-          }}
-        />
+        <h1>Edit the code</h1>
         <p>
-          Start with a structure, then change the HTML, CSS and behavior. Your AI can edit the same
-          drafts through MCP.
+          For people who want to write HTML and CSS. Changes stay in a private draft until you
+          publish. To change your look the easy way, use Edit profile instead.
         </p>
-        <label>
-          Starting point
-          <select
-            aria-label="Profile starting point"
-            value={template}
-            onChange={(e) => setTemplate(e.target.value)}
-          >
-            <option value="smudge">Smudge · Paint wall</option>
-            <option value="room">Interactive room</option>
-            <option value="comic">Vertical comic</option>
-            <option value="raka">Ink &amp; Paper · Comic + Drawing Relay</option>
-            <option value="basic">Smudge · Modular essentials</option>
-          </select>
-        </label>
-        <button disabled={busy || !templates[template]} onClick={() => void create()}>
-          Create profile draft
-        </button>
-        <label className="profile-import">
-          Import package JSON
-          <input
-            aria-label="Import profile package"
-            type="file"
-            accept=".json,application/json"
-            disabled={busy}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file)
+        <section className="pe-card" aria-label="Start a draft">
+          <h2>Start a draft</h2>
+          {history?.state.publicationId && (
+            <button
+              disabled={busy}
+              onClick={() =>
                 void run(async () => {
-                  if (file.size > 3_000_000) throw new Error("Package exceeds 3 MB import limit.");
-                  const d = await api<ProfileDraft>(
-                    "/profile-drafts",
-                    JSON.parse(await file.text()),
+                  const current = history.publications.find(
+                    (p) => p.id === history.state.publicationId,
                   );
+                  if (!current)
+                    throw new Error("Published version unavailable. Refresh and try again.");
+                  const d = await api<ProfileDraft>(`/profiles/${owner.id}/combination`, {
+                    publicationId: current.id,
+                  });
                   select(d);
                   await load();
-                });
+                  setPreview(true);
+                  setMessage(
+                    "Working copy created. Your live profile stays unchanged until you publish.",
+                  );
+                })
+              }
+            >
+              Edit a copy of live profile
+            </button>
+          )}
+          <label>
+            From a starting point
+            <select
+              aria-label="Profile starting point"
+              value={template}
+              onChange={(e) => setTemplate(e.target.value)}
+            >
+              <option value="smudge">Paint wall</option>
+              {templates.track && <option value="track">Track</option>}
+              <option value="raka">Ink &amp; Paper</option>
+              <option value="room">Room</option>
+              <option value="comic">Comic</option>
+              <option value="basic">Essentials</option>
+            </select>
+          </label>
+          <button disabled={busy || !templates[template]} onClick={() => void create()}>
+            Create profile draft
+          </button>
+          <label className="profile-import">
+            Import package JSON
+            <input
+              aria-label="Import profile package"
+              type="file"
+              accept=".json,application/json"
+              disabled={busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file)
+                  void run(async () => {
+                    if (file.size > 3_000_000)
+                      throw new Error("Package exceeds 3 MB import limit.");
+                    const d = await api<ProfileDraft>(
+                      "/profile-drafts",
+                      JSON.parse(await file.text()),
+                    );
+                    select(d);
+                    await load();
+                  });
+              }}
+            />
+          </label>
+        </section>
+        <section className="pe-card" aria-label="Mods">
+          <h2>Mods</h2>
+          <p>Designs other people shared. Try one whole, or mix one part into your draft.</p>
+          <ProfileModLibrary
+            draft={draft}
+            actorId={owner.id}
+            disabled={busy || dirty || visualDirty}
+            onInstalled={async (next, mixed) => {
+              const previous = draft;
+              select(next);
+              if (mixed && previous) {
+                setUndoPackage(previous.package);
+                setUndoIdentity(
+                  previous.identity ?? {
+                    name: owner.name,
+                    bio: owner.bio,
+                    avatarAssetId: owner.avatarAssetId ?? null,
+                  },
+                );
+                setUndoLabel("Undo last part change");
+              }
+              await load();
+              setPreview(true);
+              setMessage(
+                "Mod installed in your private draft. Preview it, then publish when ready.",
+              );
             }}
           />
-        </label>
-        {history?.state.publicationId && (
-          <button
-            disabled={busy}
-            onClick={() =>
-              void run(async () => {
-                const current = history.publications.find(
-                  (p) => p.id === history.state.publicationId,
-                );
-                if (!current)
-                  throw new Error("Published version unavailable. Refresh and try again.");
-                const d = await api<ProfileDraft>(`/profiles/${owner.id}/combination`, {
-                  publicationId: current.id,
-                });
-                select(d);
-                await load();
-                setPreview(true);
-                setMessage(
-                  "Working copy created. Your live profile stays unchanged until you publish.",
-                );
-              })
-            }
-          >
-            Edit a copy of live profile
-          </button>
-        )}
-        <details
-          className="profile-library"
-          open={draft?.package.manifest.schemaVersion === 1 ? true : undefined}
-        >
+        </section>
+        <details className="profile-library pe-card" open>
           <summary>Drafts &amp; version history ({drafts.length})</summary>
           <h2>Your drafts</h2>
           {drafts.map((d) => (
@@ -1354,11 +1370,15 @@ function ProfileEditor({
           </>
         ) : (
           <div className="profile-editor-empty">
-            <h2>Make a place people can visit.</h2>
-            <p>
-              Create a room or comic draft, import a package, or ask your connected AI to build a
-              new structure.
-            </p>
+            <h2>Nothing open yet.</h2>
+            <ol>
+              <li>Pick a starting point on the left and press Create profile draft.</li>
+              <li>Change the code, or the name, photo and parts beside the preview.</li>
+              <li>
+                Press Publish profile when it looks right. Your live page stays as it is until then.
+              </li>
+            </ol>
+            <p>Your connected AI can edit the same drafts through MCP.</p>
           </div>
         )}
       </div>

@@ -111,11 +111,9 @@ export class AccountService {
     if (this.store.get("login-email", sha(email))) throw new AppError("EMAIL_TAKEN", 409);
     const user = this.identity.newUser(profile);
     const lower = password.toLowerCase();
-    if (
-      lower === email ||
-      (user.handle.length >= 5 && lower.includes(user.handle)) ||
-      commonPasswords.includes(lower)
-    )
+    if (user.handle.length >= 5 && lower.includes(user.handle))
+      throw new AppError("PASSWORD_HAS_USERNAME");
+    if (lower === email || commonPasswords.includes(lower))
       throw new AppError("PASSWORD_TOO_GUESSABLE");
     const credential: Credential = {
       userId: user.id,

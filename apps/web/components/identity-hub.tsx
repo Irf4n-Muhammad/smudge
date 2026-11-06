@@ -102,6 +102,11 @@ const methodLabel: Record<Chapter["method"], string> = {
   "photo-location": "Photo taken there",
 };
 
+/** "7th Head of Comms": where a title sits in its organisation's line. */
+const lineName = ({ n, role }: { n: number; role: string }) => {
+  const tail = n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th");
+  return `${n}${tail} ${role}`;
+};
 export function ChapterList({
   chapters,
   editable,
@@ -125,6 +130,7 @@ export function ChapterList({
           <span className="chapter-text">
             <strong>{c.label}</strong>
             <small>
+              {c.line ? `${lineName(c.line)} · ` : ""}
               {methodLabel[c.method]}
               {c.from ? ` · ${c.from}${c.to ? ` to ${c.to}` : ""}` : ""}
             </small>

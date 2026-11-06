@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 import type { AddressInfo } from "node:net";
 import { extractSite, buildImportedPage } from "../packages/core/src/site-import.js";
 import { experienceSchema, metadataSchema } from "../packages/contracts/src/experience.js";
-import { isPublicAddress, safeGet } from "../apps/server/site-fetch.js";
+import { allowsFraming, isPublicAddress, safeGet } from "../apps/server/site-fetch.js";
 import { importSite } from "../apps/server/site-import.js";
 import { Store } from "../packages/core/src/database.js";
 import { SocialService } from "../packages/core/src/social.js";
@@ -184,4 +184,42 @@ test("importing a local trial site downloads its photos as the person's assets",
   } finally {
     server.close();
   }
+});
+
+test("outside pages open in the sheet only when their headers allow it", () => {
+  const me = "https://smudge.app";
+  assert.equal(allowsFraming({}, me), true);
+  assert.equal(allowsFraming({ "x-frame-options": "DENY" }, me), false);
+  assert.equal(allowsFraming({ "x-frame-options": "SAMEORIGIN" }, me), false);
+  assert.equal(allowsFraming({ "content-security-policy": "frame-ancestors 'none'" }, me), false);
+  assert.equal(allowsFraming({ "content-security-policy": "frame-ancestors 'self'" }, me), false);
+  assert.equal(allowsFraming({ "content-security-policy": "frame-ancestors *" }, me), true);
+  assert.equal(
+    allowsFraming(
+      { "content-security-policy": "default-src 'self'; frame-ancestors https://smudge.app" },
+      me,
+    ),
+    true,
+  );
+  assert.equal(
+    allowsFraming({ "content-security-policy": "frame-ancestors https://*.smudge.app" }, me),
+    false,
+  );
+  assert.equal(
+    allowsFraming(
+      { "content-security-policy": "frame-ancestors https://*.smudge.app" },
+      "https://www.smudge.app",
+    ),
+    true,
+  );
+  // frame-ancestors wins over X-Frame-Options when both are sent.
+  assert.equal(
+    allowsFraming(
+      { "x-frame-options": "DENY", "content-security-policy": "frame-ancestors https:" },
+      me,
+    ),
+    true,
+  );
+  // A policy without frame-ancestors says nothing about frames.
+  assert.equal(allowsFraming({ "content-security-policy": "script-src 'self'" }, me), true);
 });

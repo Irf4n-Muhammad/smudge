@@ -79,7 +79,7 @@ test("signup rejects taken emails and handles, reserved handles and weak passwor
   rejects(
     () =>
       accounts.register({ ...sara, handle: "sarahh", email: "n@x.com", password: "i am sarahh!!" }),
-    "PASSWORD_TOO_GUESSABLE",
+    "PASSWORD_HAS_USERNAME",
   );
   // Body fields cannot pick an identity.
   assert.throws(() => accounts.register({ ...sara, handle: "z1z", email: "z@x.com", id: "you" }));

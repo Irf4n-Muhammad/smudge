@@ -121,8 +121,34 @@ export const orgCreateSchema = z
     /** Clubs (student societies, fan clubs) and events; campuses and workplaces prove membership by email. */
     kind: z.enum(["club", "event"]).default("club"),
     term: z.string().trim().min(2).max(20).optional(),
+    /** A ready-made start: its look, its words and who finds it. */
+    template: z.enum(["society", "creator", "company"]).optional(),
   })
   .strict();
+
+/**
+ * How an organisation's page looks: a starting look it picks (a theatre's playbill, a club's
+ * matchday programme, a society's noticeboard), its own colour, and its own words for the
+ * members' tab and the people of each term. The admin sets it; anyone sees it.
+ */
+export const orgLooks = ["playbill", "matchday", "noticeboard"] as const;
+export type OrgLookName = (typeof orgLooks)[number];
+export const orgLookSchema = z
+  .object({
+    look: z.enum(orgLooks),
+    accent: z
+      .string()
+      .regex(/^#[0-9a-f]{6}$/i)
+      .transform((c) => c.toLowerCase())
+      .optional(),
+    inside: z.string().trim().min(2).max(20).optional(),
+    company: z.string().trim().min(2).max(30).optional(),
+  })
+  .strict();
+export type OrgLook = z.infer<typeof orgLookSchema>;
+
+/** A finished term's people keep talking as a circle; they name it. */
+export const circleStartSchema = z.object({ name: z.string().trim().min(2).max(60) }).strict();
 
 export const chapterKinds = [
   "education",
@@ -156,6 +182,8 @@ export interface Chapter {
   method: "email" | "invite" | "partner" | "photo-location";
   audience: Audience;
   createdAt: string;
+  /** A title's place in its organisation's line, worked out when read: the 7th Head of Comms. */
+  line?: { n: number; role: string };
 }
 
 const year = z.number().int().min(1950).max(2100);
@@ -319,6 +347,40 @@ export const collections: Collection[] = [
   },
 ];
 export const collectionById = (id: string) => collections.find((c) => c.id === id);
+/** Collections an organisation makes itself (its crew stamps) join the list once the server loads them. */
+export const registerCollection = (collection: Collection) => {
+  const at = collections.findIndex((c) => c.id === collection.id);
+  if (at >= 0) collections[at] = collection;
+  else collections.push(collection);
+  return collection;
+};
+/** An organisation's own event: one crew stamp the admin gives to the people who ran it. */
+export const crewEventSchema = z.object({ name: z.string().trim().min(2).max(60) }).strict();
+export const crewAwardSchema = z
+  .object({ handles: z.array(z.string().trim().min(1).max(40)).min(1).max(100) })
+  .strict();
+
+/**
+ * Who finds an organisation: anyone (public), only people with its link (link), or only its own
+ * people (private: no page for anyone else, and its chapters stay off other people's view).
+ */
+export const orgVisibilities = ["public", "link", "private"] as const;
+export type OrgVisibility = (typeof orgVisibilities)[number];
+export const orgVisibilitySchema = z.object({ visibility: z.enum(orgVisibilities) }).strict();
+
+/** A post written together: a member drafts it, an admin approves it, it goes out as the organisation. */
+export const orgPostSchema = z.object({ text: z.string().trim().min(2).max(1000) }).strict();
+export const orgPostReviewSchema = z.object({ approve: z.boolean() }).strict();
+export interface OrgPost {
+  id: string;
+  orgId: string;
+  authorId: string;
+  text: string;
+  status: "pending" | "published" | "declined";
+  createdAt: string;
+  reviewedBy?: string | undefined;
+  reviewedAt?: string | undefined;
+}
 export const inviteRedeemSchema = z
   .object({
     code: z
