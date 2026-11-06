@@ -9,6 +9,7 @@ import { SocialService } from "../packages/core/src/social.js";
 import { IdentityService } from "../packages/core/src/identity.js";
 import { OrgService } from "../packages/core/src/orgs.js";
 import { OrgEventsService } from "../packages/core/src/org-events.js";
+import { PassportService } from "../packages/core/src/passport.js";
 import { renderMoment } from "../apps/server/moments.js";
 import { findWhen } from "../packages/contracts/src/when.js";
 
@@ -26,12 +27,13 @@ async function setup() {
   const social = new SocialService(store);
   const identity = new IdentityService(social, renderMoment, clock);
   const orgs = new OrgService(social, identity, clock);
-  const events = new OrgEventsService(social, orgs, clock);
+  const events = new OrgEventsService(social, orgs, identity, clock);
   const org = orgs.createOrg({ userId: "dani" }, { name: "Room club", term: "2026/27" });
   identity.redeemInvite({ userId: "maya" }, orgs.joinLink({ userId: "dani" }, org.id));
   const [term] = orgs.terms(org.id);
   return {
     store,
+    social,
     identity,
     orgs,
     events,
@@ -232,4 +234,230 @@ test("a locked term keeps a yearbook for the people who were there", async () =>
   // Made once: later changes don't rewrite it.
   identity.redeemInvite({ userId: "leo" }, orgs.joinLink({ userId: "dani" }, org.id));
   assert.equal(orgs.room({ userId: "maya" }, org.id, term.id).yearbook!.madeAt, book.madeAt);
+});
+
+const tickets = (extra: Record<string, unknown> = {}) => ({
+  when: "2026-12-01T19:00:00Z",
+  place: "Main hall",
+  capacity: 2,
+  firstWave: "2026-11-03T09:00:00Z",
+  everyone: "2026-11-04T09:00:00Z",
+  ...extra,
+});
+const doorCode = (path: string) => path.split(".").pop()!;
+
+test("coming through the door leaves a stamp, and enough stamps open the presale first", async () => {
+  const { events, orgs, org, at, identity } = await setup();
+  const first = orgs.createEvent({ userId: "dani" }, org.id, { name: "Open mic" }).stamp;
+  events.setTickets(
+    { userId: "dani" },
+    org.id,
+    first.id,
+    tickets({
+      when: "2026-11-02T19:00:00Z",
+      firstWave: "2026-11-01T00:00:00Z",
+      everyone: "2026-11-01T00:00:00Z",
+    }),
+  );
+  events.claim({ userId: "leo" }, org.id, first.id);
+  const code = doorCode(events.door({ userId: "dani" }, org.id, first.id).path);
+  events.arrive({ userId: "leo" }, org.id, first.id, { code });
+  const went = identity.chaptersFor({ userId: "leo" }, "leo").filter((c) => c.kind === "stamp");
+  assert.deepEqual(
+    went.map((c) => c.label),
+    ["Was there, Open mic"],
+  );
+  assert.equal(events.stampsHeld("leo", org.id), 1);
+
+  // The next show: a presale for anyone with a stamp of the club, before its own members.
+  const show = orgs.createEvent({ userId: "dani" }, org.id, { name: "Spring show" }).stamp;
+  // The presale has to come before the first wave.
+  assert.throws(() =>
+    events.setTickets(
+      { userId: "dani" },
+      org.id,
+      show.id,
+      tickets({ presale: { opens: "2026-11-05T09:00:00Z", minStamps: 1 } }),
+    ),
+  );
+  events.setTickets(
+    { userId: "dani" },
+    org.id,
+    show.id,
+    tickets({ presale: { opens: "2026-11-02T09:00:00Z", minStamps: 1 } }),
+  );
+  assert.equal(events.view(org.id, show.id, "leo").yourWave, "presale");
+  assert.equal(events.view(org.id, show.id, "maya").yourWave, "first");
+  assert.equal(events.claim({ userId: "leo" }, org.id, show.id).mine?.status, "going");
+  rejects(() => events.claim({ userId: "maya" }, org.id, show.id), "TICKETS_NOT_OPEN");
+  at("2026-11-03T10:00:00Z");
+  assert.equal(events.claim({ userId: "maya" }, org.id, show.id).mine?.status, "going");
+});
+
+test("paid tickets are held while their buyer pays, and stay off when payments are off", async () => {
+  const { events, orgs, org, at } = await setup();
+  const { stamp } = orgs.createEvent({ userId: "dani" }, org.id, { name: "Gala" });
+  rejects(
+    () =>
+      events.setTickets(
+        { userId: "dani" },
+        org.id,
+        stamp.id,
+        tickets({ price: 1500, currency: "USD" }),
+      ),
+    "PAYMENTS_OFF",
+  );
+  let charged = 0;
+  events.payments = { name: "test", charge: () => ({ ref: `r${++charged}` }) };
+  rejects(
+    () => events.setTickets({ userId: "dani" }, org.id, stamp.id, tickets({ price: 1500 })),
+    "CURRENCY_REQUIRED",
+  );
+  events.setTickets(
+    { userId: "dani" },
+    org.id,
+    stamp.id,
+    tickets({ price: 1500, currency: "USD", capacity: 1 }),
+  );
+  at("2026-11-03T10:00:00Z");
+  assert.equal(events.claim({ userId: "maya" }, org.id, stamp.id).mine?.status, "held");
+  // Someone else finds it sold out while Maya's seat is held.
+  at("2026-11-04T10:00:00Z");
+  rejects(() => events.pay({ userId: "maya" }, org.id, stamp.id), "NO_HOLD");
+  // Her hold ran out, so the seat is free again.
+  assert.equal(events.claim({ userId: "leo" }, org.id, stamp.id).mine?.status, "held");
+  rejects(() => events.claim({ userId: "ines" }, org.id, stamp.id), "SOLD_OUT");
+  const paid = events.pay({ userId: "leo" }, org.id, stamp.id);
+  assert.deepEqual(paid.mine, { status: "going", paid: { amount: 1500, currency: "USD" } });
+  assert.equal(charged, 1);
+  rejects(() => events.release({ userId: "leo" }, org.id, stamp.id), "REFUND_BY_ORGANISER");
+});
+
+test("people at the same event remember they met by scanning each other's QR", async () => {
+  const { events, orgs, org } = await setup();
+  const { stamp } = orgs.createEvent({ userId: "dani" }, org.id, { name: "Mixer" });
+  events.setTickets(
+    { userId: "dani" },
+    org.id,
+    stamp.id,
+    tickets({ capacity: 10, firstWave: "2026-11-01T00:00:00Z", everyone: "2026-11-01T00:00:00Z" }),
+  );
+  for (const id of ["maya", "leo"]) events.claim({ userId: id }, org.id, stamp.id);
+  rejects(() => events.swapCode({ userId: "ines" }, org.id, stamp.id), "NO_TICKET");
+  const mine = events.swapCode({ userId: "maya" }, org.id, stamp.id);
+  const code = doorCode(mine.path);
+  assert.match(mine.path, /\?swap=mixer\.maya\./);
+  rejects(
+    () => events.swap({ userId: "maya" }, org.id, stamp.id, { from: "maya", code }),
+    "SWAP_SELF",
+  );
+  rejects(
+    () => events.swap({ userId: "ines" }, org.id, stamp.id, { from: "maya", code }),
+    "NO_TICKET",
+  );
+  rejects(
+    () => events.swap({ userId: "leo" }, org.id, stamp.id, { from: "maya", code: "AAAAAAAA" }),
+    "SWAP_CODE_EXPIRED",
+  );
+  assert.equal(
+    events.swap({ userId: "leo" }, org.id, stamp.id, { from: "maya", code }).event,
+    "Mixer",
+  );
+  events.swap({ userId: "leo" }, org.id, stamp.id, { from: "maya", code });
+  assert.equal(events.meetings("maya").length, 1);
+  assert.equal(events.meetings("leo").length, 1);
+});
+
+test("The Hunt: find every printed spot at the event and keep a stamp", async () => {
+  const { events, orgs, org, identity } = await setup();
+  const { stamp } = orgs.createEvent({ userId: "dani" }, org.id, { name: "Fair" });
+  events.setTickets(
+    { userId: "dani" },
+    org.id,
+    stamp.id,
+    tickets({ capacity: 10, firstWave: "2026-11-01T00:00:00Z" }),
+  );
+  rejects(
+    () => events.setHunt({ userId: "maya" }, org.id, stamp.id, { spots: ["Stage", "Bar"] }),
+    "ORG_ADMIN_REQUIRED",
+  );
+  const sheet = events.setHunt({ userId: "dani" }, org.id, stamp.id, {
+    spots: ["Stage door", "Merch table"],
+  });
+  const spots = sheet.spots.map((s) => {
+    const [, i, code] = s.path.split("hunt=")[1]!.split(".");
+    return { spot: Number(i), code: code! };
+  });
+  rejects(() => events.find({ userId: "maya" }, org.id, stamp.id, spots[0]), "NO_TICKET");
+  events.claim({ userId: "maya" }, org.id, stamp.id);
+  rejects(
+    () => events.find({ userId: "maya" }, org.id, stamp.id, { spot: 0, code: spots[1]!.code }),
+    "HUNT_SPOT_UNKNOWN",
+  );
+  assert.deepEqual(events.find({ userId: "maya" }, org.id, stamp.id, spots[0]), {
+    spot: "Stage door",
+    found: 1,
+    spots: 2,
+    done: false,
+  });
+  events.find({ userId: "maya" }, org.id, stamp.id, spots[0]);
+  assert.equal(events.find({ userId: "maya" }, org.id, stamp.id, spots[1]).done, true);
+  assert.ok(
+    identity
+      .chaptersFor({ userId: "maya" }, "maya")
+      .some((c) => c.label === "Found them all, Fair"),
+  );
+  assert.deepEqual(events.view(org.id, stamp.id, "maya").hunt, { spots: 2, found: 2, done: true });
+});
+
+test("a passport shows roles, stamps and stubs as the viewer may see them; who you met stays yours", async () => {
+  const { events, orgs, org, social, identity } = await setup();
+  const passports = new PassportService(social, identity, orgs, events);
+  const { stamp } = orgs.createEvent({ userId: "dani" }, org.id, { name: "Open mic" });
+  events.setTickets(
+    { userId: "dani" },
+    org.id,
+    stamp.id,
+    tickets({ capacity: 10, firstWave: "2026-11-01T00:00:00Z", everyone: "2026-11-01T00:00:00Z" }),
+  );
+  for (const id of ["maya", "leo"]) events.claim({ userId: id }, org.id, stamp.id);
+  const code = doorCode(events.door({ userId: "dani" }, org.id, stamp.id).path);
+  events.arrive({ userId: "leo" }, org.id, stamp.id, { code });
+  events.arrive({ userId: "maya" }, org.id, stamp.id, { code });
+  events.swap({ userId: "leo" }, org.id, stamp.id, {
+    from: "maya",
+    code: doorCode(events.swapCode({ userId: "maya" }, org.id, stamp.id).path),
+  });
+  const own = passports.passport({ userId: "maya" }, "@Maya");
+  assert.equal(own.mine, true);
+  assert.deepEqual(
+    own.orgs[0]?.roles.map((r) => r.label),
+    ["Member, Room club 2026/27"],
+  );
+  assert.deepEqual(
+    own.stubs.map((s) => [s.event, s.door]),
+    [["Open mic", 2]],
+  );
+  assert.deepEqual(
+    own.met.map((m) => m.handle),
+    ["leo"],
+  );
+  // Leo sees Maya's public stamps and stub, never who she met.
+  const seen = passports.passport({ userId: "leo" }, "maya");
+  assert.equal(seen.mine, false);
+  assert.deepEqual(seen.met, []);
+  assert.equal(seen.stubs.length, 1);
+});
+
+test("a template gives a new organisation its look, words and who finds it", async () => {
+  const { orgs } = await setup();
+  const creator = orgs.createOrg(
+    { userId: "leo" },
+    { name: "Nova fan space", template: "creator" },
+  );
+  assert.equal(creator.look.inside, "Inner circle");
+  assert.equal(creator.visibility, "public");
+  const company = orgs.createOrg({ userId: "leo" }, { name: "Acme team", template: "company" });
+  assert.equal(company.look.company, "The team");
+  assert.equal(company.visibility, "link");
 });

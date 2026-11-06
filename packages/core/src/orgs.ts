@@ -35,6 +35,7 @@ import {
   roomMuteSchema,
   roomReportSchema,
   roomSlowSchema,
+  type OrgTemplate,
   type RoomReport,
   type RoomSettings,
   type Yearbook,
@@ -483,6 +484,12 @@ export class OrgService {
       const [from] = parsed.term.match(/\d{4}/) ?? [String(this.now().getFullYear())];
       this.startTerm(actor, id, { label: parsed.term, from: Number(from) });
     }
+    const start = parsed.template ? templates[parsed.template] : undefined;
+    if (start)
+      this.store.transaction(() => {
+        this.store.put("org-look", id, start.look);
+        this.store.put("org-visibility", id, { visibility: start.visibility });
+      });
     return this.publicPage(id);
   }
   /**
@@ -1005,6 +1012,23 @@ export class OrgService {
     return made;
   }
 }
+
+/**
+ * Ready-made starts. A society runs by terms, with the page every organisation starts with. A creator's fan space reads like a
+ * playbill, with an inner circle and supporters. A company's team space is a noticeboard kept
+ * off search, since a workplace rarely wants strangers finding it.
+ */
+const templates: Record<OrgTemplate, { look: OrgLook; visibility: OrgVisibility }> = {
+  society: { look: { look: "playbill" }, visibility: "public" },
+  creator: {
+    look: { look: "playbill", inside: "Inner circle", company: "The supporters" },
+    visibility: "public",
+  },
+  company: {
+    look: { look: "noticeboard", inside: "The office", company: "The team" },
+    visibility: "link",
+  },
+};
 
 /** A chapter covers a term when its years do; one with no years counts for the open term only. */
 function covers(c: Chapter, term: Term) {

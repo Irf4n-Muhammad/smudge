@@ -121,6 +121,8 @@ export const orgCreateSchema = z
     /** Clubs (student societies, fan clubs) and events; campuses and workplaces prove membership by email. */
     kind: z.enum(["club", "event"]).default("club"),
     term: z.string().trim().min(2).max(20).optional(),
+    /** A ready-made start: its look, its words and who finds it. */
+    template: z.enum(["society", "creator", "company"]).optional(),
   })
   .strict();
 

@@ -29,6 +29,7 @@ import {
 import { seedProfiles, seedDaniPage, seedInesPosts, profileTemplates } from "./seed-profiles.js";
 import { IdentityService } from "../../packages/core/src/identity.js";
 import { OrgEventsService } from "../../packages/core/src/org-events.js";
+import { PassportService } from "../../packages/core/src/passport.js";
 import { OrgService } from "../../packages/core/src/orgs.js";
 import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
@@ -128,7 +129,14 @@ const identity = new IdentityService(
 );
 const orgService = new OrgService(service, identity, clock);
 const oprecs = new OprecService(service, identity, orgService, clock);
-const orgEvents = new OrgEventsService(service, orgService, clock);
+const orgEvents = new OrgEventsService(service, orgService, identity, clock);
+const passports = new PassportService(service, identity, orgService, orgEvents);
+// Paid tickets: a pretend checkout in demo mode; off in production until a provider is chosen.
+if (config.mode === "demo")
+  orgEvents.payments = {
+    name: "demo",
+    charge: () => ({ ref: `demo-${randomUUID()}` }),
+  };
 const accounts = new AccountService(
   service,
   identity,
@@ -673,6 +681,29 @@ api.post("/api/orgs/:id/events/:stamp/claim", roomLimit, (req, res) =>
 );
 api.post("/api/orgs/:id/events/:stamp/release", roomLimit, (req, res) =>
   res.json(orgEvents.release(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/pay", roomLimit, (req, res) =>
+  res.json(orgEvents.pay(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+// At the event: meeting people by scanning each other, and The Hunt.
+api.get("/api/orgs/:id/events/:stamp/swap", (req, res) =>
+  res.json(orgEvents.swapCode(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/swap", roomLimit, (req, res) =>
+  res.json(orgEvents.swap(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body)),
+);
+api.put("/api/orgs/:id/events/:stamp/hunt", (req, res) =>
+  res.json(orgEvents.setHunt(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body)),
+);
+api.get("/api/orgs/:id/events/:stamp/hunt", (req, res) =>
+  res.json(orgEvents.huntSheet(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/hunt/find", roomLimit, (req, res) =>
+  res.json(orgEvents.find(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body)),
+);
+// A fan passport: someone's organisations, stamps and stubs, as the viewer may see them.
+api.get("/api/passport/:handle", (req, res) =>
+  res.json(passports.passport(actor(res), z.string().max(40).parse(req.params.handle))),
 );
 api.get("/api/orgs/:id/events/:stamp/door", (req, res) =>
   res.json(orgEvents.door(actor(res), orgId(req.params.id), orgId(req.params.stamp))),

@@ -21,6 +21,7 @@ import { Avatar, Dialog } from "./ui";
 import {
   CalendarLink,
   DoorOverlay,
+  HuntEditor,
   TicketSetup,
   TicketsSection,
   YearbookCard,
@@ -29,7 +30,7 @@ import {
   type TicketView,
 } from "./org-tools";
 import { findWhen } from "../../../packages/contracts/src/when";
-import type { Yearbook } from "../../../packages/contracts/src/org-rooms";
+import type { OrgTemplate, Yearbook } from "../../../packages/contracts/src/org-rooms";
 import type { User } from "../../../packages/contracts/src/experience";
 import type {
   OrgLook,
@@ -261,20 +262,36 @@ export function OrgPage({ id }: { id: string }) {
   useEffect(() => {
     void load();
   }, [load]);
-  // Someone scanned the door QR: their own ticket lets them in.
+  // Someone scanned a QR at an event: the door, another person's swap code, or a hunt spot.
   useEffect(() => {
-    const door = new URLSearchParams(window.location.search).get("door");
-    const [stamp, code] = door?.split(".") ?? [];
-    if (!stamp || !code) return;
+    const params = new URLSearchParams(window.location.search);
+    const scan = (["door", "swap", "hunt"] as const).find((k) => params.get(k));
+    if (!scan) return;
+    const parts = params.get(scan)!.split(".");
+    const [stamp] = parts;
+    if (!stamp || parts.length < 2) return;
     void (async () => {
       if (!(await signedInOrSignIn())) return;
       window.history.replaceState(null, "", `/o/${encodeURIComponent(id)}`);
+      const base = `/orgs/${encodeURIComponent(id)}/events/${encodeURIComponent(stamp)}`;
       try {
-        const t = await api<TicketView>(
-          `/orgs/${encodeURIComponent(id)}/events/${encodeURIComponent(stamp)}/arrive`,
-          { code },
-        );
-        setNote(`You’re in. Enjoy ${t.name}.`);
+        if (scan === "door") {
+          const t = await api<TicketView>(`${base}/arrive`, { code: parts[1] });
+          setNote(`You’re in. Enjoy ${t.name}. It’s in your passport now.`);
+        } else if (scan === "swap") {
+          await api(`${base}/swap`, { from: parts[1], code: parts[2] });
+          setNote("You met. It’s in both your passports.");
+        } else {
+          const r = await api<{ spot: string; found: number; spots: number; done: boolean }>(
+            `${base}/hunt/find`,
+            { spot: Number(parts[1]), code: parts[2] },
+          );
+          setNote(
+            r.done
+              ? `Found “${r.spot}”. That’s all ${r.spots}! Your stamp is in your passport.`
+              : `Found “${r.spot}”. ${r.found} of ${r.spots}.`,
+          );
+        }
         await load();
       } catch (e) {
         setNote(plain(e));
@@ -607,7 +624,10 @@ function Backstage({
           <Avatar user={asUser(room.you)} />
           <div>
             <b>{room.you.name}</b>
-            <small>{room.you.role ?? "In the company"}</small>
+            <small>
+              {room.you.role ?? "In the company"} ·{" "}
+              <a href={`/u/${encodeURIComponent(room.you.handle)}/passport`}>Passport</a>
+            </small>
           </div>
           <label className="op-term">
             <span className="sr-only">Term</span>
@@ -1486,6 +1506,7 @@ function CrewStamps({
   const [name, setName] = useState("");
   const [giving, setGiving] = useState<string | null>(null);
   const [setting, setSetting] = useState<string | null>(null);
+  const [hunting, setHunting] = useState<string | null>(null);
   const [door, setDoor] = useState<EventRow | null>(null);
   const [handles, setHandles] = useState("");
   const base = `/orgs/${encodeURIComponent(org.id)}/events`;
@@ -1566,6 +1587,7 @@ function CrewStamps({
                   }}
                 />
               )}
+              {hunting === ev.id && <HuntEditor orgId={org.id} eventId={ev.id} notify={notify} />}
               {giving === ev.id ? (
                 <form
                   className="op-panel-form row"
@@ -1623,9 +1645,18 @@ function CrewStamps({
                     {ev.tickets ? "Tickets" : "Free tickets"}
                   </button>
                   {ev.tickets && !ev.tickets.over && (
-                    <button className="op-plain" onClick={() => setDoor(ev)}>
-                      Open the door
-                    </button>
+                    <>
+                      <button className="op-plain" onClick={() => setDoor(ev)}>
+                        Open the door
+                      </button>
+                      <button
+                        className="op-plain"
+                        aria-expanded={hunting === ev.id}
+                        onClick={() => setHunting((x) => (x === ev.id ? null : ev.id))}
+                      >
+                        The Hunt
+                      </button>
+                    </>
                   )}
                 </div>
               )}
@@ -1973,7 +2004,25 @@ export function CreateOrg() {
   const [name, setName] = useState("");
   const [kind, setKind] = useState<"club" | "event">("club");
   const [term, setTerm] = useState(`${year}/${String(year + 1).slice(2)}`);
+  const [template, setTemplate] = useState<OrgTemplate>("society");
   const [note, setNote] = useState("");
+  const starts: Record<OrgTemplate, { name: string; says: string; term: string }> = {
+    society: {
+      name: "Society or club",
+      says: "Runs by terms and hands over each year. A page anyone can find.",
+      term: `${year}/${String(year + 1).slice(2)}`,
+    },
+    creator: {
+      name: "Creator’s fan space",
+      says: "An inner circle for your supporters, with presales for the fans who keep coming.",
+      term: String(year),
+    },
+    company: {
+      name: "Company team",
+      says: "The office and the team, kept off search. People join by link.",
+      term: String(year),
+    },
+  };
   return (
     <main className="org-page">
       <a className="org-brand" href="/">
@@ -1988,7 +2037,7 @@ export function CreateOrg() {
         onSubmit={async (e) => {
           e.preventDefault();
           try {
-            const org = await api<{ id: string }>("/orgs", { name, kind, term });
+            const org = await api<{ id: string }>("/orgs", { name, kind, term, template });
             window.location.assign(`/o/${encodeURIComponent(org.id)}`);
           } catch (err) {
             const code = (err as Error).message.split(" ")[0];
@@ -2002,6 +2051,23 @@ export function CreateOrg() {
           }
         }}
       >
+        <div className="org-templates" role="radiogroup" aria-label="Start from">
+          {(Object.keys(starts) as OrgTemplate[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="radio"
+              aria-checked={template === t}
+              onClick={() => {
+                setTemplate(t);
+                setTerm(starts[t].term);
+              }}
+            >
+              <b>{starts[t].name}</b>
+              <small>{starts[t].says}</small>
+            </button>
+          ))}
+        </div>
         <label>
           Name
           <input

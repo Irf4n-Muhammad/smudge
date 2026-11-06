@@ -3079,6 +3079,8 @@
   font: 600 11px var(--ui);
 }
 .op-ticket-setup label small {
+  font: 500 11px var(--ui);
+  letter-spacing: 0;
   font-weight: 500;
   color: var(--op-muted, #6b5a48);
 }
@@ -3120,6 +3122,7 @@
 .op-door h2 {
   font: 800 34px/1 var(--op-big);
   margin: 0;
+  color: var(--op-ink);
 }
 .op-door-qr {
   width: min(78vw, 360px);
@@ -3290,4 +3293,333 @@
   justify-content: center;
   width: 100%;
   text-decoration: none;
+}
+
+/* Fan passport */
+.pp {
+  --pp-cover: #14233f;
+  --pp-gold: #d9b45a;
+  --pp-paper: #f3ecdc;
+  --pp-ink: #1c1a17;
+  --pp-red: #a2281f;
+  --pp-blue: #1f4e8c;
+  --pp-green: #2f6b3f;
+  min-height: 100vh;
+  background: var(--pp-paper);
+  color: var(--pp-ink);
+  padding: 0 16px 60px;
+  font-family: var(--ui);
+}
+.pp > * {
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.pp-top {
+  padding: 14px 0;
+}
+.pp-top a {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #0003;
+  color: inherit;
+}
+.pp-cover {
+  background: var(--pp-cover);
+  color: var(--pp-gold);
+  border-radius: 6px 16px 16px 6px;
+  padding: 26px 20px 20px;
+  box-shadow:
+    inset 8px 0 0 #0e1a30,
+    0 20px 30px -20px #000a;
+}
+.pp-cover small {
+  font:
+    700 10px ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  letter-spacing: 0.24em;
+}
+.pp-cover h1 {
+  margin: 12px 0 2px;
+  font:
+    italic 400 38px/1 "Instrument Serif",
+    Georgia,
+    serif;
+  color: #f6e7bd;
+}
+.pp-cover > span {
+  font: 600 13px var(--ui);
+  opacity: 0.8;
+}
+.pp-cover dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 8px;
+  margin: 20px 0 0;
+}
+.pp-cover dl div {
+  border-top: 1px solid #d9b45a55;
+  padding-top: 8px;
+}
+.pp-cover dt {
+  font:
+    700 9px ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.pp-cover dd {
+  margin: 2px 0 0;
+  font: 800 26px var(--ui);
+  color: #f6e7bd;
+}
+.pp h2 {
+  margin: 26px 0 8px;
+  font:
+    italic 400 26px "Instrument Serif",
+    Georgia,
+    serif;
+}
+.pp h2 a {
+  color: inherit;
+}
+.pp-empty,
+.pp-note {
+  color: #6b5a48;
+  font-size: 14px;
+}
+.pp-empty {
+  padding-top: 40px;
+  text-align: center;
+}
+.pp-note {
+  margin: -4px 0 8px;
+  font-size: 12.5px;
+}
+.pp-page {
+  border-top: 1px dashed #0003;
+}
+.pp-roles {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  font: 600 14px/1.6 var(--ui);
+}
+.pp-roles small {
+  margin-left: 8px;
+  font:
+    italic 400 16px "Instrument Serif",
+    Georgia,
+    serif;
+  color: var(--pp-red);
+}
+.pp-stamps {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 12px;
+}
+.pp-stamps li {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px double currentColor;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px;
+  color: var(--pp-blue);
+  opacity: 0.9;
+}
+.pp-stamps li.went {
+  color: var(--pp-red);
+}
+.pp-stamps li.hunt {
+  color: var(--pp-green);
+}
+.pp-stamps small {
+  font:
+    800 8.5px ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.14em;
+}
+.pp-stamps b {
+  font: 800 12px/1.15 var(--ui);
+  margin: 3px 0;
+  text-transform: uppercase;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pp-stamps span {
+  font:
+    700 10px ui-monospace,
+    Menlo,
+    monospace;
+}
+.pp-stubs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.pp-stubs li {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  background: #fffaf0;
+  border-radius: 10px;
+  box-shadow: 0 10px 20px -16px #000a;
+  overflow: hidden;
+}
+.pp-stubs li > div {
+  padding: 12px 14px;
+  min-width: 0;
+}
+.pp-stubs small {
+  font:
+    700 9px ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.14em;
+  color: #8a5a2a;
+}
+.pp-stubs b {
+  display: block;
+  font:
+    italic 400 22px/1.1 "Instrument Serif",
+    Georgia,
+    serif;
+  margin: 3px 0;
+}
+.pp-stubs span {
+  font-size: 12.5px;
+  color: #6b5a48;
+}
+.pp-stubs em {
+  flex: none;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  min-width: 78px;
+  border-left: 2px dashed #c9b48e;
+  font: 800 30px var(--ui);
+  font-style: normal;
+  color: var(--pp-red);
+}
+.pp-stubs em i {
+  font:
+    700 9px ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.14em;
+  font-style: normal;
+  color: #8a5a2a;
+}
+.pp-met {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pp-met li {
+  padding: 8px 0;
+  border-bottom: 1px dotted #0003;
+  font-size: 14px;
+}
+.pp-met a {
+  color: inherit;
+  font-weight: 700;
+  margin-right: 6px;
+}
+.pp-met span {
+  color: #6b5a48;
+}
+
+/* Paid tickets, swaps, the hunt, ready-made starts */
+.op-price {
+  display: grid;
+  grid-template-columns: 1fr 110px;
+  gap: 8px;
+}
+.op-hunt-progress {
+  flex-basis: 100%;
+}
+.op-you small a {
+  color: var(--op-gold);
+}
+.op-hunt-sheet {
+  overflow: auto;
+  justify-content: flex-start;
+  padding-top: 60px;
+}
+.op-hunt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 640px;
+}
+.op-hunt-grid figure {
+  margin: 0;
+  background: #fff;
+  border: 1px dashed #c9b48e;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.op-hunt-grid svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.op-hunt-grid figcaption {
+  font: 700 13px var(--ui);
+  margin-top: 6px;
+}
+.op-hunt-sheet .op-ink {
+  width: 200px;
+  flex: none;
+}
+@media print {
+  .op-hunt-sheet .op-ink,
+  .op-hunt-sheet .op-door-close {
+    display: none;
+  }
+}
+.org-templates {
+  display: grid;
+  gap: 8px;
+}
+.org-templates button {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line, #0002);
+  background: var(--card, #fff);
+  color: inherit;
+}
+.org-templates button[aria-checked="true"] {
+  border-color: var(--ink, #111);
+  box-shadow: inset 0 0 0 1px var(--ink, #111);
+}
+.org-templates b {
+  font: 700 14px var(--ui);
+}
+.org-templates small {
+  font-size: 12.5px;
+  opacity: 0.75;
 }

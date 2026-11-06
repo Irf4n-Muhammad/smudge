@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toString as qrSvg } from "qrcode";
 import { CalendarPlus, X } from "lucide-react";
 import { api } from "./runtime";
@@ -19,9 +19,24 @@ export interface TicketView {
   everyone: string | null;
   over: boolean;
   opensForYou: string | null;
-  yourWave: "first" | "everyone" | null;
-  mine: { status: "going" | "waiting"; place?: number; arrivedAt?: string } | null;
+  yourWave: "presale" | "first" | "everyone" | null;
+  price: number;
+  currency: string | null;
+  presale: { opens: string; minStamps: number } | null;
+  hunt: { spots: number; found: number; done: boolean } | null;
+  mine: {
+    status: "going" | "waiting" | "held";
+    place?: number;
+    heldUntil?: string;
+    paid?: { amount: number; currency: string };
+    arrivedAt?: string;
+  } | null;
 }
+/** "$15.00", in the viewer's own way of writing money. */
+export const money = (amount: number, currency: string) =>
+  new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount / 100);
+const clockTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
 const said: Record<string, string> = {
   TICKETS_NOT_OPEN: "Tickets aren’t open for you yet.",
@@ -32,6 +47,14 @@ const said: Record<string, string> = {
   CAPACITY_BELOW_TAKEN: "More people already have tickets than that.",
   SLOW_MODE: "Slow mode is on. Wait a moment before your next message.",
   MUTED: "An admin paused your messages in this room.",
+  SOLD_OUT: "Sold out.",
+  NO_HOLD: "Your seat wasn’t held anymore. Try again.",
+  PAYMENTS_OFF: "Paid tickets aren’t switched on yet.",
+  CURRENCY_REQUIRED: "Pick a currency for the price.",
+  REFUND_BY_ORGANISER: "Paid tickets go back through the organiser.",
+  SWAP_SELF: "That’s your own code.",
+  SWAP_CODE_EXPIRED: "That code changed. Scan their QR again.",
+  HUNT_SPOT_UNKNOWN: "That isn’t one of this hunt’s spots.",
 };
 /** A friendly line for a server error code, or the message as it came. */
 export const plain = (e: unknown) => {
@@ -112,8 +135,9 @@ export function TicketsSection({
   onChange: () => Promise<void>;
   notify: (s: string) => void;
 }) {
+  const [swapping, setSwapping] = useState<TicketView | null>(null);
   if (tickets.length === 0) return null;
-  const act = async (t: TicketView, what: "claim" | "release") => {
+  const act = async (t: TicketView, what: "claim" | "release" | "pay") => {
     if (!(await signedInOrSignIn())) return;
     try {
       const next = await api<TicketView>(
@@ -122,10 +146,14 @@ export function TicketsSection({
       );
       notify(
         what === "release"
-          ? "Ticket given back. The next person in line gets it."
-          : next.mine?.status === "going"
-            ? `You’re going to ${t.name}. Scan the QR at the door when you get there.`
-            : `It’s full, so you’re number ${next.mine?.place ?? "?"} in line.`,
+          ? t.price
+            ? "Seat given back."
+            : "Ticket given back. The next person in line gets it."
+          : next.mine?.status === "held"
+            ? `Your seat is held until ${clockTime(next.mine.heldUntil!)}. Pay to keep it.`
+            : next.mine?.status === "going"
+              ? `You’re going to ${t.name}. Scan the QR at the door when you get there.`
+              : `It’s full, so you’re number ${next.mine?.place ?? "?"} in line.`,
       );
       await onChange();
     } catch (e) {
@@ -133,6 +161,15 @@ export function TicketsSection({
     }
   };
   const now = new Date().toISOString();
+  const waves = (t: TicketView) =>
+    t.yourWave === "presale"
+      ? "You’re in the presale"
+      : t.yourWave === "first"
+        ? "You’re in the first wave"
+        : [
+            t.presale ? `Fans with ${t.presale.minStamps}+ stamps first` : "Members first",
+            t.everyone ? `everyone from ${dayTime(t.everyone)}` : "members only",
+          ].join(", ");
   return (
     <section className="op-bill" aria-label="Tickets">
       <h2>Tickets</h2>
@@ -150,12 +187,9 @@ export function TicketsSection({
                   {t.left > 0
                     ? `${t.left} of ${t.capacity} left`
                     : `Full${t.waiting ? `, ${t.waiting} in line` : ""}`}
+                  {t.price && t.currency ? ` · ${money(t.price, t.currency)}` : " · Free"}
                   {" · "}
-                  {t.yourWave === "first"
-                    ? "You’re in the first wave"
-                    : t.everyone
-                      ? `Members first, everyone from ${dayTime(t.everyone)}`
-                      : "Members only"}
+                  {waves(t)}
                 </span>
               </div>
               {t.mine ? (
@@ -165,20 +199,45 @@ export function TicketsSection({
                       ? "You’re in"
                       : t.mine.status === "going"
                         ? "You’re going"
-                        : `Number ${t.mine.place} in line`}
+                        : t.mine.status === "held"
+                          ? `Held until ${clockTime(t.mine.heldUntil!)}`
+                          : `Number ${t.mine.place} in line`}
                   </em>
-                  {!t.mine.arrivedAt && (
+                  {t.mine.status === "held" && t.currency && (
+                    <button className="op-claim" onClick={() => void act(t, "pay")}>
+                      Pay {money(t.price, t.currency)}
+                    </button>
+                  )}
+                  {!t.mine.arrivedAt && !t.mine.paid && (
                     <button className="op-link" onClick={() => void act(t, "release")}>
                       Give it back
                     </button>
                   )}
                   {t.mine.status === "going" && (
-                    <CalendarLink title={t.name} start={t.when} place={t.place} />
+                    <>
+                      <CalendarLink title={t.name} start={t.when} place={t.place} />
+                      <button className="op-link" onClick={() => setSwapping(t)}>
+                        My QR to swap
+                      </button>
+                    </>
+                  )}
+                  {t.hunt && t.mine.status === "going" && (
+                    <small className="op-hunt-progress">
+                      {t.hunt.done
+                        ? "Hunt: found them all"
+                        : `Hunt: ${t.hunt.found} of ${t.hunt.spots} found`}
+                    </small>
                   )}
                 </div>
               ) : open || t.yourWave === null ? (
                 <button className="op-claim" onClick={() => void act(t, "claim")}>
-                  {t.left > 0 ? "Get a free ticket" : "Join the line"}
+                  {t.price && t.currency
+                    ? t.left > 0
+                      ? `Get a ticket · ${money(t.price, t.currency)}`
+                      : "Sold out"
+                    : t.left > 0
+                      ? "Get a free ticket"
+                      : "Join the line"}
                 </button>
               ) : (
                 <small className="op-opens">
@@ -189,7 +248,192 @@ export function TicketsSection({
           );
         })}
       </ul>
+      {swapping && <SwapOverlay orgId={orgId} event={swapping} onClose={() => setSwapping(null)} />}
     </section>
+  );
+}
+
+/** A QR that changes every 30 seconds, drawn from a path the server gives. */
+function useRotatingQr(path: string, onTick?: (data: Record<string, unknown>) => void) {
+  const [svg, setSvg] = useState("");
+  const [error, setError] = useState("");
+  const tick = useRef(onTick);
+  tick.current = onTick;
+  useEffect(() => {
+    let live = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      try {
+        const data = await api<{ path: string; rotatesInMs: number } & Record<string, unknown>>(
+          path,
+        );
+        const image = await qrSvg(`${window.location.origin}${data.path}`, {
+          type: "svg",
+          margin: 1,
+          errorCorrectionLevel: "M",
+        });
+        if (!live) return;
+        setSvg(image);
+        setError("");
+        tick.current?.(data);
+        timer = setTimeout(load, Math.min(data.rotatesInMs + 250, 10_000));
+      } catch (e) {
+        if (!live) return;
+        setError(plain(e));
+        timer = setTimeout(load, 5000);
+      }
+    };
+    void load();
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [path]);
+  return { svg, error };
+}
+
+/** Your own QR at an event: someone who scans it remembers they met you there, and you them. */
+function SwapOverlay({
+  orgId,
+  event,
+  onClose,
+}: {
+  orgId: string;
+  event: TicketView;
+  onClose: () => void;
+}) {
+  const { svg, error } = useRotatingQr(
+    `/orgs/${encodeURIComponent(orgId)}/events/${encodeURIComponent(event.id)}/swap`,
+  );
+  return (
+    <div className="op-door" role="dialog" aria-label="Swap">
+      <button className="op-round op-door-close" aria-label="Close" onClick={onClose}>
+        <X size={16} />
+      </button>
+      <small>SWAP · {event.name.toUpperCase()}</small>
+      <h2>Met someone?</h2>
+      <QrFigure svg={svg} label="Your swap QR code" />
+      <p>
+        Let them scan this with their phone. You’ll both keep that you met at {event.name}. Only the
+        two of you see it.
+      </p>
+      {error && <p role="alert">{error}</p>}
+    </div>
+  );
+}
+function QrFigure({ svg, label }: { svg: string; label: string }) {
+  return svg ? (
+    <figure
+      className="op-door-qr"
+      aria-label={label}
+      // The SVG comes from the QR library, built from our own path.
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  ) : (
+    <div className="op-door-qr" aria-busy="true" />
+  );
+}
+
+/** The Hunt: the admin names spots around the venue and prints a QR for each. */
+export function HuntEditor({
+  orgId,
+  eventId,
+  notify,
+}: {
+  orgId: string;
+  eventId: string;
+  notify: (s: string) => void;
+}) {
+  const base = `/orgs/${encodeURIComponent(orgId)}/events/${encodeURIComponent(eventId)}/hunt`;
+  const [spots, setSpots] = useState("");
+  const [sheet, setSheet] = useState<{ event: string; spots: { name: string; path: string }[] }>();
+  const [printing, setPrinting] = useState<{ name: string; svg: string }[] | null>(null);
+  useEffect(() => {
+    void api<{ event: string; spots: { name: string; path: string }[] }>(base)
+      .then((s) => {
+        setSheet(s);
+        setSpots(s.spots.map((x) => x.name).join("\n"));
+      })
+      .catch(() => undefined);
+  }, [base]);
+  const print = async () => {
+    if (!sheet) return;
+    setPrinting(
+      await Promise.all(
+        sheet.spots.map(async (x) => ({
+          name: x.name,
+          svg: await qrSvg(`${window.location.origin}${x.path}`, { type: "svg", margin: 1 }),
+        })),
+      ),
+    );
+  };
+  return (
+    <form
+      className="op-panel-form op-ticket-setup"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        try {
+          setSheet(
+            await api(
+              base,
+              {
+                spots: spots
+                  .split("\n")
+                  .map((x) => x.trim())
+                  .filter(Boolean),
+              },
+              "PUT",
+            ),
+          );
+          notify("The hunt is set. Print the QRs and hide them.");
+        } catch (err) {
+          notify(plain(err));
+        }
+      }}
+    >
+      <label>
+        Spots to hide, one per line <small>(2 to 12)</small>
+        <textarea
+          rows={4}
+          required
+          value={spots}
+          placeholder={"Stage door\nMerch table\nPhoto wall"}
+          onChange={(e) => setSpots(e.target.value)}
+        />
+      </label>
+      <div className="op-list-actions">
+        <button className="op-ink">Save the hunt</button>
+        {sheet && sheet.spots.length > 0 && (
+          <button type="button" className="op-plain" onClick={() => void print()}>
+            Print the QRs
+          </button>
+        )}
+      </div>
+      {printing && (
+        <div className="op-door op-hunt-sheet" role="dialog" aria-label="Hunt sheet">
+          <button
+            type="button"
+            className="op-round op-door-close"
+            aria-label="Close"
+            onClick={() => setPrinting(null)}
+          >
+            <X size={16} />
+          </button>
+          <h2>The Hunt · {sheet?.event}</h2>
+          <div className="op-hunt-grid">
+            {printing.map((x) => (
+              <figure key={x.name}>
+                <div dangerouslySetInnerHTML={{ __html: x.svg }} />
+                <figcaption>{x.name}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <button type="button" className="op-ink" onClick={() => window.print()}>
+            Print
+          </button>
+        </div>
+      )}
+    </form>
   );
 }
 
@@ -212,6 +456,10 @@ export function TicketSetup({
   const [capacity, setCapacity] = useState(String(tickets?.capacity ?? 50));
   const [first, setFirst] = useState(localInput(tickets?.firstWave ?? new Date().toISOString()));
   const [everyone, setEveryone] = useState(localInput(tickets?.everyone));
+  const [presale, setPresale] = useState(localInput(tickets?.presale?.opens));
+  const [minStamps, setMinStamps] = useState(String(tickets?.presale?.minStamps ?? 2));
+  const [price, setPrice] = useState(tickets?.price ? String(tickets.price / 100) : "");
+  const [currency, setCurrency] = useState(tickets?.currency ?? "USD");
   return (
     <form
       className="op-panel-form op-ticket-setup"
@@ -226,6 +474,15 @@ export function TicketSetup({
               capacity: Number(capacity),
               firstWave: new Date(first).toISOString(),
               ...(everyone ? { everyone: new Date(everyone).toISOString() } : {}),
+              ...(presale
+                ? {
+                    presale: {
+                      opens: new Date(presale).toISOString(),
+                      minStamps: Number(minStamps),
+                    },
+                  }
+                : {}),
+              ...(Number(price) > 0 ? { price: Math.round(Number(price) * 100), currency } : {}),
             },
             "PUT",
           );
@@ -256,7 +513,7 @@ export function TicketSetup({
         />
       </label>
       <label>
-        Free tickets
+        Seats
         <input
           type="number"
           min={1}
@@ -283,6 +540,43 @@ export function TicketSetup({
           onChange={(e) => setEveryone(e.target.value)}
         />
       </label>
+      <label>
+        Presale for fans from <small>(optional, before the first wave)</small>
+        <input type="datetime-local" value={presale} onChange={(e) => setPresale(e.target.value)} />
+      </label>
+      {presale && (
+        <label>
+          Stamps a fan needs for the presale
+          <input
+            type="number"
+            min={1}
+            max={50}
+            value={minStamps}
+            onChange={(e) => setMinStamps(e.target.value)}
+          />
+        </label>
+      )}
+      <div className="op-price">
+        <label>
+          Price <small>(empty for free)</small>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            inputMode="decimal"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+          />
+        </label>
+        <label>
+          Currency
+          <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            {["USD", "EUR", "GBP", "SGD", "AUD", "IDR"].map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        </label>
+      </div>
       <button className="op-ink">{tickets ? "Save tickets" : "Open tickets"}</button>
     </form>
   );
