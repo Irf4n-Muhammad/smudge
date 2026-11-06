@@ -56,6 +56,7 @@ import {
   X,
   BookOpen,
   Trash2,
+  Globe,
 } from "lucide-react";
 import { api, Runtime } from "./runtime";
 
@@ -172,12 +173,15 @@ export function EasyEditor({
   onClose,
   onPublished,
   onAdvanced,
+  onWebsite,
 }: {
   owner: User;
   draftId?: string | undefined;
   onClose: () => void;
   onPublished: () => Promise<void>;
   onAdvanced: (draftId: string) => void;
+  /** Opens "Use my website", for a profile that is the person's own site. */
+  onWebsite?: () => void;
 }) {
   const [step, setStep] = useState<"loading" | "pick" | "edit">("loading");
   const [templates, setTemplates] = useState<Record<string, ProfilePackage>>({});
@@ -505,6 +509,11 @@ export function EasyEditor({
             Use this vibe <ArrowRight />
           </button>
         </footer>
+        {onWebsite && (
+          <button className="easy-website" onClick={onWebsite}>
+            <Globe aria-hidden="true" /> Have a website? Use my website as my profile
+          </button>
+        )}
       </div>
     );
   }
@@ -546,6 +555,11 @@ export function EasyEditor({
       </header>
       <div className="easy-stage">
         {!previewing && easy && <p className="easy-hint">tap anything to change it</p>}
+        {!previewing && onWebsite && (
+          <button className="easy-website in-edit" onClick={onWebsite}>
+            <Globe aria-hidden="true" /> Use my website
+          </button>
+        )}
         <div className={`easy-frame ${device}`}>
           <SmoothPreview
             draft={draft!}

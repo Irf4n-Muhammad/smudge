@@ -648,6 +648,11 @@ export function FormaApp() {
             setProfileVisit((v) => v + 1);
             window.scrollTo(0, 0);
           }}
+          onMessage={(id) => {
+            window.history.replaceState(null, "", "/");
+            setMessageTo(id);
+            navigate("messages");
+          }}
           onNavigate={(destination) => {
             window.history.replaceState(null, "", "/");
             setCockpit(false);

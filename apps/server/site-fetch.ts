@@ -292,3 +292,58 @@ export async function frameCheck(raw: string, origin: string, options: FetchOpti
     return null;
   }
 }
+
+/**
+ * Whether someone's own site can be their profile right now: "down" when it can't be reached or
+ * has no home page, "refused" when it asks not to be framed, "unknown" when it answered but
+ * wouldn't say (bot walls); then the profile just tries.
+ */
+export async function siteStatus(
+  raw: string,
+  origin: string,
+  options: FetchOptions = {},
+): Promise<"ok" | "refused" | "down" | "unknown"> {
+  try {
+    const page = await safeGet(raw, 1, () => true, {
+      ...options,
+      headersOnly: true,
+      timeoutMs: options.timeoutMs ?? 6000,
+    });
+    return allowsFraming(page.headers, origin) ? "ok" : "refused";
+  } catch (e) {
+    const code = e instanceof AppError ? e.code : "";
+    const down = [
+      "SITE_NOT_FOUND",
+      "SITE_UNREACHABLE",
+      "SITE_TOO_SLOW",
+      "SITE_NOT_ALLOWED",
+      "SITE_NEEDS_HTTPS",
+      "SITE_URL_INVALID",
+    ];
+    return down.includes(code) ? "down" : "unknown";
+  }
+}
+
+/** The text of a small file on a site, or null when the site answered without it. */
+export async function readSiteText(raw: string, options: FetchOptions = {}) {
+  try {
+    const file = await safeGet(raw, 4096, () => true, { ...options, timeoutMs: 6000 });
+    return file.body.toString("utf8");
+  } catch (e) {
+    const code = e instanceof AppError ? e.code : "";
+    if (["SITE_REFUSED", "SITE_NOT_A_PAGE", "SITE_TOO_LARGE"].includes(code)) return null;
+    // A 404 comes back as SITE_NOT_FOUND too, as does a missing host; a 404 means "answered".
+    if (code === "SITE_NOT_FOUND" && (await hostResolves(raw))) return null;
+    throw e;
+  }
+}
+
+async function hostResolves(raw: string) {
+  try {
+    const host = new URL(raw).hostname.replace(/^\[|\]$/g, "");
+    if (isIP(host)) return true;
+    return (await lookup(host, { all: true })).length > 0;
+  } catch {
+    return false;
+  }
+}

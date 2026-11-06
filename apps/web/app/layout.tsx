@@ -18,6 +18,7 @@ import "./nav.css";
 import "./gatherings.css";
 import "./now.css";
 import "./pages.css";
+import "./own-site.css";
 import "./frame.css";
 import "./code-editor.css";
 import { seasonScript } from "../components/season-script";
