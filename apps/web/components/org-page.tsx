@@ -9,6 +9,7 @@ import {
   Megaphone,
   Pencil,
   Send,
+  ShieldCheck,
   Stamp,
   X,
   type LucideIcon,
@@ -17,6 +18,18 @@ import { api } from "./runtime";
 import { signedInOrSignIn } from "./return-path";
 import { OprecAdmin, OprecPublic, type OprecView } from "./oprec-panel";
 import { Avatar, Dialog } from "./ui";
+import {
+  CalendarLink,
+  DoorOverlay,
+  TicketSetup,
+  TicketsSection,
+  YearbookCard,
+  dayTime,
+  plain,
+  type TicketView,
+} from "./org-tools";
+import { findWhen } from "../../../packages/contracts/src/when";
+import type { Yearbook } from "../../../packages/contracts/src/org-rooms";
 import type { User } from "../../../packages/contracts/src/experience";
 import type {
   OrgLook,
@@ -108,7 +121,7 @@ const wordsOf = (look: OrgLook): Words => ({
   ...(look.company ? { company: look.company } : {}),
 });
 
-type Tool = "sheet" | "posts" | "crew" | "archive";
+type Tool = "sheet" | "posts" | "crew" | "archive" | "reports";
 type RoomTab = { id: string; label: string; locked: boolean };
 type RoomPostView = {
   id: string;
@@ -138,6 +151,12 @@ interface RoomView {
     | { name: null }
     | { name: string; groupId: string; people: number; joined: boolean; startedBy: string }
     | null;
+  slow: number;
+  muted: boolean;
+  /** Admins only: reported messages, and who can't talk for now. */
+  reports?: { post: RoomPostView; count: number; reasons: string[] }[];
+  mutedPeople?: { id: string; name: string; handle: string }[];
+  yearbook: Yearbook | null;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -158,6 +177,11 @@ const clock = (iso: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
+/** The phone's own day for a moment in time, "YYYY-MM-DD". */
+const localDay = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 /** Enough of a user for an avatar. */
 const asUser = (p: Person): User => ({ bio: "", ...p });
 const firstName = (name: string) => name.split(" ")[0];
@@ -181,16 +205,17 @@ export function OrgPage({ id }: { id: string }) {
   const [termId, setTermId] = useState<string | null>(null);
   const [room, setRoom] = useState<RoomView | null>(null);
   const [oprec, setOprec] = useState<OprecView | null>(null);
+  const [tickets, setTickets] = useState<TicketView[]>([]);
   const [tab, setTab] = useState<"page" | "backstage">("page");
   const [editing, setEditing] = useState(false);
   const load = useCallback(async () => {
     const code = new URLSearchParams(window.location.search).get("join");
     try {
-      setOrg(
-        await api<OrgView>(
-          `/public/orgs/${encodeURIComponent(id)}${code ? `?join=${encodeURIComponent(code)}` : ""}`,
-        ),
+      const page = await api<OrgView & { tickets: TicketView[] }>(
+        `/public/orgs/${encodeURIComponent(id)}${code ? `?join=${encodeURIComponent(code)}` : ""}`,
       );
+      setOrg(page);
+      setTickets(page.tickets ?? []);
     } catch {
       setOrg("missing");
       return;
@@ -236,6 +261,26 @@ export function OrgPage({ id }: { id: string }) {
   useEffect(() => {
     void load();
   }, [load]);
+  // Someone scanned the door QR: their own ticket lets them in.
+  useEffect(() => {
+    const door = new URLSearchParams(window.location.search).get("door");
+    const [stamp, code] = door?.split(".") ?? [];
+    if (!stamp || !code) return;
+    void (async () => {
+      if (!(await signedInOrSignIn())) return;
+      window.history.replaceState(null, "", `/o/${encodeURIComponent(id)}`);
+      try {
+        const t = await api<TicketView>(
+          `/orgs/${encodeURIComponent(id)}/events/${encodeURIComponent(stamp)}/arrive`,
+          { code },
+        );
+        setNote(`You’re in. Enjoy ${t.name}.`);
+        await load();
+      } catch (e) {
+        setNote(plain(e));
+      }
+    })();
+  }, [id, load]);
   useEffect(() => {
     void loadRoom();
   }, [loadRoom]);
@@ -277,8 +322,10 @@ export function OrgPage({ id }: { id: string }) {
           words={words}
           rooms={rooms}
           room={room}
+          tickets={tickets}
           onTerm={setTermId}
           reload={loadRoom}
+          refresh={load}
           notify={setNote}
         />
       ) : (
@@ -302,6 +349,7 @@ export function OrgPage({ id }: { id: string }) {
                   notify={setNote}
                 />
               )}
+              <TicketsSection orgId={org.id} tickets={tickets} onChange={load} notify={setNote} />
               {oprec && (
                 <OprecPublic
                   org={org}
@@ -489,16 +537,20 @@ function Backstage({
   words,
   rooms,
   room,
+  tickets,
   onTerm,
   reload,
+  refresh,
   notify,
 }: {
   org: OrgView;
   words: Words;
   rooms: RoomTab[];
   room: RoomView;
+  tickets: TicketView[];
   onTerm: (id: string) => void;
   reload: () => Promise<void>;
+  refresh: () => Promise<void>;
   notify: (s: string) => void;
 }) {
   const [talk, setTalk] = useState(false);
@@ -523,12 +575,26 @@ function Backstage({
   const [pinned, ...earlier] = room.announcements;
   const last = room.messages[room.messages.length - 1];
   const edit = room.admin && room.canPost;
+  const reports = room.reports?.length ?? 0;
   const tools: [Tool, string, LucideIcon][] = [
     ["sheet", words.sheet, CalendarDays],
     ["posts", "Posts", Megaphone],
-    ...(room.admin ? [["crew", "Crew stamps", Stamp] as [Tool, string, LucideIcon]] : []),
+    ...(room.admin ? [["crew", "Events", Stamp] as [Tool, string, LucideIcon]] : []),
     ["archive", "Archive", Library],
+    ...(room.admin && room.canPost
+      ? [
+          ["reports", reports ? `Reports ${reports}` : "Room", ShieldCheck] as [
+            Tool,
+            string,
+            LucideIcon,
+          ],
+        ]
+      : []),
   ];
+  // The star is whatever comes first: a ticketed event or the next thing on the sheet.
+  const upcoming = room.term.locked ? [] : tickets.filter((t) => !t.over);
+  const event =
+    upcoming[0] && (!next || localDay(upcoming[0].when) <= next.when!) ? upcoming[0] : undefined;
   const openTool = (key: Tool) => setTool((t) => (t === key ? null : key));
   return (
     <section className="op-back" aria-label="Room">
@@ -561,18 +627,37 @@ function Backstage({
           </p>
         )}
       </header>
-      {next ? (
-        <button className="op-star" onClick={() => setTool("sheet")}>
-          <small>
-            {words.next} · {sheetDate(next.when!)}
-          </small>
-          <b>{next.text}</b>
-          <span>
-            {daysUntil(next.when!) === 0
-              ? "Today"
-              : `In ${daysUntil(next.when!)} ${daysUntil(next.when!) === 1 ? "day" : "days"}`}
-          </span>
-        </button>
+      {event ? (
+        <div className="op-star-wrap">
+          <button className="op-star" onClick={() => setTool(room.admin ? "crew" : "sheet")}>
+            <small>EVENT · {dayTime(event.when).toUpperCase()}</small>
+            <b>{event.name}</b>
+            <span>
+              {event.mine?.status === "going"
+                ? "You’re going"
+                : event.left > 0
+                  ? `${event.left} free tickets left`
+                  : "Full"}
+              {` · ${event.place}`}
+            </span>
+          </button>
+          <CalendarLink title={event.name} start={event.when} place={event.place} />
+        </div>
+      ) : room.term.locked ? null : next ? (
+        <div className="op-star-wrap">
+          <button className="op-star" onClick={() => setTool("sheet")}>
+            <small>
+              {words.next} · {sheetDate(next.when!)}
+            </small>
+            <b>{next.text}</b>
+            <span>
+              {daysUntil(next.when!) === 0
+                ? "Today"
+                : `In ${daysUntil(next.when!)} ${daysUntil(next.when!) === 1 ? "day" : "days"}`}
+            </span>
+          </button>
+          <CalendarLink title={next.text} start={next.when!} allDay />
+        </div>
       ) : pinned ? (
         <button className="op-star" onClick={() => setTool("sheet")}>
           <small>PINNED · {firstName(pinned.author.name)?.toUpperCase()}</small>
@@ -640,7 +725,7 @@ function Backstage({
               <b>{words.sheet}</b>
               <small>{room.term.label}</small>
             </div>
-            {calls.length === 0 && decided.length === 0 && (
+            {calls.length === 0 && decided.length === 0 && upcoming.length === 0 && (
               <p className="op-sheet-empty">Nothing scheduled or decided yet.</p>
             )}
             {calls.map((item) => (
@@ -661,6 +746,21 @@ function Backstage({
                     <X size={12} />
                   </button>
                 )}
+              </div>
+            ))}
+            {upcoming.map((t) => (
+              <div key={t.id} className="op-row org-state event">
+                <time>{sheetDate(localDay(t.when))}</time>
+                <div>
+                  <b>{t.name}</b>
+                  <small>
+                    Event · {t.place} ·{" "}
+                    {new Date(t.when).toLocaleTimeString(undefined, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </small>
+                </div>
               </div>
             ))}
             {edit &&
@@ -742,7 +842,11 @@ function Backstage({
         </>
       )}
       {tool === "posts" && <OrgPosts org={org} notify={notify} />}
-      {tool === "crew" && room.admin && <CrewStamps org={org} notify={notify} />}
+      {tool === "crew" && room.admin && <CrewStamps org={org} notify={notify} refresh={refresh} />}
+      {tool === "reports" && room.admin && (
+        <RoomCare room={room} base={base} reload={reload} notify={notify} />
+      )}
+      {room.yearbook && <YearbookCard book={room.yearbook} />}
       {tool === "archive" && <Archive org={org} words={words} />}
       {room.circle && (
         <AfterTerm
@@ -895,6 +999,17 @@ function Talk({
 }) {
   const [text, setText] = useState("");
   const [announce, setAnnounce] = useState(false);
+  const [acting, setActing] = useState<string | null>(null);
+  const act = async (work: () => Promise<unknown>, done: string) => {
+    try {
+      await work();
+      setActing(null);
+      notify(done);
+      await reload();
+    } catch (e) {
+      notify(plain(e));
+    }
+  };
   const end = useRef<HTMLLIElement>(null);
   const swipe = useRef<number | null>(null);
   const close = useRef(onClose);
@@ -953,20 +1068,118 @@ function Talk({
         </button>
       )}
       <ol className="op-msgs org-messages" aria-label="Conversation">
-        {room.messages.map((m) => (
-          <li key={m.id} className={m.author.id === room.you.id ? "me" : ""}>
-            {m.author.id !== room.you.id && (
-              <strong>
-                {m.author.name} <small>{clock(m.createdAt)}</small>
-              </strong>
-            )}
-            <p>{m.text}</p>
-          </li>
-        ))}
+        {room.messages.map((m) => {
+          const mine = m.author.id === room.you.id;
+          const day = room.admin && room.canPost ? findWhen(m.text, new Date()) : null;
+          const onSheet = room.state.some((i) => i.text === m.text.slice(0, 200));
+          return (
+            <li key={m.id} className={mine ? "me" : ""}>
+              {!mine && (
+                <strong>
+                  {m.author.name} <small>{clock(m.createdAt)}</small>
+                </strong>
+              )}
+              <p
+                role="button"
+                tabIndex={0}
+                aria-expanded={acting === m.id}
+                onClick={() => setActing((a) => (a === m.id ? null : m.id))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setActing((a) => (a === m.id ? null : m.id));
+                }}
+              >
+                {m.text}
+              </p>
+              {day && !onSheet && (
+                <button
+                  className="op-chip"
+                  onClick={() =>
+                    void act(
+                      () =>
+                        api(`${base}/state`, {
+                          kind: "schedule",
+                          text: m.text.slice(0, 200),
+                          when: day,
+                        }),
+                      `On the ${words.sheet.toLowerCase()} for ${sheetDate(day).toLowerCase()}.`,
+                    )
+                  }
+                >
+                  + Add to the {words.sheet.toLowerCase()}, {sheetDate(day).toLowerCase()}?
+                </button>
+              )}
+              {acting === m.id && room.canPost && (
+                <div className="op-msg-actions" role="group" aria-label="Message actions">
+                  {mine || room.admin ? (
+                    <button
+                      onClick={() =>
+                        void act(
+                          () => api(`${base}/posts/${m.id}`, undefined, "DELETE"),
+                          mine ? "Message deleted." : "Message taken down.",
+                        )
+                      }
+                    >
+                      {mine ? "Delete" : "Take down"}
+                    </button>
+                  ) : null}
+                  {!mine && !room.admin && (
+                    <>
+                      <button
+                        onClick={() =>
+                          void act(
+                            () => api(`${base}/posts/${m.id}/report`, { reason: "spam" }),
+                            "Reported. The admins will take a look.",
+                          )
+                        }
+                      >
+                        Report spam
+                      </button>
+                      <button
+                        onClick={() =>
+                          void act(
+                            () => api(`${base}/posts/${m.id}/report`, { reason: "harassment" }),
+                            "Reported. The admins will take a look.",
+                          )
+                        }
+                      >
+                        Report harassment
+                      </button>
+                      <button
+                        onClick={() =>
+                          void act(
+                            () => api(`/users/${encodeURIComponent(m.author.id)}/block`, {}),
+                            `You won’t see ${firstName(m.author.name)} anymore. Undo it in Settings.`,
+                          )
+                        }
+                      >
+                        Block {firstName(m.author.name)}
+                      </button>
+                    </>
+                  )}
+                  {!mine && room.admin && (
+                    <button
+                      onClick={() =>
+                        void act(
+                          () => api(`${base}/mute`, { userId: m.author.id, muted: true }),
+                          `${firstName(m.author.name)} can read but not talk for now.`,
+                        )
+                      }
+                    >
+                      Pause {firstName(m.author.name)}
+                    </button>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
         {room.messages.length === 0 && <li className="op-quiet">No one has said anything yet.</li>}
         <li ref={end} aria-hidden="true" />
       </ol>
-      {room.canPost && (
+      {room.canPost && room.muted && !room.admin && (
+        <p className="op-talk-shut">An admin paused your messages here. You can still read.</p>
+      )}
+      {room.canPost && !(room.muted && !room.admin) && (
         <form
           className="op-compose"
           onSubmit={(e) => {
@@ -978,7 +1191,7 @@ function Talk({
                 setAnnounce(false);
                 await reload();
               } catch (err) {
-                notify((err as Error).message);
+                notify(plain(err));
               }
             })();
           }}
@@ -1002,7 +1215,13 @@ function Talk({
               required
               maxLength={1000}
               value={text}
-              placeholder={announce ? "Pin a note for everyone" : "Say something to the company"}
+              placeholder={
+                announce
+                  ? "Pin a note for everyone"
+                  : room.slow && !room.admin
+                    ? `Slow mode: one message every ${room.slow < 60 ? `${room.slow}s` : `${room.slow / 60} min`}`
+                    : "Say something to the company"
+              }
               onChange={(e) => setText(e.target.value)}
             />
             <button className="op-send" aria-label="Send">
@@ -1132,16 +1351,147 @@ function OrgPosts({ org, notify }: { org: OrgView; notify: (s: string) => void }
   );
 }
 
-/** Crew stamps: each event the organisation ran, a stamp for the people who made it happen. */
-function CrewStamps({ org, notify }: { org: OrgView; notify: (s: string) => void }) {
-  const [events, setEvents] = useState<{ id: string; name: string; crew: number }[] | null>(null);
+/** Keeping the talk decent: what people reported, slow mode, and who is paused. */
+function RoomCare({
+  room,
+  base,
+  reload,
+  notify,
+}: {
+  room: RoomView;
+  base: string;
+  reload: () => Promise<void>;
+  notify: (s: string) => void;
+}) {
+  const act = async (work: () => Promise<unknown>, done: string) => {
+    try {
+      await work();
+      notify(done);
+      await reload();
+    } catch (e) {
+      notify(plain(e));
+    }
+  };
+  const reports = room.reports ?? [];
+  const paused = room.mutedPeople ?? [];
+  return (
+    <section className="op-panel" aria-label="Room care">
+      <div className="op-panel-head">
+        <b>The room</b>
+        <small>Only admins see this</small>
+      </div>
+      <label className="op-visibility">
+        Slow mode
+        <select
+          value={room.slow}
+          onChange={(e) =>
+            void act(
+              () => api(`${base}/slow`, { seconds: Number(e.target.value) }, "PUT"),
+              Number(e.target.value) ? "Slow mode is on." : "Slow mode is off.",
+            )
+          }
+        >
+          <option value={0}>Off</option>
+          <option value={30}>One message every 30 seconds</option>
+          <option value={60}>One message a minute</option>
+          <option value={300}>One message every 5 minutes</option>
+        </select>
+      </label>
+      {reports.length === 0 ? (
+        <p className="op-quiet op-dark">
+          No reports. Tap a message in Talk to report or take it down.
+        </p>
+      ) : (
+        <ul className="op-list" aria-label="Reports">
+          {reports.map((r) => (
+            <li key={r.post.id}>
+              <small>
+                {r.count} {r.count === 1 ? "REPORT" : "REPORTS"} ·{" "}
+                {r.reasons.join(", ").toUpperCase()} · {r.post.author.name.toUpperCase()}
+              </small>
+              <p>{r.post.text}</p>
+              <div className="op-list-actions">
+                <button
+                  className="op-ink"
+                  onClick={() =>
+                    void act(
+                      () => api(`${base}/posts/${r.post.id}`, undefined, "DELETE"),
+                      "Message taken down.",
+                    )
+                  }
+                >
+                  Take down
+                </button>
+                <button
+                  className="op-plain"
+                  onClick={() =>
+                    void act(() => api(`${base}/posts/${r.post.id}/dismiss`, {}), "It stays up.")
+                  }
+                >
+                  Keep it
+                </button>
+                <button
+                  className="op-plain"
+                  onClick={() =>
+                    void act(
+                      () => api(`${base}/mute`, { userId: r.post.author.id, muted: true }),
+                      `${firstName(r.post.author.name)} can read but not talk for now.`,
+                    )
+                  }
+                >
+                  Pause {firstName(r.post.author.name)}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {paused.length > 0 && (
+        <ul className="op-list" aria-label="Paused">
+          {paused.map((p) => (
+            <li key={p.id}>
+              <small>PAUSED</small>
+              <p>{p.name}</p>
+              <button
+                className="op-plain"
+                onClick={() =>
+                  void act(
+                    () => api(`${base}/mute`, { userId: p.id, muted: false }),
+                    `${firstName(p.name)} can talk again.`,
+                  )
+                }
+              >
+                Let them talk
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+type EventRow = { id: string; name: string; crew: number; tickets: TicketView | null };
+/** Events: free tickets for guests, and a crew stamp for the people who made it happen. */
+function CrewStamps({
+  org,
+  notify,
+  refresh,
+}: {
+  org: OrgView;
+  notify: (s: string) => void;
+  refresh: () => Promise<void>;
+}) {
+  const [events, setEvents] = useState<EventRow[] | null>(null);
   const [name, setName] = useState("");
   const [giving, setGiving] = useState<string | null>(null);
+  const [setting, setSetting] = useState<string | null>(null);
+  const [door, setDoor] = useState<EventRow | null>(null);
   const [handles, setHandles] = useState("");
   const base = `/orgs/${encodeURIComponent(org.id)}/events`;
   const load = useCallback(async () => {
     try {
-      setEvents((await api<{ events: { id: string; name: string; crew: number }[] }>(base)).events);
+      setEvents((await api<{ events: EventRow[] }>(base)).events);
     } catch (e) {
       notify((e as Error).message);
     }
@@ -1151,10 +1501,10 @@ function CrewStamps({ org, notify }: { org: OrgView; notify: (s: string) => void
   }, [load]);
   if (!events) return null;
   return (
-    <section className="op-panel" aria-label="Crew stamps">
+    <section className="op-panel" aria-label="Events">
       <div className="op-panel-head">
-        <b>Crew stamps</b>
-        <small>One per event, for the people who ran it</small>
+        <b>Events</b>
+        <small>Free tickets for guests, a crew stamp for the people who ran it</small>
       </div>
       <form
         className="op-panel-form row"
@@ -1196,6 +1546,26 @@ function CrewStamps({ org, notify }: { org: OrgView; notify: (s: string) => void
                   : `${ev.crew} ${ev.crew === 1 ? "PERSON HOLDS" : "PEOPLE HOLD"} IT`}
               </small>
               <p>{ev.name}</p>
+              {ev.tickets && (
+                <p className="op-ev-tickets">
+                  {dayTime(ev.tickets.when)} · {ev.tickets.place} ·{" "}
+                  {ev.tickets.capacity - ev.tickets.left}/{ev.tickets.capacity} going
+                  {ev.tickets.waiting ? `, ${ev.tickets.waiting} in line` : ""}
+                </p>
+              )}
+              {setting === ev.id && (
+                <TicketSetup
+                  orgId={org.id}
+                  eventId={ev.id}
+                  tickets={ev.tickets}
+                  notify={notify}
+                  onDone={async () => {
+                    setSetting(null);
+                    await load();
+                    await refresh();
+                  }}
+                />
+              )}
               {giving === ev.id ? (
                 <form
                   className="op-panel-form row"
@@ -1241,13 +1611,38 @@ function CrewStamps({ org, notify }: { org: OrgView; notify: (s: string) => void
                   <button className="op-ink">Give</button>
                 </form>
               ) : (
-                <button className="op-plain" onClick={() => setGiving(ev.id)}>
-                  Give to the crew
-                </button>
+                <div className="op-list-actions">
+                  <button className="op-plain" onClick={() => setGiving(ev.id)}>
+                    Give to the crew
+                  </button>
+                  <button
+                    className="op-plain"
+                    aria-expanded={setting === ev.id}
+                    onClick={() => setSetting((x) => (x === ev.id ? null : ev.id))}
+                  >
+                    {ev.tickets ? "Tickets" : "Free tickets"}
+                  </button>
+                  {ev.tickets && !ev.tickets.over && (
+                    <button className="op-plain" onClick={() => setDoor(ev)}>
+                      Open the door
+                    </button>
+                  )}
+                </div>
               )}
             </li>
           ))}
         </ul>
+      )}
+      {door && (
+        <DoorOverlay
+          orgId={org.id}
+          eventId={door.id}
+          name={door.name}
+          onClose={() => {
+            setDoor(null);
+            void load();
+          }}
+        />
       )}
     </section>
   );

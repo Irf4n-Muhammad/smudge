@@ -31,6 +31,14 @@ import type {
   RoomStateItem,
   Term,
 } from "../../contracts/src/identity.js";
+import {
+  roomMuteSchema,
+  roomReportSchema,
+  roomSlowSchema,
+  type RoomReport,
+  type RoomSettings,
+  type Yearbook,
+} from "../../contracts/src/org-rooms.js";
 import type { Actor } from "./index.js";
 import { AppError } from "./social.js";
 import type { SocialService } from "./social.js";
@@ -57,6 +65,8 @@ interface TermCircle {
  */
 export class OrgService {
   circles: Circles | undefined;
+  /** Installed by the server: whether two people blocked each other, either way. */
+  blockedEither: (a: string, b: string) => boolean = () => false;
   constructor(
     private readonly social: SocialService,
     private readonly identity: IdentityService,
@@ -195,7 +205,7 @@ export class OrgService {
     return { visibility };
   }
   /** One of the organisation's own: an admin, or someone it placed by a chapter, past or present. */
-  private isOwn(userId: string, orgId: string) {
+  isOwn(userId: string, orgId: string) {
     return (
       this.identity.orgAdmins(orgId).includes(userId) ||
       this.members(orgId).some((c) => c.ownerId === userId)
@@ -530,7 +540,10 @@ export class OrgService {
     };
     this.store.transaction(() => {
       for (const t of terms)
-        if (!t.locked) this.store.put("term", t.id, { ...t, locked: true } satisfies Term);
+        if (!t.locked) {
+          this.store.put("term", t.id, { ...t, locked: true } satisfies Term);
+          this.keepYearbook({ ...t, locked: true });
+        }
       this.store.put("term", term.id, term);
     });
     return term;
@@ -540,7 +553,10 @@ export class OrgService {
     const term = this.store.get<Term>("term", termId);
     if (!term || term.orgId !== orgId) throw new AppError("NOT_FOUND", 404);
     const next = { ...term, locked: true };
-    this.store.transaction(() => this.store.put("term", term.id, next));
+    this.store.transaction(() => {
+      this.store.put("term", term.id, next);
+      if (!term.locked) this.keepYearbook(next);
+    });
     return next;
   }
   /**
@@ -666,6 +682,8 @@ export class OrgService {
       .filter((p) => p.termId === termId)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const view = (p: RoomPost) => ({ ...p, author: who(p.userId) });
+    const settings = this.settings(termId);
+    const reports = admin && this.hearsTalk(userId, term) ? this.reportsOf(termId, posts) : [];
     const state = this.store.get<{ items: RoomStateItem[] }>("room-state", termId)?.items ?? [];
     this.markSeen(userId, termId);
     const mine = this.placed(term, (c) => c.ownerId === userId)[0];
@@ -694,10 +712,20 @@ export class OrgService {
       talk,
       messages: talk
         ? posts
-            .filter((p) => p.kind === "message")
+            .filter((p) => p.kind === "message" && !this.blockedEither(userId, p.userId))
             .slice(-100)
             .map(view)
         : [],
+      slow: settings.slow,
+      muted: settings.muted.includes(userId),
+      // What the admins look after: reports on messages, and who can't talk for now.
+      ...(admin
+        ? {
+            reports: reports.map((r) => ({ ...r, post: view(r.post) })),
+            mutedPeople: settings.muted.map(who),
+          }
+        : {}),
+      yearbook: term.locked && this.wasThere(userId, term) ? this.yearbook(term) : null,
       // Once a term is over, the people who were there may keep talking as a circle of their own.
       circle:
         term.locked && this.wasThere(userId, term)
@@ -790,11 +818,24 @@ export class OrgService {
     );
     return { removed: items.length - items.filter((i) => i.id !== itemId).length };
   }
-  /** Announcements are the admins'; anyone in the room talks. A locked term is read only. */
+  /**
+   * Announcements are the admins'; anyone in the room talks, unless an admin muted them or slow
+   * mode asks them to wait. A locked term is read only.
+   */
   post(actor: Actor, orgId: string, termId: string, input: unknown) {
     const { userId, admin } = this.openRoom(actor, orgId, termId);
     const parsed = roomPostSchema.parse(input);
     if (parsed.kind === "announcement" && !admin) throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    if (parsed.kind === "message" && !admin) {
+      const { slow, muted } = this.settings(termId);
+      if (muted.includes(userId)) throw new AppError("MUTED", 403);
+      const last = this.store
+        .all<RoomPost>("room-post")
+        .filter((p) => p.termId === termId && p.userId === userId && p.kind === "message")
+        .reduce((a, p) => (p.createdAt > a ? p.createdAt : a), "");
+      if (slow && last && this.now().getTime() - Date.parse(last) < slow * 1000)
+        throw new AppError("SLOW_MODE", 429);
+    }
     const post: RoomPost = {
       id: randomUUID(),
       termId,
@@ -805,6 +846,163 @@ export class OrgService {
     };
     this.store.transaction(() => this.store.put("room-post", post.id, post));
     return post;
+  }
+
+  // Keeping the talk decent ------------------------------------------------------------------
+  private settings(termId: string): RoomSettings {
+    return this.store.get<RoomSettings>("room-settings", termId) ?? { slow: 0, muted: [] };
+  }
+  /** Slow mode: how long each person waits between messages. Admins never wait. */
+  setSlow(actor: Actor, orgId: string, termId: string, input: unknown) {
+    const { admin } = this.openRoom(actor, orgId, termId);
+    if (!admin) throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    const { seconds } = roomSlowSchema.parse(input);
+    const next = { ...this.settings(termId), slow: seconds };
+    this.store.transaction(() => this.store.put("room-settings", termId, next));
+    return next;
+  }
+  /** An admin stops someone talking in this term's room, or lets them again. They still read. */
+  setMute(actor: Actor, orgId: string, termId: string, input: unknown) {
+    const { admin, userId } = this.openRoom(actor, orgId, termId);
+    if (!admin) throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    const { userId: who, muted } = roomMuteSchema.parse(input);
+    if (who === userId || this.identity.orgAdmins(orgId).includes(who))
+      throw new AppError("CANT_MUTE_ADMIN", 400);
+    const settings = this.settings(termId);
+    const next = {
+      ...settings,
+      muted: muted
+        ? [...new Set([...settings.muted, who])].slice(-200)
+        : settings.muted.filter((id) => id !== who),
+    };
+    this.store.transaction(() => this.store.put("room-settings", termId, next));
+    return next;
+  }
+  private roomPost(term: Term, postId: string) {
+    const post = this.store.get<RoomPost>("room-post", postId);
+    if (!post || post.termId !== term.id) throw new AppError("NOT_FOUND", 404);
+    return post;
+  }
+  /** Anyone who hears the talk can report a message to the admins, once. */
+  report(actor: Actor, orgId: string, termId: string, postId: string, input: unknown) {
+    const userId = this.social.actor(actor);
+    const term = this.term(orgId, termId);
+    if (!this.hearsTalk(userId, term)) throw new AppError("NOT_A_MEMBER", 403);
+    if (term.locked) throw new AppError("TERM_LOCKED", 409);
+    const post = this.roomPost(term, postId);
+    if (post.userId === userId) throw new AppError("CANT_REPORT_SELF", 400);
+    const { reason } = roomReportSchema.parse(input);
+    const report: RoomReport = { postId, termId, userId, reason, at: this.now().toISOString() };
+    this.store.transaction(() => this.store.put("room-report", `${postId}:${userId}`, report));
+    return { reported: true };
+  }
+  private reportsOf(termId: string, posts: RoomPost[]) {
+    const byPost = new Map<string, RoomReport[]>();
+    for (const r of this.store.all<RoomReport>("room-report"))
+      if (r.termId === termId) byPost.set(r.postId, [...(byPost.get(r.postId) ?? []), r]);
+    return posts
+      .filter((p) => byPost.has(p.id))
+      .map((p) => {
+        const reports = byPost.get(p.id)!;
+        return {
+          post: p,
+          count: reports.length,
+          reasons: [...new Set(reports.map((r) => r.reason))],
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+  }
+  private clearReports(postId: string) {
+    for (const r of this.store.all<RoomReport>("room-report"))
+      if (r.postId === postId) this.store.remove("room-report", `${postId}:${r.userId}`);
+  }
+  /** Its author takes a message back, or an admin takes it down. */
+  removePost(actor: Actor, orgId: string, termId: string, postId: string) {
+    const { userId, admin, term } = this.openRoom(actor, orgId, termId);
+    const post = this.roomPost(term, postId);
+    if (post.userId !== userId && !admin) throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    this.store.transaction(() => {
+      this.store.remove("room-post", postId);
+      this.clearReports(postId);
+    });
+    return { removed: true };
+  }
+  /** An admin looked and the message stays. */
+  dismissReports(actor: Actor, orgId: string, termId: string, postId: string) {
+    const { admin, term } = this.openRoom(actor, orgId, termId);
+    if (!admin) throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    this.roomPost(term, postId);
+    this.store.transaction(() => this.clearReports(postId));
+    return { dismissed: true };
+  }
+
+  // The yearbook -----------------------------------------------------------------------------
+  /**
+   * What a term left behind: its people and roles, what it decided, the first word and the last
+   * note. Made when the term locks and kept as it was, for the people who were there.
+   */
+  private makeYearbook(term: Term): Yearbook {
+    const users = new Map(this.store.all<User>("user").map((u) => [u.id, u]));
+    const name = (id: string) => users.get(id)?.name ?? "Someone";
+    const posts = this.store
+      .all<RoomPost>("room-post")
+      .filter((p) => p.termId === term.id)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const messages = posts.filter((p) => p.kind === "message");
+    const notes = posts.filter((p) => p.kind === "announcement");
+    const state = this.store.get<{ items: RoomStateItem[] }>("room-state", term.id)?.items ?? [];
+    const decisions = state.filter((i) => i.kind === "decision");
+    const collection = collectionById(`crew-${term.orgId}`.slice(0, 40));
+    const crew = new Map<string, number>();
+    for (const c of this.store.all<Chapter>("chapter"))
+      if (
+        c.kind === "stamp" &&
+        c.orgId === term.orgId &&
+        c.collection === collection?.id &&
+        c.from === term.from &&
+        c.stamp
+      )
+        crew.set(c.stamp, (crew.get(c.stamp) ?? 0) + 1);
+    const first = messages[0];
+    const last = notes[notes.length - 1];
+    return {
+      termId: term.id,
+      label: term.label,
+      from: term.from,
+      ...(term.to === undefined ? {} : { to: term.to }),
+      madeAt: this.now().toISOString(),
+      people: this.placed(term).flatMap((c) => {
+        const u = users.get(c.ownerId);
+        return u ? [{ id: u.id, name: u.name, handle: u.handle, role: roleOf(c.label) }] : [];
+      }),
+      counts: {
+        messages: messages.length,
+        announcements: notes.length,
+        decisions: decisions.length,
+        scheduled: state.length - decisions.length,
+      },
+      decisions: decisions.slice(0, 10).map((d) => d.text),
+      firstWord: first ? { name: name(first.userId), text: first.text.slice(0, 200) } : null,
+      lastNote: last ? { name: name(last.userId), text: last.text.slice(0, 300) } : null,
+      crew: [...crew]
+        .map(([stamp, people]) => ({
+          event: collection?.stamps.find((s) => s.id === stamp)?.name ?? stamp,
+          people,
+        }))
+        .sort((a, b) => b.people - a.people),
+    };
+  }
+  private keepYearbook(term: Term) {
+    if (!this.store.get<Yearbook>("term-yearbook", term.id))
+      this.store.put("term-yearbook", term.id, this.makeYearbook(term));
+  }
+  /** A term locked before yearbooks existed gets one the first time someone opens it. */
+  private yearbook(term: Term) {
+    const kept = this.store.get<Yearbook>("term-yearbook", term.id);
+    if (kept) return kept;
+    const made = this.makeYearbook(term);
+    this.store.transaction(() => this.store.put("term-yearbook", term.id, made));
+    return made;
   }
 }
 

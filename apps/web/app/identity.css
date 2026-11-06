@@ -2801,7 +2801,7 @@
 }
 .op-tools {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
   gap: 8px;
 }
 .op-tools button {
@@ -2982,6 +2982,250 @@
 .op-visibility {
   display: grid;
   gap: 4px;
+}
+/* Tickets, the door, the yearbook, and keeping the talk decent */
+.op-star-wrap {
+  position: relative;
+}
+.op-star-wrap .op-cal {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+}
+.op-cal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 600 11.5px var(--ui);
+  color: var(--op-red);
+  text-decoration: none;
+}
+.op-tickets {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.op-tickets li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  background: var(--op-cream);
+  color: var(--op-ink);
+}
+.op-tickets li > div:first-child {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.op-tickets small {
+  font: 700 9.5px var(--op-mono);
+  letter-spacing: 0.1em;
+  color: var(--op-sub, #8a5a2a);
+}
+.op-tickets b {
+  display: block;
+  font: italic 400 24px/1.05 var(--op-serif);
+  margin: 4px 0;
+}
+.op-tickets span {
+  font: 500 12.5px/1.35 var(--ui);
+  color: var(--op-muted, #6b5a48);
+}
+.op-claim {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 19px;
+  border: 0;
+  background: var(--op-red);
+  color: #fff;
+  font: 700 13px var(--ui);
+}
+.op-ticket-mine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.op-ticket-mine em {
+  font: italic 400 18px var(--op-serif);
+  color: var(--op-red);
+}
+.op-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: 600 12px var(--ui);
+  color: var(--op-muted, #6b5a48);
+  text-decoration: underline;
+}
+.op-tickets .op-opens {
+  letter-spacing: 0.04em;
+}
+.op-ev-tickets {
+  font-size: 12.5px !important;
+  color: var(--op-muted, #6b5a48);
+}
+.op-ticket-setup {
+  margin-top: 8px;
+}
+.op-ticket-setup label {
+  display: grid;
+  gap: 4px;
+  font: 600 11px var(--ui);
+}
+.op-ticket-setup label small {
+  font-weight: 500;
+  color: var(--op-muted, #6b5a48);
+}
+.op-list-actions {
+  flex-wrap: wrap;
+}
+.op-panel .op-quiet,
+.op-quiet.op-dark {
+  color: var(--op-muted, #6b5a48);
+}
+.op-row.event time {
+  color: var(--op-red);
+}
+.op-row.event small {
+  color: var(--op-muted, #6b5a48);
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font: 500 12px var(--ui);
+}
+.op-door {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--op-cream);
+  color: var(--op-ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+}
+.op-door small {
+  font: 700 10px var(--op-mono);
+  letter-spacing: 0.16em;
+  color: var(--op-sub, #8a5a2a);
+}
+.op-door h2 {
+  font: 800 34px/1 var(--op-big);
+  margin: 0;
+}
+.op-door-qr {
+  width: min(78vw, 360px);
+  aspect-ratio: 1;
+  margin: 6px 0;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+}
+.op-door-qr svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.op-door p {
+  margin: 0;
+  max-width: 320px;
+  font: 400 13.5px/1.45 var(--ui);
+  color: var(--op-muted, #6b5a48);
+}
+.op-door .op-door-count {
+  font: 600 15px var(--ui);
+  color: var(--op-ink);
+}
+.op-door-count b {
+  font: 800 28px var(--op-big);
+}
+.op-door-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: var(--op-ink);
+  border-color: var(--op-ink);
+}
+.op-yearbook blockquote {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--op-red);
+  background: #fffaf0;
+}
+.op-yearbook blockquote small,
+.op-yb-label {
+  display: block;
+  margin-top: 12px;
+  font: 700 9px var(--op-mono);
+  letter-spacing: 0.14em;
+  color: var(--op-sub, #8a5a2a);
+}
+.op-yearbook blockquote small {
+  margin-top: 0;
+}
+.op-yearbook blockquote p {
+  margin: 4px 0 0;
+  font: italic 400 18px/1.25 var(--op-serif);
+}
+.op-yearbook i {
+  font-style: normal;
+  font: 500 12px var(--ui);
+  color: var(--op-muted, #6b5a48);
+}
+.op-yb-counts {
+  margin: 0;
+  font: 600 12.5px var(--ui);
+}
+.op-yb-list,
+.op-yb-people {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font: 500 14px/1.6 var(--ui);
+}
+.op-yb-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+}
+.op-yb-people a {
+  color: inherit;
+  font-weight: 700;
+}
+.op-chip {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 5px 10px;
+  border-radius: 12px;
+  border: 1px dashed var(--op-red);
+  background: #fffaf0;
+  color: var(--op-red);
+  font: 600 11.5px var(--ui);
+}
+.op-msgs p[role="button"] {
+  cursor: pointer;
+}
+.op-msg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.op-msg-actions button {
+  padding: 5px 10px;
+  border-radius: 12px;
+  border: 1px solid currentColor;
+  background: none;
+  color: inherit;
+  font: 600 11.5px var(--ui);
 }
 .op-talk-shut {
   display: flex;

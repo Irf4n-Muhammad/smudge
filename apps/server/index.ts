@@ -28,6 +28,7 @@ import {
 } from "../../packages/contracts/src/profile.js";
 import { seedProfiles, seedDaniPage, seedInesPosts, profileTemplates } from "./seed-profiles.js";
 import { IdentityService } from "../../packages/core/src/identity.js";
+import { OrgEventsService } from "../../packages/core/src/org-events.js";
 import { OrgService } from "../../packages/core/src/orgs.js";
 import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
@@ -127,6 +128,7 @@ const identity = new IdentityService(
 );
 const orgService = new OrgService(service, identity, clock);
 const oprecs = new OprecService(service, identity, orgService, clock);
+const orgEvents = new OrgEventsService(service, orgService, clock);
 const accounts = new AccountService(
   service,
   identity,
@@ -171,6 +173,7 @@ momentDay.cardFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 const messages = new MessageService(service, community, clock);
 orgService.circles = messages;
+orgService.blockedEither = (a, b) => community.blockedEither(a, b);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
 if (deliver) startMailWorker(store, deliver);
@@ -648,9 +651,73 @@ api.put("/api/orgs/:id/visibility", (req, res) =>
 );
 // Events: each one a crew stamp the admin gives to the people who ran it.
 api.get("/api/orgs/:id/events", (req, res) => {
-  orgService.requireAdmin(actor(res), orgId(req.params.id));
-  res.json(orgService.events(orgId(req.params.id)));
+  const id = orgId(req.params.id);
+  const userId = orgService.requireAdmin(actor(res), id);
+  const list = orgService.events(id);
+  res.json({
+    ...list,
+    events: list.events.map((e) => ({
+      ...e,
+      tickets: orgEvents.has(id, e.id) ? orgEvents.view(id, e.id, userId) : null,
+    })),
+  });
 });
+// Free tickets in waves, and the door that lets ticket holders in.
+api.put("/api/orgs/:id/events/:stamp/tickets", (req, res) =>
+  res.json(
+    orgEvents.setTickets(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body),
+  ),
+);
+api.post("/api/orgs/:id/events/:stamp/claim", roomLimit, (req, res) =>
+  res.json(orgEvents.claim(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/release", roomLimit, (req, res) =>
+  res.json(orgEvents.release(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.get("/api/orgs/:id/events/:stamp/door", (req, res) =>
+  res.json(orgEvents.door(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/arrive", roomLimit, (req, res) =>
+  res.json(orgEvents.arrive(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body)),
+);
+// Keeping the talk decent: slow mode, muting, reports, taking a message down.
+api.put("/api/orgs/:id/rooms/:term/slow", (req, res) =>
+  res.json(orgService.setSlow(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.post("/api/orgs/:id/rooms/:term/mute", (req, res) =>
+  res.json(orgService.setMute(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.post("/api/orgs/:id/rooms/:term/posts/:post/report", roomLimit, (req, res) =>
+  res.json(
+    orgService.report(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      z.string().uuid().parse(req.params.post),
+      req.body,
+    ),
+  ),
+);
+api.delete("/api/orgs/:id/rooms/:term/posts/:post", (req, res) =>
+  res.json(
+    orgService.removePost(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      z.string().uuid().parse(req.params.post),
+    ),
+  ),
+);
+api.post("/api/orgs/:id/rooms/:term/posts/:post/dismiss", (req, res) =>
+  res.json(
+    orgService.dismissReports(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      z.string().uuid().parse(req.params.post),
+    ),
+  ),
+);
 api.post("/api/orgs/:id/events", roomLimit, (req, res) =>
   res.json(orgService.createEvent(actor(res), orgId(req.params.id), req.body)),
 );
@@ -1027,7 +1094,12 @@ api.get("/api/public/orgs/:id", guestLimit, (req, res) => {
     join,
   );
   opens.count("org", page.id);
-  res.json(page);
+  const viewer = signedIn(res)?.userId;
+  // Its tickets come with the page, as this viewer may claim them.
+  res.json({
+    ...page,
+    tickets: orgService.canSee(page.id, viewer) ? orgEvents.list(page.id, viewer) : [],
+  });
 });
 api.get("/api/public/orgs/:id/oprec", guestLimit, (req, res) => {
   const id = z.string().max(40).parse(req.params.id);
