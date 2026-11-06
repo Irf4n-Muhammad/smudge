@@ -63,9 +63,7 @@ test("A shares a mod, B mixes it with Raka and publishes, C votes and revisits t
     await page
       .getByLabel("Mod description", { exact: true })
       .fill("Gig posters, ticket highlights and a listener-selected encore.");
-    await page
-      .getByLabel("I want to share this source and the included assets with other demo accounts.")
-      .check();
+    await page.getByLabel("I want to share this code and its files with other people.").check();
     await page.getByRole("button", { name: "Share mod", exact: true }).click();
     await expect(page.getByRole("dialog").getByRole("status")).toContainText(`Shared ${name}`);
     const mod = (await api(page, "/mods")).find((m: any) => m.name === name);

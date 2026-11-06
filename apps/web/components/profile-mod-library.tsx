@@ -147,9 +147,10 @@ export function ProfileModLibrary({
           }}
         >
           <div className="mod-library">
-            <p>
-              Make it yours. Try a whole design or mix one part into your draft. Your live profile
-              changes only when you publish.
+            <p className="mod-intro">
+              Pages other people shared. <b>Try it</b> opens one as a new draft. <b>Use one part</b>{" "}
+              swaps just that part into the draft you have open. Nothing goes live until you
+              publish.
             </p>
             <div className="mod-tabs">
               <button aria-pressed={tab === "browse"} onClick={() => setTab("browse")}>
@@ -171,10 +172,10 @@ export function ProfileModLibrary({
             {tab === "browse" ? (
               <>
                 <label className="mod-search">
-                  Find a mod
                   <input
                     aria-label="Search mods"
-                    placeholder="Name or creator"
+                    type="search"
+                    placeholder="Search by name or creator"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
@@ -209,89 +210,90 @@ export function ProfileModLibrary({
                             >
                               <span>{m.name}</span>
                               <i />
-                              <small>{m.slots.join(" / ")}</small>
                             </div>
                           )}
-                          <h3>{m.name}</h3>
-                          <p className="mod-byline">
-                            <a
-                              href={`/?profile=${encodeURIComponent(m.bundled ? actorId : m.creatorId)}&mods=${m.bundled ? "forma" : "1"}`}
-                            >
-                              {m.creatorName}
-                            </a>{" "}
-                            · v{m.version}
-                            {m.bundled ? " · Starter" : ""}
-                          </p>
-                          <p>{m.description}</p>
-                          <div className="mod-slots">
-                            {m.slots.map((s) => (
-                              <span key={s}>{s}</span>
-                            ))}
-                          </div>
-                          <details>
-                            <summary>Access & compatibility</summary>
-                            <p>
-                              Shared source with {m.assetCount} declared assets. Parts share one
-                              runtime and its permissions. Custom parts may need source adjustments
-                              to work together.
+                          <div className="mod-card-body">
+                            <h3>{m.name}</h3>
+                            <p className="mod-byline">
+                              by{" "}
+                              <a
+                                href={`/?profile=${encodeURIComponent(m.bundled ? actorId : m.creatorId)}&mods=${m.bundled ? "forma" : "1"}`}
+                              >
+                                {m.creatorName}
+                              </a>
+                              {m.bundled ? " · Starter" : ""}
                             </p>
-                            <p>{m.capabilities.join(", ") || "No host permissions"}</p>
-                          </details>
-                          <label>
-                            Version
-                            <select
-                              aria-label={`Version of ${m.name}`}
-                              value={versions[m.id] ?? m.version}
-                              disabled={busy}
-                              onChange={(e) =>
-                                void run(async () => {
-                                  const version = Number(e.target.value);
-                                  const selected = await api<SharedMod>(
-                                    `/mods/${m.id}?version=${version}`,
-                                  );
-                                  setEditions((prev) => ({ ...prev, [m.id]: selected }));
-                                  setVersions((prev) => ({ ...prev, [m.id]: version }));
-                                })
-                              }
-                            >
-                              {Array.from(
-                                { length: latest.version },
-                                (_, i) => latest.version - i,
-                              ).map((v) => (
-                                <option key={v} value={v}>
-                                  v{v}
-                                  {v === latest.version ? " · Latest" : ""}
-                                </option>
+                            <p className="mod-description">{m.description}</p>
+                            <div className="mod-slots" aria-label="Parts in this mod">
+                              {m.slots.map((s) => (
+                                <span key={s}>{s}</span>
                               ))}
-                            </select>
-                          </label>
-                          <button
-                            className="profile-primary"
-                            disabled={busy}
-                            onClick={() => void install(m)}
-                          >
-                            Try {m.name}
-                          </button>
-                          {draft?.package.manifest.schemaVersion === 2 && (
-                            <label>
-                              Mix into current draft
+                            </div>
+                          </div>
+                          <div className="mod-actions">
+                            <button
+                              className="profile-primary"
+                              aria-label={`Try ${m.name}`}
+                              disabled={busy}
+                              onClick={() => void install(m)}
+                            >
+                              Try it
+                            </button>
+                            {draft?.package.manifest.schemaVersion === 2 && (
                               <select
                                 aria-label={`Mix ${m.name}`}
+                                title="Swap one part of your draft for this one"
                                 disabled={busy}
                                 value=""
                                 onChange={(e) => {
                                   if (e.target.value) void install(m, e.target.value);
                                 }}
                               >
-                                <option value="">Choose a part…</option>
+                                <option value="">Use one part…</option>
                                 {m.slots.map((s) => (
                                   <option value={s} key={s}>
-                                    {s}
+                                    Just the {s}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                          <details className="mod-more">
+                            <summary>Version and permissions</summary>
+                            <label>
+                              Version
+                              <select
+                                aria-label={`Version of ${m.name}`}
+                                value={versions[m.id] ?? m.version}
+                                disabled={busy}
+                                onChange={(e) =>
+                                  void run(async () => {
+                                    const version = Number(e.target.value);
+                                    const selected = await api<SharedMod>(
+                                      `/mods/${m.id}?version=${version}`,
+                                    );
+                                    setEditions((prev) => ({ ...prev, [m.id]: selected }));
+                                    setVersions((prev) => ({ ...prev, [m.id]: version }));
+                                  })
+                                }
+                              >
+                                {Array.from(
+                                  { length: latest.version },
+                                  (_, i) => latest.version - i,
+                                ).map((v) => (
+                                  <option key={v} value={v}>
+                                    v{v}
+                                    {v === latest.version ? " · Latest" : ""}
                                   </option>
                                 ))}
                               </select>
                             </label>
-                          )}
+                            <p>
+                              Permissions: {m.capabilities.join(", ") || "none"}. Comes with{" "}
+                              {m.assetCount} {m.assetCount === 1 ? "file" : "files"}. Parts from
+                              different mods may need small code fixes to work together.
+                            </p>
+                          </details>
                         </article>
                       );
                     })}
@@ -299,7 +301,11 @@ export function ProfileModLibrary({
                 {!busy &&
                   !mods.some((m) =>
                     `${m.name} ${m.creatorName}`.toLowerCase().includes(query.toLowerCase()),
-                  ) && <p>No matching mods. Try another name or share your own.</p>}
+                  ) && (
+                    <p className="mod-empty">
+                      No matching mods. Try another name or share your own.
+                    </p>
+                  )}
               </>
             ) : (
               <form
@@ -309,7 +315,10 @@ export function ProfileModLibrary({
                 }}
               >
                 <fieldset disabled={busy || !draft} className="mod-share">
-                  <legend>Publish a reusable design</legend>
+                  <legend>Share your draft as a mod</legend>
+                  <p className="mod-intro">
+                    Other people can then try it whole or take one part of it.
+                  </p>
                   <label>
                     Save as
                     <select
@@ -348,7 +357,7 @@ export function ProfileModLibrary({
                       onChange={(e) => setDescription(e.target.value)}
                     />
                   </label>
-                  <div className="mod-slot-checks">
+                  <div className="mod-slot-checks" role="group" aria-label="Parts to share">
                     {partSlots
                       .filter(
                         (s) =>
@@ -385,26 +394,18 @@ export function ProfileModLibrary({
                       ))}
                     </select>
                   </label>
-                  <p>
-                    Identity, posts, votes and drawings stay with their owners. All source files and
-                    declared design assets in this draft are shared, including dependencies of
-                    unselected parts.
-                  </p>
-                  <details>
-                    <summary>
-                      Assets included ({draft?.package.manifest.assets.length ?? 0})
-                    </summary>
+                  <details className="mod-more">
+                    <summary>What gets shared</summary>
+                    <p>
+                      All the code and design files in this draft, even for parts you leave
+                      unticked. Your name, posts, votes and drawings stay yours.
+                    </p>
                     <ul>
                       {draft?.package.manifest.assets.map((id) => (
                         <li key={id}>{assets.find((a) => a.id === id)?.name ?? id}</li>
                       ))}
                     </ul>
                   </details>
-                  <p>
-                    Partial mods keep their dependencies. Their fragment must load its own
-                    styles/scripts when mixed into a different shell; the bundled music parts do
-                    this.
-                  </p>
                   <label className="mod-consent">
                     <input
                       required
@@ -412,7 +413,7 @@ export function ProfileModLibrary({
                       checked={agree}
                       onChange={(e) => setAgree(e.target.checked)}
                     />
-                    I want to share this source and the included assets with other demo accounts.
+                    I want to share this code and its files with other people.
                   </label>
                   <button className="profile-primary" disabled={!agree || !slots.length}>
                     Share mod
