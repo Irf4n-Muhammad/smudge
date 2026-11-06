@@ -56,7 +56,6 @@ test("five answers after signing up become a published page", async ({ page }) =
   await dialog.getByLabel("Username").fill(handle);
   await dialog.getByLabel("Email", { exact: true }).fill(`${handle}@mail.example`);
   await dialog.getByLabel("Password", { exact: true }).fill("a long enough phrase");
-  await dialog.getByLabel("Repeat password").fill("a long enough phrase");
   await dialog.getByRole("button", { name: "Create account", exact: true }).click();
   const setup = page.getByRole("dialog", { name: /^Welcome/ });
   await setup.getByRole("button", { name: "Next" }).click();

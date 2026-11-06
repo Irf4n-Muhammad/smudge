@@ -70,7 +70,6 @@ test("a proven trip opens the Paris theme, worn on the profile and around posts 
   await page.getByLabel("Username").fill(handle);
   await page.getByLabel("Email", { exact: true }).fill(`${handle}@mail.example`);
   await page.getByLabel("Password", { exact: true }).fill("a long enough phrase");
-  await page.getByLabel("Repeat password").fill("a long enough phrase");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await page
     .getByRole("dialog", { name: /^Welcome/ })

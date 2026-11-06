@@ -19,7 +19,6 @@ async function signUp(page: Page, prefix: string) {
   await dialog.getByLabel("Username").fill(handle);
   await dialog.getByLabel("Email", { exact: true }).fill(`${handle}@mail.example`);
   await dialog.getByLabel("Password", { exact: true }).fill("a long enough phrase");
-  await dialog.getByLabel("Repeat password").fill("a long enough phrase");
   await dialog.getByRole("button", { name: "Create account", exact: true }).click();
   // New accounts land on the feed with a short welcome: a photo and a few people to follow.
   await page

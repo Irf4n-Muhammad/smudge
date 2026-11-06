@@ -27,7 +27,6 @@ test("signup, prove a campus email, publish a locked moment and receive one pres
   await page.getByLabel("Username").fill(handle);
   await page.getByLabel("Email", { exact: true }).fill(`${handle}@mail.example`);
   await page.getByLabel("Password", { exact: true }).fill("a long enough phrase");
-  await page.getByLabel("Repeat password").fill("a long enough phrase");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   // New accounts land on the feed with a short welcome: a photo and a few people to follow.
   await page
