@@ -48,7 +48,7 @@ test("sign up with email and password, confirm the email, log out and back in, c
   await page.getByRole("button", { name: "Change password" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Password changed" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Log out", exact: true }).click();
+  await page.locator("#main").getByRole("button", { name: "Log out", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "You are logged out" })).toBeVisible();
 
   await page.getByRole("button", { name: "Log in", exact: true }).click();

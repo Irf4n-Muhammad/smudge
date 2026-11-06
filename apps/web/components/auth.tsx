@@ -222,6 +222,8 @@ export function AuthForms({
     }
   });
   const go = (next: AuthMode) => {
+    // A username typed to log in is not an email; don't carry it into a field that wants one.
+    if (next !== "login" && !email.includes("@")) setEmail("");
     setMode(next);
     setSent(false);
   };

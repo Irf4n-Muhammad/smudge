@@ -24,6 +24,7 @@ import {
   Globe,
   UserPlus,
   LogIn,
+  LogOut,
   Shapes,
 } from "lucide-react";
 import { AccountSwitch, MoreMenu } from "./app-nav";
@@ -467,6 +468,13 @@ export function FormaApp() {
     if (key === "messages") setMessageTo(null);
     navigate(key);
   }
+  // The playground's own people have a session but no email or password: they still get the
+  // sign-up and log-in buttons. Someone who made a real account gets a way out instead.
+  const realAccount = !!auth?.account && (auth.account.hasPassword || !!auth.account.email);
+  const logOut = () =>
+    void authApi("/auth/logout", {})
+      .then(signedOut)
+      .catch((e: Error) => notify(e.message));
   const demoSwitch =
     !production && me && boot
       ? { users: boot.users, meId: me.id, onSwitch: (id: string) => void switchUser(id) }
@@ -528,21 +536,28 @@ export function FormaApp() {
         </nav>
         <div className="sidebar-bottom">
           {demoSwitch && <AccountSwitch {...demoSwitch} />}
-          {!production && (
-            <>
-              <button
-                className="nav-item"
-                title="Create an account"
-                onClick={() => setAuthDialog("signup")}
-              >
-                <UserPlus size={22} />
-                <span>Create an account</span>
-              </button>
-              <button className="nav-item" title="Log in" onClick={() => setAuthDialog("login")}>
-                <LogIn size={22} />
-                <span>Log in</span>
-              </button>
-            </>
+          {realAccount ? (
+            <button className="nav-item" title="Log out" onClick={logOut}>
+              <LogOut size={22} />
+              <span>Log out</span>
+            </button>
+          ) : (
+            !production && (
+              <>
+                <button
+                  className="nav-item"
+                  title="Create an account"
+                  onClick={() => setAuthDialog("signup")}
+                >
+                  <UserPlus size={22} />
+                  <span>Create an account</span>
+                </button>
+                <button className="nav-item" title="Log in" onClick={() => setAuthDialog("login")}>
+                  <LogIn size={22} />
+                  <span>Log in</span>
+                </button>
+              </>
+            )
           )}
           <button
             className={tab === "more" || more ? "nav-item active" : "nav-item"}
@@ -560,7 +575,12 @@ export function FormaApp() {
       {/* Outside the rail: the rail scrolls and blurs, which would clip a popover inside it. */}
       {more && (
         <div className="post-menu more-popover">
-          <MoreMenu moderator={!!auth?.moderator} production={production} onPick={pickMore} />
+          <MoreMenu
+            moderator={!!auth?.moderator}
+            production={production}
+            onLogout={realAccount ? logOut : undefined}
+            onPick={pickMore}
+          />
         </div>
       )}
       <nav className="mobile-nav" aria-label="Mobile navigation">
@@ -634,6 +654,7 @@ export function FormaApp() {
               moderator={!!auth?.moderator}
               production={production}
               demo={demoSwitch}
+              onLogout={realAccount ? logOut : undefined}
               onPick={(key) => {
                 window.history.replaceState(null, "", "/");
                 pickMore(key);
