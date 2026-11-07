@@ -741,13 +741,14 @@ export function ProfilePage({
           pageLabel={siteShows ? "Website" : undefined}
           // The one action beside the tabs: the owner edits, everyone else follows.
           action={
-            !v2 && !siteShows
+            // On a site profile's Posts and Stories the header keeps Follow, as on any profile.
+            !v2 && !siteMode
               ? undefined
               : mine
                 ? {
                     label: "Edit profile",
                     icon: "edit",
-                    onClick: () => (siteShows ? setSiteSetup(true) : setEasy(true)),
+                    onClick: () => (siteMode ? setSiteSetup(true) : setEasy(true)),
                   }
                 : {
                     label: followLabel,
