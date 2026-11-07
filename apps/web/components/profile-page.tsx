@@ -32,6 +32,7 @@ import { ArrowLeft, Search, BadgeCheck, Pencil, Lock } from "lucide-react";
 import type { Chapter } from "../../../packages/contracts/src/identity";
 import { ChapterList } from "./identity-hub";
 import { DecorFrame, themeStyle } from "./post-decor";
+import { OwnSiteProfile, OwnSiteSetup, siteProblem, type ProfileSite } from "./own-site";
 import type { DecoratedPost } from "./post-decor";
 
 type PublicProfile = ProfileState & { manifest: ProfilePackage["manifest"] | null };
@@ -45,6 +46,7 @@ export function ProfilePage({
   onCreate,
   onNavigate,
   onUseDraft,
+  onMessage,
   more,
   nav,
 }: {
@@ -67,6 +69,8 @@ export function ProfilePage({
       | "notifications",
   ) => void;
   onUseDraft: (id: string) => void;
+  /** Starts a conversation with this person in Messages. */
+  onMessage?: (userId: string) => void;
   /** The app's More menu (Saved, Themes, settings…), shown behind ☰ on your own profile. */
   more?: ReactNode;
   /** The app's rail and phone dock, so a profile keeps the same navigation as the feed. */
@@ -117,6 +121,19 @@ export function ProfilePage({
   const [chapters, setChapters] = useState<Chapter[]>([]),
     [showChapters, setShowChapters] = useState(false);
   const [theme, setTheme] = useState<DecoratedPost["decoration"] | null>(null);
+  // Their own website as the profile, when they proved the domain is theirs.
+  const [siteInfo, setSiteInfo] = useState<ProfileSite | null>(null),
+    [siteSetup, setSiteSetup] = useState(false);
+  const loadSite = useCallback(
+    () =>
+      api<ProfileSite>(`/profiles/${encodeURIComponent(ownerId)}/site`).then(setSiteInfo, () =>
+        setSiteInfo(null),
+      ),
+    [ownerId],
+  );
+  useEffect(() => {
+    void loadSite();
+  }, [loadSite]);
   useEffect(() => {
     api<Chapter[]>(`/users/${encodeURIComponent(ownerId)}/chapters`).then(setChapters, () =>
       setChapters([]),
@@ -188,6 +205,15 @@ export function ProfilePage({
         <p>Profile not found.</p>
       </main>
     );
+  const site = siteInfo?.site ?? null;
+  // A site that is down or refuses frames falls back to the Smudge profile; "unknown" just tries.
+  const siteShows = !!site && (siteInfo?.status === "ok" || siteInfo?.status === "unknown");
+  const siteMode = siteShows && !editing && page === "page";
+  const followLabel = boot.following.includes(ownerId)
+    ? "Following"
+    : boot.requested.includes(ownerId)
+      ? "Requested"
+      : "Follow";
   const chapterDialog = showChapters && (
     <Dialog
       title={mine ? "Who you are" : `Who ${owner.name} is`}
@@ -201,138 +227,233 @@ export function ProfilePage({
   );
   return (
     <main
-      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${!editing ? "has-side-nav" : ""} ${editing ? "" : look.className}`}
+      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${!editing ? "has-side-nav" : ""} ${editing ? "" : look.className} ${siteMode ? "own-site-page" : ""}`}
       style={editing ? undefined : look.style}
     >
-      <header className="profile-controls">
-        <button className="profile-back" aria-label="Back to feed" onClick={onBack}>
-          {v2 ? <ArrowLeft size={20} aria-hidden="true" /> : "← Feed"}
-        </button>
-        <div className="profile-identity">
-          <Avatar user={owner} small />
-          <span>
-            <strong>{owner.name}</strong>
-            <small>@{owner.handle}</small>
-          </span>
-          {chapters.length > 0 && (
-            <button
-              className="chapter-chip"
-              aria-label={`Who ${mine ? "you are" : "they are"}: ${chapters.length} proven chapters`}
-              onClick={() => setShowChapters(true)}
-            >
-              <BadgeCheck size={13} /> {chapters.length}
+      {siteMode ? (
+        <OwnSiteProfile
+          owner={owner}
+          site={site}
+          mine={mine}
+          posts={ownPosts.length}
+          followLabel={followLabel}
+          following={boot.following.includes(ownerId)}
+          busy={busy}
+          onBack={onBack}
+          onPage={setPage}
+          onFollow={() => void follow()}
+          onMessage={onMessage && !mine ? () => onMessage(ownerId) : undefined}
+          onEdit={() => setSiteSetup(true)}
+          onChapters={() => setShowChapters(true)}
+          chapters={chapters.length}
+          more={mine ? more : undefined}
+        />
+      ) : (
+        <>
+          <header className="profile-controls">
+            <button className="profile-back" aria-label="Back to feed" onClick={onBack}>
+              {v2 ? <ArrowLeft size={20} aria-hidden="true" /> : "← Feed"}
             </button>
-          )}
-        </div>
-        {theme && !v2 && (
-          <span
-            className="profile-theme-chip"
-            style={themeStyle(theme)}
-            title={`Theme ${theme.name} by @${theme.creator}`}
-          >
-            {theme.name}
-            {theme.event && <small>{theme.event}</small>}
-          </span>
-        )}
-        {mine && !editing && !v2 && (
-          <button className="profile-edit" aria-label="Edit profile" onClick={() => setEasy(true)}>
-            <Pencil size={16} /> Edit<span className="profile-edit-long"> profile</span>
-          </button>
-        )}
-        {!v2 && !mine && <ThemeToggle />}
-        {v2 ? (
-          // The page says who it is (ADR 0047): the app keeps only back, edit and ☰ floating
-          // over it, and everything else waits in the menu.
-          <div className="profile-chrome">
-            <details className="profile-options">
-              <summary aria-label="Profile options">☰</summary>
-              <div className="profile-control-actions">
+            <div className="profile-identity">
+              <Avatar user={owner} small />
+              <span>
+                <strong>{owner.name}</strong>
+                <small>@{owner.handle}</small>
+              </span>
+              {chapters.length > 0 && (
                 <button
-                  aria-label="Search posts"
-                  onClick={(e) => {
-                    setPanel("search");
-                    e.currentTarget.closest("details")?.removeAttribute("open");
-                  }}
+                  className="chapter-chip"
+                  aria-label={`Who ${mine ? "you are" : "they are"}: ${chapters.length} proven chapters`}
+                  onClick={() => setShowChapters(true)}
                 >
-                  <Search size={15} aria-hidden="true" /> Search posts
+                  <BadgeCheck size={13} /> {chapters.length}
                 </button>
-                {chapters.length > 0 && (
-                  <button
-                    onClick={(e) => {
-                      setShowChapters(true);
-                      e.currentTarget.closest("details")?.removeAttribute("open");
-                    }}
-                  >
-                    <BadgeCheck size={15} aria-hidden="true" />{" "}
-                    {mine ? "Who you are" : "Who they are"} · {chapters.length}
-                  </button>
-                )}
-                {theme && (
-                  <span
-                    className="profile-theme-chip"
-                    style={themeStyle(theme)}
-                    title={`Theme ${theme.name} by @${theme.creator}`}
-                  >
-                    {theme.name}
-                    {theme.event && <small>{theme.event}</small>}
-                  </span>
-                )}
-                {!mine && <ThemeToggle />}
-                <button
-                  aria-pressed={motion}
-                  onClick={() => {
-                    const next = !motion;
-                    setMotion(next);
-                    localStorage.setItem("forma-profile-motion", next ? "reduce" : "normal");
-                  }}
-                >
-                  Reduce motion
-                </button>
-                <button
-                  hidden={editing}
-                  onClick={async (e) => {
-                    if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
-                    const url = `${window.location.origin}/u/${encodeURIComponent(owner.handle)}`;
-                    try {
-                      await navigator.clipboard.writeText(url);
-                      setError("Profile link copied. Anyone with it can see this page.");
-                    } catch {
-                      setError(url);
-                    }
-                  }}
-                >
-                  Copy profile link
-                </button>
-                <button
-                  hidden={editing}
-                  onClick={(e) => {
-                    setDiscovery("credits");
-                    if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
-                  }}
-                >
-                  Made with
-                </button>
-                {!editing && (
-                  <button
-                    onClick={(e) => {
-                      setDiscovery("creator");
-                      if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
-                    }}
-                  >
-                    Creator's mods
-                  </button>
-                )}
+              )}
+            </div>
+            {theme && !v2 && (
+              <span
+                className="profile-theme-chip"
+                style={themeStyle(theme)}
+                title={`Theme ${theme.name} by @${theme.creator}`}
+              >
+                {theme.name}
+                {theme.event && <small>{theme.event}</small>}
+              </span>
+            )}
+            {mine && !editing && !v2 && (
+              <button
+                className="profile-edit"
+                aria-label="Edit profile"
+                onClick={() => setEasy(true)}
+              >
+                <Pencil size={16} /> Edit<span className="profile-edit-long"> profile</span>
+              </button>
+            )}
+            {!v2 && !mine && <ThemeToggle />}
+            {v2 ? (
+              // The page says who it is (ADR 0047): the app keeps only back, edit and ☰ floating
+              // over it, and everything else waits in the menu.
+              <div className="profile-chrome">
+                <details className="profile-options">
+                  <summary aria-label="Profile options">☰</summary>
+                  <div className="profile-control-actions">
+                    <button
+                      aria-label="Search posts"
+                      onClick={(e) => {
+                        setPanel("search");
+                        e.currentTarget.closest("details")?.removeAttribute("open");
+                      }}
+                    >
+                      <Search size={15} aria-hidden="true" /> Search posts
+                    </button>
+                    {chapters.length > 0 && (
+                      <button
+                        onClick={(e) => {
+                          setShowChapters(true);
+                          e.currentTarget.closest("details")?.removeAttribute("open");
+                        }}
+                      >
+                        <BadgeCheck size={15} aria-hidden="true" />{" "}
+                        {mine ? "Who you are" : "Who they are"} · {chapters.length}
+                      </button>
+                    )}
+                    {theme && (
+                      <span
+                        className="profile-theme-chip"
+                        style={themeStyle(theme)}
+                        title={`Theme ${theme.name} by @${theme.creator}`}
+                      >
+                        {theme.name}
+                        {theme.event && <small>{theme.event}</small>}
+                      </span>
+                    )}
+                    {!mine && <ThemeToggle />}
+                    <button
+                      aria-pressed={motion}
+                      onClick={() => {
+                        const next = !motion;
+                        setMotion(next);
+                        localStorage.setItem("forma-profile-motion", next ? "reduce" : "normal");
+                      }}
+                    >
+                      Reduce motion
+                    </button>
+                    <button
+                      hidden={editing}
+                      onClick={async (e) => {
+                        if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                        const url = `${window.location.origin}/u/${encodeURIComponent(owner.handle)}`;
+                        try {
+                          await navigator.clipboard.writeText(url);
+                          setError("Profile link copied. Anyone with it can see this page.");
+                        } catch {
+                          setError(url);
+                        }
+                      }}
+                    >
+                      Copy profile link
+                    </button>
+                    <button
+                      hidden={editing}
+                      onClick={(e) => {
+                        setDiscovery("credits");
+                        if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                      }}
+                    >
+                      Made with
+                    </button>
+                    {!editing && (
+                      <button
+                        onClick={(e) => {
+                          setDiscovery("creator");
+                          if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                        }}
+                      >
+                        Creator's mods
+                      </button>
+                    )}
+                    {mine ? (
+                      <button
+                        className="profile-primary"
+                        onClick={(e) => {
+                          setEditing((v) => !v);
+                          if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                        }}
+                      >
+                        {editing ? "Back to my profile" : "Edit the code (advanced)"}
+                      </button>
+                    ) : pageFollows || v2 ? null : (
+                      <button
+                        disabled={busy}
+                        className="profile-primary"
+                        onClick={() => void follow()}
+                      >
+                        {boot.following.includes(ownerId)
+                          ? "Unfollow"
+                          : boot.requested.includes(ownerId)
+                            ? "Requested"
+                            : "Follow"}
+                      </button>
+                    )}
+                    {!mine && ownerId === "raka" && (
+                      <button
+                        disabled={busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          try {
+                            const templates =
+                              await api<Record<string, ProfilePackage>>("/profile-templates");
+                            const d = await api<ProfileDraft>(
+                              "/profile-drafts",
+                              applyProfileDesign(templates.raka!, defaultProfileDesign),
+                            );
+                            const url = new URL(location.href);
+                            url.searchParams.set("profile", boot.actor.userId);
+                            url.searchParams.set("profileDraft", d.id);
+                            window.location.assign(url.toString());
+                          } catch (e) {
+                            setError((e as Error).message);
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        Use this design
+                      </button>
+                    )}
+                    <button
+                      hidden={mine}
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          await api(`/profiles/${ownerId}/report`, {});
+                          setError("Report recorded locally.");
+                        } catch (e) {
+                          setError((e as Error).message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      Report profile
+                    </button>
+                    {mine && more}
+                  </div>
+                </details>
+              </div>
+            ) : (
+              // Plain profiles: the one action that matters stays in the header; the rest is ☰.
+              <>
                 {mine ? (
-                  <button
-                    className="profile-primary"
-                    onClick={(e) => {
-                      setEditing((v) => !v);
-                      if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
-                    }}
-                  >
-                    {editing ? "Back to my profile" : "Edit the code (advanced)"}
-                  </button>
-                ) : pageFollows || v2 ? null : (
+                  // The code editor is for the few who want it: it waits in ☰, and only the way back
+                  // out of it sits in the header. Everyone else edits with Edit profile.
+                  editing && (
+                    <button className="profile-primary" onClick={() => setEditing(false)}>
+                      Back to my profile
+                    </button>
+                  )
+                ) : (
                   <button disabled={busy} className="profile-primary" onClick={() => void follow()}>
                     {boot.following.includes(ownerId)
                       ? "Unfollow"
@@ -341,362 +462,309 @@ export function ProfilePage({
                         : "Follow"}
                   </button>
                 )}
-                {!mine && ownerId === "raka" && (
-                  <button
-                    disabled={busy}
-                    onClick={async () => {
-                      setBusy(true);
-                      try {
-                        const templates =
-                          await api<Record<string, ProfilePackage>>("/profile-templates");
-                        const d = await api<ProfileDraft>(
-                          "/profile-drafts",
-                          applyProfileDesign(templates.raka!, defaultProfileDesign),
-                        );
-                        const url = new URL(location.href);
-                        url.searchParams.set("profile", boot.actor.userId);
-                        url.searchParams.set("profileDraft", d.id);
-                        window.location.assign(url.toString());
-                      } catch (e) {
-                        setError((e as Error).message);
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
-                  >
-                    Use this design
-                  </button>
-                )}
-                <button
-                  hidden={mine}
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    try {
-                      await api(`/profiles/${ownerId}/report`, {});
-                      setError("Report recorded locally.");
-                    } catch (e) {
-                      setError((e as Error).message);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  Report profile
-                </button>
-                {mine && more}
-              </div>
-            </details>
-          </div>
-        ) : (
-          // Plain profiles: the one action that matters stays in the header; the rest is ☰.
-          <>
-            {mine ? (
-              // The code editor is for the few who want it: it waits in ☰, and only the way back
-              // out of it sits in the header. Everyone else edits with Edit profile.
-              editing && (
-                <button className="profile-primary" onClick={() => setEditing(false)}>
-                  Back to my profile
-                </button>
-              )
-            ) : (
-              <button disabled={busy} className="profile-primary" onClick={() => void follow()}>
-                {boot.following.includes(ownerId)
-                  ? "Unfollow"
-                  : boot.requested.includes(ownerId)
-                    ? "Requested"
-                    : "Follow"}
-              </button>
-            )}
-            <details className="profile-more">
-              <summary aria-label="More options">☰</summary>
-              <div className="profile-more-menu profile-control-actions">
-                {mine && !editing && (
-                  <button
-                    onClick={(e) => {
-                      e.currentTarget.closest("details")?.removeAttribute("open");
-                      setEditing(true);
-                    }}
-                  >
-                    Edit the code (advanced)
-                  </button>
-                )}
-                <button
-                  aria-pressed={motion}
-                  onClick={() => {
-                    const next = !motion;
-                    setMotion(next);
-                    localStorage.setItem("forma-profile-motion", next ? "reduce" : "normal");
-                  }}
-                >
-                  Reduce motion
-                </button>
-                <button
-                  hidden={editing}
-                  onClick={async (e) => {
-                    if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
-                    const url = `${window.location.origin}/u/${encodeURIComponent(owner.handle)}`;
-                    try {
-                      await navigator.clipboard.writeText(url);
-                      setError("Profile link copied. Anyone with it can see this page.");
-                    } catch {
-                      setError(url);
-                    }
-                  }}
-                >
-                  Copy profile link
-                </button>
-                <button
-                  hidden={editing}
-                  onClick={(e) => {
-                    setDiscovery("credits");
-                    if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
-                  }}
-                >
-                  Made with
-                </button>
-                {!editing && (
-                  <button
-                    onClick={(e) => {
-                      setDiscovery("creator");
-                      if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
-                    }}
-                  >
-                    Creator's mods
-                  </button>
-                )}
-                {!mine && ownerId === "raka" && (
-                  <button
-                    disabled={busy}
-                    onClick={async () => {
-                      setBusy(true);
-                      try {
-                        const templates =
-                          await api<Record<string, ProfilePackage>>("/profile-templates");
-                        const d = await api<ProfileDraft>(
-                          "/profile-drafts",
-                          applyProfileDesign(templates.raka!, defaultProfileDesign),
-                        );
-                        const url = new URL(location.href);
-                        url.searchParams.set("profile", boot.actor.userId);
-                        url.searchParams.set("profileDraft", d.id);
-                        window.location.assign(url.toString());
-                      } catch (e) {
-                        setError((e as Error).message);
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
-                  >
-                    Use this design
-                  </button>
-                )}
-                <button
-                  hidden={mine}
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    try {
-                      await api(`/profiles/${ownerId}/report`, {});
-                      setError("Report recorded locally.");
-                    } catch (e) {
-                      setError((e as Error).message);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  Report profile
-                </button>
-                {mine && more}
-              </div>
-            </details>
-          </>
-        )}
-      </header>
-      {owner.private && !mine && !boot.following.includes(ownerId) && (
-        <div className="profile-message private-note" role="note">
-          <Lock size={15} />
-          <span>
-            {boot.requested.includes(ownerId)
-              ? `Your request is waiting for ${owner.name}.`
-              : `${owner.name}'s posts are private. Follow to ask to see them.`}
-          </span>
-          <button className="text-button" disabled={busy} onClick={() => void follow()}>
-            {boot.requested.includes(ownerId) ? "Cancel request" : "Follow"}
-          </button>
-        </div>
-      )}
-      {error && (
-        <p className="profile-message" role="status">
-          {error}
-        </p>
-      )}
-      {/* "Right now" sits on the landing only when there is no page to say it (ADR 0047); a page
-          of its own carries the song and the line, and the bar moves to Stories. */}
-      {!editing && page === "page" && !v2 && (
-        <NowBar key={ownerId} ownerId={ownerId} mine={mine} onChanged={() => void refresh()} />
-      )}
-      {!editing && page !== "page" ? (
-        <section
-          className="page-fixed"
-          aria-label={page === "posts" ? "Posts page" : "Stories page"}
-        >
-          <PageHead
-            user={owner}
-            page={page}
-            look={Boolean(look.className)}
-            posts={ownPosts.length}
-          />
-          {page === "posts" ? (
-            <PostsCollage
-              posts={ownPosts}
-              cover={(p) => `/api/assets/${p.coverAssetId}`}
-              onOpen={(p) => openPost(p.id)}
-              empty={mine ? "Your posts will show up here." : "No posts yet."}
-              onCreate={mine ? onCreate : undefined}
-            />
-          ) : (
-            <>
-              <NowBar
-                key={ownerId}
-                ownerId={ownerId}
-                mine={mine}
-                onChanged={() => void refresh()}
-              />
-              <Stories
-                path={`/users/${encodeURIComponent(ownerId)}/timeline`}
-                who={owner.name}
-                cover={(p) => `/api/assets/${p.coverAssetId}`}
-                onOpenPost={(p) => openPost(p.id)}
-                empty={mine ? "Your days will show up here." : "Nothing yet."}
-              />
-            </>
-          )}
-        </section>
-      ) : editing && mine ? (
-        <ProfileEditor
-          key={ownerId}
-          draftId={draftLink}
-          reducedMotion={motion}
-          owner={owner}
-          onOpenPost={openPost}
-          onChanged={async () => {
-            await Promise.all([refresh(), onRefresh()]);
-          }}
-        />
-      ) : profile ? (
-        <div
-          className={`profile-theme-frame ${theme ? "has-decor" : ""}`}
-          style={themeStyle(theme ?? undefined)}
-        >
-          <DecorFrame post={{ decoration: theme ?? undefined } as DecoratedPost}>
-            {profile?.publicationId && profile.manifest ? (
-              <section aria-label="Public profile world" className="profile-world">
-                <Runtime
-                  key={`${ownerId}:${profile.publicationId}`}
-                  kind="profile"
-                  target={profile.publicationId}
-                  height={profile.manifest.height}
-                  autoHeight={profile.manifest.schemaVersion === 2 && profile.manifest.autoHeight}
-                  mobileHeight={
-                    profile.manifest.schemaVersion === 2 ? profile.manifest.mobileHeight : undefined
-                  }
-                  reducedMotion={motion}
-                  owner={mine}
-                  onOpenPost={openPost}
-                  onSocialChange={onRefresh}
-                />
-              </section>
-            ) : (
-              <section className="profile-default">
-                <header className="profile-default-head">
-                  <Avatar user={owner} />
-                  <div>
-                    <h1>{owner.name}</h1>
-                    <span className="profile-default-handle">@{owner.handle}</span>
-                    {owner.bio && <p>{owner.bio}</p>}
-                    <span className="profile-default-count">
-                      {posts.filter((p) => p.ownerId === ownerId).length} posts
-                    </span>
-                  </div>
-                  {!mine && (
-                    <button
-                      disabled={busy}
-                      className={boot.following.includes(ownerId) ? "quiet-button" : "primary"}
-                      onClick={() => void follow()}
-                    >
-                      {boot.following.includes(ownerId)
-                        ? "Following"
-                        : boot.requested.includes(ownerId)
-                          ? "Requested"
-                          : "Follow"}
-                    </button>
-                  )}
-                </header>
-                {mine && (
-                  <p className="profile-default-hint">
-                    Make this page yours: a giant painted name, or you cut out in front of it.{" "}
-                    <button className="text-button" onClick={() => setEasy(true)}>
-                      Pick a style
-                    </button>
-                  </p>
-                )}
-                <div className="profile-default-grid">
-                  {posts
-                    .filter((p) => p.ownerId === ownerId)
-                    .map((p) => (
-                      <button key={p.id} onClick={() => setOpen(p)}>
-                        {p.metadata.coverAssetId ? (
-                          <img
-                            src={`/api/assets/${p.metadata.coverAssetId}`}
-                            alt=""
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="profile-default-blank" aria-hidden="true">
-                            ✳
-                          </span>
-                        )}
-                        <strong>{p.metadata.title}</strong>
+                <details className="profile-more">
+                  <summary aria-label="More options">☰</summary>
+                  <div className="profile-more-menu profile-control-actions">
+                    {mine && !editing && (
+                      <button
+                        onClick={(e) => {
+                          e.currentTarget.closest("details")?.removeAttribute("open");
+                          setEditing(true);
+                        }}
+                      >
+                        Edit the code (advanced)
                       </button>
-                    ))}
-                </div>
-                {!posts.some((p) => p.ownerId === ownerId) && (
-                  <p className="fineprint">
-                    {mine ? "Your posts will show up here." : "No posts yet."}
-                  </p>
-                )}
-              </section>
+                    )}
+                    <button
+                      aria-pressed={motion}
+                      onClick={() => {
+                        const next = !motion;
+                        setMotion(next);
+                        localStorage.setItem("forma-profile-motion", next ? "reduce" : "normal");
+                      }}
+                    >
+                      Reduce motion
+                    </button>
+                    <button
+                      hidden={editing}
+                      onClick={async (e) => {
+                        if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                        const url = `${window.location.origin}/u/${encodeURIComponent(owner.handle)}`;
+                        try {
+                          await navigator.clipboard.writeText(url);
+                          setError("Profile link copied. Anyone with it can see this page.");
+                        } catch {
+                          setError(url);
+                        }
+                      }}
+                    >
+                      Copy profile link
+                    </button>
+                    <button
+                      hidden={editing}
+                      onClick={(e) => {
+                        setDiscovery("credits");
+                        if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                      }}
+                    >
+                      Made with
+                    </button>
+                    {!editing && (
+                      <button
+                        onClick={(e) => {
+                          setDiscovery("creator");
+                          if (v2) e.currentTarget.closest("details")?.removeAttribute("open");
+                        }}
+                      >
+                        Creator's mods
+                      </button>
+                    )}
+                    {!mine && ownerId === "raka" && (
+                      <button
+                        disabled={busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          try {
+                            const templates =
+                              await api<Record<string, ProfilePackage>>("/profile-templates");
+                            const d = await api<ProfileDraft>(
+                              "/profile-drafts",
+                              applyProfileDesign(templates.raka!, defaultProfileDesign),
+                            );
+                            const url = new URL(location.href);
+                            url.searchParams.set("profile", boot.actor.userId);
+                            url.searchParams.set("profileDraft", d.id);
+                            window.location.assign(url.toString());
+                          } catch (e) {
+                            setError((e as Error).message);
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        Use this design
+                      </button>
+                    )}
+                    <button
+                      hidden={mine}
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          await api(`/profiles/${ownerId}/report`, {});
+                          setError("Report recorded locally.");
+                        } catch (e) {
+                          setError((e as Error).message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      Report profile
+                    </button>
+                    {mine && more}
+                  </div>
+                </details>
+              </>
             )}
-          </DecorFrame>
-        </div>
-      ) : (
-        <p className="profile-message">Opening profile…</p>
-      )}
-      {!editing && (
-        <PageStrip
-          current={page}
-          posts={ownPosts.length}
-          onPick={setPage}
-          // The one action beside the tabs (ADR 0048): the owner edits, everyone else follows.
-          action={
-            !v2
-              ? undefined
-              : mine
-                ? { label: "Edit profile", icon: "edit", onClick: () => setEasy(true) }
-                : {
-                    label: boot.following.includes(ownerId)
-                      ? "Following"
-                      : boot.requested.includes(ownerId)
-                        ? "Requested"
-                        : "Follow",
-                    pressed: boot.following.includes(ownerId),
-                    disabled: busy,
-                    onClick: () => void follow(),
-                  }
-          }
-        />
+          </header>
+          {owner.private && !mine && !boot.following.includes(ownerId) && (
+            <div className="profile-message private-note" role="note">
+              <Lock size={15} />
+              <span>
+                {boot.requested.includes(ownerId)
+                  ? `Your request is waiting for ${owner.name}.`
+                  : `${owner.name}'s posts are private. Follow to ask to see them.`}
+              </span>
+              <button className="text-button" disabled={busy} onClick={() => void follow()}>
+                {boot.requested.includes(ownerId) ? "Cancel request" : "Follow"}
+              </button>
+            </div>
+          )}
+          {error && (
+            <p className="profile-message" role="status">
+              {error}
+            </p>
+          )}
+          {mine && site && !siteShows && !editing && (
+            <p className="profile-message own-site-note" role="note">
+              {siteProblem(siteInfo?.status ?? null, site.host)}{" "}
+              <button className="text-button" onClick={() => setSiteSetup(true)}>
+                Website settings
+              </button>
+            </p>
+          )}
+          {/* "Right now" sits on the landing only when there is no page to say it (ADR 0047); a page
+          of its own carries the song and the line, and the bar moves to Stories. */}
+          {!editing && page === "page" && !v2 && (
+            <NowBar key={ownerId} ownerId={ownerId} mine={mine} onChanged={() => void refresh()} />
+          )}
+          {!editing && page !== "page" ? (
+            <section
+              className="page-fixed"
+              aria-label={page === "posts" ? "Posts page" : "Stories page"}
+            >
+              <PageHead
+                user={owner}
+                page={page}
+                look={Boolean(look.className)}
+                posts={ownPosts.length}
+              />
+              {page === "posts" ? (
+                <PostsCollage
+                  posts={ownPosts}
+                  cover={(p) => `/api/assets/${p.coverAssetId}`}
+                  onOpen={(p) => openPost(p.id)}
+                  empty={mine ? "Your posts will show up here." : "No posts yet."}
+                  onCreate={mine ? onCreate : undefined}
+                />
+              ) : (
+                <>
+                  <NowBar
+                    key={ownerId}
+                    ownerId={ownerId}
+                    mine={mine}
+                    onChanged={() => void refresh()}
+                  />
+                  <Stories
+                    path={`/users/${encodeURIComponent(ownerId)}/timeline`}
+                    who={owner.name}
+                    cover={(p) => `/api/assets/${p.coverAssetId}`}
+                    onOpenPost={(p) => openPost(p.id)}
+                    empty={mine ? "Your days will show up here." : "Nothing yet."}
+                  />
+                </>
+              )}
+            </section>
+          ) : editing && mine ? (
+            <ProfileEditor
+              key={ownerId}
+              draftId={draftLink}
+              reducedMotion={motion}
+              owner={owner}
+              onOpenPost={openPost}
+              onChanged={async () => {
+                await Promise.all([refresh(), onRefresh()]);
+              }}
+            />
+          ) : profile ? (
+            <div
+              className={`profile-theme-frame ${theme ? "has-decor" : ""}`}
+              style={themeStyle(theme ?? undefined)}
+            >
+              <DecorFrame post={{ decoration: theme ?? undefined } as DecoratedPost}>
+                {profile?.publicationId && profile.manifest ? (
+                  <section aria-label="Public profile world" className="profile-world">
+                    <Runtime
+                      key={`${ownerId}:${profile.publicationId}`}
+                      kind="profile"
+                      target={profile.publicationId}
+                      height={profile.manifest.height}
+                      autoHeight={
+                        profile.manifest.schemaVersion === 2 && profile.manifest.autoHeight
+                      }
+                      mobileHeight={
+                        profile.manifest.schemaVersion === 2
+                          ? profile.manifest.mobileHeight
+                          : undefined
+                      }
+                      reducedMotion={motion}
+                      owner={mine}
+                      onOpenPost={openPost}
+                      onSocialChange={onRefresh}
+                    />
+                  </section>
+                ) : (
+                  <section className="profile-default">
+                    <header className="profile-default-head">
+                      <Avatar user={owner} />
+                      <div>
+                        <h1>{owner.name}</h1>
+                        <span className="profile-default-handle">@{owner.handle}</span>
+                        {owner.bio && <p>{owner.bio}</p>}
+                        <span className="profile-default-count">
+                          {posts.filter((p) => p.ownerId === ownerId).length} posts
+                        </span>
+                      </div>
+                      {!mine && (
+                        <button
+                          disabled={busy}
+                          className={boot.following.includes(ownerId) ? "quiet-button" : "primary"}
+                          onClick={() => void follow()}
+                        >
+                          {boot.following.includes(ownerId)
+                            ? "Following"
+                            : boot.requested.includes(ownerId)
+                              ? "Requested"
+                              : "Follow"}
+                        </button>
+                      )}
+                    </header>
+                    {mine && (
+                      <p className="profile-default-hint">
+                        Make this page yours: a giant painted name, or you cut out in front of it.{" "}
+                        <button className="text-button" onClick={() => setEasy(true)}>
+                          Pick a style
+                        </button>
+                      </p>
+                    )}
+                    <div className="profile-default-grid">
+                      {posts
+                        .filter((p) => p.ownerId === ownerId)
+                        .map((p) => (
+                          <button key={p.id} onClick={() => setOpen(p)}>
+                            {p.metadata.coverAssetId ? (
+                              <img
+                                src={`/api/assets/${p.metadata.coverAssetId}`}
+                                alt=""
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className="profile-default-blank" aria-hidden="true">
+                                ✳
+                              </span>
+                            )}
+                            <strong>{p.metadata.title}</strong>
+                          </button>
+                        ))}
+                    </div>
+                    {!posts.some((p) => p.ownerId === ownerId) && (
+                      <p className="fineprint">
+                        {mine ? "Your posts will show up here." : "No posts yet."}
+                      </p>
+                    )}
+                  </section>
+                )}
+              </DecorFrame>
+            </div>
+          ) : (
+            <p className="profile-message">Opening profile…</p>
+          )}
+          {!editing && (
+            <PageStrip
+              current={page}
+              posts={ownPosts.length}
+              onPick={setPage}
+              // The one action beside the tabs (ADR 0048): the owner edits, everyone else follows.
+              action={
+                !v2
+                  ? undefined
+                  : mine
+                    ? { label: "Edit profile", icon: "edit", onClick: () => setEasy(true) }
+                    : {
+                        label: boot.following.includes(ownerId)
+                          ? "Following"
+                          : boot.requested.includes(ownerId)
+                            ? "Requested"
+                            : "Follow",
+                        pressed: boot.following.includes(ownerId),
+                        disabled: busy,
+                        onClick: () => void follow(),
+                      }
+              }
+            />
+          )}
+        </>
       )}
       {!editing && profile && (
         <ProfileDiscovery
@@ -720,6 +788,20 @@ export function ProfilePage({
             setEasy(false);
             setDraftLink(id);
             setEditing(true);
+          }}
+          onWebsite={() => {
+            setEasy(false);
+            setSiteSetup(true);
+          }}
+        />
+      )}
+      {siteSetup && mine && (
+        <OwnSiteSetup
+          onClose={() => setSiteSetup(false)}
+          onChanged={loadSite}
+          onSmudgeEditor={() => {
+            setSiteSetup(false);
+            setEasy(true);
           }}
         />
       )}

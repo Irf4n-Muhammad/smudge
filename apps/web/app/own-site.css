@@ -1,0 +1,303 @@
+/* A profile that is the person's own website: Smudge's bar on top, the site under it. */
+.own-site-page {
+  padding-bottom: 0;
+}
+.own-site-profile {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+.own-site-profile .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.own-site-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 16px;
+  background: var(--white, #fff);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.own-site-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.own-site-who > span {
+  display: grid;
+  min-width: 0;
+}
+.own-site-who strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+}
+.own-site-who small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.own-site-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  color: #1f7a4d;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.own-site-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 auto;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--paper);
+}
+.own-site-tabs button,
+.own-site-primary,
+.own-site-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.own-site-tabs button {
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.own-site-tabs button[aria-current="page"] {
+  background: var(--white, #fff);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+}
+.own-site-tabs small {
+  color: var(--muted);
+  font-weight: 400;
+}
+.own-site-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.own-site-primary {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--white, #fff);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.own-site-primary.is-on {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.own-site-icon {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+}
+.own-site-icon:hover,
+.own-site-tabs button:hover {
+  background: var(--paper);
+}
+.own-site-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: #fff;
+}
+.own-site-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Setting it up. */
+.own-site-setup {
+  display: grid;
+  gap: 16px;
+  padding: 4px 28px 24px;
+}
+@media (max-width: 700px) {
+  .own-site-setup {
+    padding-inline: 16px;
+  }
+}
+.own-site-lead {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.own-site-link {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+.own-site-link label {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  font-weight: 600;
+}
+.own-site-link input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.own-site-link button {
+  min-height: 42px;
+}
+.own-site-proof {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.own-site-proof h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.own-site-proof p,
+.own-site-proof ol {
+  margin: 0;
+  line-height: 1.5;
+}
+.own-site-proof ol {
+  padding-left: 20px;
+}
+.own-site-proof code,
+.own-site-token code {
+  overflow-wrap: anywhere;
+  font-size: 12.5px;
+}
+.own-site-ways {
+  display: flex;
+  gap: 6px;
+}
+.own-site-ways button {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.own-site-ways button[aria-selected="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--white, #fff);
+}
+.own-site-token {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--paper);
+}
+.own-site-token code {
+  flex: 1;
+}
+.own-site-live {
+  display: grid;
+  gap: 8px;
+}
+.own-site-live p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.own-site-live svg {
+  color: #1f7a4d;
+}
+.own-site-setup .own-site-actions {
+  flex-wrap: wrap;
+}
+.own-site-message {
+  margin: 0;
+  color: var(--accent);
+}
+
+/* The way in from the easy editor. */
+.easy-website {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px auto 0;
+  padding: 10px 16px;
+  border: 1px dashed currentColor;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+}
+.easy-website svg {
+  width: 16px;
+  height: 16px;
+}
+.easy-website.in-edit {
+  display: flex;
+  margin: 0 auto 10px;
+}
+
+@media (max-width: 700px) {
+  .own-site-profile {
+    height: calc(100dvh - 88px - env(safe-area-inset-bottom));
+  }
+  .own-site-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .own-site-who {
+    flex: 1;
+  }
+  .own-site-tabs {
+    order: 3;
+    width: 100%;
+    margin: 0;
+  }
+  .own-site-tabs button {
+    flex: 1;
+  }
+}
+
+/* The Home tab in the rail replaces the back button, as on every profile. */
+.has-side-nav .own-site-back {
+  display: none;
+}
