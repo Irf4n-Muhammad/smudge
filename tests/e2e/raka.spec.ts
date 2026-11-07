@@ -15,7 +15,7 @@ async function api(page: Page, path: string, body?: unknown) {
     { path, body },
   );
 }
-test("Raka drawing, social actions, responsive night mode and modular editor persist", async ({
+test("Kai's page: social actions, responsive night mode and modular editor persist", async ({
   page,
 }) => {
   // This covers multiple publications, mobile screenshots and every part editor in one journey.
@@ -98,13 +98,6 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
         path: `artifacts/raka-mobile-complete-${width}.png`,
         fullPage: true,
       });
-      await frame.getByRole("button", { name: "Add your mark" }).click();
-      await frame.getByRole("button", { name: "Add a star" }).click();
-      await expect(frame.getByRole("button", { name: "Save contribution" })).toBeEnabled();
-      const toolBounds = await frame.locator("#relay-tools").boundingBox();
-      const postsBounds = await frame.locator(".published-posts").boundingBox();
-      expect(toolBounds!.y + toolBounds!.height).toBeLessThan(postsBounds!.y);
-      await frame.getByRole("button", { name: "Cancel drawing" }).click();
     }
   }
   await page.setViewportSize({ width: 1024, height: 1536 });
@@ -141,30 +134,9 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
   await expect(inlineLike).toHaveAttribute("aria-pressed", liked === "true" ? "false" : "true");
   await page.reload();
   await expect(inlineLike).toHaveAttribute("aria-pressed", liked === "true" ? "false" : "true");
-  await expect(frame.getByRole("button", { name: "Add your mark" })).toBeEnabled();
-  const before = parseInt(await frame.locator("#relay-contributors").innerText());
-  await frame.getByRole("button", { name: "Add your mark" }).click();
-  await frame.getByRole("button", { name: "Add a star" }).click();
-  const profileFrame = page.locator(".profile-world iframe");
-  const frameUrl = await profileFrame.getAttribute("src");
-  await page.setViewportSize({ width: 900, height: 650 });
-  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
-  await page.setViewportSize({ width: 1440, height: 1050 });
-  await expect(profileFrame).toHaveAttribute("src", frameUrl!);
-  await expect(frame.getByRole("button", { name: "Save contribution" })).toBeEnabled();
-  await frame.getByRole("button", { name: "Undo stroke" }).click();
-  await expect(frame.getByRole("button", { name: "Save contribution" })).toBeDisabled();
-  await frame.getByRole("button", { name: "Red ink" }).click();
-  await frame.locator("canvas").evaluate((el) => el.scrollIntoView({ block: "center" }));
-  const box = await frame.locator("canvas").boundingBox();
-  await page.mouse.move(box!.x + box!.width * 0.2, box!.y + box!.height * 0.2);
-  await page.mouse.down();
-  await page.mouse.move(box!.x + box!.width * 0.4, box!.y + box!.height * 0.3, { steps: 8 });
-  await page.mouse.up();
-  await frame.getByRole("button", { name: "Save contribution" }).click();
-  await expect(frame.locator("#relay-status")).toContainText("Your contribution is saved");
-  await page.reload();
-  await expect(frame.locator("#relay-contributors")).toContainText(`${before + 1} contributions`);
+  // Visitors get no canvas on someone else's page.
+  await expect(frame.getByRole("button", { name: "Add your mark" })).toHaveCount(0);
+  await expect(frame.locator("canvas")).toHaveCount(0);
   await frame.getByRole("button", { name: "Open Pages from Sunday", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
@@ -217,7 +189,6 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
     const preview = page.locator(".profile-preview").frameLocator("iframe");
     await expect(preview.locator(".post-grid")).not.toHaveClass(/post-grid-comic/);
     await expect(preview.locator(".masthead")).toBeVisible();
-    await expect(preview.getByRole("heading", { name: "DRAWING RELAY" })).toBeVisible();
     await clickSettled(page.getByRole("button", { name: "Compare with live", exact: true }));
     await expect(page.locator(".profile-preview")).toHaveAttribute("inert", "");
     await expect(preview.locator(".post-grid")).toHaveClass(/post-grid-comic/);
@@ -237,7 +208,6 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
     await changePart(page, "post", "stack");
     await expect(preview.locator(".photo-stack")).toBeVisible();
     await expect(preview.locator(".masthead")).toBeVisible();
-    await expect(preview.locator("#relay-canvas")).toBeVisible();
     await expect(preview.locator(".stack-counter")).toHaveText("1 / 3");
     await preview.locator(".stack-card.active .stack-front button").click();
     await expect(preview.locator(".stack-card.active .stack-back")).toBeVisible();
@@ -261,20 +231,11 @@ test("Raka drawing, social actions, responsive night mode and modular editor per
     await clickSettled(page.getByRole("button", { name: "Close dialog" }));
     await clickSettled(page.getByRole("button", { name: "Undo last part change", exact: true }));
     await expect(preview.locator(".post-grid")).toBeVisible();
-    await changePart(page, "feature", "none");
-    await page.locator(".profile-preview").scrollIntoViewIfNeeded();
-    await expect(preview.getByRole("heading", { name: "Kai", exact: true })).toBeVisible();
-    await expect(preview.getByRole("heading", { name: "DRAWING RELAY" })).toHaveCount(0);
-    await clickSettled(page.getByRole("button", { name: "Publish profile", exact: true }));
-    await expect(page.getByRole("status")).toContainText("Profile published");
-    await changePart(page, "feature", "raka");
-    await page.locator(".profile-preview").scrollIntoViewIfNeeded();
-    await expect(preview.locator("#relay-contributors")).toContainText("0 contributions");
     await clickSettled(page.getByRole("button", { name: "Publish profile", exact: true }));
     await expect(page.getByRole("status")).toContainText("Profile published");
     await page.getByLabel("Profile options", { exact: true }).click();
     await clickSettled(page.getByRole("button", { name: "Back to my profile" }));
-    await expect(frame.locator("#relay-contributors")).toContainText(`${before + 1} contributions`);
+    await expect(frame.getByRole("heading", { name: "Kai", exact: true })).toBeVisible();
   } finally {
     const state = (await api(page, "/profile-history")).data.state;
     await api(page, "/profile-restore", {

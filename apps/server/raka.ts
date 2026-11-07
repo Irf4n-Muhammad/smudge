@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { profilePackageSchema, type ProfilePackage } from "../../packages/contracts/src/profile.js";
 import type { ProfileService } from "../../packages/core/src/profiles.js";
+import { composeProfilePart } from "../../packages/core/src/composition.js";
 
 const source = (file: string) => readFileSync(resolve("apps/server/profiles/raka", file), "utf8");
 const sharedFiles = {
@@ -11,8 +12,6 @@ const sharedFiles = {
   "raka/profile.html": source("profile.html"),
   "raka/post.html": source("post.html"),
   "raka/story.html": source("story.html"),
-  "raka/relay.html": source("relay.html"),
-  "raka/relay.js": source("relay.js"),
   "basic/profile.html": source("basic-profile.html"),
   "basic/post.html": source("post.html").replace("post-grid post-grid-comic", "post-grid"),
   "basic/story.html": source("story.html").replace("stories stories-comic", "stories"),
@@ -22,7 +21,7 @@ export const rakaPackage: ProfilePackage = profilePackageSchema.parse({
     kind: "profile",
     schemaVersion: 2,
     runtimeVersion: "web-v1",
-    name: "Ink & Paper · Make your mark",
+    name: "Ink & Paper",
     entrypoint: "index.html",
     height: 1520,
     mobileHeight: 1260,
@@ -37,8 +36,6 @@ export const rakaPackage: ProfilePackage = profilePackageSchema.parse({
     capabilities: [
       "profile.read",
       "profile.openPost",
-      "relay.read",
-      "relay.add",
       "profile.cover",
       "profile.social.read",
       "profile.social.toggle",
@@ -64,11 +61,6 @@ export const rakaPackage: ProfilePackage = profilePackageSchema.parse({
         name: "Ink & Paper / Orbit",
         entrypoint: "raka/story.html",
         capabilities: ["profile.read", "profile.openPost"],
-      },
-      feature: {
-        name: "Drawing Relay",
-        entrypoint: "raka/relay.html",
-        capabilities: ["relay.read", "relay.add"],
       },
     },
   },
@@ -172,8 +164,16 @@ export function seedRaka(profiles: ProfileService) {
   const existing = store.get<{ name: string; handle: string }>("user", "raka");
   if (!existing || (existing.name === "Raka" && existing.handle === "rakadulu"))
     store.transaction(() => store.put("user", "raka", { ...existing, ...illustrator }));
-  if (store.get("seed", "raka-v2")) return;
   const actor = { userId: "raka" };
+  // Visitors no longer draw on someone else's page: a published Kai page that still has the
+  // Drawing Relay gets a new version without that part. Everything else on it stays.
+  const page = profiles.public("raka");
+  if (page.manifest?.capabilities.some((c) => c.startsWith("relay."))) {
+    const current = profiles.publication(page.publicationId!).package;
+    const d = profiles.create(actor, composeProfilePart(current, null, "feature"));
+    profiles.publish(actor, d.id, d.revision, page.version);
+  }
+  if (store.get("seed", "raka-v2")) return;
   // Existing profiles and posts are preserved, including an interrupted seed run.
   if (!social.feed(actor).some((p) => p.ownerId === "raka")) {
     for (const [title, caption, format, html] of [
@@ -219,111 +219,7 @@ export function seedRaka(profiles: ProfileService) {
   }
   if (profiles.state("raka").version === 0) {
     const d = profiles.create(actor, rakaPackage);
-    const state = profiles.publish(actor, d.id, d.revision, 0);
-    // The opening sketch is an ordinary attributed contribution, not a baked-in canvas background.
-    profiles.capability(actor, state.publicationId!, false, "relay.add", {
-      submissionId: "20000000-0000-4000-8000-000000000001",
-      strokes: [
-        [
-          [350, 370],
-          [330, 250],
-          [350, 160],
-          [405, 200],
-          [480, 185],
-          [535, 135],
-          [545, 255],
-          [520, 345],
-          [475, 370],
-          [350, 370],
-        ],
-        [
-          [360, 390],
-          [300, 400],
-          [345, 425],
-          [530, 405],
-          [590, 375],
-        ],
-        [
-          [300, 430],
-          [350, 450],
-          [510, 430],
-          [590, 400],
-        ],
-        [
-          [350, 457],
-          [360, 448],
-          [375, 451],
-          [380, 465],
-          [370, 476],
-          [355, 471],
-          [350, 457],
-        ],
-        [
-          [515, 437],
-          [525, 426],
-          [540, 430],
-          [545, 444],
-          [535, 455],
-          [520, 450],
-          [515, 437],
-        ],
-        [
-          [370, 255],
-          [400, 250],
-        ],
-        [
-          [460, 245],
-          [490, 235],
-        ],
-        [
-          [410, 290],
-          [425, 305],
-          [445, 290],
-        ],
-        [
-          [300, 260],
-          [360, 280],
-        ],
-        [
-          [290, 295],
-          [360, 295],
-        ],
-        [
-          [510, 270],
-          [580, 240],
-        ],
-        [
-          [515, 290],
-          [585, 290],
-        ],
-      ]
-        .map((points) => ({ color: "#202020", width: 6, points }))
-        .concat([
-          {
-            color: "#e83727",
-            width: 6,
-            points: [
-              [365, 145],
-              [355, 95],
-              [395, 120],
-              [425, 65],
-              [450, 115],
-              [485, 85],
-              [480, 145],
-            ],
-          },
-          {
-            color: "#296ccc",
-            width: 5,
-            points: [
-              [260, 460],
-              [320, 462],
-              [370, 457],
-              [400, 460],
-            ],
-          },
-        ]),
-    });
+    profiles.publish(actor, d.id, d.revision, 0);
   }
   store.transaction(() => store.put("seed", "raka-v2", { complete: true }));
 }

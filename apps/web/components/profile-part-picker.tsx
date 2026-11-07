@@ -83,7 +83,7 @@ export function ProfilePartPicker({
         >
           <span aria-hidden="true">−</span>
           <strong>Without this part</strong>
-          <small>{slot === "feature" ? "Drawings stay saved" : "Leave this surface empty"}</small>
+          <small>Leave this surface empty</small>
         </button>
       </div>
       <label>

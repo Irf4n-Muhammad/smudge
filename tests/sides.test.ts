@@ -302,3 +302,20 @@ test("a profile lists the owner's posts from every side the viewer may see, what
   assert.deepEqual(leoTitles(alice), ["Screening tonight"]);
   assert.deepEqual(leoTitles(leo), ["Screening tonight", "Jury notes"]);
 });
+
+test("a search looks in every side you may see, with the side you are in first", async () => {
+  const { sides, post, social } = await setup();
+  sides.join(alice, "runners");
+  post(alice, "Sunday long run", "runners");
+  post(bob, "A run before breakfast");
+  const found = (viewer: { userId: string }) =>
+    social.explore(viewer, "run").map((p) => p.metadata.title);
+  // In Everyday, Everyday's match leads and the Runners one follows.
+  assert.deepEqual(found(alice), ["A run before breakfast", "Sunday long run"]);
+  sides.setActive(alice, { side: "runners" });
+  assert.deepEqual(found(alice), ["Sunday long run", "A run before breakfast"]);
+  // Leo is in neither side's feed for the run, but it is public, so a search finds it.
+  assert.deepEqual(found(leo), ["A run before breakfast", "Sunday long run"]);
+  // Without words, Search stays the side's own explore list.
+  assert.ok(!social.explore(leo).some((p) => p.metadata.title === "Sunday long run"));
+});

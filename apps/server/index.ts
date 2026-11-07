@@ -299,7 +299,7 @@ if (config.demoContent) {
   mods.seed(
     "50000000-0000-4000-8000-000000000001",
     "Ink & Paper",
-    "Cut paper posts, orbit highlights and a collaborative drawing relay.",
+    "Cut paper posts and orbit highlights.",
     profileTemplates.raka,
   );
   mods.seed(
@@ -567,7 +567,8 @@ api.get("/api/explore", (req, res) =>
     identity
       .decorate(actor(res), service.explore(actor(res), req.query.q))
       .filter((p) => !("moment" in p && p.moment))
-      .map((p) => ({ ...p, ...sidesService.tag(p) })),
+      // A search mixes sides, so every result says which side it is from.
+      .map((p) => ({ ...p, ...sidesService.tag(p, !!String(req.query.q ?? "").trim()) })),
   ),
 );
 sideRoutes(
