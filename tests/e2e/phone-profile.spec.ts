@@ -34,7 +34,14 @@ test("on a phone, your profile keeps posts from every side and its ☰ opens wha
     await expect(dialog).toBeVisible();
     await expect(menu).not.toHaveAttribute("open", "");
     await page.keyboard.press("Escape");
-    if (await dialog.isVisible()) await page.getByRole("button", { name: "Close" }).first().click();
     await expect(dialog).toBeHidden();
   }
+  // Back to Everyday, so later specs see the feed they expect.
+  await page.evaluate(() =>
+    fetch("/api/sides/active", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ side: "everyday" }),
+    }),
+  );
 });
