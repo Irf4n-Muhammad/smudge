@@ -78,16 +78,19 @@ export function ProfilePage({
 }) {
   const owner = boot.users.find((u) => u.id === ownerId),
     mine = ownerId === boot.actor.userId;
-  const ownPosts: PostTile[] = posts
-    .filter((p) => p.ownerId === ownerId)
-    .map((p) => ({
-      id: p.id,
-      title: p.metadata.title,
-      caption: p.metadata.caption,
-      hasCover: !!p.metadata.coverAssetId,
-      ...(p.metadata.coverAssetId ? { coverAssetId: p.metadata.coverAssetId } : {}),
-      createdAt: p.createdAt,
-    }));
+  // Everything of theirs the viewer may see, whichever side it was posted in. The feed only holds
+  // the active side, so it is a fallback until this arrives, and the source of live counts.
+  const [theirs, setTheirs] = useState<PostView[] | null>(null);
+  const live = (p: PostView) => posts.find((f) => f.id === p.id) ?? p;
+  const ownerPosts = (theirs ?? posts.filter((p) => p.ownerId === ownerId)).map(live);
+  const ownPosts: PostTile[] = ownerPosts.map((p) => ({
+    id: p.id,
+    title: p.metadata.title,
+    caption: p.metadata.caption,
+    hasCover: !!p.metadata.coverAssetId,
+    ...(p.metadata.coverAssetId ? { coverAssetId: p.metadata.coverAssetId } : {}),
+    createdAt: p.createdAt,
+  }));
   const [profile, setProfile] = useState<PublicProfile | null>(null),
     [error, setError] = useState("");
   const [panel, setPanel] = useState<"search" | null>(null);
@@ -152,7 +155,15 @@ export function ProfilePage({
   useEffect(() => {
     void loadTheme();
   }, [loadTheme]);
+  const loadPosts = useCallback(
+    () =>
+      api<PostView[]>(`/users/${encodeURIComponent(ownerId)}/post-views`)
+        .then(setTheirs)
+        .catch(() => setTheirs(null)),
+    [ownerId],
+  );
   const refresh = useCallback(async () => {
+    void loadPosts();
     try {
       setProfile(await api(`/profiles/${encodeURIComponent(ownerId)}`));
       setError("");
@@ -181,11 +192,12 @@ export function ProfilePage({
   }, [refresh, mine, ownerId]);
   const openPost = useCallback(
     (id: string) => {
-      const post = posts.find((p) => p.id === id && p.ownerId === ownerId);
+      const post =
+        posts.find((p) => p.id === id && p.ownerId === ownerId) ?? theirs?.find((p) => p.id === id);
       if (post) setOpen(post);
       else setError("This post is no longer available. Refresh the profile.");
     },
-    [posts, ownerId],
+    [posts, theirs, ownerId],
   );
   async function follow() {
     setBusy(true);
@@ -673,9 +685,7 @@ export function ProfilePage({
                         <h1>{owner.name}</h1>
                         <span className="profile-default-handle">@{owner.handle}</span>
                         {owner.bio && <p>{owner.bio}</p>}
-                        <span className="profile-default-count">
-                          {posts.filter((p) => p.ownerId === ownerId).length} posts
-                        </span>
+                        <span className="profile-default-count">{ownerPosts.length} posts</span>
                       </div>
                       {!mine && (
                         <button
@@ -700,26 +710,24 @@ export function ProfilePage({
                       </p>
                     )}
                     <div className="profile-default-grid">
-                      {posts
-                        .filter((p) => p.ownerId === ownerId)
-                        .map((p) => (
-                          <button key={p.id} onClick={() => setOpen(p)}>
-                            {p.metadata.coverAssetId ? (
-                              <img
-                                src={`/api/assets/${p.metadata.coverAssetId}`}
-                                alt=""
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span className="profile-default-blank" aria-hidden="true">
-                                ✳
-                              </span>
-                            )}
-                            <strong>{p.metadata.title}</strong>
-                          </button>
-                        ))}
+                      {ownerPosts.map((p) => (
+                        <button key={p.id} onClick={() => setOpen(p)}>
+                          {p.metadata.coverAssetId ? (
+                            <img
+                              src={`/api/assets/${p.metadata.coverAssetId}`}
+                              alt=""
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="profile-default-blank" aria-hidden="true">
+                              ✳
+                            </span>
+                          )}
+                          <strong>{p.metadata.title}</strong>
+                        </button>
+                      ))}
                     </div>
-                    {!posts.some((p) => p.ownerId === ownerId) && (
+                    {!ownerPosts.length && (
                       <p className="fineprint">
                         {mine ? "Your posts will show up here." : "No posts yet."}
                       </p>
@@ -837,8 +845,10 @@ export function ProfilePage({
         <Dialog title={open.metadata.title} wide onClose={() => setOpen(null)}>
           <p className="profile-message">{open.metadata.caption}</p>
           <ProfilePostActions
-            post={posts.find((p) => p.id === open.id) ?? open}
-            onRefresh={onRefresh}
+            post={live(theirs?.find((p) => p.id === open.id) ?? open)}
+            onRefresh={async () => {
+              await Promise.all([onRefresh(), loadPosts()]);
+            }}
           />
           <PostLink post={open} notify={setError} />
           <Runtime

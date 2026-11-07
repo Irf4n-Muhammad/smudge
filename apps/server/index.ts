@@ -890,6 +890,15 @@ api.get("/api/users/:id/now", async (req, res) => {
 api.get("/api/users/:id/posts", (req, res) =>
   res.json(pages.posts(actor(res).userId, String(req.params.id))),
 );
+// The same posts as full cards, so a profile can open them whichever side the viewer is in.
+api.get("/api/users/:id/post-views", (req, res) =>
+  res.json(
+    identity
+      .decorate(actor(res), service.byOwner(actor(res), String(req.params.id)))
+      .filter((p) => !identity.isMoment(p.id))
+      .map((p) => ({ ...p, ...sidesService.tag(p) })),
+  ),
+);
 api.get("/api/users/:id/timeline", async (req, res) => {
   await spotify.poll(String(req.params.id));
   res.json(pages.timeline(actor(res).userId, String(req.params.id)));

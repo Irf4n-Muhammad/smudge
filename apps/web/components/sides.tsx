@@ -588,39 +588,41 @@ export function ShareCardDialog({
   }
   return (
     <Dialog title="Share card" onClose={onClose}>
-      <p className="fineprint sides-intro">
-        A picture of you in {side.name}, for a chat group or a story. Whoever taps the link lands
-        {side.private || side.id === EVERYDAY
-          ? " on your page."
-          : ` on your page, inside ${side.name}.`}
-      </p>
-      <div
-        className="share-card-preview"
-        style={{ "--side-accent": side.accent } as React.CSSProperties}
-      >
-        {svg ? (
-          <img
-            src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
-            alt={`Your ${side.name} card`}
-          />
-        ) : (
-          <span className="share-card-wait">Drawing your card…</span>
-        )}
-      </div>
-      <div className="share-card-actions">
-        <button className="primary" disabled={!svg || busy} onClick={() => void save()}>
-          <Download size={15} /> Save image
-        </button>
-        {canShare && (
-          <button className="quiet-button" disabled={!svg || busy} onClick={() => void share()}>
-            <Share2 size={15} /> Share
+      <div className="share-card">
+        <p className="fineprint sides-intro">
+          A picture of you in {side.name}, for a chat group or a story. Whoever taps the link lands
+          {side.private || side.id === EVERYDAY
+            ? " on your page."
+            : ` on your page, inside ${side.name}.`}
+        </p>
+        <div
+          className="share-card-preview"
+          style={{ "--side-accent": side.accent } as React.CSSProperties}
+        >
+          {svg ? (
+            <img
+              src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
+              alt={`Your ${side.name} card`}
+            />
+          ) : (
+            <span className="share-card-wait">Drawing your card…</span>
+          )}
+        </div>
+        <div className="share-card-actions">
+          <button className="primary" disabled={!svg || busy} onClick={() => void save()}>
+            <Download size={15} /> Save image
           </button>
-        )}
-        <button className="quiet-button" disabled={!link} onClick={() => void copy()}>
-          <Link2 size={15} /> Copy link
-        </button>
+          {canShare && (
+            <button className="quiet-button" disabled={!svg || busy} onClick={() => void share()}>
+              <Share2 size={15} /> Share
+            </button>
+          )}
+          <button className="quiet-button" disabled={!link} onClick={() => void copy()}>
+            <Link2 size={15} /> Copy link
+          </button>
+        </div>
+        {link && <p className="fineprint share-card-link">{link}</p>}
       </div>
-      {link && <p className="fineprint share-card-link">{link}</p>}
     </Dialog>
   );
 }
