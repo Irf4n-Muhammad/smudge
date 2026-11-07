@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../../..");
 const port = Number(process.env.PORT ?? 3010);
-const pages = { "/": "bakery.html", "/journal": "journal.html" };
+const pages = { "/": "bakery.html", "/journal": "journal.html", "/portfolio": "portfolio.html" };
 const photos = {
   bread: "spray",
   croissant: "concert",
@@ -16,6 +16,11 @@ const photos = {
   shop: "coast",
   rooftop: "rooftop",
   hero: "forest",
+  forest: "forest",
+  coast: "coast",
+  concert: "concert",
+  spray: "spray",
+  lake: "lake",
 };
 
 // The proof file for "Use my website": a test puts the code here, as the owner would upload it.
