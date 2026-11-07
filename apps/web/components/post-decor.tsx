@@ -33,6 +33,10 @@ export function themeStyle(theme: DecoratedPost["decoration"]): CSSProperties | 
     : undefined;
 }
 
+/** How far a theme's pieces reach above the frame, so a feed can keep that room clear. */
+export const decorReach = (d: DecoratedPost["decoration"]) =>
+  Math.max(0, ...(d?.pieces ?? []).filter((p) => p.anchor.startsWith("top")).map((p) => -p.dy));
+
 /**
  * Transparent decoration that clings to the post edges. The post itself keeps its standard
  * shape; pieces sit outside or over the border and never take clicks.

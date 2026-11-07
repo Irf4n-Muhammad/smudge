@@ -366,6 +366,20 @@ export class SocialService {
     );
   }
   /**
+   * One person's posts as this viewer may see them, newest first. Ignores the active side: a
+   * profile shows everything of theirs you are allowed to see, wherever it was posted.
+   */
+  byOwner(actor: Actor, ownerId: string): PostView[] {
+    this.actor(actor);
+    return this.views(
+      actor,
+      this.store
+        .all<Publication>("post")
+        .reverse()
+        .filter((p) => p.ownerId === ownerId && this.viewFilter(actor.userId, p)),
+    );
+  }
+  /**
    * A format and every version of it the viewer can see, newest version first. Ignores the
    * active side: the page is about the format, not about where you are scrolling.
    */

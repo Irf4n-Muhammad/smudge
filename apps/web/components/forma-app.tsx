@@ -627,6 +627,38 @@ export function FormaApp() {
       onSignedIn={signedIn}
     />
   );
+  // Opened from More, which the profile shows too, so they render on either screen.
+  const startDialogs = (
+    <>
+      {importOpen && (
+        <SiteImport
+          onClose={() => setImportOpen(false)}
+          onPublished={async () => {
+            setImportOpen(false);
+            navigate("home");
+            await refresh();
+            notify("Published. Your imported page opens right in the feed.");
+          }}
+        />
+      )}
+      {momentOpen && (
+        <MomentComposer
+          notify={notify}
+          onClose={() => setMomentOpen(false)}
+          onProve={() => {
+            setMomentOpen(false);
+            navigate("who");
+          }}
+          onPublished={async () => {
+            setMomentOpen(false);
+            navigate("home");
+            await refresh();
+            notify("Milestone published. Visitors can leave one sticker each.");
+          }}
+        />
+      )}
+    </>
+  );
   if (view === "profile" && boot && !studio)
     return (
       <>
@@ -666,6 +698,9 @@ export function FormaApp() {
               demo={demoSwitch}
               onLogout={realAccount ? logOut : undefined}
               onPick={(key) => {
+                // The menu sits in the profile's ☰; a pick that stays on the page closes it.
+                for (const menu of document.querySelectorAll("details.profile-more[open]"))
+                  menu.removeAttribute("open");
                 window.history.replaceState(null, "", "/");
                 pickMore(key);
               }}
@@ -680,6 +715,7 @@ export function FormaApp() {
             window.scrollTo(0, 0);
           }}
         />
+        {startDialogs}
         {authDialogView}
       </>
     );
@@ -1359,17 +1395,7 @@ export function FormaApp() {
           }}
         />
       )}
-      {importOpen && (
-        <SiteImport
-          onClose={() => setImportOpen(false)}
-          onPublished={async () => {
-            setImportOpen(false);
-            navigate("home");
-            await refresh();
-            notify("Published. Your imported page opens right in the feed.");
-          }}
-        />
-      )}
+      {startDialogs}
       {filling && (
         <FillDialog
           post={filling.post}
@@ -1385,22 +1411,6 @@ export function FormaApp() {
             await refresh();
             openPost(id);
             notify("Your version is up.");
-          }}
-        />
-      )}
-      {momentOpen && (
-        <MomentComposer
-          notify={notify}
-          onClose={() => setMomentOpen(false)}
-          onProve={() => {
-            setMomentOpen(false);
-            navigate("who");
-          }}
-          onPublished={async () => {
-            setMomentOpen(false);
-            navigate("home");
-            await refresh();
-            notify("Milestone published. Visitors can leave one sticker each.");
           }}
         />
       )}
