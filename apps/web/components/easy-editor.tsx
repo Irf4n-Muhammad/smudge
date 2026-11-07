@@ -467,6 +467,15 @@ export function EasyEditor({
           Pick your <em>vibe,</em>
         </h1>
         <p className="easy-sub">We fill it with your stuff. Swipe to try others.</p>
+        {onWebsite && (
+          <button className="easy-website" onClick={onWebsite}>
+            <Globe aria-hidden="true" />
+            <span>
+              <strong>Use my website</strong> instead
+            </span>
+            <ArrowRight aria-hidden="true" />
+          </button>
+        )}
         <PictureRail
           label="Profile vibes"
           items={vibes}
@@ -509,11 +518,6 @@ export function EasyEditor({
             Use this vibe <ArrowRight />
           </button>
         </footer>
-        {onWebsite && (
-          <button className="easy-website" onClick={onWebsite}>
-            <Globe aria-hidden="true" /> Have a website? Use my website as my profile
-          </button>
-        )}
       </div>
     );
   }
@@ -555,11 +559,7 @@ export function EasyEditor({
       </header>
       <div className="easy-stage">
         {!previewing && easy && <p className="easy-hint">tap anything to change it</p>}
-        {!previewing && onWebsite && (
-          <button className="easy-website in-edit" onClick={onWebsite}>
-            <Globe aria-hidden="true" /> Use my website
-          </button>
-        )}
+
         <div className={`easy-frame ${device}`}>
           <SmoothPreview
             draft={draft!}

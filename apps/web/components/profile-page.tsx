@@ -227,7 +227,7 @@ export function ProfilePage({
   );
   return (
     <main
-      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${!editing ? "has-side-nav" : ""} ${editing ? "" : look.className} ${siteMode ? "own-site-page" : ""}`}
+      className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${!editing ? "has-side-nav" : ""} ${editing ? "" : look.className} ${siteMode ? "own-site-page" : ""} ${siteShows ? "has-site" : ""}`}
       style={editing ? undefined : look.style}
     >
       {siteMode ? (
@@ -235,17 +235,8 @@ export function ProfilePage({
           owner={owner}
           site={site}
           mine={mine}
-          posts={ownPosts.length}
-          followLabel={followLabel}
-          following={boot.following.includes(ownerId)}
-          busy={busy}
           onBack={onBack}
-          onPage={setPage}
-          onFollow={() => void follow()}
           onMessage={onMessage && !mine ? () => onMessage(ownerId) : undefined}
-          onEdit={() => setSiteSetup(true)}
-          onChapters={() => setShowChapters(true)}
-          chapters={chapters.length}
           more={mine ? more : undefined}
         />
       ) : (
@@ -740,31 +731,33 @@ export function ProfilePage({
           ) : (
             <p className="profile-message">Opening profile…</p>
           )}
-          {!editing && (
-            <PageStrip
-              current={page}
-              posts={ownPosts.length}
-              onPick={setPage}
-              // The one action beside the tabs (ADR 0048): the owner edits, everyone else follows.
-              action={
-                !v2
-                  ? undefined
-                  : mine
-                    ? { label: "Edit profile", icon: "edit", onClick: () => setEasy(true) }
-                    : {
-                        label: boot.following.includes(ownerId)
-                          ? "Following"
-                          : boot.requested.includes(ownerId)
-                            ? "Requested"
-                            : "Follow",
-                        pressed: boot.following.includes(ownerId),
-                        disabled: busy,
-                        onClick: () => void follow(),
-                      }
-              }
-            />
-          )}
         </>
+      )}
+      {!editing && (
+        <PageStrip
+          current={page}
+          posts={ownPosts.length}
+          onPick={setPage}
+          pageLabel={siteShows ? "Website" : undefined}
+          // The one action beside the tabs: the owner edits, everyone else follows.
+          action={
+            // On a site profile's Posts and Stories the header keeps Follow, as on any profile.
+            !v2 && !siteMode
+              ? undefined
+              : mine
+                ? {
+                    label: "Edit profile",
+                    icon: "edit",
+                    onClick: () => (siteMode ? setSiteSetup(true) : setEasy(true)),
+                  }
+                : {
+                    label: followLabel,
+                    pressed: boot.following.includes(ownerId),
+                    disabled: busy,
+                    onClick: () => void follow(),
+                  }
+          }
+        />
       )}
       {!editing && profile && (
         <ProfileDiscovery

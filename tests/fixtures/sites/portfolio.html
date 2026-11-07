@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Alex Morgan, photographer</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #f3efe7;
+        color: #1c1b19;
+        font: 16px/1.55 "Helvetica Neue", Arial, sans-serif;
+      }
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 22px clamp(20px, 5vw, 64px);
+        font-size: 14px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      nav b { letter-spacing: 0.12em; }
+      nav a { color: inherit; margin-left: 22px; text-decoration: none; }
+      header {
+        padding: clamp(28px, 7vw, 90px) clamp(20px, 5vw, 64px) 40px;
+      }
+      h1 {
+        margin: 0;
+        max-width: 11ch;
+        font: 400 clamp(46px, 9vw, 120px) / 0.92 Georgia, "Times New Roman", serif;
+        letter-spacing: -0.03em;
+      }
+      h1 em { color: #c4532d; }
+      header p { max-width: 46ch; margin: 22px 0 0; color: #5d5951; font-size: 18px; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+        padding: 0 clamp(20px, 5vw, 64px) 40px;
+      }
+      figure { margin: 0; }
+      figure img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; border-radius: 4px; }
+      figcaption { display: flex; justify-content: space-between; padding: 8px 2px; font-size: 13px; color: #5d5951; }
+      .contact {
+        margin: 20px clamp(20px, 5vw, 64px) 60px;
+        padding: 32px;
+        border-radius: 6px;
+        background: #1c1b19;
+        color: #f3efe7;
+      }
+      .contact h2 { margin: 0 0 8px; font: 400 34px Georgia, serif; }
+      .contact a { color: #f0b48f; }
+    </style>
+  </head>
+  <body>
+    <nav><b>Alex Morgan</b><span><a href="#work">Work</a><a href="#contact">Contact</a></span></nav>
+    <header>
+      <h1>Little moments, <em>kept.</em></h1>
+      <p>Street and travel photography from Lisbon, Jakarta and wherever the train stops next.</p>
+    </header>
+    <section class="grid" id="work">
+      <figure><img src="/img/rooftop.jpg" alt="Rooftop at dusk" /><figcaption><span>Rooftops</span><span>2026</span></figcaption></figure>
+      <figure><img src="/img/coast.jpg" alt="Coastline" /><figcaption><span>Coastline</span><span>2025</span></figcaption></figure>
+      <figure><img src="/img/forest.jpg" alt="Forest path" /><figcaption><span>Forest walk</span><span>2025</span></figcaption></figure>
+      <figure><img src="/img/concert.jpg" alt="Concert crowd" /><figcaption><span>Front row</span><span>2024</span></figcaption></figure>
+      <figure><img src="/img/spray.jpg" alt="Wall painting" /><figcaption><span>Paint wall</span><span>2024</span></figcaption></figure>
+      <figure><img src="/img/lake.jpg" alt="Lake" /><figcaption><span>Still water</span><span>2023</span></figcaption></figure>
+    </section>
+    <section class="contact" id="contact">
+      <h2>Working on something?</h2>
+      <p>Commissions open for spring. Say hello at <a href="mailto:hello@example.com">hello@example.com</a>.</p>
+    </section>
+  </body>
+</html>
