@@ -9,11 +9,17 @@ test("on a phone, your profile keeps posts from every side and its ☰ opens wha
   await page.locator(".post-card").first().waitFor();
   const dock = page.getByRole("navigation", { name: "Mobile navigation" });
   // Browse Runners: Alex's Everyday breakfast is not in this feed, but it is still his post.
-  await page.getByRole("button", { name: /Runners/ }).first().click();
+  await page
+    .getByRole("button", { name: /Runners/ })
+    .first()
+    .click();
   await expect(page.locator(".side-home")).toBeVisible();
   await dock.getByRole("button", { name: "Profile", exact: true }).click();
   await expect(page.locator(".profile-default-count")).not.toHaveText("0 posts");
-  await page.getByRole("button", { name: /Breakfast is the best meal/ }).first().click();
+  await page
+    .getByRole("button", { name: /Breakfast is the best meal/ })
+    .first()
+    .click();
   await expect(page.getByRole("dialog", { name: "Breakfast is the best meal" })).toBeVisible();
   await page.keyboard.press("Escape");
 
