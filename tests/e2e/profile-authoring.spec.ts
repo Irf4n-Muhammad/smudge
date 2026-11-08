@@ -39,10 +39,6 @@ test("make a personal profile from Raka, preview privately, mix parts and publis
     const preview = page.locator(".profile-preview").frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: original.name, exact: true })).toBeVisible();
     await expect(preview.locator(".drawing-hand")).toBeVisible();
-    await preview.getByRole("button", { name: /Add your mark/ }).click();
-    await preview.getByRole("button", { name: "Add a star", exact: true }).click();
-    await expect(preview.getByRole("button", { name: /Save contribution/ })).toBeEnabled();
-    await preview.getByRole("button", { name: "Cancel drawing", exact: true }).click();
     await preview
       .getByRole("heading", { name: original.name, exact: true })
       .scrollIntoViewIfNeeded();
@@ -93,9 +89,6 @@ test("make a personal profile from Raka, preview privately, mix parts and publis
     await parts.getByLabel("post part", { exact: true }).selectOption("basic");
     await expect(page.locator(".profile-message")).toContainText("Changed post");
     await expect(preview.locator(".post-tile").first()).toHaveCSS("border-radius", "22px");
-    await parts.getByRole("button", { name: "Feature", exact: true }).click();
-    await parts.getByLabel("feature part", { exact: true }).selectOption("none");
-    await expect(page.locator(".profile-message")).toContainText("Changed feature");
     await expect(preview.locator(".relay")).toHaveCount(0);
     await page.getByText("Add a photo post", { exact: true }).click();
     await page

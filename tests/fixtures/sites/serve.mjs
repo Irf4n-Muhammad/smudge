@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../../..");
 const port = Number(process.env.PORT ?? 3010);
-const pages = { "/": "bakery.html", "/journal": "journal.html" };
+const pages = { "/": "bakery.html", "/journal": "journal.html", "/portfolio": "portfolio.html" };
 const photos = {
   bread: "spray",
   croissant: "concert",
@@ -16,10 +16,37 @@ const photos = {
   shop: "coast",
   rooftop: "rooftop",
   hero: "forest",
+  forest: "forest",
+  coast: "coast",
+  concert: "concert",
+  spray: "spray",
+  lake: "lake",
 };
+
+// The proof file for "Use my website": a test puts the code here, as the owner would upload it.
+let proof = "";
 
 createServer((req, res) => {
   const path = (req.url ?? "/").split("?")[0];
+  if (path === "/__proof" && req.method === "PUT") {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      proof = body;
+      res.writeHead(204).end();
+    });
+    return;
+  }
+  if (path === "/.well-known/smudge-verification.txt") {
+    if (!proof) return res.writeHead(404).end();
+    res.writeHead(200, { "content-type": "text/plain" });
+    return res.end(proof);
+  }
+  if (path === "/private") {
+    // A site that asks not to be shown inside other sites.
+    res.writeHead(200, { "content-type": "text/html", "x-frame-options": "DENY" });
+    return res.end("<h1>Not in frames</h1>");
+  }
   const img = /^\/img\/(\w+)\.jpg$/.exec(path);
   if (img && photos[img[1]]) {
     res.writeHead(200, { "content-type": "image/jpeg" });

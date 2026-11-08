@@ -8,6 +8,8 @@ import { SocialService } from "../packages/core/src/social.js";
 import { IdentityService } from "../packages/core/src/identity.js";
 import { OrgService } from "../packages/core/src/orgs.js";
 import { renderMoment } from "../apps/server/moments.js";
+import { CommunityService } from "../packages/core/src/community.js";
+import { MessageService } from "../packages/core/src/messages.js";
 
 const rejects = (fn: () => unknown, code: string) =>
   assert.throws(fn, (e: { code?: string }) => e.code === code);
@@ -25,7 +27,10 @@ async function setup() {
     () => new Date("2026-11-02T10:00:00Z"),
   );
   const orgs = new OrgService(social, identity, () => new Date("2026-11-02T10:00:00Z"));
-  return { store, social, identity, orgs };
+  const community = new CommunityService(social, () => false);
+  const messages = new MessageService(social, community, () => new Date("2026-11-02T10:00:00Z"));
+  orgs.circles = messages;
+  return { store, social, identity, orgs, messages };
 }
 
 test("a new term locks the last one; only the organisation's admin can start or lock terms", async () => {
@@ -241,4 +246,259 @@ test("the page lists each term's company from public chapters, titles first; the
   // In the room, Maya sees her own title whatever its audience; the admin without one is Admin.
   assert.equal(orgs.room({ userId: "maya" }, org.id, term!.id).you.role, "Stage manager");
   assert.equal(orgs.room({ userId: "dani" }, org.id, term!.id).you.role, "Admin");
+});
+
+test("an organisation picks its own look, colour and words; only its admin can, and anyone sees it", async () => {
+  const { orgs } = await setup();
+  assert.deepEqual(orgs.publicPage("teater-senja").look, { look: "playbill" });
+  rejects(
+    () => orgs.setLook({ userId: "leo" }, "teater-senja", { look: "matchday" }),
+    "ORG_ADMIN_REQUIRED",
+  );
+  orgs.setLook({ userId: "maya" }, "teater-senja", {
+    look: "noticeboard",
+    accent: "#FF0066",
+    inside: "Sekre",
+    company: "Pengurus",
+  });
+  assert.deepEqual(orgs.publicPage("teater-senja").look, {
+    look: "noticeboard",
+    accent: "#ff0066",
+    inside: "Sekre",
+    company: "Pengurus",
+  });
+  // Leaving a word out goes back to the look's own.
+  orgs.setLook({ userId: "maya" }, "teater-senja", { look: "matchday" });
+  assert.deepEqual(orgs.publicPage("teater-senja").look, { look: "matchday" });
+  // A colour is a colour, not CSS, and looks come from the list.
+  for (const bad of [
+    { look: "matchday", accent: "red; background:url(x)" },
+    { look: "vaporwave" },
+    { look: "matchday", inside: "x".repeat(21) },
+    { look: "matchday", css: "body{}" },
+  ])
+    assert.throws(() => orgs.setLook({ userId: "maya" }, "teater-senja", bad));
+});
+
+test("a finished term's talk stays with its people, who may keep going as a circle of their own", async () => {
+  const { orgs, identity, messages } = await setup();
+  const org = orgs.createOrg({ userId: "dani" }, { name: "Makrab Committee", term: "2026/27" });
+  const term = orgs.terms(org.id)[0]!;
+  identity.redeemInvite({ userId: "maya" }, orgs.joinLink({ userId: "dani" }, org.id));
+  orgs.post({ userId: "maya" }, org.id, term.id, { text: "See you at the venue" });
+  orgs.post({ userId: "dani" }, org.id, term.id, { kind: "announcement", text: "Thanks all" });
+  // While it's open there's nothing to keep going yet.
+  assert.equal(orgs.room({ userId: "maya" }, org.id, term.id).circle, null);
+  rejects(
+    () => orgs.startCircle({ userId: "maya" }, org.id, term.id, { name: "Makrab crew" }),
+    "TERM_STILL_OPEN",
+  );
+
+  // The term ends and Leo, who was never in it, takes over the organisation.
+  orgs.startTerm({ userId: "dani" }, org.id, { label: "2027/28", from: 2027 });
+  orgs.handover({ userId: "dani" }, org.id, { handle: "leo" });
+  const asLeo = orgs.room({ userId: "leo" }, org.id, term.id);
+  assert.equal(asLeo.talk, false);
+  assert.deepEqual(asLeo.messages, [], "the next committee doesn't read the old talk");
+  assert.deepEqual(
+    asLeo.announcements.map((a) => a.text),
+    ["Thanks all"],
+  );
+  assert.equal(asLeo.circle, null);
+  rejects(
+    () => orgs.startCircle({ userId: "leo" }, org.id, term.id, { name: "Mine" }),
+    "NOT_A_MEMBER",
+  );
+  const asMaya = orgs.room({ userId: "maya" }, org.id, term.id);
+  assert.equal(asMaya.talk, true);
+  assert.deepEqual(asMaya.circle, { name: null });
+
+  // Maya keeps it going; nobody is added, Dani joins by choice, Leo can't.
+  const { groupId } = orgs.startCircle({ userId: "maya" }, org.id, term.id, {
+    name: "Makrab crew",
+  });
+  assert.deepEqual(messages.circleMembers(groupId), ["maya"]);
+  assert.deepEqual(orgs.room({ userId: "dani" }, org.id, term.id).circle, {
+    name: "Makrab crew",
+    groupId,
+    people: 1,
+    joined: false,
+    startedBy: "maya",
+  });
+  orgs.joinCircle({ userId: "dani" }, org.id, term.id);
+  rejects(() => orgs.joinCircle({ userId: "leo" }, org.id, term.id), "NOT_A_MEMBER");
+  assert.deepEqual(messages.circleMembers(groupId), ["maya", "dani"]);
+  // A second start joins the circle that's there instead of making another.
+  assert.equal(
+    orgs.startCircle({ userId: "dani" }, org.id, term.id, { name: "Other" }).groupId,
+    groupId,
+  );
+  // It's an ordinary group chat now, outside the organisation.
+  messages.sendToGroup({ userId: "dani" }, groupId, { text: "Reunion?" });
+  assert.deepEqual(
+    messages.groupThread({ userId: "maya" }, groupId).messages.map((m) => m.text),
+    ["Reunion?"],
+  );
+  rejects(() => messages.groupThread({ userId: "leo" }, groupId), "NOT_FOUND");
+});
+
+test("a private organisation is there only for its own people; a join link still opens it", async () => {
+  const { orgs, identity } = await setup();
+  const org = orgs.createOrg({ userId: "dani" }, { name: "Quiet club", term: "2026/27" });
+  const { code } = orgs.joinLink({ userId: "dani" }, org.id);
+  const joined = identity.redeemInvite({ userId: "maya" }, { code });
+  identity.setChapterAudience({ userId: "maya" }, joined.id, { audience: "public" });
+  assert.equal(orgs.publicPage(org.id).visibility, "public");
+  rejects(
+    () => orgs.setVisibility({ userId: "maya" }, org.id, { visibility: "private" }),
+    "ORG_ADMIN_REQUIRED",
+  );
+  orgs.setVisibility({ userId: "dani" }, org.id, { visibility: "private" });
+  rejects(() => orgs.publicPage(org.id), "NOT_FOUND");
+  rejects(() => orgs.publicPage(org.id, "leo"), "NOT_FOUND");
+  assert.equal(orgs.publicPage(org.id, "maya").members, 1);
+  assert.equal(orgs.canSee(org.id, "leo"), false);
+  // Someone holding a join link sees just enough to join, and no people.
+  const fresh = orgs.joinLink({ userId: "dani" }, org.id).code;
+  const stub = orgs.publicPage(org.id, "leo", fresh);
+  assert.equal(stub.name, "Quiet club");
+  assert.deepEqual(stub.company, []);
+  // Maya's member chapter is public on her page, but Leo, outside the club, doesn't see it.
+  assert.equal(
+    identity.chaptersFor({ userId: "leo" }, "maya").some((c) => c.orgId === org.id),
+    false,
+  );
+  assert.equal(
+    identity.chaptersFor({ userId: "maya" }, "maya").some((c) => c.orgId === org.id),
+    true,
+  );
+  // Link only: anyone can open it, it just stays out of search.
+  orgs.setVisibility({ userId: "dani" }, org.id, { visibility: "link" });
+  assert.equal(orgs.publicPage(org.id).visibility, "link");
+  assert.equal(
+    identity.chaptersFor({ userId: "leo" }, "maya").some((c) => c.orgId === org.id),
+    true,
+  );
+});
+
+test("each title has a line: the people who held it, numbered from the first", async () => {
+  const { orgs, store, identity } = await setup();
+  const org = orgs.createOrg({ userId: "dani" }, { name: "Line club", term: "2026/27" });
+  const title = (id: string, ownerId: string, label: string, from: number, audience = "public") =>
+    store.put("chapter", id, {
+      id,
+      ownerId,
+      kind: "title",
+      label,
+      orgId: org.id,
+      from,
+      to: from + 1,
+      method: "invite",
+      audience,
+      createdAt: `${from}-09-01T00:00:00Z`,
+    });
+  store.transaction(() => {
+    title("t2", "leo", "Head of Comms, Line club 2025/26", 2025);
+    title("t1", "dani", "Head of Comms, Line club 2024/25", 2024);
+    title("t3", "maya", "Head of Comms, Line club 2026/27", 2026, "circle");
+    title("t4", "maya", "Treasurer, Line club 2026/27", 2026);
+  });
+  const lines = orgs.publicPage(org.id).lines;
+  const comms = lines.find((l) => l.role === "Head of Comms")!;
+  // Maya's own comms title is close circle only, so the public line skips her but keeps the count.
+  assert.deepEqual(
+    comms.holders.map((h) => [h.id, h.n]),
+    [
+      ["dani", 1],
+      ["leo", 2],
+    ],
+  );
+  assert.deepEqual(
+    identity
+      .chaptersFor({ userId: "maya" }, "maya")
+      .filter((c) => c.kind === "title")
+      .map((c) => c.line),
+    [
+      { n: 3, role: "Head of Comms" },
+      { n: 1, role: "Treasurer" },
+    ],
+  );
+});
+
+test("an event's crew stamp goes to the organisation's own people, once each", async () => {
+  const { orgs, identity } = await setup();
+  const org = orgs.createOrg({ userId: "dani" }, { name: "Crew club", term: "2026/27" });
+  identity.redeemInvite({ userId: "maya" }, orgs.joinLink({ userId: "dani" }, org.id));
+  assert.deepEqual(orgs.events(org.id), { collection: null, events: [] });
+  rejects(
+    () => orgs.createEvent({ userId: "maya" }, org.id, { name: "Spring Show" }),
+    "ORG_ADMIN_REQUIRED",
+  );
+  const { stamp } = orgs.createEvent({ userId: "dani" }, org.id, { name: "Spring Show" });
+  const again = orgs.createEvent({ userId: "dani" }, org.id, { name: "Spring Show" });
+  assert.notEqual(again.stamp.id, stamp.id);
+  const result = orgs.awardCrew({ userId: "dani" }, org.id, stamp.id, {
+    handles: ["@maya", "leo", "nobody", "MAYA"],
+  });
+  assert.deepEqual(result.awarded, ["maya"]);
+  assert.deepEqual(
+    result.skipped.map((s) => [s.handle, s.why]),
+    [
+      ["leo", "not-a-member"],
+      ["nobody", "unknown"],
+    ],
+  );
+  assert.deepEqual(
+    orgs.awardCrew({ userId: "dani" }, org.id, stamp.id, { handles: ["maya"] }).skipped,
+    [{ handle: "maya", why: "already" }],
+  );
+  const held = identity
+    .chaptersFor({ userId: "maya" }, "maya")
+    .filter((c) => c.kind === "stamp" && c.orgId === org.id);
+  assert.deepEqual(
+    held.map((c) => [c.label, c.from]),
+    [["Crew, Spring Show", 2026]],
+  );
+  assert.equal(orgs.events(org.id).events.find((e) => e.id === stamp.id)?.crew, 1);
+  assert.equal(orgs.publicPage(org.id).collections[0]?.stamps, 2);
+  rejects(
+    () => orgs.awardCrew({ userId: "dani" }, org.id, "nope", { handles: ["maya"] }),
+    "NOT_FOUND",
+  );
+});
+
+test("members draft posts for the organisation; only what an admin approves goes on the page", async () => {
+  const { orgs, identity } = await setup();
+  const org = orgs.createOrg({ userId: "dani" }, { name: "Post club", term: "2026/27" });
+  identity.redeemInvite({ userId: "maya" }, orgs.joinLink({ userId: "dani" }, org.id));
+  rejects(() => orgs.submitPost({ userId: "leo" }, org.id, { text: "Hello" }), "NOT_A_MEMBER");
+  rejects(() => orgs.posts({ userId: "leo" }, org.id), "NOT_A_MEMBER");
+  const draft = orgs.submitPost({ userId: "maya" }, org.id, { text: "Auditions open Friday" });
+  assert.equal(draft.status, "pending");
+  assert.deepEqual(orgs.publicPage(org.id).posts, []);
+  rejects(
+    () => orgs.reviewPost({ userId: "maya" }, org.id, draft.id, { approve: true }),
+    "ORG_ADMIN_REQUIRED",
+  );
+  assert.equal(orgs.posts({ userId: "dani" }, org.id).pending.length, 1);
+  orgs.reviewPost({ userId: "dani" }, org.id, draft.id, { approve: true });
+  rejects(
+    () => orgs.reviewPost({ userId: "dani" }, org.id, draft.id, { approve: false }),
+    "POST_NOT_PENDING",
+  );
+  const declined = orgs.submitPost({ userId: "maya" }, org.id, { text: "Free pizza for all" });
+  orgs.reviewPost({ userId: "dani" }, org.id, declined.id, { approve: false });
+  // The admin's own post goes out at once.
+  assert.equal(
+    orgs.submitPost({ userId: "dani" }, org.id, { text: "Welcome, new term" }).status,
+    "published",
+  );
+  const page = orgs.publicPage(org.id);
+  assert.deepEqual(page.posts.map((p) => p.text).sort(), [
+    "Auditions open Friday",
+    "Welcome, new term",
+  ]);
+  // The page speaks as the organisation; who drafted it stays inside.
+  assert.equal("authorId" in page.posts[0]!, false);
+  assert.equal(orgs.posts({ userId: "maya" }, org.id).pending.length, 0);
 });

@@ -374,8 +374,9 @@ test("Smudge Paint wall parts mix with Ink & Paper both ways without file confli
     assert.ok(mixed.files[file], file);
   assert.match(mixed.files["smudge/post.html"]!, /href="smudge\/parts\.css"/);
   assert.match(mixed.files["smudge/post.html"]!, /src="smudge\/helpers\.js"/);
-  // The Drawing Relay feature fits into the Smudge shell, which keeps a feature marker.
-  const relay = composeProfilePart(smudgeProfilePackage, rakaPackage, "feature");
+  // A feature part (here a test-only Drawing Relay) fits into the Smudge shell's feature marker.
+  const { relayPackage } = await import("./relay-fixture.js");
+  const relay = composeProfilePart(smudgeProfilePackage, relayPackage, "feature");
   assert.ok((relay.manifest.capabilities as string[]).includes("relay.add"));
   assert.match(relay.files["index.html"]!, /<!--forma:feature-->/);
 });

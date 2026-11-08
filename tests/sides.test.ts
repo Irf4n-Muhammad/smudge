@@ -273,3 +273,49 @@ test("a side's link shows an open side's home to a guest; private sides and Ever
   // A guest can never be taken for a member or a plan's viewer.
   rejects(() => sides.join({ userId: GUEST }, "runners"), "UNAUTHENTICATED");
 });
+
+test("a profile lists the owner's posts from every side the viewer may see, whatever side they browse", async () => {
+  const { sides, post, social, identity } = await setup();
+  sides.join(alice, "runners");
+  post(alice, "Sunday long run", "runners");
+  post(alice, "Breakfast");
+  // Alice browses Runners; her own Everyday post still belongs on her profile.
+  sides.setActive(alice, { side: "runners" });
+  const ownTitles = (viewer: { userId: string }) =>
+    social.byOwner(viewer, "alice").map((p) => p.metadata.title);
+  assert.deepEqual(ownTitles(alice), ["Breakfast", "Sunday long run"]);
+  // Bob is in neither feed for the run, but it is public, so her profile shows it to him too.
+  assert.deepEqual(ownTitles(bob), ["Breakfast", "Sunday long run"]);
+  // A private side's post stays with its members.
+  const invite = identity.createInvite(leo, {
+    orgId: "film-fest",
+    kind: "member",
+    label: "Jury, Lembayung Film Festival 2026",
+    period: { from: 2026 },
+    uses: 5,
+  });
+  identity.redeemInvite(leo, { code: invite.code, audience: "public" });
+  post(leo, "Jury notes", "film-fest");
+  post(leo, "Screening tonight");
+  const leoTitles = (viewer: { userId: string }) =>
+    social.byOwner(viewer, "leo").map((p) => p.metadata.title);
+  assert.deepEqual(leoTitles(alice), ["Screening tonight"]);
+  assert.deepEqual(leoTitles(leo), ["Screening tonight", "Jury notes"]);
+});
+
+test("a search looks in every side you may see, with the side you are in first", async () => {
+  const { sides, post, social } = await setup();
+  sides.join(alice, "runners");
+  post(alice, "Sunday long run", "runners");
+  post(bob, "A run before breakfast");
+  const found = (viewer: { userId: string }) =>
+    social.explore(viewer, "run").map((p) => p.metadata.title);
+  // In Everyday, Everyday's match leads and the Runners one follows.
+  assert.deepEqual(found(alice), ["A run before breakfast", "Sunday long run"]);
+  sides.setActive(alice, { side: "runners" });
+  assert.deepEqual(found(alice), ["Sunday long run", "A run before breakfast"]);
+  // Leo is in neither side's feed for the run, but it is public, so a search finds it.
+  assert.deepEqual(found(leo), ["A run before breakfast", "Sunday long run"]);
+  // Without words, Search stays the side's own explore list.
+  assert.ok(!social.explore(leo).some((p) => p.metadata.title === "Sunday long run"));
+});

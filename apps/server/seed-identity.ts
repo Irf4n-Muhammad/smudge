@@ -252,3 +252,35 @@ export function seedOrgCompany(social: SocialService) {
     store.put("system", "seed-org-company-v1", { at });
   });
 }
+
+/** Last season's room, finished: Dani was in it with Maya, and they still talk about it. */
+export function seedOrgPastTerm(social: SocialService) {
+  const store = social.store;
+  if (store.get("system", "seed-org-past-term-v1") || !store.get("term", "teater-senja-2024"))
+    return;
+  const now = Date.now();
+  const ago = (days: number) => new Date(now - days * 86_400_000).toISOString();
+  const term = "teater-senja-2024";
+  store.transaction(() => {
+    store.put("chapter", "seed-ts-2024-dani", {
+      id: "seed-ts-2024-dani",
+      ownerId: "dani",
+      kind: "title",
+      label: "Lighting, Teater Senja 2024/25",
+      orgId: "teater-senja",
+      from: 2024,
+      to: 2025,
+      method: "invite",
+      audience: "public",
+      createdAt: ago(300),
+    });
+    const posts: [string, string, "announcement" | "message", string, number][] = [
+      ["seed-q1", "maya", "announcement", "Closing night is sold out. Thank you, everyone.", 130],
+      ["seed-q2", "dani", "message", "The blackout in act 2 finally worked 😭", 129],
+      ["seed-q3", "maya", "message", "Best cue of the year. Dinner after strike?", 129],
+    ];
+    for (const [id, userId, kind, text, days] of posts)
+      store.put("room-post", id, { id, termId: term, userId, kind, text, createdAt: ago(days) });
+    store.put("system", "seed-org-past-term-v1", { at: ago(0) });
+  });
+}

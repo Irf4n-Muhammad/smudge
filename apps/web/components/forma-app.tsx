@@ -24,6 +24,7 @@ import {
   Globe,
   UserPlus,
   LogIn,
+  LogOut,
   Shapes,
 } from "lucide-react";
 import { AccountSwitch, MoreMenu } from "./app-nav";
@@ -107,6 +108,7 @@ export function FormaApp() {
     [resetToken, setResetToken] = useState<string | null>(null),
     [badges, setBadges] = useState({ notifications: 0, messages: 0 }),
     [messageTo, setMessageTo] = useState<string | null>(null),
+    [messageGroup, setMessageGroup] = useState<string | null>(null),
     [more, setMore] = useState(false),
     [feedMenu, setFeedMenu] = useState(false),
     /** Just signed up: a photo and a few people before the first feed. */
@@ -239,6 +241,13 @@ export function FormaApp() {
     // the easy editor.
     const easy = new URLSearchParams(window.location.search).get("postDraft");
     if (easy) setPostEditor({ draftId: easy });
+    // A group opened from elsewhere, such as a finished term's circle, lands in Messages.
+    const group = new URLSearchParams(window.location.search).get("group");
+    if (group) {
+      setMessageGroup(group);
+      setView("messages");
+      window.history.replaceState(null, "", "/");
+    }
   }, [refresh]);
   // Played a shared post as a guest, then came in: once someone is signed in, the answer kept in
   // this browser joins their account.
@@ -339,10 +348,15 @@ export function FormaApp() {
     window.scrollTo({ top: 0, behavior: "smooth" });
     await loadFormat(id);
   }
-  async function reuse(id: string) {
+  async function reuse(id: string, code = false) {
     const d = await api<DraftView>(`/posts/${id}/reuse`, {});
-    setActiveDraft(d.id);
-    setStudio(true);
+    setEditingPost(false);
+    if (code) {
+      setActiveDraft(d.id);
+      setStudio(true);
+    }
+    // Otherwise the copy opens in the easy editor, which hands a post made in code to the studio.
+    else setPostEditor({ draftId: d.id });
   }
   function openPost(id: string) {
     setFocusPost(id);
@@ -459,6 +473,13 @@ export function FormaApp() {
     if (key === "messages") setMessageTo(null);
     navigate(key);
   }
+  // The playground's own people have a session but no email or password: they still get the
+  // sign-up and log-in buttons. Someone who made a real account gets a way out instead.
+  const realAccount = !!auth?.account && (auth.account.hasPassword || !!auth.account.email);
+  const logOut = () =>
+    void authApi("/auth/logout", {})
+      .then(signedOut)
+      .catch((e: Error) => notify(e.message));
   const demoSwitch =
     !production && me && boot
       ? { users: boot.users, meId: me.id, onSwitch: (id: string) => void switchUser(id) }
@@ -520,21 +541,28 @@ export function FormaApp() {
         </nav>
         <div className="sidebar-bottom">
           {demoSwitch && <AccountSwitch {...demoSwitch} />}
-          {!production && (
-            <>
-              <button
-                className="nav-item"
-                title="Create an account"
-                onClick={() => setAuthDialog("signup")}
-              >
-                <UserPlus size={22} />
-                <span>Create an account</span>
-              </button>
-              <button className="nav-item" title="Log in" onClick={() => setAuthDialog("login")}>
-                <LogIn size={22} />
-                <span>Log in</span>
-              </button>
-            </>
+          {realAccount ? (
+            <button className="nav-item" title="Log out" onClick={logOut}>
+              <LogOut size={22} />
+              <span>Log out</span>
+            </button>
+          ) : (
+            !production && (
+              <>
+                <button
+                  className="nav-item"
+                  title="Create an account"
+                  onClick={() => setAuthDialog("signup")}
+                >
+                  <UserPlus size={22} />
+                  <span>Create an account</span>
+                </button>
+                <button className="nav-item" title="Log in" onClick={() => setAuthDialog("login")}>
+                  <LogIn size={22} />
+                  <span>Log in</span>
+                </button>
+              </>
+            )
           )}
           <button
             className={tab === "more" || more ? "nav-item active" : "nav-item"}
@@ -552,7 +580,12 @@ export function FormaApp() {
       {/* Outside the rail: the rail scrolls and blurs, which would clip a popover inside it. */}
       {more && (
         <div className="post-menu more-popover">
-          <MoreMenu moderator={!!auth?.moderator} production={production} onPick={pickMore} />
+          <MoreMenu
+            moderator={!!auth?.moderator}
+            production={production}
+            onLogout={realAccount ? logOut : undefined}
+            onPick={pickMore}
+          />
         </div>
       )}
       <nav className="mobile-nav" aria-label="Mobile navigation">
@@ -594,6 +627,38 @@ export function FormaApp() {
       onSignedIn={signedIn}
     />
   );
+  // Opened from More, which the profile shows too, so they render on either screen.
+  const startDialogs = (
+    <>
+      {importOpen && (
+        <SiteImport
+          onClose={() => setImportOpen(false)}
+          onPublished={async () => {
+            setImportOpen(false);
+            navigate("home");
+            await refresh();
+            notify("Published. Your imported page opens right in the feed.");
+          }}
+        />
+      )}
+      {momentOpen && (
+        <MomentComposer
+          notify={notify}
+          onClose={() => setMomentOpen(false)}
+          onProve={() => {
+            setMomentOpen(false);
+            navigate("who");
+          }}
+          onPublished={async () => {
+            setMomentOpen(false);
+            navigate("home");
+            await refresh();
+            notify("Milestone published. Visitors can leave one sticker each.");
+          }}
+        />
+      )}
+    </>
+  );
   if (view === "profile" && boot && !studio)
     return (
       <>
@@ -615,6 +680,11 @@ export function FormaApp() {
             setProfileVisit((v) => v + 1);
             window.scrollTo(0, 0);
           }}
+          onMessage={(id) => {
+            window.history.replaceState(null, "", "/");
+            setMessageTo(id);
+            navigate("messages");
+          }}
           onNavigate={(destination) => {
             window.history.replaceState(null, "", "/");
             setCockpit(false);
@@ -626,7 +696,11 @@ export function FormaApp() {
               moderator={!!auth?.moderator}
               production={production}
               demo={demoSwitch}
+              onLogout={realAccount ? logOut : undefined}
               onPick={(key) => {
+                // The menu sits in the profile's ☰; a pick that stays on the page closes it.
+                for (const menu of document.querySelectorAll("details.profile-more[open]"))
+                  menu.removeAttribute("open");
                 window.history.replaceState(null, "", "/");
                 pickMore(key);
               }}
@@ -641,6 +715,7 @@ export function FormaApp() {
             window.scrollTo(0, 0);
           }}
         />
+        {startDialogs}
         {authDialogView}
       </>
     );
@@ -703,29 +778,6 @@ export function FormaApp() {
                   >
                     <strong>Following</strong>
                     <small>Only people you follow</small>
-                  </button>
-                  <span className="feed-menu-label">Ways to browse</span>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setFeedMenu(false);
-                      setBreakout(true);
-                      window.history.replaceState(null, "", "/?mode=breakout");
-                      window.scrollTo(0, 0);
-                    }}
-                  >
-                    <strong>Break the frame</strong>
-                    <small>Posts float free on one long page</small>
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setFeedMenu(false);
-                      changeMode(true);
-                    }}
-                  >
-                    <strong>Enter hyperspace</strong>
-                    <small>Fly through posts in orbit</small>
                   </button>
                 </div>
               )}
@@ -841,8 +893,9 @@ export function FormaApp() {
               />
             ) : view === "messages" && boot ? (
               <MessagesPanel
-                key={`${boot.actor.userId}:${messageTo ?? ""}`}
+                key={`${boot.actor.userId}:${messageTo ?? ""}:${messageGroup ?? ""}`}
                 initialUser={messageTo}
+                initialGroup={messageGroup}
                 meId={boot.actor.userId}
                 notify={notify}
                 onRead={refreshBadges}
@@ -1342,17 +1395,7 @@ export function FormaApp() {
           }}
         />
       )}
-      {importOpen && (
-        <SiteImport
-          onClose={() => setImportOpen(false)}
-          onPublished={async () => {
-            setImportOpen(false);
-            navigate("home");
-            await refresh();
-            notify("Published. Your imported page opens right in the feed.");
-          }}
-        />
-      )}
+      {startDialogs}
       {filling && (
         <FillDialog
           post={filling.post}
@@ -1361,29 +1404,13 @@ export function FormaApp() {
           onCode={() => {
             const id = filling.post.id;
             setFilling(null);
-            reuse(id).catch((e: Error) => notify(e.message));
+            reuse(id, true).catch((e: Error) => notify(e.message));
           }}
           onPosted={async (id) => {
             setFilling(null);
             await refresh();
             openPost(id);
             notify("Your version is up.");
-          }}
-        />
-      )}
-      {momentOpen && (
-        <MomentComposer
-          notify={notify}
-          onClose={() => setMomentOpen(false)}
-          onProve={() => {
-            setMomentOpen(false);
-            navigate("who");
-          }}
-          onPublished={async () => {
-            setMomentOpen(false);
-            navigate("home");
-            await refresh();
-            notify("Milestone published. Visitors can leave one sticker each.");
           }}
         />
       )}
