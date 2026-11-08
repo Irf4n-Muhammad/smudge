@@ -26,6 +26,7 @@ import type { DraftView } from "../../../packages/contracts/src/experience";
 import {
   buildPost,
   fillableParts,
+  firstReact,
   withoutStarterWords,
   postFonts,
   postPalettes,
@@ -281,7 +282,11 @@ export function PostEditor({
         return;
       }
       const photos = photo ? [{ assetId: await uploadPhoto(photo), caption: "" }] : [];
-      const built = buildPost(startPostDesign(style, photos.length ? { photos } : undefined));
+      // Every new post asks for one tap; the maker can change it or take it off.
+      const tap = style !== "ask" && style !== "plan" ? { ask: firstReact() } : {};
+      const built = buildPost(
+        startPostDesign(style, { ...(photos.length ? { photos } : {}), ...tap }),
+      );
       open(
         await api<DraftView>("/drafts", {
           package: built.package,
@@ -683,7 +688,19 @@ export function PostEditor({
             </div>
           )}
           {sheet === "field" && field === "ask" && d.ask && (
-            <AskFields ask={d.ask} onChange={(ask, now) => change({ ...d, ask }, now)} />
+            <AskFields
+              ask={d.ask}
+              onChange={(ask, now) => change({ ...d, ask }, now)}
+              onRemove={
+                d.style === "ask"
+                  ? undefined
+                  : () => {
+                      const { ask: _gone, ...rest } = d;
+                      change(rest, true);
+                      setSheet(null);
+                    }
+              }
+            />
           )}
           {sheet === "fill" && <FillFields design={d} onChange={(next) => change(next, true)} />}
           {sheet === "style" && (
@@ -767,6 +784,17 @@ export function PostEditor({
                 hint="Leave it empty for no button."
                 onChange={(linkLabel) => changeMeta({ ...meta, linkLabel })}
               />
+              {!d.ask && d.style !== "plan" && d.style !== "ask" && (
+                <button
+                  className="post-all-photos"
+                  onClick={() => {
+                    change({ ...d, ask: firstReact() }, true);
+                    pick("ask");
+                  }}
+                >
+                  Add one tap for viewers
+                </button>
+              )}
               {meta.linkLabel.trim() && (
                 <TextField
                   title=""
@@ -863,32 +891,51 @@ export function PostEditor({
 function AskFields({
   ask,
   onChange,
+  onRemove,
 }: {
   ask: PostAsk;
   onChange: (ask: PostAsk, now?: boolean) => void;
+  /** Any style but Ask can do without it. */
+  onRemove?: (() => void) | undefined;
 }) {
   const options = ask.options.length >= 2 ? ask.options : ["Yes", "No"];
+  const emoji = ask.kind === "react";
   return (
     <div className="easy-field">
       <ChipRow
         label="Friends answer by"
         value={ask.kind}
         options={[
+          ["react", "An emoji"],
           ["poll", "Tapping one"],
           ["open", "Writing a few words"],
           ["slider", "Sliding"],
         ]}
-        onChange={(kind) => onChange({ ...ask, kind, options }, true)}
+        onChange={(kind) =>
+          onChange(
+            {
+              ...ask,
+              kind,
+              options:
+                kind === "react" && !emoji
+                  ? firstReact().options
+                  : kind === "poll" && emoji
+                    ? ["Yes", "No"]
+                    : options,
+            },
+            true,
+          )
+        }
       />
-      {ask.kind === "poll" && (
+      {(ask.kind === "poll" || emoji) && (
         <div className="ask-options">
           {options.map((o, i) => (
             <div className="ask-option" key={i}>
               <TextField
                 title=""
-                label={`Option ${i + 1}`}
+                label={`${emoji ? "Emoji" : "Option"} ${i + 1}`}
                 value={o}
-                max={40}
+                max={emoji ? 8 : 40}
                 onChange={(v) =>
                   onChange({ ...ask, options: options.map((x, j) => (j === i ? v : x)) })
                 }
@@ -910,14 +957,18 @@ function AskFields({
             <button
               className="post-all-photos"
               onClick={() =>
-                onChange({ ...ask, options: [...options, `Option ${options.length + 1}`] }, true)
+                onChange(
+                  { ...ask, options: [...options, emoji ? "👀" : `Option ${options.length + 1}`] },
+                  true,
+                )
               }
             >
-              Add an option
+              {emoji ? "Add an emoji" : "Add an option"}
             </button>
           )}
           <p className="easy-note">
-            Two to four. After they tap, people see how you and their friends split.
+            Two to four. After they tap, people see how you and their friends split, and it counts
+            toward how much you match.
           </p>
         </div>
       )}
@@ -938,6 +989,11 @@ function AskFields({
             onChange(v.trim() ? { ...rest, emoji: v } : rest);
           }}
         />
+      )}
+      {onRemove && (
+        <button className="post-all-photos" onClick={onRemove}>
+          Take the tap off this post
+        </button>
       )}
     </div>
   );

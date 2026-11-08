@@ -243,3 +243,23 @@ html[data-theme="dark"] .org-feed-tag {
   background: var(--accent);
   color: #fff;
 }
+
+/* Asking to turn on push notifications, where it makes sense. */
+.push-offer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--paper, #f4efe6);
+  border: 1px solid var(--line, #e2ddd3);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.push-offer span {
+  flex: 1;
+}
+.push-offer.compact {
+  margin: 6px 0 0;
+}

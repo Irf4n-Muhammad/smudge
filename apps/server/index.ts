@@ -44,6 +44,7 @@ import {
 } from "./seed-identity.js";
 import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
 import { seedOpeners } from "./seed-openers.js";
+import { seedEveryday } from "./seed-everyday.js";
 import { seedOrgFeed } from "./seed-org-feed.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
@@ -67,6 +68,7 @@ import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
 import { deliveryFor, startMailWorker } from "./mail.js";
+import { PushService } from "../../packages/core/src/push.js";
 import { ActivityDigest } from "../../packages/core/src/digest.js";
 import { rateLimit } from "./rate-limit.js";
 import { CommunityService } from "../../packages/core/src/community.js";
@@ -196,6 +198,54 @@ if (deliver) startMailWorker(store, deliver);
 const digest = new ActivityDigest(service, community, config.publicUrl.href, clock);
 // Activity emails go out with the other mail, a few minutes after things happen.
 setInterval(() => digest.run(), 5 * 60_000).unref();
+// Push notifications: what Notifications shows, on the phone, a moment after it happens. Only the
+// things that bring someone back (answers, versions, replies); likes stay in the app.
+const push = new PushService(store, config.publicUrl.href, {
+  ...(production
+    ? {}
+    : { allowHost: (u: URL) => u.hostname === "127.0.0.1" || u.hostname === "localhost" }),
+  now: clock,
+});
+accounts.erasers.push((userId) => {
+  for (const s of push.subscriptions(userId)) push.unsubscribe(userId, s.endpoint);
+});
+service.listeners.push((event) => {
+  if (community.blockedEither(event.actorId, event.targetId)) return;
+  const who =
+    service
+      .users()
+      .find((u) => u.id === event.actorId)
+      ?.name.split(" ")[0] ?? "Someone";
+  const postId = "postId" in event ? event.postId : undefined;
+  const post = postId ? store.get<{ metadata: { title: string } }>("post", postId) : undefined;
+  const title = post ? `“${post.metadata.title}”` : "your post";
+  const body =
+    event.type === "answer"
+      ? `${who} answered ${title}. See what they said.`
+      : event.type === "answered-too"
+        ? `${who} answered ${title} too. See if you agree.`
+        : event.type === "version"
+          ? `${who} made their own version of ${title}.`
+          : event.type === "comment"
+            ? `${who} commented on ${title}.`
+            : event.type === "reply"
+              ? `${who} replied to your comment.`
+              : event.type === "mention"
+                ? `${who} mentioned you.`
+                : event.type === "follow"
+                  ? `${who} started following you.`
+                  : event.type === "follow-request"
+                    ? `${who} asked to follow you.`
+                    : null;
+  if (!body) return;
+  const message = {
+    title: "Smudge",
+    body,
+    url: postId ? `/?post=${encodeURIComponent(postId)}` : "/",
+    tag: `${event.type}:${postId ?? event.actorId}`,
+  };
+  setImmediate(() => void push.send(event.targetId, message));
+});
 const profiles = new ProfileService(service);
 if (config.demoContent) {
   seedIdentity(identity, service);
@@ -210,6 +260,7 @@ if (config.demoContent) {
   seedPhotos(service);
   // After the photo seed too: Dani makes two of them.
   seedOpeners(service, clock());
+  seedEveryday(service);
   // After the photo seed, which adds Dani and the photos on his page.
   seedDaniPage(profiles);
   seedInesPosts(profiles);
@@ -1392,6 +1443,22 @@ api.post("/api/posts/:id/claim", (req, res) => {
     service.capability(actor(res), id, "viewer.progress.write", body.progress);
   res.json(service.answers(actor(res), id));
 });
+// Push: the key a browser subscribes with, and turning it on or off for this device.
+api.get("/api/push", (_req, res) =>
+  res.json({ key: push.publicKey(), on: push.subscriptions(actor(res).userId).length > 0 }),
+);
+api.post("/api/push", (req, res) => res.json(push.subscribe(actor(res).userId, req.body)));
+api.post("/api/push/off", (req, res) =>
+  res.json(
+    push.unsubscribe(
+      actor(res).userId,
+      z
+        .object({ endpoint: z.string().max(1000) })
+        .strict()
+        .parse(req.body).endpoint,
+    ),
+  ),
+);
 /** The parts of a fill-in format anyone may change; empty when the post is not one. */
 api.get("/api/posts/:id/fields", (req, res) => {
   const post = service.visiblePost(actor(res), String(req.params.id));

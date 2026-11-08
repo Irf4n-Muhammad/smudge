@@ -40,6 +40,10 @@ export type NotificationType =
   | "reply"
   | "mention"
   | "answer"
+  /** Someone you follow answered a post you answered too. */
+  | "answered-too"
+  /** Someone made their own version of your format. */
+  | "version"
   | "partner-request"
   | "follow-request"
   | "follow-accepted"

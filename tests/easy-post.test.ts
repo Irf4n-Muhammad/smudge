@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildPost,
   fillableParts,
+  firstReact,
   postStyles,
   readPostDesign,
   restylePost,
@@ -129,8 +130,34 @@ test("an Ask is a photo and one question that takes one answer, by tap, words or
     /&lt;b&gt;hi/,
   );
 
-  // Switching to Ask from another style gives it a question to answer; other styles don't take answers.
+  // Switching to Ask from another style gives it a question to answer.
   const fromPoster = restylePost(startPostDesign("poster"), "ask");
   assert.equal(fromPoster.ask?.kind, "poll");
-  assert.deepEqual(buildPost(restylePost(ask, "poster")).package.manifest.capabilities, []);
+});
+
+test("any post can carry one tap, pinned to the bottom so it shows in a feed card", () => {
+  const plain = buildPost(startPostDesign("poster")).package;
+  assert.deepEqual(plain.manifest.capabilities, [], "no tap, no answers");
+  for (const style of postStyles.filter((s) => s !== "ask" && s !== "plan")) {
+    const design = { ...startPostDesign(style), ask: firstReact() };
+    const pkg = buildPost(design).package;
+    assert.deepEqual(pkg.manifest.capabilities, ["answers.write", "answers.read"], style);
+    assert.match(
+      pkg.files["index.html"]!,
+      /<section class="answer tap"[^>]*>.*aria-label="🔥"/,
+      style,
+    );
+    assert.match(
+      pkg.files["post.css"]!,
+      /\.answer\.tap\{position:fixed;left:0;right:0;bottom:0/,
+      style,
+    );
+    assert.deepEqual(readPostDesign(pkg), design);
+  }
+  // A plan already has its tap ("I'm in"): no second one.
+  const plan = buildPost({ ...startPostDesign("plan"), ask: firstReact() }).package;
+  assert.deepEqual(plan.manifest.capabilities, ["plan.read", "plan.join"]);
+  assert.throws(() =>
+    buildPost({ ...startPostDesign("note"), ask: { kind: "react", options: ["🔥"] } }),
+  );
 });

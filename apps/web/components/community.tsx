@@ -1,4 +1,5 @@
 "use client";
+import { PushOffer } from "./push-offer";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -296,6 +297,8 @@ interface NotificationView {
   text?: string;
   youFollow: boolean;
   answer?: { theirs: Said | null; yours: Said | null };
+  /** For a version: which one it is, counting from the first. */
+  nth?: number;
 }
 type Said = { pick: string | null; score: number | null; of: number | null };
 /** "3/3, beat your 2/3" or "picked Indomie". */
@@ -329,6 +332,10 @@ function describe(n: NotificationView) {
       return `left a sticker on ${title}.`;
     case "answer":
       return `played ${title}${played(n.answer)}.`;
+    case "answered-too":
+      return `answered ${title} too${played(n.answer)}.`;
+    case "version":
+      return `made their own version of ${title}${n.nth ? `. That's version ${n.nth}` : ""}.`;
     case "follow-request":
       return "asked to follow you.";
     case "follow-accepted":
@@ -359,12 +366,19 @@ export function NotificationsPanel({
     [],
   );
   useEffect(() => {
-    void (async () => {
+    const load = async () => {
       void loadRequests();
       setItems(await api<NotificationView[]>("/notifications"));
       await api("/notifications/read", {});
       onRead();
-    })();
+    };
+    void load();
+    // A push arriving while this is open shows up here right away.
+    const onPush = (e: MessageEvent) => {
+      if (e.data?.type === "smudge-push") void load();
+    };
+    navigator.serviceWorker?.addEventListener("message", onPush);
+    return () => navigator.serviceWorker?.removeEventListener("message", onPush);
   }, [onRead, loadRequests]);
   return (
     <section className="community-panel" aria-labelledby="notifications-title">
@@ -372,6 +386,7 @@ export function NotificationsPanel({
         <span className="eyebrow">ACTIVITY</span>
         <h1 id="notifications-title">Notifications</h1>
       </header>
+      <PushOffer reason="Get these on your phone: when friends answer your posts, answer the ones you did, or make their own version." />
       {requests.length > 0 && (
         <section className="follow-requests" aria-label="Follow requests">
           <h2>Follow requests</h2>

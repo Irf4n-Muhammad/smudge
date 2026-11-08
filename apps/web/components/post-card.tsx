@@ -403,6 +403,7 @@ export function PostCard({
           <FriendAnswers
             postId={post.id}
             title={post.metadata.title}
+            cover={post.metadata.coverAssetId}
             version={answered}
             follow={
               post.ownerId !== boot.actor.userId && !boot.following.includes(post.ownerId)

@@ -185,7 +185,7 @@ export class CommunityService {
           : undefined;
         // What they answered, beside the maker's own answer, so "beat your 2/3" needs no lookup.
         const answer =
-          n.type === "answer" && n.postId && n.actorId
+          (n.type === "answer" || n.type === "answered-too") && n.postId && n.actorId
             ? {
                 theirs: score(this.store.get<Answer>("answer", `${n.postId}:${n.actorId}`)),
                 yours: score(this.store.get<Answer>("answer", `${n.postId}:${me}`)),
@@ -200,9 +200,18 @@ export class CommunityService {
           post: post ? { id: post.id, title: post.metadata.title } : null,
           ...(said ? { text: said.length > 140 ? `${said.slice(0, 139)}…` : said } : {}),
           ...(answer ? { answer } : {}),
+          ...(n.type === "version" && post?.remixOf ? { nth: this.nth(post) } : {}),
           youFollow: !!n.actorId && follows.some((f) => f.userId === me && f.target === n.actorId),
         };
       });
+  }
+  /** Which version of its format a post is, counting from the first one made. */
+  private nth(post: Publication) {
+    const versions = this.store
+      .all<Publication>("post")
+      .filter((p) => p.remixOf === post.remixOf)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return versions.findIndex((p) => p.id === post.id) + 1;
   }
   private mine(me: string) {
     return this.store

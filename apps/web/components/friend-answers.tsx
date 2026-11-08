@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { Share2, Users } from "lucide-react";
 import { api } from "./runtime";
 import { answersChanged } from "./guest-answers";
-import { shareTierStory } from "./tier-story";
+import { PushOffer } from "./push-offer";
+import { answerStorySvg, photoData, shareStory, shareTierStory } from "./tier-story";
 
 type Answer = {
   userId: string;
@@ -28,8 +29,11 @@ export function FriendAnswers({
   version,
   follow,
   title,
+  cover,
 }: {
   postId: string;
+  /** The post's cover photo, drawn at the top of the story picture. */
+  cover?: string | undefined;
   version: number;
   /** The post's title, for the story picture of a ranking. */
   title?: string;
@@ -77,18 +81,45 @@ export function FriendAnswers({
         </span>
       </span>
       {answers.mine && <small>People who follow you see your answer.</small>}
-      {answers.mine?.placed && answers.mine.placed.length > 0 && (
-        <p className="answer-follow">
-          <span>{shared || "Put your list on your story. The link brings people here."}</span>
+      {answers.mine && (
+        <p className="answer-share">
+          <span>
+            {shared ||
+              (answers.mine.placed?.length
+                ? "Put your list on your story. The link brings people here."
+                : "Put your answer on your story. The link brings people here.")}
+          </span>
           <button
             className="primary small"
             onClick={async () => {
+              const mine = answers.mine!;
               try {
-                const how = await shareTierStory({
-                  postId,
-                  title: title ?? "My tier list",
-                  placed: answers.mine!.placed!,
-                });
+                const how = mine.placed?.length
+                  ? await shareTierStory({
+                      postId,
+                      title: title ?? "My tier list",
+                      placed: mine.placed,
+                    })
+                  : await (async () => {
+                      const photo = await photoData(cover);
+                      return shareStory(postId, title ?? "My answer", "smudge-answer.png", (link) =>
+                        answerStorySvg({
+                          title: title ?? "My answer",
+                          mine:
+                            mine.of === 1 && mine.pick === undefined
+                              ? mine.score
+                                ? "Yes"
+                                : "No"
+                              : said(mine),
+                          friends: answers.friends
+                            .filter((f) => f.userId !== mine.userId)
+                            .map((f) => ({ name: f.name.split(" ")[0] ?? f.name, said: said(f) })),
+                          count: answers.count,
+                          link,
+                          photo,
+                        }),
+                      );
+                    })();
                 setShared(
                   how === "shared"
                     ? "Shared."
@@ -102,6 +133,9 @@ export function FriendAnswers({
             <Share2 size={13} /> Share to story
           </button>
         </p>
+      )}
+      {answers.mine && (
+        <PushOffer compact reason="Get a notification when your friends answer this too." />
       )}
       {answers.mine && follow && (
         <p className="answer-follow">
