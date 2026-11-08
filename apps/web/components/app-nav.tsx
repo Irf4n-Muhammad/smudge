@@ -9,6 +9,7 @@ import {
   IdCard,
   Layers,
   LogIn,
+  LogOut,
   Palette,
   Settings,
   ShieldCheck,
@@ -62,10 +63,13 @@ export function MoreMenu({
   moderator,
   production,
   demo,
+  onLogout,
   onPick,
 }: {
   moderator: boolean;
   production: boolean;
+  /** Given when a real account is signed in: the menu offers a way out instead of a way in. */
+  onLogout?: (() => void) | undefined;
   /** The local playground's account switcher; absent in production. */
   demo?: { users: User[]; meId: string; onSwitch: (id: string) => void } | null;
   onPick: (key: MoreKey) => void;
@@ -97,15 +101,24 @@ export function MoreMenu({
           </select>
         </label>
       )}
-      {!production && demo && (
+      {onLogout ? (
         <div className="more-menu-row demo-auth">
-          <button className="text-button signup-link" onClick={() => onPick("signup")}>
-            <UserPlus size={14} /> Create an account
-          </button>
-          <button className="text-button signup-link" onClick={() => onPick("login")}>
-            <LogIn size={14} /> Log in
+          <button className="text-button signup-link" onClick={onLogout}>
+            <LogOut size={14} /> Log out
           </button>
         </div>
+      ) : (
+        !production &&
+        demo && (
+          <div className="more-menu-row demo-auth">
+            <button className="text-button signup-link" onClick={() => onPick("signup")}>
+              <UserPlus size={14} /> Create an account
+            </button>
+            <button className="text-button signup-link" onClick={() => onPick("login")}>
+              <LogIn size={14} /> Log in
+            </button>
+          </div>
+        )
       )}
     </div>
   );

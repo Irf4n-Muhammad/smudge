@@ -30,6 +30,7 @@ import type { Boot } from "./types";
 import {
   DecorCredit,
   DecorFrame,
+  decorReach,
   FullScreenButton,
   FullScreenPost,
   MomentCover,
@@ -341,7 +342,11 @@ export function PostCard({
           </div>
         </div>
       </header>
-      <div className="world-window">
+      <div
+        className="world-window"
+        // The theme's top pieces get their own room instead of covering the post above.
+        style={{ marginTop: Math.max(0, decorReach(post.decoration) - 14) || undefined }}
+      >
         <DecorFrame post={post}>
           {moment ? (
             <MomentCover post={post} onOpen={() => setFull(true)} />
@@ -396,6 +401,7 @@ export function PostCard({
         {takesAnswers && (
           <FriendAnswers
             postId={post.id}
+            title={post.metadata.title}
             version={answered}
             follow={
               post.ownerId !== boot.actor.userId && !boot.following.includes(post.ownerId)

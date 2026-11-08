@@ -1,4 +1,5 @@
 "use client";
+import { PictureRail, RailDots } from "./rail";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -384,51 +385,27 @@ export function PostEditor({
         <p className="easy-sub">
           Pick a style. You can change everything after, and switch styles any time.
         </p>
-        <div
-          className="easy-vibes"
-          role="listbox"
-          aria-label="Post styles"
-          onScroll={(e) => {
-            const row = e.currentTarget;
-            const mid = row.scrollLeft + row.clientWidth / 2;
-            let best = 0;
-            Array.from(row.children).forEach((c, i) => {
-              const el = c as HTMLElement;
-              const b = row.children[best] as HTMLElement;
-              if (
-                Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid) <
-                Math.abs(b.offsetLeft + b.offsetWidth / 2 - mid)
-              )
-                best = i;
-            });
-            if (best !== choice) setChoice(best);
-          }}
-        >
-          {postStyles.map((s, i) => (
-            <button
-              key={s}
-              role="option"
-              aria-selected={i === choice}
-              aria-label={postStyleInfo[s].name}
-              className={`easy-vibe ${i === choice ? "on" : ""}`}
-              onClick={(e) => {
-                setChoice(i);
-                e.currentTarget.scrollIntoView({ inline: "center", block: "nearest" });
-              }}
-            >
-              <img src={`/post-styles/${s}.jpg`} alt="" />
-            </button>
-          ))}
-        </div>
-        <div className="easy-vibe-name">
-          <strong>{postStyleInfo[style].name}</strong>
-          <span>{postStyleInfo[style].note}</span>
-          <span className="easy-dots" aria-hidden="true">
-            {postStyles.map((s, i) => (
-              <i key={s} className={i === choice ? "on" : ""} />
-            ))}
-          </span>
-        </div>
+        <PictureRail
+          label="Post styles"
+          items={postStyles.map((s) => ({
+            key: s,
+            name: postStyleInfo[s].name,
+            image: `/post-styles/${s}.jpg`,
+          }))}
+          index={choice}
+          setIndex={setChoice}
+          below={(goTo) => (
+            <div className="easy-vibe-name">
+              <strong>{postStyleInfo[style].name}</strong>
+              <span>{postStyleInfo[style].note}</span>
+              <RailDots
+                names={postStyles.map((s) => postStyleInfo[s].name)}
+                index={choice}
+                goTo={goTo}
+              />
+            </div>
+          )}
+        />
         {message && (
           <p className="easy-message" role="status">
             {message}

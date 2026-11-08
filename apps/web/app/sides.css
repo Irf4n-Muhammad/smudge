@@ -222,6 +222,14 @@
   align-items: center;
   gap: 4px;
 }
+.share-card {
+  padding: 16px 28px 24px;
+}
+@media (max-width: 700px) {
+  .share-card {
+    padding: 14px 18px 20px;
+  }
+}
 .share-card-preview {
   margin: 12px 0;
   aspect-ratio: 4 / 5;

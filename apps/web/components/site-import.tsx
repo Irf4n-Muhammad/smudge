@@ -67,6 +67,13 @@ export function SiteImport({
   const queue = useRef<Promise<void>>(Promise.resolve());
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
+  // Escape leaves the first step like any other sheet; the editor keeps its own Cancel.
+  useEffect(() => {
+    if (step !== "link") return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [step, onClose]);
   const [frameHeight, setFrameHeight] = useState(720);
   useEffect(() => {
     if (window.matchMedia("(min-width: 900px)").matches) setDevice("pc");

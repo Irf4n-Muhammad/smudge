@@ -16,7 +16,8 @@ const messages: Record<string, string> = {
   EMAIL_TAKEN: "There is already an account with this email. Log in instead.",
   HANDLE_TAKEN: "That username is taken. Try another one.",
   PASSWORD_TOO_SHORT: "Use at least 10 characters for your password.",
-  PASSWORD_TOO_GUESSABLE: "That password is too easy to guess. Try a longer phrase.",
+  PASSWORD_TOO_GUESSABLE: "That password is too common. Try a few words you will remember.",
+  PASSWORD_HAS_USERNAME: "Leave your username out of your password.",
   LINK_INVALID_OR_EXPIRED: "This link has expired or was already used. Ask for a new one.",
   TOO_MANY_EMAILS: "We already sent a few emails. Check your inbox and spam folder.",
   ACCOUNT_SUSPENDED: "This account is suspended for breaking the community rules.",
@@ -24,7 +25,6 @@ const messages: Record<string, string> = {
     "An account with this email exists but its email is not confirmed. Log in with your password and confirm it first.",
   GOOGLE_EMAIL_UNVERIFIED: "Google has not verified that email address.",
   GOOGLE_STATE_MISMATCH: "Google sign-in expired. Please try again.",
-  PASSWORDS_DIFFER: "The two passwords are not the same.",
 };
 export class AuthError extends Error {
   constructor(
@@ -60,6 +60,8 @@ export async function authApi<T = unknown>(path: string, body?: unknown): Promis
       HANDLE_TAKEN: ["handle"],
       EMAIL_TAKEN: ["email"],
       LOGIN_INCORRECT: ["password"],
+      PASSWORD_TOO_GUESSABLE: ["password"],
+      PASSWORD_HAS_USERNAME: ["password"],
     };
     throw new AuthError(value.error ?? "INTERNAL_ERROR", byField[value.error] ?? []);
   }
@@ -126,14 +128,29 @@ function Field({
 }
 
 /** Length first, then variety: a long plain phrase beats a short clever one. */
-export function passwordStrength(value: string): { level: 0 | 1 | 2 | 3; label: string } {
+/** "Rina Putri" → "rinaputri": letters and numbers only, accents dropped, at most 24. */
+export function suggestHandle(name: string) {
+  return name
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 24);
+}
+
+export function passwordStrength(
+  value: string,
+  handle = "",
+): { level: 0 | 1 | 2 | 3; label: string } {
   if (value.length < 10) return { level: 0, label: value ? "Too short" : "" };
+  // The same rule the server holds: a password with the username in it is refused.
+  if (handle.length >= 5 && value.toLowerCase().includes(handle.toLowerCase()))
+    return { level: 0, label: "Has your username" };
   const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^\w\s]/, /\s/].filter((re) => re.test(value)).length;
   const level = value.length >= 16 && kinds >= 2 ? 3 : value.length >= 12 || kinds >= 3 ? 2 : 1;
   return { level, label: ["", "Okay", "Good", "Strong"][level]! };
 }
-function Strength({ value }: { value: string }) {
-  const { level, label } = passwordStrength(value);
+function Strength({ value, handle }: { value: string; handle: string }) {
+  const { level, label } = passwordStrength(value, handle);
   if (!value) return null;
   return (
     <span className="auth-strength" data-level={level} aria-live="polite">
@@ -203,12 +220,10 @@ export function AuthForms({
     [handle, setHandle] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
-    [repeat, setRepeat] = useState(""),
+    [handleTyped, setHandleTyped] = useState(false),
     [sent, setSent] = useState(false);
-  const mismatch = mode === "signup" && repeat.length > 0 && repeat !== password;
   const { error, fieldError, busy, submit } = useSubmit(async () => {
     if (mode === "signup") {
-      if (repeat !== password) throw new AuthError("PASSWORDS_DIFFER", ["repeat"]);
       await authApi("/auth/signup", { name, handle, email, password });
       rememberAccount();
       await onSignedIn(true);
@@ -222,6 +237,8 @@ export function AuthForms({
     }
   });
   const go = (next: AuthMode) => {
+    // A username typed to log in is not an email; don't carry it into a field that wants one.
+    if (next !== "login" && !email.includes("@")) setEmail("");
     setMode(next);
     setSent(false);
   };
@@ -279,7 +296,11 @@ export function AuthForms({
                   autoComplete="name"
                   placeholder="Rina Putri"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    // The username follows the name until it is typed by hand.
+                    if (!handleTyped) setHandle(suggestHandle(e.target.value));
+                  }}
                 />
               </Field>
               <Field
@@ -299,7 +320,10 @@ export function AuthForms({
                     autoComplete="username"
                     placeholder="rina"
                     value={handle}
-                    onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/\s/g, ""))}
+                    onChange={(e) => {
+                      setHandleTyped(true);
+                      setHandle(e.target.value.toLowerCase().replace(/\s/g, ""));
+                    }}
                   />
                 </span>
               </Field>
@@ -339,26 +363,7 @@ export function AuthForms({
                 minLength={mode === "signup" ? 10 : 1}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
               />
-              {mode === "signup" && <Strength value={password} />}
-            </Field>
-          )}
-          {mode === "signup" && (
-            <Field
-              id="auth-repeat"
-              label="Repeat password"
-              error={
-                mismatch || fieldError === "repeat"
-                  ? "The two passwords are not the same."
-                  : undefined
-              }
-            >
-              <PasswordInput
-                id="auth-repeat"
-                value={repeat}
-                onChange={setRepeat}
-                minLength={10}
-                autoComplete="new-password"
-              />
+              {mode === "signup" && <Strength value={password} handle={handle} />}
             </Field>
           )}
           {mode === "forgot" && (
@@ -369,7 +374,7 @@ export function AuthForms({
               {error}
             </p>
           )}
-          <button className="primary auth-submit" disabled={busy || mismatch}>
+          <button className="primary auth-submit" disabled={busy}>
             {mode === "signup" ? "Create account" : mode === "login" ? "Log in" : "Send reset link"}
           </button>
           {mode === "login" && (

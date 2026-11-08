@@ -204,7 +204,7 @@ test("the easy editor: pick a vibe, tap to edit, add The Wall, publish, a friend
   }
 });
 
-test("every vibe can be edited by tapping it, without the preview flashing", async ({ page }) => {
+test("both vibes can be picked and edited, switching between them", async ({ page }) => {
   test.setTimeout(120000);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?profile=you");
@@ -217,35 +217,23 @@ test("every vibe can be edited by tapping it, without the preview flashing", asy
   await expect(go.or(editing)).toBeVisible();
   if (!(await go.isVisible()))
     await page.getByRole("button", { name: "Vibe", exact: true }).click();
-  await page.getByRole("option", { name: "Room" }).click();
+  // Only the two newest looks are on offer.
+  await expect(
+    page.getByRole("listbox", { name: "Profile vibes" }).getByRole("option"),
+  ).toHaveCount(2);
+  await page.getByRole("option", { name: "Track" }).click();
   await go.click();
   await expect(editing).toBeVisible();
   const frame = page.locator(".easy-layer.shown iframe").contentFrame();
-
-  await frame.locator("#bio").click();
-  await page.getByRole("textbox", { name: "Bio" }).fill("Plants, tapes and too many mugs.");
-  await expect(page.getByText("Draft saved · only you see it")).toBeVisible();
-  await expect(frame.locator("#bio")).toHaveText("Plants, tapes and too many mugs.");
-  // While the next version loads, the current one stays on screen.
-  await expect(page.locator(".easy-layer.shown")).toHaveCount(1);
-
-  await frame.locator(".note").click();
-  await page.getByRole("textbox", { name: "Your pinned note" }).fill("stuff I love.");
-  await expect(frame.locator(".note")).toHaveText("stuff I love.");
-  await page.getByRole("button", { name: "Colors", exact: true }).click();
-  await page.getByRole("radio", { name: "Sage" }).click();
-  await expect(page.getByText("Draft saved · only you see it")).toBeVisible();
   await expect(frame.locator("html")).toHaveAttribute("data-editing", "on");
-  await page.screenshot({ path: "artifacts/easy-editor-room.png" });
+  await page.screenshot({ path: "artifacts/easy-editor-track.png" });
 
-  // Ink & Paper: tapping the posts opens their layout.
   await page.getByRole("button", { name: "Vibe", exact: true }).click();
-  await page.getByRole("option", { name: "Ink & Paper" }).click();
+  await page.getByRole("option", { name: "Paint wall" }).click();
   await go.click();
   await expect(editing).toBeVisible();
-  await frame.locator(".published-posts").click();
-  await page.getByRole("button", { name: "Round" }).click();
-  await expect(page.getByText("Draft saved · only you see it")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Round" })).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.locator(".easy-layer.shown iframe").contentFrame().locator("html"),
+  ).toHaveAttribute("data-editing", "on");
   await page.getByRole("button", { name: "Cancel" }).click();
 });

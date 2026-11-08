@@ -13,7 +13,8 @@ import {
   profileDocument,
   type RelayContribution,
 } from "../packages/contracts/src/profile.js";
-import { rakaPackage, basicPackage } from "../apps/server/raka.js";
+import { basicPackage } from "../apps/server/raka.js";
+import { relayPackage as rakaPackage } from "./relay-fixture.js";
 
 const fixture = () => {
   const p = structuredClone(rakaPackage);
@@ -135,4 +136,34 @@ test("relay survives design changes and restart, blocks disabled historical writ
     store.close();
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("Kai's page loses an old Drawing Relay at seed time and keeps the rest of the page", async () => {
+  const { seedRaka } = await import("../apps/server/raka.js");
+  const store = await Store.open(join(mkdtempSync(join(tmpdir(), "forma-kai-")), "db.sqlite"));
+  store.transaction(() =>
+    store.put("user", "raka", {
+      id: "raka",
+      name: "Kai Moreno",
+      handle: "kai.inks",
+      bio: "",
+      initials: "KM",
+      color: "#e83727",
+    }),
+  );
+  const profiles = new ProfileService(new SocialService(store));
+  const kai = { userId: "raka" };
+  const old = profiles.create(kai, fixture());
+  profiles.publish(kai, old.id, old.revision, 0);
+  store.transaction(() => store.put("seed", "raka-v2", { complete: true }));
+  seedRaka(profiles);
+  const page = profiles.public("raka");
+  assert.equal(page.version, 2);
+  assert.ok(!page.manifest!.capabilities.some((c) => c.startsWith("relay.")));
+  const parts = page.manifest!.schemaVersion === 2 ? page.manifest!.parts : {};
+  assert.equal(parts.feature, undefined);
+  assert.ok(parts.post && parts.profile);
+  // Running the seed again changes nothing.
+  seedRaka(profiles);
+  assert.equal(profiles.public("raka").version, 2);
 });

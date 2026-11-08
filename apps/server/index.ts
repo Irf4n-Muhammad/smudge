@@ -28,9 +28,20 @@ import {
 } from "../../packages/contracts/src/profile.js";
 import { seedProfiles, seedDaniPage, seedInesPosts, profileTemplates } from "./seed-profiles.js";
 import { IdentityService } from "../../packages/core/src/identity.js";
+import { OrgEventsService } from "../../packages/core/src/org-events.js";
+import { PassportService } from "../../packages/core/src/passport.js";
+import { OrgService } from "../../packages/core/src/orgs.js";
+import { OprecService } from "../../packages/core/src/oprec.js";
+import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
-import { seedIdentity } from "./seed-identity.js";
+import {
+  seedIdentity,
+  seedOrgRooms,
+  seedOrgCompany,
+  seedOrgPastTerm,
+  seedOrgTerms,
+} from "./seed-identity.js";
 import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
@@ -66,6 +77,9 @@ import { SpotifyService, spotifyStart } from "./spotify.js";
 import type { NowView } from "../../packages/contracts/src/now.js";
 import type { Publication } from "../../packages/core/src/social.js";
 import { importSite } from "./site-import.js";
+import { frameCheck, readSiteText, siteStatus } from "./site-fetch.js";
+import { resolveTxt } from "node:dns/promises";
+import { OwnSiteService } from "../../packages/core/src/own-site.js";
 import { SharingService } from "../../packages/core/src/sharing.js";
 import { MediaService, maxVideoBytes } from "../../packages/core/src/media.js";
 
@@ -94,6 +108,9 @@ process.on("exit", () => {
   } catch {}
 });
 const store = await Store.open(resolve(dataDir, "forma.sqlite"));
+// Opens of public posts and organisation pages, counted per day with no visitor id.
+const opens = new OpenCounter(store);
+setInterval(() => opens.flush(), 60_000).unref();
 const service = new SocialService(store);
 seedSharedAssets(service);
 if (config.demoContent) {
@@ -113,6 +130,16 @@ const identity = new IdentityService(
   clock,
   config.mail.provider === "inbox",
 );
+const orgService = new OrgService(service, identity, clock);
+const oprecs = new OprecService(service, identity, orgService, clock);
+const orgEvents = new OrgEventsService(service, orgService, identity, clock);
+const passports = new PassportService(service, identity, orgService, orgEvents);
+// Paid tickets: a pretend checkout in demo mode; off in production until a provider is chosen.
+if (config.mode === "demo")
+  orgEvents.payments = {
+    name: "demo",
+    charge: () => ({ ref: `demo-${randomUUID()}` }),
+  };
 const accounts = new AccountService(
   service,
   identity,
@@ -156,6 +183,8 @@ accounts.erasers.push((userId) => momentDay.erase(userId));
 momentDay.cardFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 const messages = new MessageService(service, community, clock);
+orgService.circles = messages;
+orgService.blockedEither = (a, b) => community.blockedEither(a, b);
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
 if (deliver) startMailWorker(store, deliver);
@@ -165,6 +194,10 @@ setInterval(() => digest.run(), 5 * 60_000).unref();
 const profiles = new ProfileService(service);
 if (config.demoContent) {
   seedIdentity(identity, service);
+  seedOrgTerms(service);
+  seedOrgRooms(service);
+  seedOrgCompany(service);
+  seedOrgPastTerm(service);
   seedProfiles(profiles);
   seedSmudge(service);
   seedFillFormat(service);
@@ -266,7 +299,7 @@ if (config.demoContent) {
   mods.seed(
     "50000000-0000-4000-8000-000000000001",
     "Ink & Paper",
-    "Cut paper posts, orbit highlights and a collaborative drawing relay.",
+    "Cut paper posts and orbit highlights.",
     profileTemplates.raka,
   );
   mods.seed(
@@ -442,8 +475,10 @@ api.get("/api/bootstrap", (_req, res) =>
     sides: sidesService.me(actor(res)),
   }),
 );
-const authLimit = rateLimit({ windowMs: 15 * 60_000, max: 30 });
-const signupLimit = rateLimit({ windowMs: 60 * 60_000, max: 10 });
+// The local playground is for trying sign-up over and over; real servers keep the tight limits.
+const authRoom = production ? 1 : 20;
+const authLimit = rateLimit({ windowMs: 15 * 60_000, max: 30 * authRoom });
+const signupLimit = rateLimit({ windowMs: 60 * 60_000, max: 10 * authRoom });
 const signedIn = (res: Response) => (res.locals.actor ? (res.locals.actor as Actor) : undefined);
 api.get("/api/auth/state", (_req, res) => {
   const current = signedIn(res);
@@ -532,7 +567,8 @@ api.get("/api/explore", (req, res) =>
     identity
       .decorate(actor(res), service.explore(actor(res), req.query.q))
       .filter((p) => !("moment" in p && p.moment))
-      .map((p) => ({ ...p, ...sidesService.tag(p) })),
+      // A search mixes sides, so every result says which side it is from.
+      .map((p) => ({ ...p, ...sidesService.tag(p, !!String(req.query.q ?? "").trim()) })),
   ),
 );
 sideRoutes(
@@ -542,6 +578,203 @@ sideRoutes(
   config.publicUrl.origin,
 );
 identityRoutes(api, identity);
+// Organisations: terms, handover and the admin's view. The public face is under /api/public.
+const orgId = (value: unknown) => z.string().max(40).parse(value);
+api.post("/api/orgs", rateLimit({ windowMs: 60 * 60_000, max: 10 }), (req, res) =>
+  res.json(orgService.createOrg(actor(res), req.body)),
+);
+// A term's room: members only; a locked term is read only.
+const roomLimit = rateLimit({ windowMs: 60_000, max: 30 });
+api.get("/api/orgs/:id/rooms", (req, res) =>
+  res.json(orgService.rooms(actor(res), orgId(req.params.id))),
+);
+api.get("/api/orgs/:id/rooms/:term", (req, res) =>
+  res.json(orgService.room(actor(res), orgId(req.params.id), orgId(req.params.term))),
+);
+api.post("/api/orgs/:id/rooms/:term/posts", roomLimit, (req, res) =>
+  res.json(orgService.post(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.post("/api/orgs/:id/rooms/:term/state", roomLimit, (req, res) =>
+  res.json(orgService.setState(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.delete("/api/orgs/:id/rooms/:term/state/:item", (req, res) =>
+  res.json(
+    orgService.removeState(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      orgId(req.params.item),
+    ),
+  ),
+);
+// Open recruitment: apply with your profile; accepted means a chapter from the organisation.
+api.post("/api/orgs/:id/oprec", (req, res) =>
+  res.json(oprecs.create(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/oprec/:oprec/close", (req, res) =>
+  res.json(oprecs.close(actor(res), orgId(req.params.id), orgId(req.params.oprec))),
+);
+api.post("/api/orgs/:id/oprec/:oprec/apply", roomLimit, (req, res) =>
+  res.json(oprecs.apply(actor(res), orgId(req.params.id), orgId(req.params.oprec), req.body)),
+);
+api.get("/api/orgs/:id/oprec/:oprec/mine", (req, res) =>
+  res.json(oprecs.mine(actor(res), orgId(req.params.id), orgId(req.params.oprec))),
+);
+api.get("/api/orgs/:id/oprec/:oprec/applications", (req, res) =>
+  res.json(oprecs.list(actor(res), orgId(req.params.id), orgId(req.params.oprec))),
+);
+api.post("/api/orgs/:id/oprec/:oprec/applications/:app/decide", (req, res) =>
+  res.json(
+    oprecs.decide(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.oprec),
+      orgId(req.params.app),
+      req.body,
+    ),
+  ),
+);
+api.post("/api/orgs/:id/join-link", (req, res) =>
+  res.json(orgService.joinLink(actor(res), orgId(req.params.id))),
+);
+api.get("/api/orgs/:id/manage", (req, res) =>
+  res.json(orgService.manage(actor(res), orgId(req.params.id))),
+);
+api.post("/api/orgs/:id/terms", (req, res) =>
+  res.json(orgService.startTerm(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/terms/:term/lock", (req, res) =>
+  res.json(orgService.lockTerm(actor(res), orgId(req.params.id), orgId(req.params.term))),
+);
+api.post("/api/orgs/:id/rooms/:term/circle", roomLimit, (req, res) =>
+  res.json(
+    orgService.startCircle(actor(res), orgId(req.params.id), orgId(req.params.term), req.body),
+  ),
+);
+api.post("/api/orgs/:id/rooms/:term/circle/join", (req, res) =>
+  res.json(orgService.joinCircle(actor(res), orgId(req.params.id), orgId(req.params.term))),
+);
+api.put("/api/orgs/:id/look", (req, res) =>
+  res.json(orgService.setLook(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/handover", (req, res) =>
+  res.json(orgService.handover(actor(res), orgId(req.params.id), req.body)),
+);
+api.put("/api/orgs/:id/visibility", (req, res) =>
+  res.json(orgService.setVisibility(actor(res), orgId(req.params.id), req.body)),
+);
+// Events: each one a crew stamp the admin gives to the people who ran it.
+api.get("/api/orgs/:id/events", (req, res) => {
+  const id = orgId(req.params.id);
+  const userId = orgService.requireAdmin(actor(res), id);
+  const list = orgService.events(id);
+  res.json({
+    ...list,
+    events: list.events.map((e) => ({
+      ...e,
+      tickets: orgEvents.has(id, e.id) ? orgEvents.view(id, e.id, userId) : null,
+    })),
+  });
+});
+// Free tickets in waves, and the door that lets ticket holders in.
+api.put("/api/orgs/:id/events/:stamp/tickets", (req, res) =>
+  res.json(
+    orgEvents.setTickets(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body),
+  ),
+);
+api.post("/api/orgs/:id/events/:stamp/claim", roomLimit, (req, res) =>
+  res.json(orgEvents.claim(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/release", roomLimit, (req, res) =>
+  res.json(orgEvents.release(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/pay", roomLimit, (req, res) =>
+  res.json(orgEvents.pay(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+// At the event: meeting people by scanning each other, and The Hunt.
+api.get("/api/orgs/:id/events/:stamp/swap", (req, res) =>
+  res.json(orgEvents.swapCode(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/swap", roomLimit, (req, res) =>
+  res.json(orgEvents.swap(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body)),
+);
+api.put("/api/orgs/:id/events/:stamp/hunt", (req, res) =>
+  res.json(orgEvents.setHunt(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body)),
+);
+api.get("/api/orgs/:id/events/:stamp/hunt", (req, res) =>
+  res.json(orgEvents.huntSheet(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/hunt/find", roomLimit, (req, res) =>
+  res.json(orgEvents.find(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body)),
+);
+// A fan passport: someone's organisations, stamps and stubs, as the viewer may see them.
+api.get("/api/passport/:handle", (req, res) =>
+  res.json(passports.passport(actor(res), z.string().max(40).parse(req.params.handle))),
+);
+api.get("/api/orgs/:id/events/:stamp/door", (req, res) =>
+  res.json(orgEvents.door(actor(res), orgId(req.params.id), orgId(req.params.stamp))),
+);
+api.post("/api/orgs/:id/events/:stamp/arrive", roomLimit, (req, res) =>
+  res.json(orgEvents.arrive(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body)),
+);
+// Keeping the talk decent: slow mode, muting, reports, taking a message down.
+api.put("/api/orgs/:id/rooms/:term/slow", (req, res) =>
+  res.json(orgService.setSlow(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.post("/api/orgs/:id/rooms/:term/mute", (req, res) =>
+  res.json(orgService.setMute(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
+);
+api.post("/api/orgs/:id/rooms/:term/posts/:post/report", roomLimit, (req, res) =>
+  res.json(
+    orgService.report(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      z.string().uuid().parse(req.params.post),
+      req.body,
+    ),
+  ),
+);
+api.delete("/api/orgs/:id/rooms/:term/posts/:post", (req, res) =>
+  res.json(
+    orgService.removePost(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      z.string().uuid().parse(req.params.post),
+    ),
+  ),
+);
+api.post("/api/orgs/:id/rooms/:term/posts/:post/dismiss", (req, res) =>
+  res.json(
+    orgService.dismissReports(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      z.string().uuid().parse(req.params.post),
+    ),
+  ),
+);
+api.post("/api/orgs/:id/events", roomLimit, (req, res) =>
+  res.json(orgService.createEvent(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/events/:stamp/award", roomLimit, (req, res) =>
+  res.json(
+    orgService.awardCrew(actor(res), orgId(req.params.id), orgId(req.params.stamp), req.body),
+  ),
+);
+// Posts written together: a member drafts, an admin sends it out as the organisation.
+api.get("/api/orgs/:id/posts", (req, res) =>
+  res.json(orgService.posts(actor(res), orgId(req.params.id))),
+);
+api.post("/api/orgs/:id/posts", roomLimit, (req, res) =>
+  res.json(orgService.submitPost(actor(res), orgId(req.params.id), req.body)),
+);
+api.post("/api/orgs/:id/posts/:post/review", (req, res) =>
+  res.json(
+    orgService.reviewPost(actor(res), orgId(req.params.id), orgId(req.params.post), req.body),
+  ),
+);
 themeRoutes(api, studio, rateLimit({ windowMs: 60 * 60_000, max: 20 }));
 communityRoutes(api, community, messages, privacy, accounts, clearSession, authLimit);
 // Google sign-in. The state and PKCE verifier live in a short-lived cookie scoped to the
@@ -657,6 +890,15 @@ api.get("/api/users/:id/now", async (req, res) => {
 });
 api.get("/api/users/:id/posts", (req, res) =>
   res.json(pages.posts(actor(res).userId, String(req.params.id))),
+);
+// The same posts as full cards, so a profile can open them whichever side the viewer is in.
+api.get("/api/users/:id/post-views", (req, res) =>
+  res.json(
+    identity
+      .decorate(actor(res), service.byOwner(actor(res), String(req.params.id)))
+      .filter((p) => !identity.isMoment(p.id))
+      .map((p) => ({ ...p, ...sidesService.tag(p) })),
+  ),
 );
 api.get("/api/users/:id/timeline", async (req, res) => {
   await spotify.poll(String(req.params.id));
@@ -890,9 +1132,56 @@ api.get("/api/public/sides/:id", guestLimit, (req, res) => {
 api.get("/api/public/sides/:id/home", guestLimit, (req, res) =>
   res.json(sharing.side(z.string().max(40).parse(req.params.id))),
 );
-api.get("/api/public/posts/:id", guestLimit, (req, res) =>
-  res.json(sharing.post(String(req.params.id))),
+api.get("/api/public/orgs/:id", guestLimit, (req, res) => {
+  const join = typeof req.query.join === "string" ? req.query.join.slice(0, 12) : undefined;
+  const page = orgService.publicPage(
+    z.string().max(40).parse(req.params.id),
+    signedIn(res)?.userId,
+    join,
+  );
+  opens.count("org", page.id);
+  const viewer = signedIn(res)?.userId;
+  // Its tickets come with the page, as this viewer may claim them.
+  res.json({
+    ...page,
+    tickets: orgService.canSee(page.id, viewer) ? orgEvents.list(page.id, viewer) : [],
+  });
+});
+api.get("/api/public/orgs/:id/oprec", guestLimit, (req, res) => {
+  const id = z.string().max(40).parse(req.params.id);
+  res.json({ oprec: orgService.canSee(id, signedIn(res)?.userId) ? oprecs.current(id) : null });
+});
+api.get("/api/public/orgs/:id/join/:code", guestLimit, (req, res) =>
+  res.json(
+    orgService.joinPreview(
+      z.string().max(40).parse(req.params.id),
+      z.string().max(12).parse(req.params.code),
+    ),
+  ),
 );
+api.get("/api/public/posts/:id", guestLimit, (req, res) => {
+  const post = sharing.post(String(req.params.id));
+  opens.count("post", post.id);
+  res.json(post);
+});
+// The trial's numbers, for moderators: counts only, never who.
+api.get("/api/trial", (req, res) => {
+  if (!isAdmin(actor(res).userId)) throw new AppError("FORBIDDEN", 403);
+  const ids = (v: unknown) =>
+    z
+      .string()
+      .max(400)
+      .optional()
+      .parse(v)
+      ?.split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .slice(0, 10) ?? [];
+  res.json({
+    posts: ids(req.query.post).map((id) => ({ id, ...postTrial(store, opens, id) })),
+    orgs: ids(req.query.org).map((id) => ({ id, ...orgTrial(store, opens, id) })),
+  });
+});
 api.get("/api/public/posts/:id/cover", guestLimit, (req, res) => {
   const asset = sharing.cover(String(req.params.id));
   res.type(asset.mime).send(Buffer.from(asset.base64, "base64"));
@@ -1091,6 +1380,55 @@ const importAllowHosts = production
 api.post("/api/imports", importLimit, async (req, res) =>
   res.json(await importSite(service, actor(res), req.body, { allowHosts: importAllowHosts })),
 );
+// Whether an outside page lets itself open in the in-app sheet; only its headers are read.
+const frameLimit = rateLimit({ windowMs: 60_000, max: 30 });
+api.get("/api/frame-check", frameLimit, async (req, res) => {
+  const url = String(req.query.url ?? "").slice(0, 500);
+  res.json({
+    frameable: await frameCheck(url, config.publicUrl.origin, { allowHosts: importAllowHosts }),
+  });
+});
+// Your own website as your profile: set it, prove the domain is yours, or stop using it.
+const ownSites = new OwnSiteService(
+  service,
+  {
+    readText: (url) => readSiteText(url, { allowHosts: importAllowHosts }),
+    txt: async (name) => (await resolveTxt(name)).map((parts) => parts.join("")),
+  },
+  { allowHttpHosts: importAllowHosts },
+);
+accounts.erasers.push((userId) => ownSites.erase(userId));
+const siteLimit = rateLimit({ windowMs: 10 * 60_000, max: 30 });
+api.get("/api/me/site", (_req, res) => res.json({ site: ownSites.mine(actor(res)) }));
+api.post("/api/me/site", siteLimit, (req, res) =>
+  res.json({ site: ownSites.set(actor(res), req.body) }),
+);
+api.post("/api/me/site/verify", siteLimit, async (_req, res) =>
+  res.json({ site: await ownSites.verify(actor(res)) }),
+);
+api.delete("/api/me/site", (_req, res) => res.json(ownSites.remove(actor(res))));
+// Whether a profile is a website right now. Answers are kept a minute so visits don't hammer it.
+const siteSeen = new Map<string, { at: number; status: Awaited<ReturnType<typeof siteStatus>> }>();
+api.get("/api/profiles/:ownerId/site", frameLimit, async (req, res) => {
+  const ownerId = String(req.params.ownerId);
+  community.assertVisibleUser(actor(res), ownerId);
+  await ownSites.recheck(ownerId).catch(() => undefined);
+  const site = ownSites.public(ownerId);
+  if (!site) return res.json({ site: null, status: null });
+  const key = `${ownerId}:${site.url}`;
+  let seen = siteSeen.get(key);
+  if (!seen || Date.now() - seen.at > 60_000) {
+    seen = {
+      at: Date.now(),
+      status: await siteStatus(site.url, config.publicUrl.origin, {
+        allowHosts: importAllowHosts,
+      }),
+    };
+    if (siteSeen.size > 2000) siteSeen.clear();
+    siteSeen.set(key, seen);
+  }
+  res.json({ site, status: seen.status });
+});
 api.post("/api/validate", (req, res) => res.json(service.validate(req.body)));
 api.post("/api/assets", (req, res) => res.json(service.upload(actor(res), req.body)));
 // Videos arrive as the raw file, not base64 JSON, and are kept as files (see MediaService).
@@ -1363,6 +1701,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const)
   process.on(signal, () => {
     apiServer.close();
     runtimeServer.close();
+    opens.flush();
     store.close();
     process.exit(0);
   });

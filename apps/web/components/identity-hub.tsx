@@ -102,6 +102,11 @@ const methodLabel: Record<Chapter["method"], string> = {
   "photo-location": "Photo taken there",
 };
 
+/** "7th Head of Comms": where a title sits in its organisation's line. */
+const lineName = ({ n, role }: { n: number; role: string }) => {
+  const tail = n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th");
+  return `${n}${tail} ${role}`;
+};
 export function ChapterList({
   chapters,
   editable,
@@ -125,6 +130,7 @@ export function ChapterList({
           <span className="chapter-text">
             <strong>{c.label}</strong>
             <small>
+              {c.line ? `${lineName(c.line)} · ` : ""}
               {methodLabel[c.method]}
               {c.from ? ` · ${c.from}${c.to ? ` to ${c.to}` : ""}` : ""}
             </small>
@@ -291,6 +297,9 @@ export function IdentityHub({
           notify={notify}
         />
       )}
+      <p className="fineprint">
+        Run a club, society or fan club? <a href="/o/new">Start an organisation</a>
+      </p>
     </section>
   );
 }
@@ -698,6 +707,13 @@ function InviteAdmin({
   return (
     <section className="invite-admin">
       <span className="eyebrow">YOU MANAGE {orgs.map((o) => o.name.toUpperCase()).join(", ")}</span>
+      <p className="org-links">
+        {orgs.map((o) => (
+          <a key={o.id} href={`/o/${encodeURIComponent(o.id)}`}>
+            {o.name}: page, terms, handover ↗
+          </a>
+        ))}
+      </p>
       <form
         className="identity-form"
         onSubmit={async (e) => {

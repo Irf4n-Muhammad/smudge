@@ -366,6 +366,20 @@ export class SocialService {
     );
   }
   /**
+   * One person's posts as this viewer may see them, newest first. Ignores the active side: a
+   * profile shows everything of theirs you are allowed to see, wherever it was posted.
+   */
+  byOwner(actor: Actor, ownerId: string): PostView[] {
+    this.actor(actor);
+    return this.views(
+      actor,
+      this.store
+        .all<Publication>("post")
+        .reverse()
+        .filter((p) => p.ownerId === ownerId && this.viewFilter(actor.userId, p)),
+    );
+  }
+  /**
    * A format and every version of it the viewer can see, newest version first. Ignores the
    * active side: the page is about the format, not about where you are scrolling.
    */
@@ -455,14 +469,25 @@ export class SocialService {
       .filter(Boolean)
       .map((w) => w.replace(/^[@#]/, ""));
     const posts = this.feed(actor);
-    if (words.length)
-      return posts
-        .filter((p) => {
-          const text =
-            `${p.metadata.title} ${p.metadata.caption} ${p.author.name} ${p.author.handle}`.toLowerCase();
-          return words.every((w) => text.includes(w));
-        })
-        .slice(0, 60);
+    if (words.length) {
+      // A search looks in every side you may see; the side you are in comes first.
+      const here = new Set(posts.map((p) => p.id));
+      const matches = this.views(
+        actor,
+        this.store
+          .all<Publication>("post")
+          .reverse()
+          .filter((p) => this.viewFilter(me, p)),
+      ).filter((p) => {
+        const text =
+          `${p.metadata.title} ${p.metadata.caption} ${p.author.name} ${p.author.handle}`.toLowerCase();
+        return words.every((w) => text.includes(w));
+      });
+      return [
+        ...matches.filter((p) => here.has(p.id)),
+        ...matches.filter((p) => !here.has(p.id)),
+      ].slice(0, 60);
+    }
     const following = new Set(this.following(actor));
     const now = Date.now();
     const score = (p: PostView) =>

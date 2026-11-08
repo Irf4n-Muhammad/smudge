@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { openMore, openPeople, pickFeed } from "./nav";
+import { openMore, openPeople } from "./nav";
 
 test("cockpit orbit selects real posts, opens isolated worlds and persists social actions", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  await pickFeed(page, "Enter hyperspace");
+  // Hidden from the feed menu; the mode still opens from its link.
+  await page.goto("/?mode=cockpit");
   await expect(page).toHaveURL(/mode=cockpit/);
   const dial = page.getByRole("slider", { name: "Rotate post orbit" });
   await expect(dial).toBeVisible();

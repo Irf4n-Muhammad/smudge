@@ -144,12 +144,12 @@ const songQuiz = (() => {
 /** A tier list: one item at a time, tapped into a tier, then set beside the maker's and friends'. */
 const tierList = (() => {
   const items = [
-    ["🥞 Martabak manis", "S"],
-    ["🌶️ Seblak", "C"],
-    ["🍜 Bakso", "A"],
-    ["🍳 Nasi goreng", "A"],
-    ["🍢 Sate padang", "S"],
-    ["🧋 Es teh jumbo", "B"],
+    ["🌮 Tacos", "S"],
+    ["🌶️ Spicy ramen", "C"],
+    ["🍔 Smash burger", "A"],
+    ["🍕 Pizza slice", "A"],
+    ["🍢 Satay", "S"],
+    ["🧋 Bubble tea", "B"],
   ];
   const fields = [
     {
@@ -198,12 +198,12 @@ export function seedTierList(service: SocialService) {
     ["dani", ["S", "B", "S", "B", "A", "A"]],
   ];
   const names = [
-    "🥞 Martabak manis",
-    "🌶️ Seblak",
-    "🍜 Bakso",
-    "🍳 Nasi goreng",
-    "🍢 Sate padang",
-    "🧋 Es teh jumbo",
+    "🌮 Tacos",
+    "🌶️ Spicy ramen",
+    "🍔 Smash burger",
+    "🍕 Pizza slice",
+    "🍢 Satay",
+    "🧋 Bubble tea",
   ];
   service.publish(actor, draft.id, draft.revision, (post) => {
     for (const [userId, tiers] of ranked)

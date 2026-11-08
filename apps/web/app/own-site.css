@@ -1,0 +1,242 @@
+/* A profile that is the person's own website: one slim Smudge row on top, the site under it,
+   and the same page strip at the bottom as every profile. */
+.own-site-profile {
+  position: fixed;
+  inset: 0 0 0 var(--profile-rail, 0px);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+.own-site-profile .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.own-site-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  flex: none;
+  padding: 0 10px 0 16px;
+  background: var(--white, #fff);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.own-site-who {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.2;
+}
+.own-site-who strong {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.own-site-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.own-site-verified svg {
+  flex: none;
+  color: #1d9bf0;
+}
+.own-site-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.own-site-icon:hover {
+  background: var(--paper);
+}
+.own-site-bar .profile-more summary {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+}
+.own-site-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: #fff;
+}
+/* The Home tab in the rail replaces the back button, as on every profile. */
+.has-side-nav .own-site-back {
+  display: none;
+}
+.own-site-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Setting it up, in the easy editor's own full-screen style. */
+.own-site-setup .easy-sub strong {
+  color: var(--ink);
+}
+.own-site-inline-check {
+  vertical-align: -2px;
+  color: #1d9bf0;
+}
+.own-site-body {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 720px);
+  margin: 28px auto 0;
+  padding-inline: 18px;
+}
+.own-site-for {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 500 16px var(--ui);
+}
+.own-site-for strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.own-site-for .own-site-quiet {
+  margin-left: auto;
+}
+.own-site-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.own-site-steps li {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-items: start;
+  gap: 4px 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--white, #fff);
+  box-shadow: inset 0 0 0 1px var(--line);
+  counter-increment: step;
+  font: 500 15px/1.4 var(--ui);
+}
+.own-site-steps li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  grid-row: span 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+}
+.own-site-steps li > span {
+  align-self: center;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+.own-site-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  max-width: 100%;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--lime);
+  color: #111 !important;
+  font: 600 14px var(--ui);
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.own-site-chip.mono,
+.own-site-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+.own-site-path {
+  justify-self: start;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.own-site-path b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.own-site-quiet {
+  justify-self: start;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--muted) !important;
+  font: 600 14px var(--ui);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.own-site-quiet.danger {
+  color: #b42318 !important;
+}
+
+/* The way in, right under "Pick your vibe". */
+.easy-website {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100% - 36px);
+  margin: 14px 0 0 max(18px, calc(50% - 342px));
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--white, #fff);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+  font: 500 14px var(--ui);
+}
+.easy-website svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+}
+.easy-website strong {
+  font-weight: 700;
+}
+
+/* "Website" and Follow need the room of the tab icons on a phone. */
+@media (max-width: 440px) {
+  .has-site .page-strip-tabs svg {
+    display: none;
+  }
+  .has-site .page-strip-action {
+    padding: 0 16px;
+  }
+}

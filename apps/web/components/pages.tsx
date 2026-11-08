@@ -116,6 +116,7 @@ export function PageStrip({
   href,
   onPick,
   action,
+  pageLabel,
 }: {
   current: PageTab;
   posts?: number;
@@ -123,13 +124,16 @@ export function PageStrip({
   href?: (tab: PageTab) => string;
   onPick?: (tab: PageTab) => void;
   action?: StripAction;
+  /** What the landing tab is called, such as "Website" for a profile that is someone's site. */
+  pageLabel?: string;
 }) {
   const body: ReactNode =
     action?.icon === "edit" ? <Pencil size={20} aria-hidden="true" /> : action?.label;
   return (
     <div className="page-strip">
       <nav className="page-strip-tabs" aria-label="Pages">
-        {tabs.map(({ tab, label, icon: Icon }) => {
+        {tabs.map(({ tab, label: named, icon: Icon }) => {
+          const label = tab === "page" && pageLabel ? pageLabel : named;
           const on = tab === current;
           const inner = (
             <>

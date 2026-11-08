@@ -1,0 +1,656 @@
+/* The code editor for a profile and its mod library, in the Smudge look: cards, pills and one
+   accent, over the older editor styles in profiles.css. */
+
+.profile-page:has(> .profile-editor),
+.profile-editor {
+  background: var(--paper);
+  color: var(--ink);
+}
+.profile-editor,
+.mod-library {
+  accent-color: var(--accent);
+}
+.profile-editor {
+  font-family: var(--ui);
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 28px;
+  padding: 28px;
+}
+.profile-editor button,
+.mod-library button {
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  font: 600 13px/1.2 var(--ui);
+  cursor: pointer;
+}
+.profile-editor button:hover:not(:disabled),
+.mod-library button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.profile-editor .profile-primary,
+.mod-library .profile-primary,
+.profile-page .profile-controls .profile-primary {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+.profile-editor .profile-primary:hover:not(:disabled),
+.mod-library .profile-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.profile-editor button:disabled,
+.mod-library button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.profile-editor select,
+.profile-editor textarea,
+.profile-editor input:not([type="file"], [type="checkbox"], [type="range"]),
+.mod-library select,
+.mod-library textarea,
+.mod-library input:not([type="file"], [type="checkbox"]) {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--ink);
+  font: 14px/1.4 var(--ui);
+}
+.profile-editor :is(select, textarea, input):focus-visible,
+.mod-library :is(select, textarea, input):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.profile-editor label {
+  margin: 14px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.profile-editor input[type="file"] {
+  font-size: 12px;
+  color: var(--muted);
+}
+.profile-editor input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  font: 600 12px var(--ui);
+  cursor: pointer;
+}
+
+/* Sidebar: a short intro, then one card per job. */
+.profile-editor-sidebar {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 0;
+  border: 0;
+}
+.profile-editor-sidebar h1 {
+  margin: 4px 0 0;
+  font: 700 26px/1.1 var(--ui);
+  letter-spacing: -0.02em;
+}
+.profile-editor-sidebar > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 1;
+}
+.pe-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+.pe-card h2,
+.pe-card > summary {
+  margin: 0;
+  font: 700 15px/1.2 var(--ui);
+}
+.pe-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  opacity: 1;
+}
+.pe-card label {
+  margin: 0;
+}
+.pe-card > button,
+.pe-card .mod-library-open {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}
+.profile-editor-sidebar .profile-import {
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.profile-library {
+  margin: 0;
+  font-size: 13px;
+}
+.profile-library > summary {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+.profile-library h2 {
+  margin: 8px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.profile-library > button {
+  margin: 0;
+  border-radius: 12px;
+  text-align: left;
+}
+.profile-library > button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.profile-library > button:last-child {
+  margin-top: 6px;
+  text-align: center;
+}
+.profile-version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.profile-version button {
+  margin: 0;
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+/* Main column: the draft's bar, then the preview or the code. */
+.profile-edit-bar {
+  gap: 8px;
+  padding: 12px 12px 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+.profile-edit-bar strong {
+  font-size: 16px;
+}
+.profile-editor .profile-message {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--accent-light);
+  color: var(--ink);
+}
+.profile-preview-toolbar {
+  padding: 12px 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.profile-preview-toolbar button {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+.profile-preview-toolbar button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.profile-preview {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.profile-source-label {
+  color: var(--ink) !important;
+}
+.profile-editor .profile-source-label textarea {
+  font:
+    12px/1.6 ui-monospace,
+    Consolas,
+    monospace;
+  background: #17151c;
+  color: #f1ede4;
+  border-color: transparent;
+}
+.profile-editor-empty {
+  max-width: 560px;
+  margin: 40px auto;
+  padding: 32px;
+  border: 1px dashed var(--line);
+  border-radius: 24px;
+  background: var(--white);
+}
+.profile-editor-empty h2 {
+  margin: 0 0 14px;
+  font: 700 26px/1.1 var(--ui);
+}
+.profile-editor-empty ol {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding-left: 22px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.profile-editor-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Beside the preview: name and photo, parts, a photo post. Each a card. */
+.profile-authoring-controls {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0;
+}
+.profile-personalizer fieldset,
+.part-workbench,
+.profile-authoring-controls > .profile-content {
+  margin: 0;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+.profile-personalizer legend,
+.part-workbench legend {
+  float: left;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 0;
+  font: 700 15px/1.2 var(--ui);
+}
+.profile-personalizer fieldset > p,
+.part-workbench > p {
+  clear: both;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.profile-personalizer details,
+.part-workbench details {
+  margin-top: 10px;
+  font-size: 13px;
+}
+.profile-personalizer summary,
+.part-workbench summary,
+.profile-content > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+}
+.profile-content > summary {
+  font-size: 15px;
+}
+.part-surface-tabs {
+  clear: both;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.part-surface-tabs button {
+  flex: 1;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+}
+.part-surface-tabs button[aria-pressed="true"] {
+  background: var(--white);
+  border: 0;
+  box-shadow: 0 1px 3px #0002;
+}
+.part-choices button {
+  min-height: 0;
+  padding: 8px;
+  border-radius: 14px;
+  text-align: left;
+  font-weight: 400;
+}
+.part-choices button[aria-pressed="true"] {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.part-swatch,
+.part-remove > span {
+  border-radius: 10px;
+}
+.part-choices strong {
+  font-size: 12px;
+}
+.part-undo {
+  justify-self: start;
+}
+@media (min-width: 1200px) {
+  .profile-editor:has(.visual-mode) {
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 24px;
+    padding-inline: 24px;
+  }
+  .visual-mode {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 0 20px;
+  }
+  .visual-mode .profile-authoring-controls {
+    margin: 0;
+    gap: 14px;
+  }
+}
+@media (max-width: 800px) {
+  .profile-editor {
+    padding: 16px;
+  }
+  .profile-editor-sidebar {
+    padding: 0 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .profile-edit-bar {
+    margin-top: 18px;
+  }
+  /* With a draft open, the draft comes first; starting a new one waits below it. */
+  .profile-editor:has(.profile-edit-bar) {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .profile-editor:has(.profile-edit-bar) .profile-editor-sidebar {
+    padding: 18px 0 0;
+    border-bottom: 0;
+    border-top: 1px solid var(--line);
+  }
+  .profile-editor:has(.profile-edit-bar) .profile-edit-bar {
+    margin-top: 0;
+  }
+  .profile-edit-bar > div {
+    flex-basis: 100%;
+  }
+}
+
+/* Mod library */
+.modal:has(> .mod-library) .modal-header .eyebrow {
+  display: none;
+}
+.modal:has(> .mod-library) .modal-header h2 {
+  margin: 0;
+  font: 700 26px/1.1 var(--ui);
+  letter-spacing: -0.02em;
+}
+.modal > .mod-library {
+  display: grid;
+  gap: 14px;
+  padding: 18px 28px 28px;
+  font-family: var(--ui);
+}
+.mod-library p {
+  margin: 0;
+}
+.mod-intro {
+  max-width: 640px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.mod-intro b {
+  color: var(--ink);
+}
+.mod-tabs {
+  display: inline-flex;
+  justify-self: start;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.mod-library .mod-tabs button {
+  min-height: 34px;
+  border: 0;
+  background: transparent;
+}
+.mod-library .mod-tabs button[aria-pressed="true"] {
+  background: var(--white);
+  box-shadow: 0 1px 3px #0002;
+}
+.mod-message {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--accent-light);
+  font-size: 13px;
+}
+.mod-search {
+  display: block;
+  max-width: 420px;
+}
+.mod-library .mod-search input {
+  margin: 0;
+  border-radius: 999px;
+  padding-inline: 16px;
+}
+.mod-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.mod-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+.mod-cover {
+  display: block;
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+}
+.mod-cover-art {
+  position: relative;
+  display: grid;
+  align-content: end;
+  padding: 14px;
+  overflow: hidden;
+  background: var(--p2);
+  color: #121212;
+}
+.mod-cover-art span {
+  position: relative;
+  z-index: 1;
+  font: 400 22px/1 var(--wordmark);
+}
+.mod-cover-art i {
+  position: absolute;
+  top: -30px;
+  right: -20px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--p1);
+}
+.mod-cover-art.vinyl {
+  background: #121212;
+  color: #fff;
+}
+.mod-cover-art.vinyl i {
+  top: 14px;
+  right: 18px;
+  width: 92px;
+  height: 92px;
+  background:
+    radial-gradient(circle, #121212 0 5px, var(--p1) 6px 18px, transparent 19px),
+    repeating-radial-gradient(#2a2a2a 0 2px, #161616 2px 4px);
+}
+.mod-card:nth-child(3n + 2) .mod-cover-art.paper {
+  background: var(--p3);
+  color: #fff;
+}
+.mod-card:nth-child(3n + 2) .mod-cover-art.paper i {
+  background: var(--p2);
+}
+.mod-card:nth-child(3n) .mod-cover-art.paper {
+  background: var(--p4);
+}
+.mod-card-body {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px 0;
+  flex: 1;
+  align-content: start;
+}
+.mod-card h3 {
+  margin: 0;
+  font: 700 16px/1.25 var(--ui);
+}
+.mod-byline {
+  color: var(--muted);
+  font-size: 12px;
+}
+.mod-byline a {
+  color: inherit;
+  font-weight: 600;
+}
+.mod-description {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.mod-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.mod-slots span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.mod-actions {
+  display: flex;
+  gap: 8px;
+  padding: 14px 16px 0;
+}
+.mod-actions button {
+  flex: none;
+}
+.mod-library .mod-actions select {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  min-height: 38px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.mod-more {
+  padding: 10px 16px 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.mod-more summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.mod-more[open] {
+  display: grid;
+  gap: 8px;
+}
+.mod-more label {
+  display: block;
+  font-weight: 600;
+}
+.mod-empty {
+  color: var(--muted);
+}
+.mod-share {
+  display: grid;
+  gap: 14px;
+  max-width: 560px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.mod-share legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font: 700 18px/1.2 var(--ui);
+}
+.mod-share > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.mod-slot-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mod-slot-checks label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  font-size: 13px;
+  cursor: pointer;
+}
+.mod-slot-checks label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.mod-share .mod-more {
+  padding: 0;
+}
+.mod-consent {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 8px;
+  font-weight: 400 !important;
+  line-height: 1.4;
+}
+.mod-share > .profile-primary {
+  justify-self: start;
+}
+@media (max-width: 700px) {
+  .modal > .mod-library {
+    padding: 14px 16px 22px;
+  }
+  .mod-grid {
+    grid-template-columns: 1fr;
+  }
+}

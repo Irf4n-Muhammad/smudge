@@ -94,7 +94,7 @@ export function Cockpit({
       </div>
       <header className="flight-header">
         <button className="flight-brand" onClick={onExit} aria-label="Return to feed">
-          <span>✳</span> FORMA <small>EXPERIMENT 02</small>
+          <span>✳</span> SMUDGE <small>EXPERIMENT 02</small>
         </button>
         <span className="flight-coordinate">OUTER RIM / PERSONAL SPACE</span>
         <button className="flight-exit" onClick={onExit}>
