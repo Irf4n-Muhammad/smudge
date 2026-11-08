@@ -113,3 +113,39 @@ test("a tier list keeps where each item went, and friends see it to compare", as
   );
   assert.throws(() => answer("dian", { placed: [] }));
 });
+
+test("how much two people agree, and today's format is the same post for everyone that day", async () => {
+  const { social, answer, quiz } = await setup();
+  const draft = social.createDraft({ userId: "ana" }, post(["answers.write", "answers.read"]));
+  const ranking = social.publish({ userId: "ana" }, draft.id, 1);
+  const rank = (userId: string, tiers: string[]) =>
+    social.capability({ userId }, ranking.id, "answers.write", {
+      pick: "x",
+      placed: ["a", "b", "c", "d"].map((item, i) => ({ item, tier: tiers[i] })),
+    });
+  answer("budi", { pick: "Indomie" });
+  answer("citra", { pick: "indomie" });
+  answer("dian", { score: 2, of: 3 });
+  rank("budi", ["S", "A", "B", "C"]);
+  rank("citra", ["S", "A", "C", "C"]);
+  // Same pick (any case) is one full agreement; the ranking agrees on three of four items.
+  assert.deepEqual(social.match({ userId: "budi" }, "citra"), { shared: 2, percent: 88 });
+  // A score isn't an opinion, so it shares nothing.
+  assert.deepEqual(social.match({ userId: "budi" }, "dian"), { shared: 0, percent: null });
+  social.follow({ userId: "budi" }, "citra");
+  social.follow({ userId: "budi" }, "dian");
+  assert.deepEqual(
+    social.matches({ userId: "budi" }).map((m) => [m.userId, m.percent]),
+    [["citra", 88]],
+  );
+
+  const today = social.today({ userId: "budi" }, "2026-11-08");
+  assert.ok(today && [quiz.id, ranking.id].includes(today.post.id));
+  assert.equal(social.today({ userId: "dian" }, "2026-11-08")?.post.id, today.post.id);
+  const days = new Set(
+    ["2026-11-08", "2026-11-09", "2026-11-10", "2026-11-11"].map(
+      (d) => social.today({ userId: "budi" }, d)?.post.id,
+    ),
+  );
+  assert.equal(days.size, 2, "it changes from day to day");
+});

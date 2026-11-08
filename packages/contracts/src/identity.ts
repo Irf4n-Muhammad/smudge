@@ -243,6 +243,8 @@ export const roomPostSchema = z
   .object({
     kind: z.enum(["announcement", "message"]).default("message"),
     text: z.string().trim().min(1).max(1000),
+    /** A division's own room; left out, the post goes to everyone in the term. */
+    room: z.string().trim().min(1).max(40).optional(),
   })
   .strict();
 export interface RoomStateItem {
@@ -259,6 +261,8 @@ export interface RoomPost {
   userId: string;
   kind: "announcement" | "message";
   text: string;
+  /** The division room it was written in (its key); none means the whole term. */
+  room?: string | undefined;
   createdAt: string;
 }
 /** Open recruitment: an organisation asks for people for its term, by division. */
@@ -369,13 +373,22 @@ export type OrgVisibility = (typeof orgVisibilities)[number];
 export const orgVisibilitySchema = z.object({ visibility: z.enum(orgVisibilities) }).strict();
 
 /** A post written together: a member drafts it, an admin approves it, it goes out as the organisation. */
-export const orgPostSchema = z.object({ text: z.string().trim().min(2).max(1000) }).strict();
+export const orgPostAttachSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("tickets"), event: z.string().min(1).max(80) }).strict(),
+  z.object({ kind: z.literal("oprec") }).strict(),
+]);
+export type OrgPostAttach = z.infer<typeof orgPostAttachSchema>;
+export const orgPostSchema = z
+  .object({ text: z.string().trim().min(2).max(1000), attach: orgPostAttachSchema.optional() })
+  .strict();
 export const orgPostReviewSchema = z.object({ approve: z.boolean() }).strict();
 export interface OrgPost {
   id: string;
   orgId: string;
   authorId: string;
   text: string;
+  /** Something the post lets people do right in the feed: take a ticket, or apply. */
+  attach?: OrgPostAttach | undefined;
   status: "pending" | "published" | "declined";
   createdAt: string;
   reviewedBy?: string | undefined;

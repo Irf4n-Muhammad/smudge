@@ -43,6 +43,8 @@ import {
   seedOrgTerms,
 } from "./seed-identity.js";
 import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
+import { seedOpeners } from "./seed-openers.js";
+import { seedOrgFeed } from "./seed-org-feed.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
 import { themeRoutes } from "./theme-routes.js";
@@ -185,6 +187,9 @@ momentDay.cardFilter = (viewerId, userId) =>
 const messages = new MessageService(service, community, clock);
 orgService.circles = messages;
 orgService.blockedEither = (a, b) => community.blockedEither(a, b);
+// A post can carry an event's tickets once they're set up, or the open recruitment.
+orgService.attachable = (id, attach) =>
+  attach.kind === "tickets" ? orgEvents.has(id, attach.event) : !!oprecs.current(id)?.accepting;
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
 if (deliver) startMailWorker(store, deliver);
@@ -203,6 +208,8 @@ if (config.demoContent) {
   seedFillFormat(service);
   seedTierList(service);
   seedPhotos(service);
+  // After the photo seed too: Dani makes two of them.
+  seedOpeners(service, clock());
   // After the photo seed, which adds Dani and the photos on his page.
   seedDaniPage(profiles);
   seedInesPosts(profiles);
@@ -214,6 +221,7 @@ if (config.demoContent) {
   seedPlan(service);
   seedGamers(service, sidesService);
   seedGift(service);
+  seedOrgFeed(store, orgService, oprecs, orgEvents, clock());
 }
 // Pages made on an older Paint wall are brought up to the template at start (ADR 0046).
 {
@@ -589,8 +597,46 @@ api.get("/api/orgs/:id/rooms", (req, res) =>
   res.json(orgService.rooms(actor(res), orgId(req.params.id))),
 );
 api.get("/api/orgs/:id/rooms/:term", (req, res) =>
-  res.json(orgService.room(actor(res), orgId(req.params.id), orgId(req.params.term))),
+  res.json(
+    orgService.room(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      typeof req.query.room === "string" && req.query.room ? orgId(req.query.room) : undefined,
+    ),
+  ),
 );
+// Your organisations as rows in Messages: newest line, what's new, and their rooms.
+api.get("/api/org-inbox", (_req, res) => res.json(orgService.inbox(actor(res))));
+api.post("/api/orgs/:id/follow", roomLimit, (req, res) =>
+  res.json(orgService.follow(actor(res), orgId(req.params.id))),
+);
+/**
+ * Posts from the organisations you follow or belong to, for the feed, each with what it lets
+ * you do right there: an event's tickets as you may claim them, or the recruitment and your
+ * application to it.
+ */
+api.get("/api/org-feed", (_req, res) => {
+  const viewer = actor(res).userId;
+  res.json(
+    orgService.feedPosts(viewer).map((p) => {
+      let attach: unknown = null;
+      try {
+        if (p.attach?.kind === "tickets")
+          attach = { kind: "tickets", ticket: orgEvents.view(p.org.id, p.attach.event, viewer) };
+        if (p.attach?.kind === "oprec") {
+          const oprec = oprecs.current(p.org.id);
+          attach = oprec
+            ? { kind: "oprec", oprec, mine: oprecs.mine(actor(res), p.org.id, oprec.id) }
+            : { kind: "oprec", oprec: null, mine: null };
+        }
+      } catch {
+        attach = null;
+      }
+      return { ...p, attach };
+    }),
+  );
+});
 api.post("/api/orgs/:id/rooms/:term/posts", roomLimit, (req, res) =>
   res.json(orgService.post(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
 );
@@ -1310,6 +1356,18 @@ api.post("/api/posts/:id/reuse", (req, res) => {
   );
 });
 /** Your answer to a post, and the answers of people you follow; the card shows them under the post. */
+/** Today's format, the same for everyone that day, with the friends who played it. */
+api.get("/api/today", (_req, res) => {
+  const today = service.today(actor(res), clock().toISOString().slice(0, 10));
+  if (!today) return res.json(null);
+  const [post] = identity
+    .decorate(actor(res), [today.post])
+    .map((p) => ({ ...p, ...sidesService.tag(p) }));
+  res.json({ ...today, post, matches: service.matches(actor(res)) });
+});
+api.get("/api/match/:user", (req, res) =>
+  res.json(service.match(actor(res), z.string().max(40).parse(req.params.user))),
+);
 api.get("/api/posts/:id/answers", (req, res) => {
   const post = service.visiblePost(actor(res), String(req.params.id));
   res.json(service.answers(actor(res), post.id));

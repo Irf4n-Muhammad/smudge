@@ -575,6 +575,82 @@ export class SocialService {
         .map(view),
     };
   }
+  /**
+   * How much two people agree, over the posts both of them answered: the same pick counts as
+   * agreeing, and a ranking counts by how many items they put in the same tier. Scores aren't
+   * opinions, so they don't count. Each shared post weighs the same.
+   */
+  match(actor: Actor, otherId: string) {
+    const me = this.actor(actor);
+    const mine = new Map(
+      this.store
+        .all<Answer>("answer")
+        .filter((a) => a.userId === me)
+        .map((a) => [a.postId, a]),
+    );
+    let shared = 0;
+    let agree = 0;
+    for (const theirs of this.store.all<Answer>("answer")) {
+      if (theirs.userId !== otherId || otherId === me) continue;
+      const m = mine.get(theirs.postId);
+      if (!m) continue;
+      if (m.placed && theirs.placed) {
+        const tiers = new Map(m.placed.map((p) => [p.item, p.tier]));
+        const both = theirs.placed.filter((p) => tiers.has(p.item));
+        if (!both.length) continue;
+        shared += 1;
+        agree += both.filter((p) => tiers.get(p.item) === p.tier).length / both.length;
+      } else if (m.pick !== undefined && theirs.pick !== undefined) {
+        shared += 1;
+        if (m.pick.toLowerCase() === theirs.pick.toLowerCase()) agree += 1;
+      }
+    }
+    return { shared, percent: shared ? Math.round((agree / shared) * 100) : null };
+  }
+  /** The people you follow you agree with most, over at least one shared answer. */
+  matches(actor: Actor, limit = 5) {
+    const users = this.users();
+    return this.following(actor)
+      .flatMap((id) => {
+        const u = users.find((x) => x.id === id);
+        const m = this.match(actor, id);
+        return u && m.percent !== null
+          ? [{ userId: id, name: u.name, handle: u.handle, ...m, percent: m.percent }]
+          : [];
+      })
+      .sort((a, b) => b.percent - a.percent || b.shared - a.shared)
+      .slice(0, limit);
+  }
+  /**
+   * Today's format: one post that asks for answers, the same for everyone who can see it on a
+   * given day, so friends play the same thing and have something to compare.
+   */
+  today(actor: Actor, date = new Date().toISOString().slice(0, 10)) {
+    const me = this.actor(actor);
+    const playable = this.store
+      .all<Publication>("post")
+      .filter(
+        (p) =>
+          (p.package.manifest.capabilities as string[]).includes("answers.write") &&
+          this.viewFilter(me, p),
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
+    if (!playable.length) return null;
+    let hash = 0;
+    for (const ch of date) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    const post = playable[hash % playable.length]!;
+    const answers = this.answers(actor, post.id);
+    return {
+      date,
+      post: this.views(actor, [post])[0]!,
+      played: answers.count,
+      mine: answers.mine,
+      friends: answers.friends.map((f) => ({
+        ...f,
+        match: this.match(actor, f.userId).percent,
+      })),
+    };
+  }
   following(actor: Actor) {
     return this.store
       .all<{ userId: string; target: string }>("follow")

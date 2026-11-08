@@ -870,7 +870,7 @@
 .conversation.active {
   border-color: var(--ink);
 }
-.conversation > span:not(.avatar):not(.badge):not(.group-icon) {
+.conversation > span:not(.avatar):not(.badge):not(.group-icon):not(.org-chat-badge) {
   flex: 1;
   min-width: 0;
   display: grid;
@@ -3625,4 +3625,129 @@
 }
 .auth-strength[data-level="0"] b {
   color: #d14b43;
+}
+
+/* Following an organisation from its page; its posts then reach your feed. */
+.op-follow {
+  margin: 14px auto 0;
+  display: block;
+  font: 700 12px var(--ui);
+  letter-spacing: 0.04em;
+  padding: 9px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--op-gold, #c9a45c);
+  background: var(--op-gold, #c9a45c);
+  color: #1d1710;
+  cursor: pointer;
+}
+.op-follow.on {
+  background: transparent;
+  color: inherit;
+}
+.op[data-look="noticeboard"] .op-follow.on {
+  color: var(--op-ink);
+}
+.op-attach {
+  display: grid;
+  gap: 4px;
+  font: 12px var(--ui);
+  color: var(--op-muted, #7a6f5f);
+}
+.op-attach select {
+  font: 14px var(--ui);
+  padding: 8px 10px;
+  border: 1px solid var(--op-rule, #c9b48e);
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #2d2418;
+}
+
+/* What happened while you were away: the first thing in the room after a gap. */
+.op-missed {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--op-cream);
+  color: var(--op-ink);
+  border: 2px solid var(--op-gold, #e8b44a);
+  display: grid;
+  gap: 10px;
+}
+.op-missed header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.op-missed header b {
+  font: 700 15px var(--ui);
+}
+.op-missed header button {
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 4px;
+  cursor: pointer;
+}
+.op-missed ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.op-missed li {
+  display: grid;
+  gap: 2px;
+  padding-left: 10px;
+  border-left: 3px solid var(--op-rule, #c9b48e);
+}
+.op-missed li.missed-mention {
+  border-left-color: var(--op-gold, #e8b44a);
+}
+.op-missed li small {
+  font: 700 9.5px var(--op-mono);
+  letter-spacing: 0.12em;
+  color: var(--op-sub, #8a5a2a);
+}
+.op-missed li span {
+  font: 14px/1.4 var(--ui);
+}
+.op-missed p {
+  margin: 0;
+  font: 12px var(--ui);
+  color: var(--op-sub, #8a5a2a);
+}
+.op-missed .op-ink {
+  justify-self: start;
+  padding: 8px 16px;
+}
+/* A term's rooms in the talk: everyone, then each division. */
+.op-rooms {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 0 8px;
+  scrollbar-width: none;
+}
+.op-rooms button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 12px var(--ui);
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--op-rule, #c9b48e);
+  background: transparent;
+  color: var(--op-ink);
+  cursor: pointer;
+}
+.op-rooms button[aria-pressed="true"] {
+  background: var(--op-ink);
+  color: var(--op-cream);
+  border-color: var(--op-ink);
+}
+.op-rooms button small {
+  opacity: 0.6;
+  font-size: 10px;
 }

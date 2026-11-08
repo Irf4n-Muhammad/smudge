@@ -475,6 +475,63 @@ interface Thread {
   canMessage: boolean;
   messages: { id: string; fromMe: boolean; text: string; createdAt: string }[];
 }
+/** One of your organisations, as a row in Messages: its newest line and its rooms. */
+interface OrgRow {
+  orgId: string;
+  name: string;
+  look: { accent?: string };
+  term: { id: string; label: string };
+  last: { text: string; by: string; kind: string; room: string; at: string } | null;
+  unread: number;
+  rooms: { key: string | null; label: string; unread: number }[];
+}
+function OrgConversation({ row }: { row: OrgRow }) {
+  const href = (key: string | null) =>
+    `/o/${encodeURIComponent(row.orgId)}?room=${encodeURIComponent(key ?? "everyone")}`;
+  const badge = row.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+  return (
+    <li className="org-conversation">
+      <a className="conversation" href={href(null)}>
+        <span
+          className="org-chat-badge"
+          aria-hidden="true"
+          style={row.look.accent ? { background: row.look.accent } : undefined}
+        >
+          {badge}
+        </span>
+        <span>
+          <strong>{row.name}</strong>
+          <small>
+            {row.last
+              ? `${row.last.kind === "announcement" ? "📣 " : ""}${row.last.by}${
+                  row.last.room !== "Everyone" ? ` in ${row.last.room}` : ""
+                }: ${row.last.text}`
+              : `${row.term.label} · nothing yet`}
+          </small>
+        </span>
+        {row.unread > 0 && (
+          <span className="badge" aria-label={`${row.unread} new`}>
+            {row.unread}
+          </span>
+        )}
+      </a>
+      {row.rooms.length > 1 && (
+        <nav className="org-chat-rooms" aria-label={`${row.name} rooms`}>
+          {row.rooms.map((r) => (
+            <a key={r.key ?? "everyone"} href={href(r.key)}>
+              {r.label}
+              {r.unread > 0 && <b>{r.unread}</b>}
+            </a>
+          ))}
+        </nav>
+      )}
+    </li>
+  );
+}
 export function MessagesPanel({
   initialUser,
   initialGroup = null,
@@ -495,14 +552,18 @@ export function MessagesPanel({
     [open, setOpen] = useState<string | null>(initialUser),
     [thread, setThread] = useState<Thread | null>(null),
     [text, setText] = useState("");
+  const [orgs, setOrgs] = useState<OrgRow[]>([]);
   const end = useRef<HTMLDivElement>(null);
   const loadList = useCallback(async () => {
-    const [people, rooms] = await Promise.all([
+    const [people, rooms, mine] = await Promise.all([
       api<Conversation[]>("/messages"),
       api<GroupSummary[]>("/groups"),
+      // Your organisations sit here too, like a chat; leaving them out never breaks Messages.
+      api<OrgRow[]>("/org-inbox").catch(() => []),
     ]);
     setList(people);
     setGroups(rooms);
+    setOrgs(mine);
   }, []);
   const groupChanged = useCallback(() => {
     void loadList();
@@ -512,6 +573,7 @@ export function MessagesPanel({
   const items = [
     ...list.map((c) => ({ kind: "person" as const, at: c.last.createdAt, c })),
     ...groups.map((g) => ({ kind: "group" as const, at: g.updatedAt, g })),
+    ...orgs.map((o) => ({ kind: "org" as const, at: o.last?.at ?? "", o })),
   ].sort((a, b) => b.at.localeCompare(a.at));
   const loadThread = useCallback(async () => {
     if (!open) return setThread(null);
@@ -570,7 +632,9 @@ export function MessagesPanel({
             </li>
           )}
           {items.map((item) =>
-            item.kind === "group" ? (
+            item.kind === "org" ? (
+              <OrgConversation key={`o:${item.o.orgId}`} row={item.o} />
+            ) : item.kind === "group" ? (
               <li key={`g:${item.g.id}`}>
                 <button
                   className={group === item.g.id ? "conversation active" : "conversation"}

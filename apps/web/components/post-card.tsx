@@ -183,6 +183,7 @@ export function PostCard({
   }
   return (
     <article
+      data-post-id={post.id}
       className={`post-card ${stage ? "world-stage" : "classic-post"} ${post.decoration ? "themed" : ""}`}
       style={
         {

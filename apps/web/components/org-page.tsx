@@ -52,7 +52,9 @@ interface OrgView {
   current: string | null;
   collections: { id: string; name: string; stamps: number }[];
   visibility: OrgVisibility;
-  posts: { id: string; text: string; at: string }[];
+  posts: { id: string; text: string; at: string; attach?: { kind: string } }[];
+  followers: number;
+  following: boolean;
   /** Each title's line: who held it, numbered from the first. */
   lines: { role: string; holders: (Person & { n: number; from?: number })[] }[];
   look: OrgLook;
@@ -158,7 +160,28 @@ interface RoomView {
   reports?: { post: RoomPostView; count: number; reasons: string[] }[];
   mutedPeople?: { id: string; name: string; handle: string }[];
   yearbook: Yearbook | null;
+  /** The term's rooms: everyone, then each division this person is in. */
+  rooms: { key: string | null; label: string; people: number | null }[];
+  roomKey: string | null;
+  missed: Missed | null;
 }
+/** What happened since this person last opened the term's rooms. */
+interface Missed {
+  since: string;
+  messages: number;
+  items: {
+    kind: "announcement" | "decision" | "deadline" | "mention";
+    text: string;
+    by?: string;
+  }[];
+  more: number;
+}
+const missedLabel = {
+  announcement: "Announced",
+  decision: "Decided",
+  deadline: "Due",
+  mention: "Mentioned you",
+};
 
 const today = () => new Date().toISOString().slice(0, 10);
 const daysUntil = (d: string) =>
@@ -208,6 +231,19 @@ export function OrgPage({ id }: { id: string }) {
   const [oprec, setOprec] = useState<OprecView | null>(null);
   const [tickets, setTickets] = useState<TicketView[]>([]);
   const [tab, setTab] = useState<"page" | "backstage">("page");
+  // From Messages, a room chip opens straight into that room's talk.
+  const [roomKey, setRoomKey] = useState<string | null>(null);
+  const [openTalk, setOpenTalk] = useState(false);
+  const [missed, setMissed] = useState<Missed | null>(null);
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).get("room");
+    if (asked === null) return;
+    setRoomKey(asked === "everyone" ? null : asked);
+    setTab("backstage");
+    setOpenTalk(true);
+    // Keep the router's state on this entry, or coming back to it from the talk reloads the page.
+    window.history.replaceState(window.history.state, "", `/o/${encodeURIComponent(id)}`);
+  }, [id]);
   const [editing, setEditing] = useState(false);
   const load = useCallback(async () => {
     const code = new URLSearchParams(window.location.search).get("join");
@@ -252,13 +288,19 @@ export function OrgPage({ id }: { id: string }) {
   const loadRoom = useCallback(async () => {
     if (!termId) return setRoom(null);
     try {
-      setRoom(
-        await api<RoomView>(`/orgs/${encodeURIComponent(id)}/rooms/${encodeURIComponent(termId)}`),
+      const next = await api<RoomView>(
+        `/orgs/${encodeURIComponent(id)}/rooms/${encodeURIComponent(termId)}${
+          roomKey ? `?room=${encodeURIComponent(roomKey)}` : ""
+        }`,
       );
+      setRoom(next);
+      // Opening the room counts as caught up, so later loads say nothing new; keep the first.
+      if (next.missed) setMissed(next.missed);
     } catch (e) {
+      if (roomKey) setRoomKey(null);
       setNote((e as Error).message);
     }
-  }, [id, termId]);
+  }, [id, termId, roomKey]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -341,6 +383,11 @@ export function OrgPage({ id }: { id: string }) {
           room={room}
           tickets={tickets}
           onTerm={setTermId}
+          onRoom={setRoomKey}
+          missed={missed}
+          onSeen={() => setMissed(null)}
+          openTalk={openTalk}
+          onTalkOpened={() => setOpenTalk(false)}
           reload={loadRoom}
           refresh={load}
           notify={setNote}
@@ -351,6 +398,23 @@ export function OrgPage({ id }: { id: string }) {
           words={words}
           next={room && !room.term.locked ? nextUp(room.state) : undefined}
           onNext={() => setTab("backstage")}
+          onFollow={async () => {
+            try {
+              if (!(await signedInOrSignIn())) return;
+              const r = await api<{ following: boolean }>(
+                `/orgs/${encodeURIComponent(org.id)}/follow`,
+                {},
+              );
+              setNote(
+                r.following
+                  ? `Following ${org.name}. Its posts will show up in your feed.`
+                  : `You unfollowed ${org.name}.`,
+              );
+              await load();
+            } catch (e) {
+              setNote((e as Error).message);
+            }
+          }}
           oprecSlot={
             <>
               {join && (
@@ -414,12 +478,14 @@ function PlayPage({
   words,
   next,
   onNext,
+  onFollow,
   oprecSlot,
 }: {
   org: OrgView;
   words: Words;
   next?: StateItem | undefined;
   onNext: () => void;
+  onFollow: () => void;
   oprecSlot: React.ReactNode;
 }) {
   const [season, setSeason] = useState(
@@ -448,7 +514,17 @@ function PlayPage({
             <span>
               {org.members} {org.members === 1 ? "person" : "people"}
             </span>
+            <span>
+              {org.followers} {org.followers === 1 ? "follower" : "followers"}
+            </span>
           </p>
+          <button
+            className={`op-follow ${org.following ? "on" : ""}`}
+            aria-pressed={org.following}
+            onClick={onFollow}
+          >
+            {org.following ? "Following" : "Follow"}
+          </button>
         </div>
       </header>
       <div className="op-body">
@@ -559,6 +635,11 @@ function Backstage({
   reload,
   refresh,
   notify,
+  onRoom,
+  missed,
+  onSeen,
+  openTalk,
+  onTalkOpened,
 }: {
   org: OrgView;
   words: Words;
@@ -566,11 +647,21 @@ function Backstage({
   room: RoomView;
   tickets: TicketView[];
   onTerm: (id: string) => void;
+  onRoom: (key: string | null) => void;
+  missed: Missed | null;
+  onSeen: () => void;
+  openTalk: boolean;
+  onTalkOpened: () => void;
   reload: () => Promise<void>;
   refresh: () => Promise<void>;
   notify: (s: string) => void;
 }) {
   const [talk, setTalk] = useState(false);
+  useEffect(() => {
+    if (!openTalk || !room.talk) return;
+    setTalk(true);
+    onTalkOpened();
+  }, [openTalk, room.talk, onTalkOpened]);
   const [tool, setTool] = useState<Tool | null>(null);
   const [adding, setAdding] = useState(false);
   const [stateKind, setStateKind] = useState<StateItem["kind"]>("schedule");
@@ -647,6 +738,44 @@ function Backstage({
           </p>
         )}
       </header>
+      {missed && (
+        <section className="op-missed" aria-label="While you were away">
+          <header>
+            <b>While you were away</b>
+            <button onClick={onSeen} aria-label="Dismiss">
+              <X size={13} />
+            </button>
+          </header>
+          <ul>
+            {missed.items.map((m, i) => (
+              <li key={i} className={`missed-${m.kind}`}>
+                <small>
+                  {missedLabel[m.kind].toUpperCase()}
+                  {m.by ? ` · ${firstName(m.by).toUpperCase()}` : ""}
+                </small>
+                <span>{m.text}</span>
+              </li>
+            ))}
+          </ul>
+          <p>
+            {missed.messages > 0
+              ? `${missed.messages} new ${missed.messages === 1 ? "message" : "messages"} in the talk`
+              : "No new messages"}
+            {missed.more > 0 ? ` · ${missed.more} more on the ${words.sheet.toLowerCase()}` : ""}
+          </p>
+          {missed.messages > 0 && room.talk && (
+            <button
+              className="op-ink"
+              onClick={() => {
+                onRoom(null);
+                setTalk(true);
+              }}
+            >
+              Catch up
+            </button>
+          )}
+        </section>
+      )}
       {event ? (
         <div className="op-star-wrap">
           <button className="op-star" onClick={() => setTool(room.admin ? "crew" : "sheet")}>
@@ -861,7 +990,7 @@ function Backstage({
           )}
         </>
       )}
-      {tool === "posts" && <OrgPosts org={org} notify={notify} />}
+      {tool === "posts" && <OrgPosts org={org} tickets={tickets} notify={notify} />}
       {tool === "crew" && room.admin && <CrewStamps org={org} notify={notify} refresh={refresh} />}
       {tool === "reports" && room.admin && (
         <RoomCare room={room} base={base} reload={reload} notify={notify} />
@@ -883,6 +1012,7 @@ function Backstage({
           words={words}
           room={room}
           base={base}
+          onRoom={onRoom}
           next={next}
           reload={reload}
           notify={notify}
@@ -1004,6 +1134,7 @@ function Talk({
   words,
   room,
   base,
+  onRoom,
   next,
   reload,
   notify,
@@ -1012,6 +1143,7 @@ function Talk({
   words: Words;
   room: RoomView;
   base: string;
+  onRoom: (key: string | null) => void;
   next?: StateItem | undefined;
   reload: () => Promise<void>;
   notify: (s: string) => void;
@@ -1079,7 +1211,23 @@ function Talk({
           {room.term.label} · {room.people} {room.people === 1 ? "PERSON" : "PEOPLE"}
         </small>
       </header>
-      <h2>Talk</h2>
+      <h2>
+        {room.roomKey ? (room.rooms.find((r) => r.key === room.roomKey)?.label ?? "Talk") : "Talk"}
+      </h2>
+      {room.rooms.length > 1 && (
+        <nav className="op-rooms" aria-label="Rooms">
+          {room.rooms.map((r) => (
+            <button
+              key={r.key ?? "everyone"}
+              aria-pressed={r.key === room.roomKey}
+              onClick={() => onRoom(r.key)}
+            >
+              {r.label}
+              {r.people !== null && <small>{r.people}</small>}
+            </button>
+          ))}
+        </nav>
+      )}
       {next && (
         <button className="op-strip" onClick={() => leave(true)}>
           <b>{sheetDate(next.when!)}</b>
@@ -1206,7 +1354,11 @@ function Talk({
             e.preventDefault();
             void (async () => {
               try {
-                await api(`${base}/posts`, { kind: announce ? "announcement" : "message", text });
+                await api(`${base}/posts`, {
+                  kind: announce ? "announcement" : "message",
+                  text,
+                  ...(room.roomKey && !announce ? { room: room.roomKey } : {}),
+                });
                 setText("");
                 setAnnounce(false);
                 await reload();
@@ -1216,7 +1368,7 @@ function Talk({
             })();
           }}
         >
-          {room.admin && (
+          {room.admin && !room.roomKey && (
             <label className="op-pin-toggle">
               <input
                 type="checkbox"
@@ -1240,7 +1392,9 @@ function Talk({
                   ? "Pin a note for everyone"
                   : room.slow && !room.admin
                     ? `Slow mode: one message every ${room.slow < 60 ? `${room.slow}s` : `${room.slow / 60} min`}`
-                    : "Say something to the company"
+                    : room.roomKey
+                      ? `Say something to ${room.rooms.find((r) => r.key === room.roomKey)?.label ?? "the division"}`
+                      : "Say something to the company"
               }
               onChange={(e) => setText(e.target.value)}
             />
@@ -1255,7 +1409,15 @@ function Talk({
 }
 
 /** Posts written together: anyone in the term drafts, an admin sends it out as the organisation. */
-function OrgPosts({ org, notify }: { org: OrgView; notify: (s: string) => void }) {
+function OrgPosts({
+  org,
+  tickets,
+  notify,
+}: {
+  org: OrgView;
+  tickets: TicketView[];
+  notify: (s: string) => void;
+}) {
   type PostView = OrgPost & { author: { id: string; name: string; handle: string } };
   const [view, setView] = useState<{
     admin: boolean;
@@ -1263,6 +1425,14 @@ function OrgPosts({ org, notify }: { org: OrgView; notify: (s: string) => void }
     published: PostView[];
   } | null>(null);
   const [text, setText] = useState("");
+  // What the post lets people do from the feed: "" for nothing, "oprec", or an event's id.
+  const [attach, setAttach] = useState("");
+  const [oprec, setOprec] = useState<OprecView | null>(null);
+  useEffect(() => {
+    void api<{ oprec: OprecView | null }>(`/public/orgs/${encodeURIComponent(org.id)}/oprec`)
+      .then((r) => setOprec(r.oprec))
+      .catch(() => setOprec(null));
+  }, [org.id]);
   const base = `/orgs/${encodeURIComponent(org.id)}/posts`;
   const load = useCallback(async () => {
     try {
@@ -1296,8 +1466,16 @@ function OrgPosts({ org, notify }: { org: OrgView; notify: (s: string) => void }
           e.preventDefault();
           void run(
             async () => {
-              await api(base, { text });
+              await api(base, {
+                text,
+                ...(attach === "oprec"
+                  ? { attach: { kind: "oprec" } }
+                  : attach
+                    ? { attach: { kind: "tickets", event: attach } }
+                    : {}),
+              });
               setText("");
+              setAttach("");
             },
             view.admin ? "Posted on the page." : "Sent to the admins for a look.",
           );
@@ -1316,6 +1494,20 @@ function OrgPosts({ org, notify }: { org: OrgView; notify: (s: string) => void }
           placeholder={`Write something for ${org.name}'s page`}
           onChange={(e) => setText(e.target.value)}
         />
+        {(tickets.length > 0 || oprec?.accepting) && (
+          <label className="op-attach">
+            In the feed, people can
+            <select value={attach} onChange={(e) => setAttach(e.target.value)}>
+              <option value="">Just read it</option>
+              {tickets.map((t) => (
+                <option key={t.id} value={t.id}>
+                  Get a ticket for {t.name}
+                </option>
+              ))}
+              {oprec?.accepting && <option value="oprec">Apply to {oprec.title}</option>}
+            </select>
+          </label>
+        )}
         <button className="op-ink">{view.admin ? "Post" : "Send for approval"}</button>
       </form>
       {view.pending.length > 0 && (
