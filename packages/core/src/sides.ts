@@ -234,9 +234,10 @@ export class SidesService {
     return { everyday };
   }
   /** Per post, for the card: which side it is from and whether it is also in Everyday. */
-  tag(post: { id: string; metadata: { side?: string | undefined } }) {
+  /** The side label a card shows. Everyday goes unlabelled, except where sides mix (search). */
+  tag(post: { id: string; metadata: { side?: string | undefined } }, everyday = false) {
     const side = sideById(this.sideOf(post));
-    return side && side.id !== EVERYDAY
+    return side && (everyday || side.id !== EVERYDAY)
       ? {
           side: { id: side.id, name: side.name, accent: side.accent },
           shared: this.shared(post.id),

@@ -469,14 +469,25 @@ export class SocialService {
       .filter(Boolean)
       .map((w) => w.replace(/^[@#]/, ""));
     const posts = this.feed(actor);
-    if (words.length)
-      return posts
-        .filter((p) => {
-          const text =
-            `${p.metadata.title} ${p.metadata.caption} ${p.author.name} ${p.author.handle}`.toLowerCase();
-          return words.every((w) => text.includes(w));
-        })
-        .slice(0, 60);
+    if (words.length) {
+      // A search looks in every side you may see; the side you are in comes first.
+      const here = new Set(posts.map((p) => p.id));
+      const matches = this.views(
+        actor,
+        this.store
+          .all<Publication>("post")
+          .reverse()
+          .filter((p) => this.viewFilter(me, p)),
+      ).filter((p) => {
+        const text =
+          `${p.metadata.title} ${p.metadata.caption} ${p.author.name} ${p.author.handle}`.toLowerCase();
+        return words.every((w) => text.includes(w));
+      });
+      return [
+        ...matches.filter((p) => here.has(p.id)),
+        ...matches.filter((p) => !here.has(p.id)),
+      ].slice(0, 60);
+    }
     const following = new Set(this.following(actor));
     const now = Date.now();
     const score = (p: PostView) =>

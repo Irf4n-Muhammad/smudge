@@ -21,6 +21,7 @@ import { applyLook, lookKind, readLook } from "../packages/core/src/easy-look.js
 import { applyProfileDesign, defaultProfileDesign } from "../packages/core/src/profile-design.js";
 import { smudgeProfilePackage } from "../apps/server/smudge-profile.js";
 import { rakaPackage, basicPackage } from "../apps/server/raka.js";
+import { relayPackage } from "./relay-fixture.js";
 import { profileTemplates } from "../apps/server/seed-profiles.js";
 
 const rejects = (fn: () => unknown, code: string) =>
@@ -219,7 +220,7 @@ test("an older Paint wall copy is brought up to date, keeping files already rewr
 
 test("Paint wall with settings still mixes with Ink & Paper within the file limit", () => {
   const easy = applySmudgeSettings(smudgeProfilePackage, defaultSmudgeSettings);
-  const mixed = composeProfilePart(easy, rakaPackage, "feature");
+  const mixed = composeProfilePart(easy, relayPackage, "feature");
   assert.ok(Object.keys(mixed.files).length <= 20);
   assert.ok(mixed.manifest.capabilities.includes("relay.add" as never));
   const other = composeProfilePart(rakaPackage, smudgeProfilePackage, "post");
