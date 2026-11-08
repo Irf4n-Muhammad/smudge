@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Experience } from "../../contracts/src/experience.js";
 import { AppError } from "./social.js";
+import { fillSource } from "./fill-script.js";
 
 /**
  * Fill-in formats. A creator lists the parts of a post others may change in `smudge/fill.js`
@@ -37,11 +38,8 @@ const fillSchema = z
   })
   .strict();
 
-/** Puts each value into the page's `data-fill` parts once it has loaded. */
-const applyScript = `(()=>{const f=window.smudgeFill,v={};for(const x of f.fields)v[x.key]=x.value;f.values=v;const put=()=>{for(const el of document.querySelectorAll("[data-fill]")){const x=v[el.dataset.fill];if(x===undefined)continue;if(el.tagName==="IMG")el.src=x;else el.textContent=x}};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",put):put()})();\n`;
-
-const write = (fields: FillField[]) =>
-  `window.smudgeFill = ${JSON.stringify({ fields }).replace(/</g, "\\u003c")};\n${applyScript}`;
+export { fillSource };
+const write = fillSource;
 
 /** The post's fields, or null when it is not a fill-in format or its list cannot be read. */
 export function readFill(pkg: Experience): FillField[] | null {

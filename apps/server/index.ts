@@ -1418,10 +1418,15 @@ api.post("/api/posts/:id/fill", (req, res) => {
       if (a.ownerId !== actor(res).userId || !a.mime.startsWith("image/"))
         throw new AppError("ASSET_NOT_ACCESSIBLE", 403);
     }
+  // A new photo in the cover's place becomes the version's cover in the feed too.
+  const cover = fields.find(
+    (f) => f.kind === "image" && f.value === `asset:${metadata.coverAssetId}`,
+  );
+  const coverAssetId = cover && values[cover.key] ? values[cover.key]! : metadata.coverAssetId;
   res.json(
     service.createDraft(
       actor(res),
-      { package: fillPackage(pkg, values), metadata },
+      { package: fillPackage(pkg, values), metadata: { ...metadata, coverAssetId } },
       post.remixOf ?? post.id,
     ),
   );
