@@ -26,7 +26,9 @@ async function setup() {
   });
   const social = new SocialService(store);
   const identity = new IdentityService(social, renderMoment);
-  const sides = new SidesService(social);
+  // Each join a millisecond apart, so "newest first" never depends on two joins sharing one.
+  let tick = Date.now();
+  const sides = new SidesService(social, () => new Date(tick++));
   identity.chapterListeners.push((c) => sides.joinByChapter(c));
   const post = (actor: { userId: string }, title: string, side?: string) => {
     const draft = social.createDraft(actor, {

@@ -74,6 +74,10 @@ import { SideHome, SideResults, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
 import { takeReturnPath } from "./return-path";
+import { OrgPostCard } from "./org-feed";
+import type { OrgFeedPost } from "./org-feed";
+import { TodayRibbon } from "./today-format";
+import type { TodayView } from "./today-format";
 export function FormaApp() {
   const [profileVisit, setProfileVisit] = useState(0);
   const wide = useWide();
@@ -81,6 +85,8 @@ export function FormaApp() {
   const [breakout, setBreakout] = useState(false);
   const [boot, setBoot] = useState<Boot | null>(null),
     [posts, setPosts] = useState<DecoratedPost[]>([]),
+    [orgPosts, setOrgPosts] = useState<OrgFeedPost[]>([]),
+    [today, setToday] = useState<TodayView | null>(null),
     [view, setView] = useState("home"),
     [query, setQuery] = useState(""),
     [loading, setLoading] = useState(true),
@@ -174,9 +180,16 @@ export function FormaApp() {
         return;
       }
       const b = await api<Boot>("/bootstrap");
-      const p = await api<DecoratedPost[]>("/feed");
+      const [p, o, t] = await Promise.all([
+        api<DecoratedPost[]>("/feed"),
+        // Organisation posts and today's format are extras; the feed works without them.
+        api<OrgFeedPost[]>("/org-feed").catch(() => []),
+        api<TodayView | null>("/today").catch(() => null),
+      ]);
       setBoot(b);
       setPosts(p);
+      setOrgPosts(o);
+      setToday(t);
       setFailure("");
     } catch (e) {
       setFailure((e as Error).message);
@@ -434,6 +447,63 @@ export function FormaApp() {
           .toLowerCase()
           .includes(query.toLowerCase())),
   );
+  // Home and Following mix in the organisations' posts by time, and Home opens on today's format.
+  const plain = !query && (view === "home" || view === "following") && !inSide;
+  const todayPost = plain && view === "home" && today ? today.post : null;
+  type FeedItem = { kind: "post"; post: DecoratedPost } | { kind: "org"; post: OrgFeedPost };
+  const feedItems: FeedItem[] = (() => {
+    const items: FeedItem[] = visible
+      .filter((p) => p.id !== todayPost?.id)
+      .map((post) => ({ kind: "post", post }));
+    if (!plain || !orgPosts.length) return items;
+    const mixed: FeedItem[] = [];
+    const queue = [...orgPosts];
+    for (const item of items) {
+      while (queue.length && queue[0]!.at >= (item.post as DecoratedPost).createdAt)
+        mixed.push({ kind: "org", post: queue.shift()! });
+      mixed.push(item);
+    }
+    return [...mixed, ...queue.map((post) => ({ kind: "org" as const, post }))];
+  })();
+  if (todayPost) feedItems.unshift({ kind: "post", post: todayPost });
+  const renderPost = (post: DecoratedPost) =>
+    boot && (
+      <PostCard
+        key={`${boot.actor.userId}:${post.id}`}
+        post={post}
+        boot={boot}
+        onRefresh={async () => {
+          await refresh();
+          if (view === "explore") await loadExplore(exploreQuery);
+          if (view === "format" && formatPage) await loadFormat(formatPage.rootId);
+        }}
+        notify={notify}
+        onFollow={() => void follow(post.ownerId)}
+        onProfile={() => openUser(post.ownerId)}
+        onUser={openUser}
+        onFormat={(id) => void openFormat(id)}
+        onEdit={() => void editPost(post.id)}
+        openComments={view === "post"}
+        onReuse={async () => {
+          try {
+            const { fields } = await api<{ fields: FillField[] }>(`/posts/${post.id}/fields`);
+            if (fields.length) setFilling({ post, fields });
+            else await reuse(post.id);
+          } catch (e) {
+            notify((e as Error).message);
+          }
+        }}
+        onSkip={() => {
+          const cards = [...document.querySelectorAll<HTMLElement>(".post-card, .org-feed-card")];
+          const here = cards.findIndex((c) => c.dataset.postId === post.id);
+          const next = cards[here + 1];
+          if (next) {
+            next.scrollIntoView({ behavior: "smooth", block: "start" });
+            next.focus({ preventScroll: true });
+          } else notify("You’re all caught up. A good moment to make something.");
+        }}
+      />
+    );
   function navigate(next: string) {
     if (view === "post" || view === "format") window.history.replaceState(null, "", "/");
     setView(next);
@@ -1153,44 +1223,23 @@ export function FormaApp() {
                   )}
                 <div className="post-list">
                   {boot &&
-                    visible.map((post, index) => (
-                      <PostCard
-                        key={`${boot.actor.userId}:${post.id}`}
-                        post={post}
-                        boot={boot}
-                        onRefresh={async () => {
-                          await refresh();
-                          if (view === "explore") await loadExplore(exploreQuery);
-                          if (view === "format" && formatPage) await loadFormat(formatPage.rootId);
-                        }}
-                        notify={notify}
-                        onFollow={() => void follow(post.ownerId)}
-                        onProfile={() => openUser(post.ownerId)}
-                        onUser={openUser}
-                        onFormat={(id) => void openFormat(id)}
-                        onEdit={() => void editPost(post.id)}
-                        openComments={view === "post"}
-                        onReuse={async () => {
-                          try {
-                            const { fields } = await api<{ fields: FillField[] }>(
-                              `/posts/${post.id}/fields`,
-                            );
-                            if (fields.length) setFilling({ post, fields });
-                            else await reuse(post.id);
-                          } catch (e) {
-                            notify((e as Error).message);
-                          }
-                        }}
-                        onSkip={() => {
-                          const next =
-                            document.querySelectorAll<HTMLElement>(".post-card")[index + 1];
-                          if (next) {
-                            next.scrollIntoView({ behavior: "smooth", block: "start" });
-                            next.focus({ preventScroll: true });
-                          } else notify("You’re all caught up. A good moment to make something.");
-                        }}
-                      />
-                    ))}
+                    feedItems.map((item) =>
+                      item.kind === "org" ? (
+                        <OrgPostCard
+                          key={`org:${item.post.id}`}
+                          post={item.post}
+                          notify={notify}
+                          onChanged={refresh}
+                        />
+                      ) : item.post.id === todayPost?.id ? (
+                        <div className="today-block" key={`today:${item.post.id}`}>
+                          <TodayRibbon today={today!} onUser={openUser} />
+                          {renderPost(item.post)}
+                        </div>
+                      ) : (
+                        renderPost(item.post)
+                      ),
+                    )}
                 </div>
                 {!loading && visible.length > 0 && (
                   <footer className="feed-end">

@@ -48,6 +48,10 @@ function line(n: { type: string; actor: { name: string } | null; post: { title: 
       return `${who} left a sticker on ${title}.`;
     case "answer":
       return `${who} played ${title}.`;
+    case "answered-too":
+      return `${who} answered ${title} too.`;
+    case "version":
+      return `${who} made their own version of ${title}.`;
     case "partner-request":
       return `${who} wants to add you as their partner.`;
     default:

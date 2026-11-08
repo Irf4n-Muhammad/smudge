@@ -1,0 +1,265 @@
+/* An organisation's post in the feed, and what it lets you do right there. */
+.org-feed-card {
+  --org-accent: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--org-accent);
+  border-radius: 11px;
+  padding: 16px 18px 18px;
+  display: grid;
+  gap: 12px;
+  font-family: var(--ui);
+  scroll-margin-top: 24px;
+}
+.org-feed-card header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.org-feed-card header > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.org-feed-card header a {
+  color: inherit;
+  text-decoration: none;
+}
+.org-feed-card header small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.org-feed-card header a.org-feed-badge,
+.org-feed-badge {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--org-accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.org-feed-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.org-feed-attach {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+  background: var(--paper);
+}
+.org-feed-attach > strong {
+  font-size: 16px;
+}
+.org-feed-attach ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.org-feed-attach ul li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.org-feed-attach ul.org-feed-roles li {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  color: var(--ink);
+  background: var(--white);
+}
+.org-feed-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--org-accent);
+}
+html[data-theme="dark"] .org-feed-tag {
+  color: var(--ink);
+}
+.org-feed-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+.org-feed-status {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.org-feed-attach .primary.small,
+.org-feed-attach .quiet-button.small {
+  justify-self: start;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+.org-feed-form {
+  display: grid;
+  gap: 10px;
+}
+.org-feed-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.org-feed-form select,
+.org-feed-form input {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 9px 10px;
+  background: var(--white);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+/* Today's format: the same post for everyone today, on top of Home. */
+.today-block {
+  display: grid;
+  gap: 8px;
+}
+.today-ribbon {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--accent-light);
+  padding: 12px 16px;
+  display: grid;
+  gap: 6px;
+  font-family: var(--ui);
+}
+.today-ribbon header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.today-ribbon header small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.today-ribbon p {
+  margin: 0;
+  font-size: 14px;
+}
+.today-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.today-matches {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.today-matches button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.today-matches button span {
+  color: var(--muted);
+}
+
+/* An organisation in Messages: one row like a chat, with its rooms underneath. */
+.org-conversation {
+  display: grid;
+  gap: 6px;
+}
+.org-conversation > a.conversation {
+  text-decoration: none;
+}
+.conversation > span.org-chat-badge {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: #fff;
+  font: 700 12px var(--ui);
+}
+.org-chat-rooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 4px 2px 54px;
+}
+.org-chat-rooms a {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 12px var(--ui);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--ink);
+  text-decoration: none;
+}
+.org-chat-rooms a b {
+  font-size: 10px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Asking to turn on push notifications, where it makes sense. */
+.push-offer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--paper, #f4efe6);
+  border: 1px solid var(--line, #e2ddd3);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.push-offer span {
+  flex: 1;
+}
+.push-offer.compact {
+  margin: 6px 0 0;
+}

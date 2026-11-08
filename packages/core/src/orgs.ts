@@ -12,6 +12,7 @@ import {
   orgLookSchema,
   orgPostReviewSchema,
   orgPostSchema,
+  type OrgPostAttach,
   orgVisibilitySchema,
   orgs,
   registerCollection,
@@ -68,6 +69,8 @@ export class OrgService {
   circles: Circles | undefined;
   /** Installed by the server: whether two people blocked each other, either way. */
   blockedEither: (a: string, b: string) => boolean = () => false;
+  /** Installed by the server: whether a post may carry this ticket or recruitment. */
+  attachable: (orgId: string, attach: OrgPostAttach) => boolean = () => false;
   constructor(
     private readonly social: SocialService,
     private readonly identity: IdentityService,
@@ -187,7 +190,14 @@ export class OrgService {
       posts: this.orgPosts(orgId)
         .filter((p) => p.status === "published")
         .slice(0, 10)
-        .map((p) => ({ id: p.id, text: p.text, at: p.reviewedAt ?? p.createdAt })),
+        .map((p) => ({
+          id: p.id,
+          text: p.text,
+          at: p.reviewedAt ?? p.createdAt,
+          ...(p.attach ? { attach: p.attach } : {}),
+        })),
+      followers: this.followers(orgId).length,
+      following: !!viewerId && this.follows(viewerId, orgId),
       lines: this.publicLines(orgId, users),
       look: this.look(orgId),
     };
@@ -360,6 +370,60 @@ export class OrgService {
     return { awarded, skipped };
   }
 
+  // Following an organisation ---------------------------------------------------------------
+  /** People who follow the organisation to see what it posts, without being one of its own. */
+  followers(orgId: string) {
+    return this.store
+      .all<{ orgId: string; userId: string }>("org-follow")
+      .filter((f) => f.orgId === orgId)
+      .map((f) => f.userId);
+  }
+  follows(userId: string, orgId: string) {
+    return !!this.store.get("org-follow", `${orgId}:${userId}`);
+  }
+  /** Follow or unfollow. A private organisation can't be followed by anyone outside it. */
+  follow(actor: Actor, orgId: string) {
+    const userId = this.social.actor(actor);
+    this.org(orgId);
+    if (!this.canSee(orgId, userId)) throw new AppError("NOT_FOUND", 404);
+    const key = `${orgId}:${userId}`;
+    const active = !this.store.get("org-follow", key);
+    this.store.transaction(() =>
+      active
+        ? this.store.put("org-follow", key, { orgId, userId, at: this.now().toISOString() })
+        : this.store.remove("org-follow", key),
+    );
+    return { following: active, followers: this.followers(orgId).length };
+  }
+  /**
+   * What reaches someone's feed from organisations: the published posts of the ones they follow
+   * or belong to, newest first, as long as they may still see the organisation.
+   */
+  feedPosts(viewerId: string, limit = 30) {
+    const mine = new Set<string>();
+    for (const f of this.store.all<{ orgId: string; userId: string }>("org-follow"))
+      if (f.userId === viewerId) mine.add(f.orgId);
+    for (const org of orgs) if (this.isOwn(viewerId, org.id)) mine.add(org.id);
+    return this.store
+      .all<OrgPost>("org-post")
+      .filter(
+        (p) => p.status === "published" && mine.has(p.orgId) && this.canSee(p.orgId, viewerId),
+      )
+      .sort((a, b) => (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt))
+      .slice(0, limit)
+      .map((p) => {
+        const org = this.org(p.orgId);
+        return {
+          id: p.id,
+          org: { id: org.id, name: org.name, kind: org.kind, look: this.look(org.id) },
+          text: p.text,
+          at: p.reviewedAt ?? p.createdAt,
+          attach: p.attach ?? null,
+          member: this.isOwn(viewerId, org.id),
+        };
+      });
+  }
+
   // Posts written together ------------------------------------------------------------------
   private orgPosts(orgId: string) {
     return this.store
@@ -408,7 +472,8 @@ export class OrgService {
     const userId = this.social.actor(actor);
     this.org(orgId);
     if (!this.writes(userId, orgId)) throw new AppError("NOT_A_MEMBER", 403);
-    const { text } = orgPostSchema.parse(input);
+    const { text, attach } = orgPostSchema.parse(input);
+    if (attach && !this.attachable(orgId, attach)) throw new AppError("ATTACH_UNKNOWN", 400);
     const admin = this.identity.orgAdmins(orgId).includes(userId);
     const waiting = this.orgPosts(orgId).filter(
       (p) => p.status === "pending" && p.authorId === userId,
@@ -420,6 +485,7 @@ export class OrgService {
       orgId,
       authorId: userId,
       text,
+      ...(attach ? { attach } : {}),
       status: admin ? "published" : "pending",
       createdAt: at,
       ...(admin ? { reviewedBy: userId, reviewedAt: at } : {}),
@@ -674,10 +740,14 @@ export class OrgService {
       .filter((t) => this.inRoom(userId, t))
       .map(({ id, label, locked }) => ({ id, label, locked }));
   }
-  room(actor: Actor, orgId: string, termId: string) {
+  room(actor: Actor, orgId: string, termId: string, roomKey?: string) {
     const userId = this.social.actor(actor);
     const term = this.term(orgId, termId);
     if (!this.inRoom(userId, term)) throw new AppError("NOT_A_MEMBER", 403);
+    const divisions = this.divisions(term);
+    const open = divisions.filter((d) => this.inDivision(userId, term, d.key));
+    const here = roomKey ? open.find((d) => d.key === roomKey) : undefined;
+    if (roomKey && !here) throw new AppError("NOT_IN_DIVISION", 403);
     const admin = this.identity.orgAdmins(orgId).includes(userId);
     const users = new Map(this.store.all<User>("user").map((u) => [u.id, u]));
     const who = (id: string) => {
@@ -693,6 +763,7 @@ export class OrgService {
     const reports = admin && this.hearsTalk(userId, term) ? this.reportsOf(termId, posts) : [];
     const state = this.store.get<{ items: RoomStateItem[] }>("room-state", termId)?.items ?? [];
     this.markSeen(userId, termId);
+    const missed = this.missed(userId, term, posts, state, open);
     const mine = this.placed(term, (c) => c.ownerId === userId)[0];
     const me = users.get(userId);
     const talk = this.hearsTalk(userId, term);
@@ -712,17 +783,29 @@ export class OrgService {
       canPost: !term.locked,
       state: [...state].sort((a, b) => (a.when ?? "9999").localeCompare(b.when ?? "9999")),
       announcements: posts
-        .filter((p) => p.kind === "announcement")
+        .filter((p) => p.kind === "announcement" && !p.room)
         .slice(-20)
         .reverse()
         .map(view),
       talk,
       messages: talk
         ? posts
-            .filter((p) => p.kind === "message" && !this.blockedEither(userId, p.userId))
+            .filter(
+              (p) =>
+                p.kind === "message" &&
+                (p.room ?? undefined) === here?.key &&
+                !this.blockedEither(userId, p.userId),
+            )
             .slice(-100)
             .map(view)
         : [],
+      // The term's own rooms: everyone, then each division this person belongs to.
+      rooms: [
+        { key: null, label: "Everyone", people: null },
+        ...open.map((d) => ({ key: d.key, label: d.label, people: d.people.length })),
+      ],
+      roomKey: here?.key ?? null,
+      missed,
       slow: settings.slow,
       muted: settings.muted.includes(userId),
       // What the admins look after: reports on messages, and who can't talk for now.
@@ -780,6 +863,156 @@ export class OrgService {
     return { groupId: circle.groupId };
   }
   /**
+   * A term's divisions, from its recruitment: each role someone was accepted into is a room of
+   * its own, holding the people accepted for it. Nobody has to set them up.
+   */
+  divisions(term: Term) {
+    const oprecs = new Set(
+      this.store
+        .all<{ id: string; termId: string }>("oprec")
+        .filter((o) => o.termId === term.id)
+        .map((o) => o.id),
+    );
+    const byKey = new Map<string, { key: string; label: string; people: string[] }>();
+    for (const a of this.store.all<{
+      oprecId: string;
+      userId: string;
+      role: string;
+      status: string;
+    }>("oprec-application")) {
+      if (!oprecs.has(a.oprecId) || a.status !== "accepted") continue;
+      const key = slug(a.role, "division");
+      const d = byKey.get(key) ?? { key, label: a.role, people: [] };
+      if (!d.people.includes(a.userId)) d.people.push(a.userId);
+      byKey.set(key, d);
+    }
+    return [...byKey.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }
+  /**
+   * Who enters a division's room: its own people, plus the ones who run the term (its admins
+   * and whoever started it), since every division answers to them.
+   */
+  private inDivision(userId: string, term: Term, key: string) {
+    const division = this.divisions(term).find((d) => d.key === key);
+    if (!division) return false;
+    return (
+      division.people.includes(userId) ||
+      this.identity.orgAdmins(term.orgId).includes(userId) ||
+      term.createdBy === userId
+    );
+  }
+  /** When someone last opened the term's rooms; what came after is new to them. */
+  private lastOpened(userId: string, termId: string) {
+    return this.store.get<{ at: string }>("room-last", `${termId}:${userId}`)?.at;
+  }
+  /**
+   * What happened while someone was away, the few things worth reading first: what was
+   * announced or decided, who mentioned them, and how much talk there was. Opening the room
+   * counts as having caught up.
+   */
+  private missed(
+    userId: string,
+    term: Term,
+    posts: RoomPost[],
+    state: RoomStateItem[],
+    open: { key: string }[],
+  ) {
+    const since = this.lastOpened(userId, term.id);
+    const now = this.now().toISOString();
+    this.store.transaction(() => this.store.put("room-last", `${term.id}:${userId}`, { at: now }));
+    if (!since) return null;
+    const keys = new Set(open.map((d) => d.key));
+    const after = posts.filter(
+      (p) =>
+        p.createdAt > since &&
+        p.userId !== userId &&
+        (!p.room || keys.has(p.room)) &&
+        (p.kind === "announcement" || this.hearsTalk(userId, term)) &&
+        !this.blockedEither(userId, p.userId),
+    );
+    const handle = this.store.all<User>("user").find((u) => u.id === userId)?.handle;
+    const mention = handle
+      ? new RegExp(`(^|\\W)@${handle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\W|$)`, "i")
+      : null;
+    const users = new Map(this.store.all<User>("user").map((u) => [u.id, u]));
+    const name = (id: string) => users.get(id)?.name ?? "Someone";
+    const top: {
+      kind: "announcement" | "decision" | "deadline" | "mention";
+      text: string;
+      by?: string;
+      at: string;
+    }[] = [];
+    for (const p of after.filter((p) => p.kind === "announcement").reverse())
+      top.push({ kind: "announcement", text: p.text, by: name(p.userId), at: p.createdAt });
+    for (const i of state.filter((i) => i.at > since && i.kind !== "schedule" && i.by !== userId))
+      top.push({ kind: i.kind as "decision" | "deadline", text: i.text, by: name(i.by), at: i.at });
+    if (mention)
+      for (const p of after.filter((p) => p.kind === "message" && mention.test(p.text)).reverse())
+        top.push({ kind: "mention", text: p.text, by: name(p.userId), at: p.createdAt });
+    const messages = after.filter((p) => p.kind === "message").length;
+    if (!top.length && !messages) return null;
+    return { since, messages, items: top.slice(0, 3), more: Math.max(0, top.length - 3) };
+  }
+  /**
+   * The organisations someone belongs to, as rows for their messages: one per organisation with
+   * an open term they can enter, its newest line, how much is new since they last opened it,
+   * and its rooms.
+   */
+  inbox(actor: Actor) {
+    const userId = this.social.actor(actor);
+    const users = new Map(this.store.all<User>("user").map((u) => [u.id, u]));
+    const posts = this.store.all<RoomPost>("room-post");
+    return orgs
+      .flatMap((org) => {
+        const term = this.terms(org.id).find((t) => !t.locked && this.inRoom(userId, t));
+        if (!term) return [];
+        const open = this.divisions(term).filter((d) => this.inDivision(userId, term, d.key));
+        const keys = new Set(open.map((d) => d.key));
+        const talk = this.hearsTalk(userId, term);
+        const mine = posts
+          .filter(
+            (p) =>
+              p.termId === term.id &&
+              (p.kind === "announcement" || talk) &&
+              (!p.room || keys.has(p.room)) &&
+              !this.blockedEither(userId, p.userId),
+          )
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        const last = mine.at(-1);
+        const since = this.lastOpened(userId, term.id) ?? "";
+        const unread = mine.filter((p) => p.createdAt > since && p.userId !== userId);
+        const room = (key?: string) =>
+          key ? (open.find((d) => d.key === key)?.label ?? "Everyone") : "Everyone";
+        return [
+          {
+            orgId: org.id,
+            name: org.name,
+            look: this.look(org.id),
+            term: { id: term.id, label: term.label },
+            last: last
+              ? {
+                  text: last.text,
+                  by: users.get(last.userId)?.name ?? "Someone",
+                  kind: last.kind,
+                  room: room(last.room),
+                  at: last.createdAt,
+                }
+              : null,
+            unread: unread.length,
+            rooms: [
+              { key: null, label: "Everyone", unread: unread.filter((p) => !p.room).length },
+              ...open.map((d) => ({
+                key: d.key,
+                label: d.label,
+                unread: unread.filter((p) => p.room === d.key).length,
+              })),
+            ],
+          },
+        ];
+      })
+      .sort((a, b) => (b.last?.at ?? "").localeCompare(a.last?.at ?? ""));
+  }
+  /**
    * Which days someone opened a room, so the trial can tell readers who come back from people
    * who looked once. Written at most once a day per person.
    */
@@ -830,9 +1063,12 @@ export class OrgService {
    * mode asks them to wait. A locked term is read only.
    */
   post(actor: Actor, orgId: string, termId: string, input: unknown) {
-    const { userId, admin } = this.openRoom(actor, orgId, termId);
+    const { userId, admin, term } = this.openRoom(actor, orgId, termId);
     const parsed = roomPostSchema.parse(input);
     if (parsed.kind === "announcement" && !admin) throw new AppError("ORG_ADMIN_REQUIRED", 403);
+    if (parsed.room && parsed.kind === "announcement") throw new AppError("ANNOUNCE_TO_ALL", 400);
+    if (parsed.room && !this.inDivision(userId, term, parsed.room))
+      throw new AppError("NOT_IN_DIVISION", 403);
     if (parsed.kind === "message" && !admin) {
       const { slow, muted } = this.settings(termId);
       if (muted.includes(userId)) throw new AppError("MUTED", 403);
@@ -849,6 +1085,7 @@ export class OrgService {
       userId,
       kind: parsed.kind,
       text: parsed.text,
+      ...(parsed.room ? { room: parsed.room } : {}),
       createdAt: this.now().toISOString(),
     };
     this.store.transaction(() => this.store.put("room-post", post.id, post));

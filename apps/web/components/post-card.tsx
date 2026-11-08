@@ -183,6 +183,7 @@ export function PostCard({
   }
   return (
     <article
+      data-post-id={post.id}
       className={`post-card ${stage ? "world-stage" : "classic-post"} ${post.decoration ? "themed" : ""}`}
       style={
         {
@@ -402,6 +403,7 @@ export function PostCard({
           <FriendAnswers
             postId={post.id}
             title={post.metadata.title}
+            cover={post.metadata.coverAssetId}
             version={answered}
             follow={
               post.ownerId !== boot.actor.userId && !boot.following.includes(post.ownerId)

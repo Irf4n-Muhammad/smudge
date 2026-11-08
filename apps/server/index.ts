@@ -43,6 +43,9 @@ import {
   seedOrgTerms,
 } from "./seed-identity.js";
 import { seedFillFormat, seedSmudge, seedTierList } from "./seed-smudge.js";
+import { seedOpeners } from "./seed-openers.js";
+import { seedEveryday } from "./seed-everyday.js";
+import { seedOrgFeed } from "./seed-org-feed.js";
 import { seedPhotos } from "./seed-photos.js";
 import { identityRoutes } from "./identity-routes.js";
 import { themeRoutes } from "./theme-routes.js";
@@ -65,6 +68,7 @@ import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
 import { deliveryFor, startMailWorker } from "./mail.js";
+import { PushService } from "../../packages/core/src/push.js";
 import { ActivityDigest } from "../../packages/core/src/digest.js";
 import { rateLimit } from "./rate-limit.js";
 import { CommunityService } from "../../packages/core/src/community.js";
@@ -185,12 +189,63 @@ momentDay.cardFilter = (viewerId, userId) =>
 const messages = new MessageService(service, community, clock);
 orgService.circles = messages;
 orgService.blockedEither = (a, b) => community.blockedEither(a, b);
+// A post can carry an event's tickets once they're set up, or the open recruitment.
+orgService.attachable = (id, attach) =>
+  attach.kind === "tickets" ? orgEvents.has(id, attach.event) : !!oprecs.current(id)?.accepting;
 accounts.erasers.push((userId) => messages.erase(userId));
 const deliver = deliveryFor(config, resolve(dataDir, "mail.jsonl"));
 if (deliver) startMailWorker(store, deliver);
 const digest = new ActivityDigest(service, community, config.publicUrl.href, clock);
 // Activity emails go out with the other mail, a few minutes after things happen.
 setInterval(() => digest.run(), 5 * 60_000).unref();
+// Push notifications: what Notifications shows, on the phone, a moment after it happens. Only the
+// things that bring someone back (answers, versions, replies); likes stay in the app.
+const push = new PushService(store, config.publicUrl.href, {
+  ...(production
+    ? {}
+    : { allowHost: (u: URL) => u.hostname === "127.0.0.1" || u.hostname === "localhost" }),
+  now: clock,
+});
+accounts.erasers.push((userId) => {
+  for (const s of push.subscriptions(userId)) push.unsubscribe(userId, s.endpoint);
+});
+service.listeners.push((event) => {
+  if (community.blockedEither(event.actorId, event.targetId)) return;
+  const who =
+    service
+      .users()
+      .find((u) => u.id === event.actorId)
+      ?.name.split(" ")[0] ?? "Someone";
+  const postId = "postId" in event ? event.postId : undefined;
+  const post = postId ? store.get<{ metadata: { title: string } }>("post", postId) : undefined;
+  const title = post ? `“${post.metadata.title}”` : "your post";
+  const body =
+    event.type === "answer"
+      ? `${who} answered ${title}. See what they said.`
+      : event.type === "answered-too"
+        ? `${who} answered ${title} too. See if you agree.`
+        : event.type === "version"
+          ? `${who} made their own version of ${title}.`
+          : event.type === "comment"
+            ? `${who} commented on ${title}.`
+            : event.type === "reply"
+              ? `${who} replied to your comment.`
+              : event.type === "mention"
+                ? `${who} mentioned you.`
+                : event.type === "follow"
+                  ? `${who} started following you.`
+                  : event.type === "follow-request"
+                    ? `${who} asked to follow you.`
+                    : null;
+  if (!body) return;
+  const message = {
+    title: "Smudge",
+    body,
+    url: postId ? `/?post=${encodeURIComponent(postId)}` : "/",
+    tag: `${event.type}:${postId ?? event.actorId}`,
+  };
+  setImmediate(() => void push.send(event.targetId, message));
+});
 const profiles = new ProfileService(service);
 if (config.demoContent) {
   seedIdentity(identity, service);
@@ -203,6 +258,9 @@ if (config.demoContent) {
   seedFillFormat(service);
   seedTierList(service);
   seedPhotos(service);
+  // After the photo seed too: Dani makes two of them.
+  seedOpeners(service, clock());
+  seedEveryday(service);
   // After the photo seed, which adds Dani and the photos on his page.
   seedDaniPage(profiles);
   seedInesPosts(profiles);
@@ -214,6 +272,7 @@ if (config.demoContent) {
   seedPlan(service);
   seedGamers(service, sidesService);
   seedGift(service);
+  seedOrgFeed(store, orgService, oprecs, orgEvents, clock());
 }
 // Pages made on an older Paint wall are brought up to the template at start (ADR 0046).
 {
@@ -589,8 +648,46 @@ api.get("/api/orgs/:id/rooms", (req, res) =>
   res.json(orgService.rooms(actor(res), orgId(req.params.id))),
 );
 api.get("/api/orgs/:id/rooms/:term", (req, res) =>
-  res.json(orgService.room(actor(res), orgId(req.params.id), orgId(req.params.term))),
+  res.json(
+    orgService.room(
+      actor(res),
+      orgId(req.params.id),
+      orgId(req.params.term),
+      typeof req.query.room === "string" && req.query.room ? orgId(req.query.room) : undefined,
+    ),
+  ),
 );
+// Your organisations as rows in Messages: newest line, what's new, and their rooms.
+api.get("/api/org-inbox", (_req, res) => res.json(orgService.inbox(actor(res))));
+api.post("/api/orgs/:id/follow", roomLimit, (req, res) =>
+  res.json(orgService.follow(actor(res), orgId(req.params.id))),
+);
+/**
+ * Posts from the organisations you follow or belong to, for the feed, each with what it lets
+ * you do right there: an event's tickets as you may claim them, or the recruitment and your
+ * application to it.
+ */
+api.get("/api/org-feed", (_req, res) => {
+  const viewer = actor(res).userId;
+  res.json(
+    orgService.feedPosts(viewer).map((p) => {
+      let attach: unknown = null;
+      try {
+        if (p.attach?.kind === "tickets")
+          attach = { kind: "tickets", ticket: orgEvents.view(p.org.id, p.attach.event, viewer) };
+        if (p.attach?.kind === "oprec") {
+          const oprec = oprecs.current(p.org.id);
+          attach = oprec
+            ? { kind: "oprec", oprec, mine: oprecs.mine(actor(res), p.org.id, oprec.id) }
+            : { kind: "oprec", oprec: null, mine: null };
+        }
+      } catch {
+        attach = null;
+      }
+      return { ...p, attach };
+    }),
+  );
+});
 api.post("/api/orgs/:id/rooms/:term/posts", roomLimit, (req, res) =>
   res.json(orgService.post(actor(res), orgId(req.params.id), orgId(req.params.term), req.body)),
 );
@@ -1310,6 +1407,18 @@ api.post("/api/posts/:id/reuse", (req, res) => {
   );
 });
 /** Your answer to a post, and the answers of people you follow; the card shows them under the post. */
+/** Today's format, the same for everyone that day, with the friends who played it. */
+api.get("/api/today", (_req, res) => {
+  const today = service.today(actor(res), clock().toISOString().slice(0, 10));
+  if (!today) return res.json(null);
+  const [post] = identity
+    .decorate(actor(res), [today.post])
+    .map((p) => ({ ...p, ...sidesService.tag(p) }));
+  res.json({ ...today, post, matches: service.matches(actor(res)) });
+});
+api.get("/api/match/:user", (req, res) =>
+  res.json(service.match(actor(res), z.string().max(40).parse(req.params.user))),
+);
 api.get("/api/posts/:id/answers", (req, res) => {
   const post = service.visiblePost(actor(res), String(req.params.id));
   res.json(service.answers(actor(res), post.id));
@@ -1334,6 +1443,22 @@ api.post("/api/posts/:id/claim", (req, res) => {
     service.capability(actor(res), id, "viewer.progress.write", body.progress);
   res.json(service.answers(actor(res), id));
 });
+// Push: the key a browser subscribes with, and turning it on or off for this device.
+api.get("/api/push", (_req, res) =>
+  res.json({ key: push.publicKey(), on: push.subscriptions(actor(res).userId).length > 0 }),
+);
+api.post("/api/push", (req, res) => res.json(push.subscribe(actor(res).userId, req.body)));
+api.post("/api/push/off", (req, res) =>
+  res.json(
+    push.unsubscribe(
+      actor(res).userId,
+      z
+        .object({ endpoint: z.string().max(1000) })
+        .strict()
+        .parse(req.body).endpoint,
+    ),
+  ),
+);
 /** The parts of a fill-in format anyone may change; empty when the post is not one. */
 api.get("/api/posts/:id/fields", (req, res) => {
   const post = service.visiblePost(actor(res), String(req.params.id));
@@ -1360,10 +1485,15 @@ api.post("/api/posts/:id/fill", (req, res) => {
       if (a.ownerId !== actor(res).userId || !a.mime.startsWith("image/"))
         throw new AppError("ASSET_NOT_ACCESSIBLE", 403);
     }
+  // A new photo in the cover's place becomes the version's cover in the feed too.
+  const cover = fields.find(
+    (f) => f.kind === "image" && f.value === `asset:${metadata.coverAssetId}`,
+  );
+  const coverAssetId = cover && values[cover.key] ? values[cover.key]! : metadata.coverAssetId;
   res.json(
     service.createDraft(
       actor(res),
-      { package: fillPackage(pkg, values), metadata },
+      { package: fillPackage(pkg, values), metadata: { ...metadata, coverAssetId } },
       post.remixOf ?? post.id,
     ),
   );

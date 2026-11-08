@@ -5,7 +5,9 @@ import {
   ArrowLeft,
   ArrowRight,
   Code,
+  Copy,
   Dices,
+  MessageCircleQuestion,
   Eye,
   Globe,
   ImagePlus,
@@ -23,14 +25,19 @@ import {
 import type { DraftView } from "../../../packages/contracts/src/experience";
 import {
   buildPost,
+  fillableParts,
+  firstReact,
   withoutStarterWords,
   postFonts,
   postPalettes,
+  postDesignSchema,
   postStyleInfo,
   postStyles,
   readPostDesign,
   restylePost,
   startPostDesign,
+  type FillPart,
+  type PostAsk,
   type PostDesign,
   type PostFont,
   type PostPalette,
@@ -39,7 +46,7 @@ import {
 import { api } from "./runtime";
 import { ChipRow, SmoothPreview, TextField } from "./easy-editor";
 
-type Sheet = "field" | "style" | "colors" | "font" | "button" | null;
+type Sheet = "field" | "style" | "colors" | "font" | "button" | "fill" | null;
 
 const videoTypes = ["video/mp4", "video/webm", "video/quicktime"];
 /**
@@ -105,7 +112,26 @@ const fieldTitles: Record<string, string> = {
   text: "Your words",
   quote: "Big quote",
   photos: "Photos",
+  ask: "How friends answer",
 };
+const partNames: Record<FillPart, string> = {
+  kicker: "Small label",
+  headline: "Headline",
+  text: "Your words",
+  quote: "Big quote",
+  photo: "Cover photo",
+};
+async function uploadPhoto(file: File) {
+  if (file.size > 3_000_000 || !["image/png", "image/jpeg", "image/webp"].includes(file.type))
+    throw new Error("Choose a PNG, JPEG or WebP photo under 3 MB.");
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1]!);
+    r.onerror = () => reject(new Error("Could not read that photo."));
+    r.readAsDataURL(file);
+  });
+  return (await api<{ id: string }>("/assets", { name: file.name, mime: file.type, base64 })).id;
+}
 
 /**
  * The easy post editor: pick a style, then tap any part of the post to change it. The design is
@@ -231,8 +257,8 @@ export function PostEditor({
   function change(next: PostDesign, now = false) {
     setDesign(next);
     latest.current = { ...latest.current, design: next };
-    // An empty headline would be refused: wait until there is one.
-    if (!next.headline.trim()) return setSaving("error");
+    // An empty headline or option would be refused: wait until the post is whole again.
+    if (!postDesignSchema.safeParse(next).success) return setSaving("error");
     setSaving("saving");
     clearTimeout(timer.current);
     if (now) void save();
@@ -246,7 +272,7 @@ export function PostEditor({
     timer.current = setTimeout(() => void save(), 700);
   }
 
-  async function start(style: PostStyle) {
+  async function start(style: PostStyle, photo?: File) {
     setBusy(true);
     setMessage("");
     try {
@@ -255,7 +281,12 @@ export function PostEditor({
         setStep("edit");
         return;
       }
-      const built = buildPost(startPostDesign(style));
+      const photos = photo ? [{ assetId: await uploadPhoto(photo), caption: "" }] : [];
+      // Every new post asks for one tap; the maker can change it or take it off.
+      const tap = style !== "ask" && style !== "plan" ? { ask: firstReact() } : {};
+      const built = buildPost(
+        startPostDesign(style, { ...(photos.length ? { photos } : {}), ...tap }),
+      );
       open(
         await api<DraftView>("/drafts", {
           package: built.package,
@@ -267,8 +298,8 @@ export function PostEditor({
           },
         }),
       );
-      // Photos make a post, so a new one starts there.
-      pick("photos");
+      // Photos make a post, so a new one starts there; an Ask starts at its question.
+      pick(style === "ask" ? "headline" : "photos");
     } catch (e) {
       setMessage(friendly(e));
     } finally {
@@ -314,18 +345,7 @@ export function PostEditor({
         }
         if (file.size > 3_000_000 || !["image/png", "image/jpeg", "image/webp"].includes(file.type))
           throw new Error("Choose PNG, JPEG or WebP photos under 3 MB, or a video.");
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => resolve(String(r.result).split(",")[1]!);
-          r.onerror = () => reject(new Error("Could not read that photo."));
-          r.readAsDataURL(file);
-        });
-        const asset = await api<{ id: string }>("/assets", {
-          name: file.name,
-          mime: file.type,
-          base64,
-        });
-        added.push({ assetId: asset.id, caption: "" });
+        added.push({ assetId: await uploadPhoto(file), caption: "" });
       }
       const next = {
         ...latest.current.design!,
@@ -379,6 +399,27 @@ export function PostEditor({
             <X />
           </button>
         </header>
+        {!draft && (
+          <label className={`post-quick-ask ${busy ? "busy" : ""}`}>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              aria-label="Ask with a photo"
+              disabled={busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void start("ask", file);
+              }}
+            />
+            <MessageCircleQuestion aria-hidden="true" />
+            <span>
+              <strong>{busy ? "Adding your photo…" : "Ask with a photo"}</strong>
+              <small>One photo, one question. Friends answer with a tap.</small>
+            </span>
+            <ArrowRight aria-hidden="true" />
+          </label>
+        )}
         <h1 className="easy-title">
           Make a <em>post,</em>
         </h1>
@@ -455,14 +496,18 @@ export function PostEditor({
         ? `Photo ${Number(photoIndex) + 1}`
         : field === "kicker" && d.style === "plan"
           ? "When and where"
-          : (fieldTitles[field ?? ""] ?? "Edit")
+          : field === "headline" && d.style === "ask"
+            ? "Your question"
+            : (fieldTitles[field ?? ""] ?? "Edit")
       : sheet === "style"
         ? "Style"
         : sheet === "colors"
           ? "Colors"
           : sheet === "font"
             ? "Font"
-            : "Caption & button";
+            : sheet === "fill"
+              ? "Let people make their own"
+              : "Caption & button";
   const addPhotos = (
     <label className="easy-upload">
       <input
@@ -545,10 +590,14 @@ export function PostEditor({
           )}
           {sheet === "field" && field === "headline" && (
             <TextField
-              title="Headline"
+              title={d.style === "ask" ? "Your question" : "Headline"}
               value={d.headline}
               max={90}
-              hint="Put *stars* around words to make them italic."
+              hint={
+                d.style === "ask"
+                  ? "Ask one thing. Put *stars* around words to make them italic."
+                  : "Put *stars* around words to make them italic."
+              }
               onChange={(v) => change({ ...d, headline: v })}
             />
           )}
@@ -638,6 +687,22 @@ export function PostEditor({
               </button>
             </div>
           )}
+          {sheet === "field" && field === "ask" && d.ask && (
+            <AskFields
+              ask={d.ask}
+              onChange={(ask, now) => change({ ...d, ask }, now)}
+              onRemove={
+                d.style === "ask"
+                  ? undefined
+                  : () => {
+                      const { ask: _gone, ...rest } = d;
+                      change(rest, true);
+                      setSheet(null);
+                    }
+              }
+            />
+          )}
+          {sheet === "fill" && <FillFields design={d} onChange={(next) => change(next, true)} />}
           {sheet === "style" && (
             <div className="easy-field">
               <h2>Style</h2>
@@ -719,6 +784,17 @@ export function PostEditor({
                 hint="Leave it empty for no button."
                 onChange={(linkLabel) => changeMeta({ ...meta, linkLabel })}
               />
+              {!d.ask && d.style !== "plan" && d.style !== "ask" && (
+                <button
+                  className="post-all-photos"
+                  onClick={() => {
+                    change({ ...d, ask: firstReact() }, true);
+                    pick("ask");
+                  }}
+                >
+                  Add one tap for viewers
+                </button>
+              )}
               {meta.linkLabel.trim() && (
                 <TextField
                   title=""
@@ -771,6 +847,15 @@ export function PostEditor({
           <span>Caption</span>
         </button>
         <button
+          className={d.fill?.length ? "is-on" : undefined}
+          aria-pressed={sheet === "fill"}
+          aria-label={d.fill?.length ? "Fill-in, on" : "Fill-in"}
+          onClick={() => setSheet(sheet === "fill" ? null : "fill")}
+        >
+          <Copy />
+          <span>Fill-in</span>
+        </button>
+        <button
           aria-pressed={previewing}
           onClick={() => {
             setPreviewing((v) => !v);
@@ -798,6 +883,182 @@ export function PostEditor({
           <Code /> Advanced editor
         </button>
       </div>
+    </div>
+  );
+}
+
+/** How friends answer an Ask: tap one option, write a few words, or slide. */
+function AskFields({
+  ask,
+  onChange,
+  onRemove,
+}: {
+  ask: PostAsk;
+  onChange: (ask: PostAsk, now?: boolean) => void;
+  /** Any style but Ask can do without it. */
+  onRemove?: (() => void) | undefined;
+}) {
+  const options = ask.options.length >= 2 ? ask.options : ["Yes", "No"];
+  const emoji = ask.kind === "react";
+  return (
+    <div className="easy-field">
+      <ChipRow
+        label="Friends answer by"
+        value={ask.kind}
+        options={[
+          ["react", "An emoji"],
+          ["poll", "Tapping one"],
+          ["open", "Writing a few words"],
+          ["slider", "Sliding"],
+        ]}
+        onChange={(kind) =>
+          onChange(
+            {
+              ...ask,
+              kind,
+              options:
+                kind === "react" && !emoji
+                  ? firstReact().options
+                  : kind === "poll" && emoji
+                    ? ["Yes", "No"]
+                    : options,
+            },
+            true,
+          )
+        }
+      />
+      {(ask.kind === "poll" || emoji) && (
+        <div className="ask-options">
+          {options.map((o, i) => (
+            <div className="ask-option" key={i}>
+              <TextField
+                title=""
+                label={`${emoji ? "Emoji" : "Option"} ${i + 1}`}
+                value={o}
+                max={emoji ? 8 : 40}
+                onChange={(v) =>
+                  onChange({ ...ask, options: options.map((x, j) => (j === i ? v : x)) })
+                }
+              />
+              {options.length > 2 && (
+                <button
+                  className="danger"
+                  aria-label={`Remove option ${i + 1}`}
+                  onClick={() =>
+                    onChange({ ...ask, options: options.filter((_, j) => j !== i) }, true)
+                  }
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          ))}
+          {options.length < 4 && (
+            <button
+              className="post-all-photos"
+              onClick={() =>
+                onChange(
+                  { ...ask, options: [...options, emoji ? "👀" : `Option ${options.length + 1}`] },
+                  true,
+                )
+              }
+            >
+              {emoji ? "Add an emoji" : "Add an option"}
+            </button>
+          )}
+          <p className="easy-note">
+            Two to four. After they tap, people see how you and their friends split, and it counts
+            toward how much you match.
+          </p>
+        </div>
+      )}
+      {ask.kind === "open" && (
+        <p className="easy-note">
+          Friends type a short answer. You and the people who follow both of you see what they
+          wrote.
+        </p>
+      )}
+      {ask.kind === "slider" && (
+        <TextField
+          title=""
+          label="Emoji on the slider"
+          value={ask.emoji ?? "😍"}
+          max={8}
+          onChange={(v) => {
+            const { emoji: _old, ...rest } = ask;
+            onChange(v.trim() ? { ...rest, emoji: v } : rest);
+          }}
+        />
+      )}
+      {onRemove && (
+        <button className="post-all-photos" onClick={onRemove}>
+          Take the tap off this post
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Makes the post a fill-in format without code: the parts ticked here go in a form, and anyone
+ * can post their own version with their words and photo while the design stays yours.
+ */
+function FillFields({
+  design,
+  onChange,
+}: {
+  design: PostDesign;
+  onChange: (next: PostDesign) => void;
+}) {
+  const parts = fillableParts(design);
+  const on = new Set(design.fill ?? []);
+  const set = (next: Set<FillPart>) => {
+    const { fill: _old, ...rest } = design;
+    const list = parts.filter((p) => next.has(p));
+    onChange(list.length ? { ...rest, fill: list } : rest);
+  };
+  return (
+    <div className="easy-field fill-fields">
+      <h2>Let people make their own</h2>
+      <p className="easy-note">
+        People get a <strong>Post my version</strong> button. They change the parts you tick from a
+        simple form, and the rest of your design stays the same.
+      </p>
+      <ul>
+        {parts.map((p) => (
+          <li key={p}>
+            <label>
+              <input
+                type="checkbox"
+                checked={on.has(p)}
+                onChange={(e) => {
+                  const next = new Set(on);
+                  if (e.target.checked) next.add(p);
+                  else next.delete(p);
+                  set(next);
+                }}
+              />
+              <span>
+                {p === "headline" && design.style === "ask" ? "Your question" : partNames[p]}
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+      {on.size === 0 ? (
+        <button
+          className="easy-go fill-all"
+          onClick={() =>
+            set(new Set(parts.filter((p) => p === "headline" || p === "photo" || p === "text")))
+          }
+        >
+          Make it fillable
+        </button>
+      ) : (
+        <button className="post-all-photos" onClick={() => set(new Set())}>
+          Turn it off
+        </button>
+      )}
     </div>
   );
 }

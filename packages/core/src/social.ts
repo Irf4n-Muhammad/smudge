@@ -124,7 +124,15 @@ export function packageDigest(value: Experience) {
 export type SocialEvent =
   | { type: "follow"; actorId: string; targetId: string }
   | {
-      type: "like" | "comment" | "reaction" | "reply" | "mention" | "answer";
+      type:
+        | "like"
+        | "comment"
+        | "reaction"
+        | "reply"
+        | "mention"
+        | "answer"
+        | "answered-too"
+        | "version";
       actorId: string;
       targetId: string;
       postId: string;
@@ -134,6 +142,22 @@ export type SocialEvent =
       actorId: string;
       targetId: string;
     };
+
+export type FormatKind = "everyday" | "rank" | "play";
+/**
+ * What kind of thing a post that takes answers is, for Today's format: someone's everyday
+ * question (an easy post in the Ask style), a ranking (answers place items), or something to
+ * play. A post whose only tap is an emoji reaction isn't a format at all: null.
+ */
+export function formatKind(post: Publication, ranked: Set<string>): FormatKind | null {
+  const settings = post.package.files["smudge/post.js"];
+  if (settings) {
+    if (/"style":"ask"/.test(settings)) return "everyday";
+    if (/"kind":"react"/.test(settings)) return null;
+  }
+  if (ranked.has(post.id)) return "rank";
+  return "play";
+}
 
 export class SocialService {
   /** Called inside the transaction that records the action, so side effects commit with it. */
@@ -281,6 +305,15 @@ export class SocialService {
       this.store.put("post", post.id, post);
       within?.(post);
       this.mention(post, actor.userId, post.metadata.caption);
+      // The maker hears each time their format is used: the version's number is the hook.
+      const original = post.remixOf ? this.store.get<Publication>("post", post.remixOf) : undefined;
+      if (original && original.ownerId !== actor.userId)
+        this.emit({
+          type: "version",
+          actorId: actor.userId,
+          targetId: original.ownerId,
+          postId: post.id,
+        });
     });
     return post;
   }
@@ -575,6 +608,112 @@ export class SocialService {
         .map(view),
     };
   }
+  /**
+   * How much two people agree, over the posts both of them answered: the same pick counts as
+   * agreeing, and a ranking counts by how many items they put in the same tier. Scores aren't
+   * opinions, so they don't count. A plan both said "I'm in" to counts as agreeing. Each shared
+   * post weighs the same.
+   */
+  match(actor: Actor, otherId: string) {
+    const me = this.actor(actor);
+    const mine = new Map(
+      this.store
+        .all<Answer>("answer")
+        .filter((a) => a.userId === me)
+        .map((a) => [a.postId, a]),
+    );
+    let shared = 0;
+    let agree = 0;
+    for (const theirs of this.store.all<Answer>("answer")) {
+      if (theirs.userId !== otherId || otherId === me) continue;
+      const m = mine.get(theirs.postId);
+      if (!m) continue;
+      if (m.placed && theirs.placed) {
+        const tiers = new Map(m.placed.map((p) => [p.item, p.tier]));
+        const both = theirs.placed.filter((p) => tiers.has(p.item));
+        if (!both.length) continue;
+        shared += 1;
+        agree += both.filter((p) => tiers.get(p.item) === p.tier).length / both.length;
+      } else if (m.pick !== undefined && theirs.pick !== undefined) {
+        shared += 1;
+        if (m.pick.toLowerCase() === theirs.pick.toLowerCase()) agree += 1;
+      }
+    }
+    // Saying "I'm in" to the same plan is a tap too: both of them chose to go.
+    const rsvps = this.store.all<{ postId: string; userId: string }>("rsvp");
+    const going = new Set(rsvps.filter((r) => r.userId === me).map((r) => r.postId));
+    for (const r of rsvps)
+      if (r.userId === otherId && otherId !== me && going.has(r.postId) && !mine.has(r.postId)) {
+        shared += 1;
+        agree += 1;
+      }
+    return { shared, percent: shared ? Math.round((agree / shared) * 100) : null };
+  }
+  /** The people you follow you agree with most, over at least one shared answer. */
+  matches(actor: Actor, limit = 5) {
+    const users = this.users();
+    return this.following(actor)
+      .flatMap((id) => {
+        const u = users.find((x) => x.id === id);
+        const m = this.match(actor, id);
+        return u && m.percent !== null
+          ? [{ userId: id, name: u.name, handle: u.handle, ...m, percent: m.percent }]
+          : [];
+      })
+      .sort((a, b) => b.percent - a.percent || b.shared - a.shared)
+      .slice(0, limit);
+  }
+  /**
+   * Today's format: one post that asks for answers, the same for everyone who can see it on a
+   * given day, so friends play the same thing and have something to compare.
+   */
+  today(actor: Actor, date = new Date().toISOString().slice(0, 10)) {
+    const me = this.actor(actor);
+    const ranked = new Set(
+      this.store
+        .all<Answer>("answer")
+        .filter((a) => a.placed)
+        .map((a) => a.postId),
+    );
+    const playable = this.store
+      .all<Publication>("post")
+      .filter(
+        (p) =>
+          (p.package.manifest.capabilities as string[]).includes("answers.write") &&
+          formatKind(p, ranked) !== null &&
+          this.viewFilter(me, p),
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
+    if (!playable.length) return null;
+    let hash = 0;
+    for (const ch of date) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    // The kind turns with the weekday, and everyday questions get more days as more of them are
+    // posted: the daily habit moves from games toward people's own days.
+    const everyday = playable.filter((p) => formatKind(p, ranked) === "everyday").length;
+    const day = new Date(`${date}T12:00:00Z`).getUTCDay();
+    const everydayDays = everyday < 5 ? [1, 5] : everyday < 20 ? [1, 3, 5] : [1, 3, 5, 6];
+    const wanted: FormatKind = everydayDays.includes(day)
+      ? "everyday"
+      : day === 4
+        ? "rank"
+        : "play";
+    const pool = playable.filter((p) => formatKind(p, ranked) === wanted);
+    const from = pool.length ? pool : playable;
+    const post = from[hash % from.length]!;
+    const kind = formatKind(post, ranked)!;
+    const answers = this.answers(actor, post.id);
+    return {
+      date,
+      kind,
+      post: this.views(actor, [post])[0]!,
+      played: answers.count,
+      mine: answers.mine,
+      friends: answers.friends.map((f) => ({
+        ...f,
+        match: this.match(actor, f.userId).percent,
+      })),
+    };
+  }
   following(actor: Actor) {
     return this.store
       .all<{ userId: string; target: string }>("follow")
@@ -752,11 +891,21 @@ export class SocialService {
         ...value,
         at: new Date().toISOString(),
       };
+      const first = !this.store.get<Answer>("answer", key);
       this.store.transaction(() => {
         this.store.put("answer", key, answer);
         // The maker hears who played; answering again refreshes the same notification.
         if (!preview && post.ownerId !== actor.userId)
           this.emit({ type: "answer", actorId: actor.userId, targetId: post.ownerId, postId });
+        // People who answered before and follow you hear that you joined in, once.
+        if (preview || !first) return;
+        for (const earlier of this.store.all<Answer>("answer")) {
+          const them = earlier.userId;
+          if (earlier.postId !== postId || them === actor.userId || them === post.ownerId) continue;
+          if (!this.following({ userId: them }).includes(actor.userId)) continue;
+          if (!this.viewFilter(them, post as Publication)) continue;
+          this.emit({ type: "answered-too", actorId: actor.userId, targetId: them, postId });
+        }
       });
       return this.answers(actor, postId);
     }

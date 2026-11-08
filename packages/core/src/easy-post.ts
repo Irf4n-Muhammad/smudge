@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Experience } from "../../contracts/src/experience.js";
+import { fillSource } from "./fill-script.js";
 
 /**
  * The easy post editor. A post is described by a small settings object (style, colours, words,
@@ -7,7 +8,15 @@ import type { Experience } from "../../contracts/src/experience.js";
  * advanced editor, MCP and "Use format" keep working on the same package. Every string is
  * escaped; the only script is the fixed motion script below.
  */
-export const postStyles = ["poster", "magazine", "gallery", "scrapbook", "note", "plan"] as const;
+export const postStyles = [
+  "poster",
+  "magazine",
+  "gallery",
+  "scrapbook",
+  "note",
+  "plan",
+  "ask",
+] as const;
 export type PostStyle = (typeof postStyles)[number];
 export const postStyleInfo: Record<PostStyle, { name: string; note: string }> = {
   poster: { name: "Poster", note: "One big photo, one huge line" },
@@ -16,6 +25,7 @@ export const postStyleInfo: Record<PostStyle, { name: string; note: string }> = 
   scrapbook: { name: "Scrapbook", note: "Taped photos and handwritten notes" },
   note: { name: "Big note", note: "Just words, loud and clear" },
   plan: { name: "Plan", note: "Invite people and see who's in" },
+  ask: { name: "Ask", note: "A photo and one question for your friends" },
 };
 
 export const postPalettes = {
@@ -76,8 +86,31 @@ export const postDesignSchema = z
       )
       .max(12),
     motion: z.boolean(),
+    /**
+     * The parts anyone may change in their own version ("Post my version"). Written out as
+     * `smudge/fill.js`, so the post works as a fill-in format without any code.
+     */
+    fill: z
+      .array(z.enum(["kicker", "headline", "text", "quote", "photo"]))
+      .max(5)
+      .optional(),
+    /** The Ask style: how friends answer the headline's question. */
+    ask: z
+      .object({
+        /** Tap one option, write a few words, or slide. */
+        /** `react` is a row of emoji: the quickest tap, the default on every new post. */
+        kind: z.enum(["poll", "react", "open", "slider"]),
+        options: z.array(z.string().trim().min(1).max(40)).max(4),
+        emoji: z.string().trim().min(1).max(8).optional(),
+      })
+      .strict()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((d, ctx) => {
+    if ((d.ask?.kind === "poll" || d.ask?.kind === "react") && d.ask.options.length < 2)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "ASK_NEEDS_TWO_OPTIONS" });
+  });
 export type PostDesign = z.infer<typeof postDesignSchema>;
 
 const styleDefaults: Record<PostStyle, { palette: PostPalette; font: PostFont }> = {
@@ -87,7 +120,14 @@ const styleDefaults: Record<PostStyle, { palette: PostPalette; font: PostFont }>
   scrapbook: { palette: "blush", font: "hand" },
   note: { palette: "lime", font: "bold" },
   plan: { palette: "ocean", font: "bold" },
+  ask: { palette: "night", font: "bold" },
 };
+export type PostAsk = NonNullable<PostDesign["ask"]>;
+export const fillParts = ["kicker", "headline", "text", "quote", "photo"] as const;
+export type FillPart = (typeof fillParts)[number];
+const firstAsk = (): PostAsk => ({ kind: "poll", options: ["Yes, do it", "Don't"] });
+/** The one tap a new post starts with: how it made you feel, one emoji. */
+export const firstReact = (): PostAsk => ({ kind: "react", options: ["🔥", "😍", "😂", "🥹"] });
 const starters: Record<PostStyle, Pick<PostDesign, "kicker" | "headline" | "text" | "quote">> = {
   poster: {
     kicker: "Tonight",
@@ -125,6 +165,12 @@ const starters: Record<PostStyle, Pick<PostDesign, "kicker" | "headline" | "text
     text: "Easy pace, 21K, coffee after. Say where and when up top; people tap I'm in and their names show up here.",
     quote: "",
   },
+  ask: {
+    kicker: "",
+    headline: "Should I *cut my hair*?",
+    text: "",
+    quote: "",
+  },
 };
 
 /** A new design in a style, keeping any words and photos already written. */
@@ -139,6 +185,8 @@ export function startPostDesign(style: PostStyle, from?: Partial<PostDesign>): P
     quote: from?.quote ?? words.quote,
     photos: from?.photos ?? [],
     motion: from?.motion ?? true,
+    ...(from?.fill ? { fill: from.fill } : {}),
+    ...(style === "ask" || from?.ask ? { ask: from?.ask ?? firstAsk() } : {}),
   });
 }
 
@@ -156,7 +204,12 @@ export function withoutStarterWords(design: PostDesign): PostDesign {
 
 /** Switching style keeps the words and photos and takes that style's colours and font. */
 export function restylePost(design: PostDesign, style: PostStyle): PostDesign {
-  return { ...design, style, ...styleDefaults[style] };
+  return {
+    ...design,
+    style,
+    ...styleDefaults[style],
+    ...(style === "ask" && !design.ask ? { ask: firstAsk() } : {}),
+  };
 }
 
 const settingsFile = "smudge/post.js";
@@ -167,10 +220,77 @@ export function readPostDesign(pkg: Experience): PostDesign | null {
   if (!match) return null;
   try {
     const parsed = postDesignSchema.safeParse(JSON.parse(match[1]!));
-    return parsed.success ? parsed.data : null;
+    return parsed.success ? withFilled(parsed.data, pkg) : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Someone's own version of a fillable post keeps the maker's settings and only rewrites
+ * `smudge/fill.js`, so the editor reads the words and photo from there: opening your version
+ * shows what you wrote, not what the maker did.
+ */
+function withFilled(design: PostDesign, pkg: Experience): PostDesign {
+  if (!design.fill?.length) return design;
+  const match = /^window\.smudgeFill = (.+);\s*(?:\n|$)/.exec(pkg.files["smudge/fill.js"] ?? "");
+  if (!match) return design;
+  let fields: { key?: unknown; value?: unknown }[];
+  try {
+    fields = (JSON.parse(match[1]!) as { fields: { key?: unknown; value?: unknown }[] }).fields;
+  } catch {
+    return design;
+  }
+  const next = { ...design, photos: [...design.photos] };
+  for (const f of Array.isArray(fields) ? fields : []) {
+    if (typeof f.value !== "string") continue;
+    const value = f.value;
+    if (f.key === "kicker") next.kicker = value.trim().slice(0, 40);
+    else if (f.key === "headline" && value.trim()) next.headline = value.trim().slice(0, 90);
+    else if (f.key === "text") next.text = value.trim().slice(0, 1500);
+    else if (f.key === "quote") next.quote = value.trim().slice(0, 200);
+    else if (f.key === "photo" && next.photos[0]) {
+      const id = /^asset:([a-f0-9-]{36})$/.exec(value)?.[1];
+      if (id) next.photos[0] = { ...next.photos[0], assetId: id };
+    }
+  }
+  const parsed = postDesignSchema.safeParse(next);
+  return parsed.success ? parsed.data : design;
+}
+
+const fillLabels: Record<FillPart, string> = {
+  kicker: "Small label",
+  headline: "Headline",
+  text: "Your words",
+  quote: "Big quote",
+  photo: "Photo",
+};
+/**
+ * The parts of a design that can be offered for others to change: only those the post shows, and
+ * the cover only when it is a photo (a version can't swap in a video).
+ */
+export function fillableParts(design: PostDesign): FillPart[] {
+  return fillParts.filter((k) =>
+    k === "photo"
+      ? !!design.photos[0] && !design.photos[0].videoAssetId
+      : k === "headline" || !!design[k],
+  );
+}
+function fillFields(design: PostDesign) {
+  const offered = new Set(fillableParts(design));
+  return fillParts
+    .filter((k) => design.fill?.includes(k) && offered.has(k))
+    .map((k) => ({
+      key: k,
+      label:
+        k === "headline" && design.style === "ask"
+          ? "The question"
+          : k === "kicker" && design.style === "plan"
+            ? "When and where"
+            : fillLabels[k],
+      kind: k === "photo" ? "image" : k === "text" ? "long" : "text",
+      value: k === "photo" ? `asset:${design.photos[0]!.assetId}` : design[k],
+    }));
 }
 
 const escape = (s: string) =>
@@ -178,8 +298,18 @@ const escape = (s: string) =>
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
   );
-/** Escaped, then `*stars*` become <em>. */
-const rich = (s: string) => escape(s).replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+/**
+ * Escaped, then `*stars*` become <em>. Punctuation right after the stars stays on the line of the
+ * last italic word ("*breakfast*?" never leaves the "?" alone on a line).
+ */
+const rich = (s: string) =>
+  escape(s)
+    .replace(
+      /\*([^*\n]*?)([^*\s]+)\*([^\s*]+)/g,
+      (_all, lead: string, last: string, tail: string) =>
+        `${lead ? `<em>${lead}</em>` : ""}<span class="nb"><em>${last}</em>${tail}</span>`,
+    )
+    .replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
 const plain = (s: string) => s.replace(/\*([^*\n]+)\*/g, "$1");
 const paragraphs = (s: string) =>
   s
@@ -259,6 +389,7 @@ img,video{display:block;max-width:100%}
 h1,h2,blockquote,figure,p{margin:0}
 h1{font-family:var(--head);font-weight:${design.font === "bold" ? 900 : 400};letter-spacing:${design.font === "bold" ? "-.045em" : "-.02em"};line-height:.92;overflow-wrap:anywhere}
 h1 em{font-style:italic;color:var(--accent)}
+.nb{white-space:nowrap}
 .kicker{display:inline-block;font:700 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase}
 .text p+p{margin-top:1em}
 .text em{font-style:italic}
@@ -281,17 +412,63 @@ const figure = (p: PostDesign["photos"][number], i: number, cls = "", background
       : `<img src="asset:${p.assetId}" alt="${escape(p.caption || `Photo ${i + 1}`)}" loading="lazy">`
   }${p.caption ? `<figcaption>${escape(p.caption)}</figcaption>` : ""}</figure>`;
 
+/** The answer box: the Ask style's own, and the one tap any other post can carry. */
+const answerCss = `.answer{position:relative;z-index:1;display:grid;gap:10px;margin-top:-22px;padding:16px 16px 14px;border-radius:22px 22px 0 0;background:var(--bg);color:var(--ink)}
+.answer .opts{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:8px}
+.answer .opts.many{grid-template-columns:1fr 1fr}
+.answer .opt{position:relative;overflow:hidden;min-height:52px;border:2px solid var(--soft);border-radius:16px;padding:10px 12px;background:var(--soft);color:var(--ink);font:800 15px/1.2 var(--body);cursor:pointer;text-align:left}
+.answer .opt .bar{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent);opacity:.32;transition:width .6s cubic-bezier(.2,.7,.2,1)}
+.answer .opt span,.answer .opt b{position:relative}
+.answer .opt b{float:right;margin-left:8px;font-weight:900;opacity:0;transition:opacity .3s}
+.answer.done .opt{cursor:default}.answer.done .opt b{opacity:1}
+.answer .opt.mine{border-color:var(--accent)}
+.answer form{display:flex;gap:8px}
+.answer input[type=text]{flex:1;min-width:0;border:2px solid var(--soft);border-radius:14px;padding:12px 14px;background:var(--soft);color:var(--ink);font:600 16px var(--body)}
+.answer .send{border:0;border-radius:14px;padding:0 18px;background:var(--accent);color:var(--bg);font:900 15px var(--body);cursor:pointer}
+.answer .said{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.answer .said li{padding:7px 11px;border-radius:14px;background:var(--soft);font:600 14px/1.3 var(--body)}
+.answer .said li b{margin-right:6px}
+.answer .said li.mine{background:var(--accent);color:var(--bg)}
+.answer .slide{display:grid;gap:6px}
+.answer .face{font-size:34px;line-height:1;text-align:center;transition:transform .15s}
+.answer input[type=range]{width:100%;height:34px;accent-color:var(--accent);cursor:pointer}
+.answer .marks{position:relative;height:22px}
+.answer .marks i{position:absolute;top:0;transform:translateX(-50%);min-width:22px;height:22px;padding:0 5px;border-radius:99px;background:var(--soft);color:var(--ink);font:700 11px/22px var(--body);font-style:normal;text-align:center}
+.answer .marks i.mine{background:var(--accent);color:var(--bg)}
+.answer .who{margin:0;font:600 13px/1.35 var(--body);opacity:.75}
+.answer .again{justify-self:start;border:0;padding:0;background:none;color:inherit;font:700 13px var(--body);text-decoration:underline;cursor:pointer;opacity:.75}
+.answer [hidden]{display:none!important}
+.answer .opts.react{grid-template-columns:repeat(var(--n),1fr)}
+.answer .opts.react .opt{text-align:center;font-size:22px;padding:6px 4px}
+.answer .opts.react .opt b{float:none;display:block;margin:2px 0 0;font-size:12px}
+.answer .opts.react .opt .bar{inset:auto 0 0 0;width:100%!important;height:0;transition:height .6s cubic-bezier(.2,.7,.2,1)}
+`;
+function answerBox(ask: PostAsk, tap = false) {
+  const tapped = ask.kind === "poll" || ask.kind === "react";
+  const opts = tapped
+    ? `<div class="opts${ask.kind === "react" ? " react" : ask.options.length > 2 ? " many" : ""}" style="--n:${ask.kind === "react" ? ask.options.length : Math.min(2, ask.options.length)}">${ask.options.map((o, i) => `<button class="opt" type="button" data-ask-option="${i}"${ask.kind === "react" ? ` aria-label="${escape(o)}"` : ""}><i class="bar"></i><b></b><span>${escape(o)}</span></button>`).join("")}</div>`
+    : ask.kind === "open"
+      ? `<form data-ask-form><input type="text" maxlength="80" placeholder="Your answer" aria-label="Your answer"><button class="send" type="submit">Send</button></form><ul class="said" data-ask-said hidden></ul>`
+      : `<div class="slide"><div class="face" aria-hidden="true" data-ask-face>${escape(ask.emoji ?? "😍")}</div><input type="range" min="0" max="100" value="50" aria-label="Slide to answer" data-ask-range><div class="marks" data-ask-marks></div></div>`;
+  return `<section class="answer${tap ? " tap" : ""}" data-ask data-edit="ask" aria-label="Answer">${opts}<p class="who" data-ask-who></p><button class="again" type="button" data-ask-again hidden>Change my answer</button></section>`;
+}
+
 function render(design: PostDesign): { html: string; css: string } {
   const { photos } = design;
+  const fills = new Set(fillFields(design).map((f) => f.key));
+  const mark = (k: FillPart, rich = "") =>
+    fills.has(k)
+      ? ` data-fill="${k}"${rich ? ` data-fill-rich${rich === "long" ? '="long"' : ""}` : ""}`
+      : "";
   const kicker = design.kicker
-    ? `<span class="kicker" data-edit="kicker">${escape(design.kicker)}</span>`
+    ? `<span class="kicker" data-edit="kicker"${mark("kicker")}>${escape(design.kicker)}</span>`
     : "";
-  const h1 = `<h1 data-edit="headline" data-split>${rich(design.headline)}</h1>`;
+  const h1 = `<h1 data-edit="headline" data-split${mark("headline", "line")}>${rich(design.headline)}</h1>`;
   const text = design.text
-    ? `<div class="text rv" data-edit="text">${paragraphs(design.text)}</div>`
+    ? `<div class="text rv" data-edit="text"${mark("text", "long")}>${paragraphs(design.text)}</div>`
     : "";
   const quote = design.quote
-    ? `<blockquote class="rv" data-edit="quote">${rich(design.quote)}</blockquote>`
+    ? `<blockquote class="rv" data-edit="quote"${mark("quote", "line")}>${rich(design.quote)}</blockquote>`
     : "";
   let css = baseCss(design);
   let html = "";
@@ -391,12 +568,13 @@ main h1 em{font-style:normal;color:inherit;background:linear-gradient(transparen
       break;
     }
     case "note": {
-      const band = escape(plain(design.kicker || design.headline));
+      const bandKey: FillPart = design.kicker ? "kicker" : "headline";
+      const band = `<i${mark(bandKey, "line")}>${escape(plain(design.kicker || design.headline))}</i>`;
       css += `.hero{min-height:100vh;display:grid;align-content:center;gap:3vh;padding:8vw 6vw}
 .hero h1{font-size:clamp(56px,13vw,210px);line-height:.86;max-width:10ch}
 .hero h1 em{color:var(--accent);-webkit-text-stroke:0}
 .band{overflow:hidden;padding:14px 0;background:var(--ink);color:var(--bg);font:900 clamp(22px,3.4vw,40px)/1 var(--head);white-space:nowrap}
-.band span{display:inline-block;padding-right:2em}
+.band span{display:inline-block;padding-right:2em}.band i,.band em{font-style:normal}
 .moving .band div{display:inline-block;animation:slide 18s linear infinite}
 @keyframes slide{to{transform:translateX(-50%)}}
 .rest{display:grid;gap:8vh;padding:10vh 6vw 14vh;max-width:900px}
@@ -433,6 +611,42 @@ main h1 em{font-style:normal;color:inherit;background:linear-gradient(transparen
       html = `<section class="hero">${kicker}${h1}</section><section class="plan rv" data-plan aria-label="Who's in"><div class="buttons"><button class="join" type="button" data-plan-join>I'm in</button><button class="came" type="button" data-plan-came hidden>I was there</button></div><p class="going"><b data-plan-count>0</b><span data-plan-label>people in</span><span class="came-count" data-plan-came-label></span></p><div class="faces" data-plan-faces></div><p class="names" data-plan-names>Tap the button and your name shows up here.</p></section><section class="rest">${text}${quote}${photos.map((p, i) => figure(p, i)).join("")}</section>`;
       break;
     }
+    case "ask": {
+      // Sized for a feed card (460px tall): the photo takes what the answer box leaves, so the
+      // question and the buttons are both in view without opening the post.
+      const [first] = photos;
+      const ask = design.ask ?? firstAsk();
+      css += `body{min-height:100vh;display:flex;flex-direction:column}
+.ask{position:relative;flex:1 1 auto;display:grid;align-content:end;gap:10px;min-height:190px;padding:22px 20px 40px;overflow:hidden;isolation:isolate}
+.ask.photo{color:#fff}.ask.plain{background:var(--accent);color:var(--bg)}.ask.plain h1 em{color:var(--ink)}
+.ask>figure{position:absolute;inset:0;z-index:-1}
+.ask>figure :is(img,video){width:100%;height:100%;object-fit:cover}
+.ask>figure::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 35%,rgba(0,0,0,.72))}
+.ask>figure figcaption{display:none}
+.ask .kicker{justify-self:start;padding:7px 11px;border-radius:99px;background:var(--accent);color:var(--bg)}
+.ask h1{font-size:clamp(30px,8.4vw,76px);line-height:.95;max-width:18ch}
+.after{display:grid;gap:18px;padding:22px 20px 40px;max-width:720px}
+.after .text{font-size:18px}`;
+      css += answerCss;
+      html = `<section class="ask ${first ? "photo" : "plain"}">${first ? figure(first, 0, "", true) : ""}${kicker}${h1}</section>${answerBox(ask)}${text || quote ? `<section class="after">${text}${quote}</section>` : ""}`;
+      break;
+    }
+  }
+  // Every other post can carry one tap too, pinned to the bottom of the screen so it is in view in
+  // a feed card without opening the post (a feed card's page doesn't scroll, so it is fixed, not
+  // sticky, with room left under the post for it). A plan already has its tap.
+  if (design.ask && design.style !== "ask" && design.style !== "plan") {
+    css += `${answerCss}
+body{padding-bottom:var(--tap-room,104px)}
+.answer.tap{position:fixed;left:0;right:0;bottom:0;margin:0;padding:12px 14px 12px;border-radius:20px 20px 0 0;box-shadow:0 -10px 30px -18px rgba(0,0,0,.45)}
+.answer.tap .opt{min-height:44px;padding:8px 10px}
+.answer.tap .who{font-size:12px}`;
+    html += answerBox(design.ask, true);
+  }
+  // The cover photo is the one a version can swap.
+  if (fills.has("photo")) {
+    const cover = `<img src="asset:${photos[0]!.assetId}"`;
+    html = html.replace(cover, `${cover} data-fill="photo"`);
   }
   return { html, css };
 }
@@ -487,6 +701,104 @@ const planScript = `(() => {
 })();
 `;
 
+/**
+ * The Ask box: one answer per person through `answers.write`, then what you and the people you
+ * follow said. Everyone else counts in the number only, the way answers work everywhere.
+ */
+const askScript = `(() => {
+  const box = document.querySelector("[data-ask]");
+  if (!box) return;
+  const ask = (window.smudgePost && window.smudgePost.ask) || { kind: "poll", options: [] };
+  const who = box.querySelector("[data-ask-who]"), again = box.querySelector("[data-ask-again]");
+  let state = null, busy = false, changing = false;
+  const editing = () => document.documentElement.dataset.editing === "on";
+  const first = (n) => String(n || "").split(" ")[0];
+  const people = () => state ? [...(state.mine ? [Object.assign({}, state.mine, { you: true })] : []), ...state.friends.filter((f) => !state.mine || f.userId !== state.mine.userId)] : [];
+  const line = () => {
+    const total = state ? Math.max(state.count || 0, state.mine ? 1 : 0) : 0;
+    if (!total) { who.textContent = ask.kind === "react" ? "Tap one. Your friends see it." : ask.kind === "poll" ? "Tap one. Your friends see what you picked." : "Be the first to answer."; return; }
+    const names = state.friends.filter((f) => !state.mine || f.userId !== state.mine.userId).slice(0, 2).map((f) => first(f.name));
+    const known = (state.mine ? 1 : 0) + names.length;
+    const rest = total - known;
+    const bits = (state.mine ? ["You"] : []).concat(names);
+    if (rest > 0) bits.push(rest + (bits.length ? " more" : rest === 1 ? " person" : " people"));
+    who.textContent = bits.join(", ").replace(/, ([^,]*)$/, " and $1") + " answered";
+  };
+  const fail = (e) => { who.textContent = /RUNTIME|GUEST|NOT_FOUND|sign/i.test(String(e && e.message)) ? "Open this in Smudge to answer." : "Could not reach Smudge. Try again."; };
+  const answered = () => !!(state && state.mine) && !changing;
+  const show = () => {
+    const done = answered();
+    box.classList.toggle("done", done);
+    again.hidden = !done;
+    if (ask.kind === "poll" || ask.kind === "react") {
+      const opts = [...box.querySelectorAll("[data-ask-option]")];
+      const votes = opts.map(() => 0);
+      for (const p of people()) { const i = ask.options.indexOf(p.pick); if (i >= 0) votes[i]++; }
+      const all = Math.max(1, votes.reduce((a, b) => a + b, 0));
+      opts.forEach((o, i) => {
+        const pct = Math.round((votes[i] / all) * 100);
+        o.querySelector(".bar").style[ask.kind === "react" ? "height" : "width"] = done ? pct + "%" : "0";
+        o.querySelector("b").textContent = done ? pct + "%" : "";
+        o.classList.toggle("mine", done && state.mine.pick === ask.options[i]);
+      });
+    } else if (ask.kind === "open") {
+      const form = box.querySelector("[data-ask-form]"), said = box.querySelector("[data-ask-said]");
+      form.hidden = done;
+      const list = people().filter((p) => p.pick);
+      said.hidden = !done || !list.length;
+      said.replaceChildren(...list.slice(0, 8).map((p) => {
+        const li = document.createElement("li"), b = document.createElement("b");
+        if (p.you) li.className = "mine";
+        b.textContent = p.you ? "You" : first(p.name);
+        li.append(b, p.pick);
+        return li;
+      }));
+    } else {
+      const range = box.querySelector("[data-ask-range]"), marks = box.querySelector("[data-ask-marks]");
+      if (done) range.value = String(state.mine.score);
+      range.disabled = done;
+      const list = done ? people().filter((p) => typeof p.score === "number") : [];
+      // Close answers stack, so a name never hides behind another one.
+      const rows = [[], [], []];
+      marks.replaceChildren(...list.slice(0, 10).map((p) => {
+        const i = document.createElement("i");
+        if (p.you) i.className = "mine";
+        const at = Math.max(4, Math.min(96, p.score));
+        const row = Math.max(0, rows.findIndex((r) => r.every((x) => Math.abs(x - at) > 14)));
+        rows[row].push(at);
+        i.style.left = at + "%";
+        i.style.top = row * 26 + "px";
+        i.textContent = p.you ? "You" : first(p.name).slice(0, 6);
+        i.title = (p.you ? "You" : p.name) + ": " + p.score;
+        return i;
+      }));
+      marks.style.height = (rows.filter((r) => r.length).length || 1) * 26 + "px";
+    }
+    line();
+  };
+  const send = (answer) => {
+    if (busy || editing()) return;
+    busy = true;
+    window.forma.answers.set(answer).then((r) => { state = r; changing = false; show(); }).catch(fail).finally(() => { busy = false; });
+  };
+  if (!window.forma || !window.forma.answers) { box.querySelectorAll("button,input").forEach((b) => (b.disabled = true)); who.textContent = "Open this in Smudge to answer."; return; }
+  window.forma.answers.read().then((r) => { state = r; show(); }).catch((e) => { show(); fail(e); });
+  again.addEventListener("click", () => { if (editing()) return; changing = true; show(); });
+  if (ask.kind === "poll" || ask.kind === "react") {
+    for (const o of box.querySelectorAll("[data-ask-option]")) o.addEventListener("click", () => { if (!answered()) send({ pick: ask.options[Number(o.dataset.askOption)] }); });
+  } else if (ask.kind === "open") {
+    const form = box.querySelector("[data-ask-form]"), input = form.querySelector("input");
+    form.addEventListener("submit", (e) => { e.preventDefault(); const v = input.value.trim(); if (v) send({ pick: v.slice(0, 80) }); });
+  } else {
+    const range = box.querySelector("[data-ask-range]"), face = box.querySelector("[data-ask-face]");
+    range.addEventListener("input", () => { face.style.transform = "scale(" + (0.8 + Number(range.value) / 100) + ")"; });
+    // Keys move the slider one step at a time: wait until it settles before answering.
+    let settle;
+    range.addEventListener("change", () => { clearTimeout(settle); settle = setTimeout(() => send({ score: Number(range.value), of: 100 }), 600); });
+  }
+})();
+`;
+
 /** Background videos play muted unless the viewer asked for less motion; a tap pauses or plays. */
 const videoScript = `for(const v of document.querySelectorAll("video[data-background]")){v.muted=true;if(!matchMedia("(prefers-reduced-motion: reduce)").matches)v.play().catch(()=>{});v.closest("section,figure").addEventListener("click",()=>v.paused?v.play().catch(()=>{}):v.pause())}`;
 
@@ -501,6 +813,8 @@ export function buildPost(input: unknown) {
   const { html, css } = render(design);
   const background = html.includes("data-background");
   const plan = design.style === "plan";
+  const ask = !!design.ask && design.style !== "plan";
+  const fields = fillFields(design);
   const data = JSON.stringify(design).replace(/</g, "\\u003c");
   const pkg: Experience = {
     manifest: {
@@ -508,16 +822,22 @@ export function buildPost(input: unknown) {
       runtimeVersion: "web-v1",
       name: plain(design.headline).slice(0, 100),
       entrypoint: "index.html",
-      capabilities: plan ? ["plan.read", "plan.join"] : [],
+      capabilities: plan
+        ? ["plan.read", "plan.join"]
+        : ask
+          ? ["answers.write", "answers.read"]
+          : [],
       assets,
     },
     files: {
-      "index.html": `<link rel="stylesheet" href="post.css"><script src="smudge/post.js"></script>${html}${design.motion ? '<script src="motion.js"></script>' : ""}${background ? '<script src="video.js"></script>' : ""}${plan ? '<script src="plan.js"></script>' : ""}`,
+      "index.html": `<link rel="stylesheet" href="post.css"><script src="smudge/post.js"></script>${html}${fields.length ? '<script src="smudge/fill.js"></script>' : ""}${design.motion ? '<script src="motion.js"></script>' : ""}${background ? '<script src="video.js"></script>' : ""}${plan ? '<script src="plan.js"></script>' : ""}${ask ? '<script src="ask.js"></script>' : ""}`,
       "post.css": css,
       [settingsFile]: `window.smudgePost = ${data};\n`,
       ...(design.motion ? { "motion.js": motionScript } : {}),
       ...(background ? { "video.js": videoScript } : {}),
       ...(plan ? { "plan.js": planScript } : {}),
+      ...(ask ? { "ask.js": askScript } : {}),
+      ...(fields.length ? { "smudge/fill.js": fillSource(fields) } : {}),
     },
   };
   return {
