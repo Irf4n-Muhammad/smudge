@@ -144,7 +144,7 @@ const openers = (
   },
   {
     key: "choose",
-    owner: "ines",
+    owner: "sofi",
     pkg: choose,
     title: "Help me choose",
     caption: "Leaving in 20 minutes. Vote fast.",
