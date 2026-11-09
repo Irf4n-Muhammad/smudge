@@ -14,7 +14,9 @@ test("the Mall: scroll people's fits, make your own, and give a friend something
   const mall = page.getByRole("region", { name: "Mall" });
   // Shop opens first as a grid to look through, each piece with who wears it.
   const tee = mall.getByRole("article", { name: "Tissue crew tee, plum from Everlane" });
-  await expect(tee).toContainText(/In 2 fits by/);
+  await expect(tee.getByRole("button", { name: /^In 2 fits by/ })).toBeVisible();
+  // People's fits slip in between the pieces.
+  await expect(mall.getByRole("article", { name: /^Fit: / }).first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   // Fits: Maya's London fit leads this month; Alex follows Maya.

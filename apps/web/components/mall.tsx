@@ -137,6 +137,7 @@ export function MallPage({
             setFitsWith(item);
             setSegment("fits");
           }}
+          onTryFit={tryOn}
         />
       ) : segment === "fits" ? (
         <Fits

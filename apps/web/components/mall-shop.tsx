@@ -49,6 +49,7 @@ export function Shop({
   onWish,
   onShop,
   onFitsWith,
+  onTryFit,
 }: {
   catalog: CatalogItem[];
   fits: FitView[];
@@ -57,6 +58,7 @@ export function Shop({
   onWish: (item: CatalogItem) => void;
   onShop: (item: CatalogItem) => void;
   onFitsWith: (item: CatalogItem) => void;
+  onTryFit: (fit: FitView) => void;
 }) {
   const [nearOnly, setNearOnly] = useState(false);
   const [kind, setKind] = useState<Slot | "all">("all");
@@ -108,6 +110,67 @@ export function Shop({
       </>
     );
   };
+  // On a grid card, who wears it sits on the picture: faces first, then a first name.
+  const faces = (item: CatalogItem) => {
+    const people = wearers.get(item.id) ?? [];
+    if (!people.length) return null;
+    const first = people[0]!.name.split(" ")[0];
+    return (
+      <button
+        className="mall-card-people"
+        aria-label={`In ${people.length} ${people.length === 1 ? "fit" : "fits"} by ${first}${people.length > 1 ? ` and ${people.length - 1} more` : ""}`}
+        onClick={() => onFitsWith(item)}
+      >
+        <span className="mall-faces">
+          {people.slice(0, 3).map((p) => (
+            <Avatar key={p.id} user={face(p)} small />
+          ))}
+        </span>
+        {first}
+        {people.length > 1 ? ` +${people.length - 1}` : ""}
+      </button>
+    );
+  };
+  // Fits by people slip in between pieces, those that wear something you are looking at.
+  const shown = new Set(items.map((i) => i.id));
+  const fitsHere = fits.filter((f) => f.items.some((i) => shown.has(i.id)));
+  const fitCard = (fit: FitView) => (
+    <article
+      key={fit.id}
+      className="mall-grid-fit"
+      aria-label={`Fit: ${fit.title || "A fit"} by ${fit.owner.name}`}
+    >
+      <MallFigure pieces={Object.fromEntries(fit.items.map((i) => [i.slot, i]))} />
+      <div className="mall-grid-fit-side">
+        <span className="mall-grid-fit-owner">
+          <Avatar user={face(fit.owner)} small />
+          <strong>{fit.owner.name.split(" ")[0]}</strong>
+          {fit.city && <small>{fit.city}</small>}
+        </span>
+        {fit.title && <h3>{fit.title}</h3>}
+        {fit.award && <small className="mall-grid-fit-award">{fit.award}</small>}
+        <small>
+          {fit.items.length} pieces · {money(fit.total)} · {fit.likes}{" "}
+          {fit.likes === 1 ? "like" : "likes"}
+        </small>
+        <button className="mall-try" onClick={() => onTryFit(fit)}>
+          <Shirt size={16} /> Try it, change it
+        </button>
+      </div>
+      <ul className="mall-grid-fit-pieces">
+        {fit.items.map((i) => (
+          <li key={i.id}>
+            <img src={sized(i.image, 160)} alt="" loading="lazy" />
+            <span>
+              <small>{i.store.name}</small>
+              {i.name}
+            </span>
+            <strong>{money(i.price)}</strong>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
   const tryOn = (item: CatalogItem, size: number) => {
     const wearing = board[item.slot] === item.id;
     return (
@@ -225,24 +288,23 @@ export function Shop({
         </div>
       </div>
       <div className="mall-grid">
-        {items.map((item) => {
-          const people = worn(item);
-          return (
+        {items.flatMap((item, n) => {
+          const card = (
             <article
               key={item.id}
               className="mall-card"
               aria-label={`${item.name} from ${item.store.name}`}
             >
-              <button
-                className={`mall-card-open ${item.slot}`}
-                aria-label={`Open ${item.name}`}
-                onClick={() => setReelAt(item.id)}
-              >
-                <img src={sized(item.image, 500)} alt="" loading="lazy" />
-              </button>
-              <div className="mall-card-acts">
-                {tryOn(item, 16)}
-                {wish(item, 16)}
+              <div className="mall-card-media">
+                <button
+                  className={`mall-card-open ${item.slot}`}
+                  aria-label={`Open ${item.name}`}
+                  onClick={() => setReelAt(item.id)}
+                >
+                  <img src={sized(item.image, 500)} alt="" loading="lazy" />
+                </button>
+                <div className="mall-card-acts">{tryOn(item, 16)}</div>
+                {faces(item)}
               </div>
               <small>{item.store.name}</small>
               <strong>{item.name}</strong>
@@ -250,9 +312,11 @@ export function Shop({
                 {money(item.price)}
                 {item.near > 0 && <span className="mall-near"> · {item.near} near you</span>}
               </span>
-              {people && <span className="mall-card-worn">{people}</span>}
             </article>
           );
+          // A fit after every eighth piece: a full row on two or four columns.
+          const fit = (n + 1) % 8 === 0 ? fitsHere[(n + 1) / 8 - 1] : undefined;
+          return fit ? [card, fitCard(fit)] : [card];
         })}
       </div>
       {!items.length && <p className="mall-empty">Nothing matches yet. Try fewer filters.</p>}
@@ -301,23 +365,34 @@ export function FitDock({
   };
   return (
     <>
-      <div className="fit-dock" aria-label="Your fit">
+      {!worn.length ? (
+        // Nothing tried on yet: a small pill, out of the way of the pieces.
         <button
-          className="fit-dock-figure"
-          aria-label={`Open your fit, ${worn.length} ${worn.length === 1 ? "piece" : "pieces"}`}
+          className="fit-dock fit-dock-pill"
+          aria-label="Open your fit, 0 pieces"
           onClick={() => setOpen(true)}
         >
-          <MallFigure pieces={pieces} hints />
-          <Maximize2 size={13} className="fit-dock-grow" aria-hidden="true" />
+          <Shirt size={16} aria-hidden="true" /> Your fit
         </button>
-        {worn.length >= 2 ? (
-          <button className="fit-dock-save" onClick={() => setOpen(true)}>
-            Save
+      ) : (
+        <div className="fit-dock" aria-label="Your fit">
+          <button
+            className="fit-dock-figure"
+            aria-label={`Open your fit, ${worn.length} ${worn.length === 1 ? "piece" : "pieces"}`}
+            onClick={() => setOpen(true)}
+          >
+            <MallFigure pieces={pieces} hints />
+            <Maximize2 size={13} className="fit-dock-grow" aria-hidden="true" />
           </button>
-        ) : (
-          <small className="fit-dock-hint">{worn.length ? "Try one more" : "Try things on"}</small>
-        )}
-      </div>
+          {worn.length >= 2 ? (
+            <button className="fit-dock-save" onClick={() => setOpen(true)}>
+              Save
+            </button>
+          ) : (
+            <small className="fit-dock-hint">Try one more</small>
+          )}
+        </div>
+      )}
       {open &&
         createPortal(
           <div className="mall-dialog-backdrop" onClick={() => setOpen(false)}>
