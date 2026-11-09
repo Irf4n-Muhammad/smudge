@@ -250,24 +250,47 @@ export class CommunityService {
       .users()
       .filter((u) => u.id !== me && this.canSeeUser(me, u.id) && !this.isDeleted(u.id));
   }
-  /** Handle prefix first, then name word prefix, then anywhere in name or handle. */
+  /**
+   * What else a person may be found by, as this viewer may see it: each line is one fact, such as
+   * "Graduate, Lembayung University" or "In Runners". The server installs the sources (proven
+   * chapters, open sides); the bio is always there.
+   */
+  contextOf: (viewerId: string, userId: string) => string[] = () => [];
+  /**
+   * Names first (handle prefix, then name word prefix, then anywhere in name or handle), then
+   * people whose context holds every word of the query: their bio, proven chapters, open sides.
+   * Within each, people you know come first. A context match says which fact matched.
+   */
   search(actor: Actor, query: unknown) {
     const me = this.social.actor(actor);
     const q = peopleQuerySchema.parse(query).replace(/^@/, "");
+    const words = q.split(/\s+/).filter(Boolean);
     const follows = this.follows();
-    const rank = (u: User) => {
+    const mine = new Set(follows.filter((f) => f.userId === me).map((f) => f.target));
+    const known = (id: string) =>
+      mine.has(id) ? 0 : follows.some((f) => mine.has(f.userId) && f.target === id) ? 1 : 2;
+    const match = (u: User): { r: number; why?: string } => {
       const name = u.name.toLowerCase();
-      if (u.handle.startsWith(q)) return 0;
-      if (name.split(/\s+/).some((w) => w.startsWith(q))) return 1;
-      if (u.handle.includes(q) || name.includes(q)) return 2;
-      return -1;
+      if (u.handle.startsWith(q)) return { r: 0 };
+      if (name.split(/\s+/).some((w) => w.startsWith(q))) return { r: 1 };
+      if (u.handle.includes(q) || name.includes(q)) return { r: 2 };
+      const facts = [u.bio, ...this.contextOf(me, u.id)].filter((f) => f && f.trim());
+      const all = facts.join(" \n ").toLowerCase();
+      if (!words.every((w) => all.includes(w))) return { r: -1 };
+      // The fact that holds the most words explains the match.
+      const why = facts
+        .map((f) => ({ f, n: words.filter((w) => f.toLowerCase().includes(w)).length }))
+        .sort((a, b) => b.n - a.n)[0]!.f;
+      return { r: 3, why: why.length > 90 ? `${why.slice(0, 89)}…` : why };
     };
     return this.candidates(me)
-      .map((u) => ({ u, r: rank(u) }))
+      .map((u) => ({ u, ...match(u) }))
       .filter((x) => x.r >= 0)
-      .sort((a, b) => a.r - b.r || a.u.name.localeCompare(b.u.name))
+      .sort(
+        (a, b) => a.r - b.r || known(a.u.id) - known(b.u.id) || a.u.name.localeCompare(b.u.name),
+      )
       .slice(0, 20)
-      .map(({ u }) => this.person(me, u.id, follows)!);
+      .map(({ u, why }) => ({ ...this.person(me, u.id, follows)!, ...(why ? { why } : {}) }));
   }
   /** People your follows follow, ranked by how many; then popular accounts. */
   suggestions(actor: Actor) {

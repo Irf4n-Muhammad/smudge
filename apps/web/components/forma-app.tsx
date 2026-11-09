@@ -878,6 +878,15 @@ export function FormaApp() {
                     setProfile(id);
                     setView("profile");
                   }}
+                  onAsk={(question) =>
+                    void api<DraftView>("/asks", { question: question.slice(0, 88) }).then(
+                      (d) => {
+                        setEditingPost(false);
+                        setPostEditor({ draftId: d.id });
+                      },
+                      (e: Error) => notify(e.message),
+                    )
+                  }
                 />
               </>
             ) : view === "notifications" && boot ? (

@@ -299,3 +299,45 @@ test("Google flow uses PKCE and refuses unverified Google emails", async () => {
   );
   assert.ok(calls.some((c) => c.startsWith("https://oauth2.googleapis.com/token")));
 });
+
+test("people are found by what they do: bio, proofs and open sides, people you know first", async () => {
+  const { store, social, community } = await setup();
+  store.transaction(() => {
+    store.put("user", "budi", {
+      ...store.get<object>("user", "budi"),
+      bio: "Wedding photographer",
+    });
+    store.put("user", "dian", {
+      ...store.get<object>("user", "dian"),
+      bio: "Photographer, film only",
+    });
+  });
+  community.contextOf = (_viewer, userId) =>
+    userId === "citra" ? ["Graduate, Lembayung University", "In Runners"] : [];
+  // Names still win; a context match says which fact matched.
+  assert.deepEqual(
+    community.search(as("ana"), "photographer").map((p) => [p.id, p.why]),
+    [
+      ["budi", "Wedding photographer"],
+      ["dian", "Photographer, film only"],
+    ],
+  );
+  // Every word must match somewhere; the fact with the most words explains it.
+  assert.deepEqual(
+    community.search(as("ana"), "runners lembayung").map((p) => p.id),
+    ["citra"],
+  );
+  assert.equal(
+    community.search(as("ana"), "lembayung graduate")[0]?.why,
+    "Graduate, Lembayung University",
+  );
+  assert.deepEqual(community.search(as("ana"), "photographer bandung"), []);
+  // People you follow come before strangers with the same match.
+  social.follow(as("ana"), "dian");
+  assert.deepEqual(
+    community.search(as("ana"), "photographer").map((p) => p.id),
+    ["dian", "budi"],
+  );
+  // A name match carries no reason.
+  assert.equal(community.search(as("ana"), "citra")[0]?.why, undefined);
+});

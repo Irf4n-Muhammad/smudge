@@ -35,6 +35,7 @@ import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { ActiveDays } from "../../packages/core/src/habit-report.js";
 import { SurpriseService } from "../../packages/core/src/surprises.js";
+import { buildPost, startPostDesign } from "../../packages/core/src/easy-post.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
 import {
@@ -178,6 +179,16 @@ accounts.loginGate = (userId) => {
 accounts.erasers.push((userId) => community.erase(userId));
 const privacy = new PrivacyService(service, community, clock);
 const sidesService = new SidesService(service, clock);
+// People are found by what they do too: their proven chapters and the open sides they are in.
+community.contextOf = (viewerId, userId) => [
+  ...identity.chaptersFor({ userId: viewerId }, userId).map((c) => c.label),
+  ...service.store
+    .all<{ sideId: string; userId: string }>("side-member")
+    .filter((m) => m.userId === userId)
+    .map((m) => sideById(m.sideId))
+    .filter((side) => side && !side.private)
+    .map((side) => `In ${side!.name}`),
+];
 // A plan's list of names follows who may see whom (blocks, hidden accounts), like comments do.
 const plans = new PlansService(service, clock);
 plans.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
@@ -1316,6 +1327,27 @@ function copyForReuse(res: Response, id: string) {
   const { side: _side, ...metadata } = post.metadata;
   return { post, pkg, metadata: { ...metadata, coverAssetId, contributors: [] } };
 }
+// A search that found nobody becomes a question to the people you know: a Big note draft with
+// the question as its headline, opened in the editor so one tap posts it.
+const askSchema = z.object({ question: z.string().trim().min(1).max(88) }).strict();
+api.post("/api/asks", (req, res) => {
+  const { question } = askSchema.parse(req.body);
+  const asked = question[0]!.toUpperCase() + question.slice(1);
+  const headline = /[?？]$/.test(asked) ? asked : `${asked}?`;
+  const built = buildPost(
+    startPostDesign("note", {
+      kicker: "Asking my people",
+      headline,
+      text: "Know someone, or been there? Tell me in the comments.",
+    }),
+  );
+  res.json(
+    service.createDraft(actor(res), {
+      package: built.package,
+      metadata: { ...built.metadata, caption: headline, contributors: [] },
+    }),
+  );
+});
 api.post("/api/posts/:id/reuse", (req, res) => {
   const { post, pkg, metadata } = copyForReuse(res, String(req.params.id));
   res.json(

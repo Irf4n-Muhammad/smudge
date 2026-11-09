@@ -63,4 +63,6 @@ export interface PersonView {
   /** They follow you or wrote to you first, so a message from you can reach them. */
   canMessage: boolean;
   mutuals?: number | undefined;
+  /** Found by what they do, not their name: the fact that matched the search. */
+  why?: string | undefined;
 }
