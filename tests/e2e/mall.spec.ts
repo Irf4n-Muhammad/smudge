@@ -12,7 +12,7 @@ test("the Mall: scroll people's fits, make your own, and give a friend something
     .getByRole("button", { name: "Mall" })
     .click();
   const mall = page.getByRole("region", { name: "Mall" });
-  // Shop opens first: one piece per screen, with who wears it.
+  // Shop opens first as a grid to look through, each piece with who wears it.
   const tee = mall.getByRole("article", { name: "Tissue crew tee, plum from Everlane" });
   await expect(tee).toContainText(/In 2 fits by/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -28,12 +28,20 @@ test("the Mall: scroll people's fits, make your own, and give a friend something
   // Wear Maya's fit, swap the shoes while scrolling the shop, and save it from the corner.
   await maya.getByRole("button", { name: "Try it, change it" }).click();
   await expect(mall.getByRole("tab", { name: "Shop" })).toHaveAttribute("aria-selected", "true");
+  await mall.getByRole("button", { name: "Shoes", exact: true }).click();
+  await expect(mall.getByRole("article", { name: /from Everlane$/ })).toHaveCount(0);
   const runner = mall.getByRole("article", { name: "Wool Runner, natural grey from Allbirds" });
   await runner.scrollIntoViewIfNeeded();
   await runner.getByRole("button", { name: "Try on Wool Runner, natural grey" }).click();
   await expect(
     runner.getByRole("button", { name: "Take off Wool Runner, natural grey" }),
   ).toBeVisible();
+  // Tapping a piece opens the reel at it: one piece per screen, worn, with Buy.
+  await runner.getByRole("button", { name: "Open Wool Runner, natural grey" }).click();
+  await expect(
+    mall.getByRole("button", { name: "Buy Wool Runner, natural grey at Allbirds" }),
+  ).toBeVisible();
+  await mall.getByRole("button", { name: "All pieces" }).click();
   await page.getByRole("button", { name: "Open your fit, 4 pieces" }).click();
   const fit = page.getByRole("dialog", { name: "Your fit" });
   await expect(fit.getByRole("img", { name: /Wool Runner, natural grey/ })).toBeVisible();

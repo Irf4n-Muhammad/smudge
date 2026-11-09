@@ -1,7 +1,16 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpRight, Bookmark, Check, Maximize2, Shirt, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Bookmark,
+  Check,
+  Maximize2,
+  Search,
+  Shirt,
+  X,
+} from "lucide-react";
 import {
   slots,
   type CatalogItem,
@@ -17,10 +26,20 @@ const money = (cents: number) =>
 const face = (p: MallPerson) => ({ ...p, bio: "" });
 type Board = Partial<Record<Slot, string>>;
 
+const kinds: [Slot | "all", string][] = [
+  ["all", "All"],
+  ["top", "Tops"],
+  ["bottom", "Bottoms"],
+  ["outer", "Outer"],
+  ["shoes", "Shoes"],
+  ["bag", "Bags"],
+];
+
 /**
- * Shop: one piece per screen, swiped like a reel. Each piece says who already wears it in a fit,
- * and three taps sit on the side: try it on your figure in the corner, wish for it, buy it at
- * the shop.
+ * Shop: a grid to look for something, a reel to drift through. The grid opens first, filtered by
+ * kind, words and what is near; tapping a piece opens the reel at it, one piece per screen, through
+ * the same pieces. Each piece says who already wears it in a fit, and both views try it on your
+ * figure in the corner.
  */
 export function Shop({
   catalog,
@@ -40,6 +59,10 @@ export function Shop({
   onFitsWith: (item: CatalogItem) => void;
 }) {
   const [nearOnly, setNearOnly] = useState(false);
+  const [kind, setKind] = useState<Slot | "all">("all");
+  const [query, setQuery] = useState("");
+  const [reelAt, setReelAt] = useState<string | null>(null);
+  const reel = useRef<HTMLDivElement>(null);
   // Who wears each piece, from the fits the viewer can see.
   const wearers = useMemo(() => {
     const out = new Map<string, MallPerson[]>();
@@ -51,91 +74,188 @@ export function Shop({
       }
     return out;
   }, [fits]);
-  const items = nearOnly ? catalog.filter((i) => i.near > 0) : catalog;
+  const words = query.trim().toLowerCase();
+  const items = catalog.filter(
+    (i) =>
+      (!nearOnly || i.near > 0) &&
+      (kind === "all" || i.slot === kind) &&
+      (!words || `${i.name} ${i.store.name}`.toLowerCase().includes(words)),
+  );
+  // The reel opens at the piece you tapped.
+  useLayoutEffect(() => {
+    const list = reel.current;
+    const at = reelAt && list?.querySelector<HTMLElement>(`[data-piece="${reelAt}"]`);
+    if (list && at) list.scrollTop = at.offsetTop;
+  }, [reelAt]);
+  const toggle = (item: CatalogItem) => {
+    const next = { ...board };
+    if (board[item.slot] === item.id) delete next[item.slot];
+    else next[item.slot] = item.id;
+    onBoard(next);
+  };
+  const worn = (item: CatalogItem) => {
+    const people = wearers.get(item.id) ?? [];
+    if (!people.length) return null;
+    return (
+      <>
+        <span className="mall-faces">
+          {people.slice(0, 3).map((p) => (
+            <Avatar key={p.id} user={face(p)} small />
+          ))}
+        </span>
+        In {people.length} {people.length === 1 ? "fit" : "fits"} by {people[0]!.name.split(" ")[0]}
+        {people.length > 1 ? ` and ${people.length - 1} more` : ""}
+      </>
+    );
+  };
+  const tryOn = (item: CatalogItem, size: number) => {
+    const wearing = board[item.slot] === item.id;
+    return (
+      <button
+        className={wearing ? "on" : ""}
+        aria-pressed={wearing}
+        aria-label={wearing ? `Take off ${item.name}` : `Try on ${item.name}`}
+        onClick={() => toggle(item)}
+      >
+        {wearing ? <Check size={size} /> : <Shirt size={size} />}
+        <span>{wearing ? "Wearing" : "Try on"}</span>
+      </button>
+    );
+  };
+  const wish = (item: CatalogItem, size: number) => (
+    <button
+      className={item.wished ? "on" : ""}
+      aria-pressed={item.wished}
+      aria-label={item.wished ? `Remove ${item.name} from your wishlist` : `Wish for ${item.name}`}
+      onClick={() => onWish(item)}
+    >
+      <Bookmark size={size} />
+      <span>Wish</span>
+    </button>
+  );
+
+  if (reelAt)
+    return (
+      <div className="mall-shop">
+        <button className="mall-reel-back" onClick={() => setReelAt(null)}>
+          <ArrowLeft size={16} /> All pieces
+        </button>
+        <div className="mall-shop-list" ref={reel}>
+          {items.map((item) => {
+            const people = worn(item);
+            return (
+              <article
+                key={item.id}
+                data-piece={item.id}
+                className={item.photo ? "mall-item worn" : "mall-item"}
+                aria-label={`${item.name} from ${item.store.name}`}
+              >
+                {/* Worn when the shop has such a picture, else the piece alone, large. */}
+                <img
+                  className="mall-item-art"
+                  src={sized(item.photo ?? item.image, 900)}
+                  alt=""
+                  loading="lazy"
+                />
+                <div className="mall-item-info">
+                  <small>{item.store.name}</small>
+                  <h2>{item.name}</h2>
+                  <p>
+                    <strong>{money(item.price)}</strong>
+                    {item.near > 0 && (
+                      <span className="mall-near"> · {item.near} to pick up near you</span>
+                    )}
+                  </p>
+                  {people && (
+                    <button className="mall-worn" onClick={() => onFitsWith(item)}>
+                      {people}
+                    </button>
+                  )}
+                </div>
+                <div className="mall-item-rail">
+                  {tryOn(item, 22)}
+                  {wish(item, 22)}
+                  <button
+                    aria-label={`Buy ${item.name} at ${item.store.name}`}
+                    onClick={() => onShop(item)}
+                  >
+                    <ArrowUpRight size={22} />
+                    <span>Buy</span>
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    );
+
   return (
-    <div className="mall-shop">
-      <label className="mall-near-chip">
-        <input type="checkbox" checked={nearOnly} onChange={(e) => setNearOnly(e.target.checked)} />
-        Near me
-      </label>
-      <div className="mall-shop-list">
+    <div className="mall-browse">
+      <div className="mall-browse-bar">
+        <label className="mall-search">
+          <Search size={16} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Search the shop"
+            placeholder="Search: chino, runner, Everlane…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <div className="mall-kinds" role="group" aria-label="Kind of piece">
+          {kinds.map(([value, label]) => (
+            <button
+              key={value}
+              aria-pressed={kind === value}
+              className={kind === value ? "on" : ""}
+              onClick={() => setKind(value)}
+            >
+              {label}
+            </button>
+          ))}
+          <label className={nearOnly ? "mall-near-toggle on" : "mall-near-toggle"}>
+            <input
+              type="checkbox"
+              checked={nearOnly}
+              onChange={(e) => setNearOnly(e.target.checked)}
+            />
+            Near me
+          </label>
+        </div>
+      </div>
+      <div className="mall-grid">
         {items.map((item) => {
-          const wearing = board[item.slot] === item.id;
-          const people = wearers.get(item.id) ?? [];
+          const people = worn(item);
           return (
             <article
               key={item.id}
-              className={item.photo ? "mall-item worn" : "mall-item"}
+              className="mall-card"
               aria-label={`${item.name} from ${item.store.name}`}
             >
-              {/* Worn when the shop has such a picture, else the piece alone, large. */}
-              <img
-                className="mall-item-art"
-                src={sized(item.photo ?? item.image, 900)}
-                alt=""
-                loading="lazy"
-              />
-              <div className="mall-item-info">
-                <small>{item.store.name}</small>
-                <h2>{item.name}</h2>
-                <p>
-                  <strong>{money(item.price)}</strong>
-                  {item.near > 0 && (
-                    <span className="mall-near"> · {item.near} to pick up near you</span>
-                  )}
-                </p>
-                {people.length > 0 && (
-                  <button className="mall-worn" onClick={() => onFitsWith(item)}>
-                    <span className="mall-faces">
-                      {people.slice(0, 3).map((p) => (
-                        <Avatar key={p.id} user={face(p)} small />
-                      ))}
-                    </span>
-                    In {people.length} {people.length === 1 ? "fit" : "fits"} by{" "}
-                    {people[0]!.name.split(" ")[0]}
-                    {people.length > 1 ? ` and ${people.length - 1} more` : ""}
-                  </button>
-                )}
+              <button
+                className={`mall-card-open ${item.slot}`}
+                aria-label={`Open ${item.name}`}
+                onClick={() => setReelAt(item.id)}
+              >
+                <img src={sized(item.image, 500)} alt="" loading="lazy" />
+              </button>
+              <div className="mall-card-acts">
+                {tryOn(item, 16)}
+                {wish(item, 16)}
               </div>
-              <div className="mall-item-rail">
-                <button
-                  className={wearing ? "on" : ""}
-                  aria-pressed={wearing}
-                  aria-label={wearing ? `Take off ${item.name}` : `Try on ${item.name}`}
-                  onClick={() => {
-                    const next = { ...board };
-                    if (wearing) delete next[item.slot];
-                    else next[item.slot] = item.id;
-                    onBoard(next);
-                  }}
-                >
-                  {wearing ? <Check size={22} /> : <Shirt size={22} />}
-                  <span>{wearing ? "Wearing" : "Try on"}</span>
-                </button>
-                <button
-                  className={item.wished ? "on" : ""}
-                  aria-pressed={item.wished}
-                  aria-label={
-                    item.wished ? `Remove ${item.name} from your wishlist` : `Wish for ${item.name}`
-                  }
-                  onClick={() => onWish(item)}
-                >
-                  <Bookmark size={22} />
-                  <span>Wish</span>
-                </button>
-                <button
-                  aria-label={`Buy ${item.name} at ${item.store.name}`}
-                  onClick={() => onShop(item)}
-                >
-                  <ArrowUpRight size={22} />
-                  <span>Buy</span>
-                </button>
-              </div>
+              <small>{item.store.name}</small>
+              <strong>{item.name}</strong>
+              <span className="mall-card-price">
+                {money(item.price)}
+                {item.near > 0 && <span className="mall-near"> · {item.near} near you</span>}
+              </span>
+              {people && <span className="mall-card-worn">{people}</span>}
             </article>
           );
         })}
-        {!items.length && <p className="mall-empty">Nothing to pick up near you yet.</p>}
       </div>
+      {!items.length && <p className="mall-empty">Nothing matches yet. Try fewer filters.</p>}
     </div>
   );
 }
