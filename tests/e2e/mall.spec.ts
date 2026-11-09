@@ -51,15 +51,28 @@ test("the Mall: scroll people's fits, make your own, and give a friend something
   await fit.getByRole("button", { name: "Save this fit" }).click();
   await expect(mall.getByRole("article", { name: /^Office, then rain by/ })).toBeVisible();
 
-  // Maya wishes for the field jacket, and Leo already started a group gift for it.
+  // Wishlists: a grid of what friends wish for. Maya wishes for the field jacket, and Leo
+  // already started a group gift for it.
   await mall.getByRole("tab", { name: "Wishlists" }).click();
-  const wishes = mall.getByRole("region", { name: "Maya Chen's wishlist" });
-  await expect(wishes).toContainText("Field jacket, burnt olive");
-  await expect(wishes).toContainText("$60 of $238 from Leo");
-  await wishes.getByRole("button", { name: /Chip in/ }).click();
-  await expect(wishes).toContainText("$80 of $238");
+  const jacket = mall.getByRole("article", { name: "Field jacket, burnt olive for Maya Chen" });
+  await expect(jacket).toContainText("$60 of $238 from Leo");
+  await jacket.getByRole("button", { name: /Chip in/ }).click();
+  await expect(jacket).toContainText("$80 of $238");
+  // Ten to a page, the rest behind numbers.
+  await expect(mall.getByRole("article", { name: / for (Maya Chen|Leo Park)$/ })).toHaveCount(10);
+  await mall
+    .getByRole("navigation", { name: "Pages" })
+    .getByRole("button", { name: "Page 2" })
+    .click();
+  await expect(mall.getByRole("article", { name: / for (Maya Chen|Leo Park)$/ })).toHaveCount(2);
+  // Searching narrows the grid to a friend or a piece.
+  await mall.getByLabel("Search wishlists").fill("strider");
+  await expect(mall.getByRole("article", { name: /for Maya Chen$/ })).toHaveCount(1);
   // The red Striders: Alex gives them alone.
-  await wishes.getByRole("button", { name: "Give" }).click();
+  await mall
+    .getByRole("article", { name: "Strider, warm red for Maya Chen" })
+    .getByRole("button", { name: "Give" })
+    .click();
   const dialog = page.getByRole("dialog", { name: /Strider, warm red/ });
   await dialog.getByLabel("A note").fill("For the next 21K");
   await dialog.getByRole("button", { name: "Give it" }).click();

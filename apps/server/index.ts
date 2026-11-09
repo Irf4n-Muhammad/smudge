@@ -954,9 +954,9 @@ api.post("/api/mall/fits/:id/like", (req, res) =>
 api.post("/api/mall/items/:id/wish", (req, res) =>
   res.json(mall.wish(actor(res), String(req.params.id))),
 );
-api.get("/api/mall/wishlists", (_req, res) => {
+api.get("/api/mall/wishlists", (req, res) => {
   const me = actor(res);
-  res.json({ mine: mall.wishlist(me, me.userId), friends: mall.friendsWishing(me) });
+  res.json({ mine: mall.wishlist(me, me.userId), ...mall.friendWishes(me, req.query) });
 });
 api.get("/api/mall/wishlists/:userId", (req, res) =>
   res.json(mall.wishlist(actor(res), String(req.params.userId))),

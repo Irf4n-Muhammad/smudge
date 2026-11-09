@@ -1256,114 +1256,57 @@
   }
 }
 
-/* Wishlists: each friend a row of large pictures; a group gift stands out with who is in. */
+/* Wishlists: a grid like the shop's, each piece with the friend who wishes for it. */
 .mall-wishlists {
   grid-template-columns: minmax(0, 1fr);
-  gap: 26px;
+  gap: 18px;
 }
-.wish-friend {
+.wish-friends {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-}
-.wish-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0;
-  font: 400 26px/1.1 var(--serif, Georgia, serif);
-}
-.wish-head span {
-  display: grid;
-  gap: 2px;
-}
-.wish-head small {
-  color: var(--muted);
-  font: 500 13px var(--ui, inherit);
-}
-.wish-row {
-  display: flex;
   gap: 14px;
-  margin: 0;
-  padding: 2px 2px 8px;
-  overflow-x: auto;
-  list-style: none;
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
 }
-.wish-tile {
-  flex: none;
-  display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
-  gap: 4px;
-  width: 240px;
-  padding: 10px 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: var(--white);
-  scroll-snap-align: start;
-}
-.wish-tile.pot {
-  width: 280px;
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 12%, transparent);
-}
-.wish-art {
+.wish-tile .mall-card-open {
   width: 100%;
-  margin-bottom: 6px;
-  border-radius: 14px;
-  background: #efeee9;
-  aspect-ratio: 1;
-  object-fit: cover;
-}
-.wish-art.shoes {
-  padding: 6%;
-  object-fit: contain;
-}
-.wish-tile > small {
-  color: var(--muted);
-  font-size: 12px;
-}
-.wish-tile > strong {
-  font-size: 15px;
-  line-height: 1.25;
-}
-.wish-price {
-  font-size: 14px;
 }
 .wish-tile .mall-pot {
   display: grid;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 5px;
+  margin-top: 2px;
 }
 .wish-tile .mall-pot-bar {
-  height: 8px;
+  height: 7px;
 }
 .wish-tile .mall-pot small {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   color: var(--ink);
   font-size: 13px;
-}
-.wish-tile .mall-pot .avatar {
-  width: 22px;
-  height: 22px;
-  font-size: 9px;
 }
 .wish-tile .mall-give {
   justify-content: center;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 6px;
 }
-@media (max-width: 720px) {
-  .wish-tile {
-    width: 58vw;
-  }
-  .wish-tile.pot {
-    width: 68vw;
-  }
-  .wish-head {
-    font-size: 22px;
-  }
+.mall-pages {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--muted);
+}
+.mall-pages button {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  font: 600 14px var(--ui, inherit);
+}
+.mall-pages button[aria-current="page"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
 }

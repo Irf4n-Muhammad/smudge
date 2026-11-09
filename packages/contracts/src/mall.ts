@@ -117,3 +117,22 @@ export interface WishlistView {
   /** Group gifts friends opened for this person that you may join; never shown to the person. */
   pots: GiftView[];
 }
+
+/** A page of what the people you follow wish for, newest first, ten at a time. */
+export const wishPageSchema = z.object({
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  /** Words from a person's name or handle, a piece or its shop. */
+  q: z.string().trim().max(60).default(""),
+});
+/** One wish of one person, with the group gift open for it, if any. */
+export interface WishView {
+  person: MallPerson;
+  item: CatalogItem;
+  pot?: GiftView | undefined;
+}
+export interface WishPage {
+  wishes: WishView[];
+  page: number;
+  pages: number;
+  total: number;
+}

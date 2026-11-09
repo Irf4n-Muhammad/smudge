@@ -13,6 +13,8 @@ import {
   type MallStore,
   type Slot,
   type WishlistView,
+  type WishPage,
+  wishPageSchema,
 } from "../../contracts/src/mall.js";
 import type { User } from "../../contracts/src/experience.js";
 import type { Actor } from "./index.js";
@@ -322,17 +324,49 @@ export class MallService {
     return { person, items: this.catalogItems(me, wished), pots };
   }
 
-  /** Friends you follow who wished for something, the ones with the newest wishes first. */
-  friendsWishing(actor: Actor): WishlistView[] {
+  /**
+   * What the people you follow wish for, newest first, ten to a page. Words narrow it to a
+   * person, a piece or a shop.
+   */
+  friendWishes(actor: Actor, input: unknown = {}): WishPage {
     const me = this.social.actor(actor);
+    const { page, q } = wishPageSchema.parse(input);
+    const words = q.toLowerCase();
     const following = new Set(this.social.following(actor));
-    const latest = new Map<string, string>();
-    for (const w of this.store.all<Wish>("wish"))
-      if (following.has(w.userId) && w.at > (latest.get(w.userId) ?? ""))
-        latest.set(w.userId, w.at);
-    return [...latest.entries()]
-      .sort((a, b) => b[1].localeCompare(a[1]))
-      .flatMap(([id]) => (this.visiblePerson(me, id) ? [this.wishlist(actor, id)] : []));
+    const items = this.items();
+    const people = new Map<string, MallPerson | null>();
+    const person = (id: string) => {
+      if (!people.has(id)) people.set(id, this.visiblePerson(me, id));
+      return people.get(id)!;
+    };
+    const found = this.store
+      .all<Wish>("wish")
+      .filter((w) => following.has(w.userId) && items.has(w.itemId) && person(w.userId))
+      .filter((w) => {
+        if (!words) return true;
+        const p = person(w.userId)!;
+        const item = items.get(w.itemId)!;
+        const store = this.person(item.storeId)?.name ?? "";
+        return `${p.name} ${p.handle} ${item.name} ${store}`.toLowerCase().includes(words);
+      })
+      .sort((a, b) => b.at.localeCompare(a.at));
+    const size = 10;
+    const pages = Math.max(1, Math.ceil(found.length / size));
+    const at = Math.min(page, pages);
+    const shown = found.slice((at - 1) * size, at * size);
+    const pots = this.store.all<Gift>("mall-gift").filter((g) => g.status === "open");
+    return {
+      wishes: shown.flatMap((w) => {
+        const item = this.catalogItems(me, [items.get(w.itemId)!])[0];
+        if (!item) return [];
+        const pot = pots.find((g) => g.toId === w.userId && g.itemId === w.itemId);
+        const view = pot ? this.giftViews(me, [pot])[0] : undefined;
+        return [{ person: person(w.userId)!, item, ...(view ? { pot: view } : {}) }];
+      }),
+      page: at,
+      pages,
+      total: found.length,
+    };
   }
 
   private giftViews(viewerId: string, gifts: Gift[]): GiftView[] {

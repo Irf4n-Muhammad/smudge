@@ -110,10 +110,14 @@ test("a wish becomes a voucher: alone at once, together once friends cover the p
   mall.wish({ userId: "maya" }, "runner");
   const list = mall.wishlist({ userId: "alex" }, "maya");
   assert.deepEqual(list.items.map((i) => i.id).sort(), ["runner", "shell"]);
-  assert.deepEqual(
-    mall.friendsWishing({ userId: "alex" }).map((l) => l.person.id),
-    ["maya"],
-  );
+  const page = mall.friendWishes({ userId: "alex" });
+  assert.deepEqual(page.wishes.map((w) => `${w.person.id}:${w.item.id}`).sort(), [
+    "maya:runner",
+    "maya:shell",
+  ]);
+  assert.equal(mall.friendWishes({ userId: "alex" }, { q: "shell" }).total, 1);
+  assert.equal(mall.friendWishes({ userId: "alex" }, { q: "nobody" }).total, 0);
+  assert.equal(mall.friendWishes({ userId: "alex" }, { page: 9 }).page, 1);
   assert.throws(
     () => mall.give({ userId: "maya" }, { toId: "maya", itemId: "shell" }),
     /GIFT_TO_SELF/,

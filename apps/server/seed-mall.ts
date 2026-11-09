@@ -40,6 +40,40 @@ const shops: (User & { kind: "brand" })[] = [
 ];
 
 export function seedMall(service: SocialService) {
+  seedCatalog(service);
+  seedWishes(service);
+}
+
+/** More wishes from Maya and Leo, enough for a second page of what friends wish for. */
+function seedWishes(service: SocialService) {
+  const store = service.store;
+  if (store.get("system", "seed-mall-wishes-v1")) return;
+  const now = Date.now();
+  const wishes: [string, string][] = [
+    ["maya", "ev-backpack-navy"],
+    ["leo", "ts-deck-khaki"],
+    ["maya", "ts-jack-wheat"],
+    ["leo", "ab-cruiser-yellow"],
+    ["maya", "ev-teddy-coffee"],
+    ["leo", "ev-liner-olive"],
+    ["maya", "ab-wool-runner-grey"],
+    ["leo", "ev-duffle-taupe"],
+    ["leo", "ev-tieneck-black"],
+  ];
+  store.transaction(() => {
+    wishes.forEach(([userId, itemId], n) => {
+      if (store.get("user", userId) && store.get("mall-item", itemId))
+        store.put("wish", `${userId}:${itemId}`, {
+          userId,
+          itemId,
+          at: new Date(now - (60 + n * 7) * 3_600_000).toISOString(),
+        });
+    });
+    store.put("system", "seed-mall-wishes-v1", { complete: true });
+  });
+}
+
+function seedCatalog(service: SocialService) {
   const store = service.store;
   if (store.get("system", "seed-mall-v2")) return;
   const now = Date.now();

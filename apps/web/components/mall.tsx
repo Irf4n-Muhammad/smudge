@@ -1,6 +1,16 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowUpRight, Award, Bookmark, Gift, Heart, MapPin, Shirt, Users } from "lucide-react";
+import {
+  ArrowUpRight,
+  Award,
+  Bookmark,
+  Gift,
+  Heart,
+  MapPin,
+  Search,
+  Shirt,
+  Users,
+} from "lucide-react";
 import {
   cities,
   type CatalogItem,
@@ -10,6 +20,7 @@ import {
   type MallPerson,
   type Slot,
   type WishlistView,
+  type WishPage,
 } from "../../../packages/contracts/src/mall";
 import { api } from "./runtime";
 import { Avatar } from "./ui";
@@ -331,17 +342,21 @@ function Wishlists({
   onWish: (item: CatalogItem) => void;
   onShop: (item: CatalogItem) => void;
 }) {
-  const [lists, setLists] = useState<{ mine: WishlistView; friends: WishlistView[] } | null>(null);
+  const [lists, setLists] = useState<({ mine: WishlistView } & WishPage) | null>(null);
   const [gifts, setGifts] = useState<{ received: GiftView[]; given: GiftView[] } | null>(null);
   const [giving, setGiving] = useState<{ person: MallPerson; item: CatalogItem } | null>(null);
+  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState("");
   const load = useCallback(async () => {
     const [l, g] = await Promise.all([
-      api<{ mine: WishlistView; friends: WishlistView[] }>("/mall/wishlists"),
+      api<{ mine: WishlistView } & WishPage>(
+        `/mall/wishlists?page=${page}&q=${encodeURIComponent(query.trim())}`,
+      ),
       api<{ received: GiftView[]; given: GiftView[] }>("/mall/gifts"),
     ]);
     setLists(l);
     setGifts(g);
-  }, []);
+  }, [page, query]);
   useEffect(() => {
     void load().catch((e: Error) => notify(e.message));
   }, [load, meId, notify]);
@@ -371,85 +386,98 @@ function Wishlists({
           </p>
         </section>
       )}
-      {lists.friends.map((list) => (
-        <section
-          key={list.person.id}
-          className="wish-friend"
-          aria-label={`${list.person.name}'s wishlist`}
-        >
-          <h2 className="wish-head">
-            <Avatar user={face(list.person)} />
-            <span>
-              {list.person.name.split(" ")[0]} wishes for
-              <small>
-                {list.items.length} {list.items.length === 1 ? "piece" : "pieces"}
-                {list.pots.length > 0 && " · a group gift is open"}
-              </small>
-            </span>
-          </h2>
-          <ul className="wish-row">
-            {list.items.map((item) => {
-              const pot = list.pots.find((p) => p.item.id === item.id);
-              return (
-                <li key={item.id} className={pot ? "wish-tile pot" : "wish-tile"}>
-                  <img
-                    className={`wish-art ${item.slot}`}
-                    src={sized(item.image, 500)}
-                    alt=""
-                    loading="lazy"
-                  />
-                  <small>{item.store.name}</small>
-                  <strong>{item.name}</strong>
-                  {pot ? (
-                    <span
-                      className="mall-pot"
-                      aria-label={`${money(pot.raised)} of ${money(pot.goal)} raised`}
-                    >
-                      <span className="mall-pot-bar">
-                        <span
-                          style={{ width: `${Math.min(100, (pot.raised / pot.goal) * 100)}%` }}
-                        />
-                      </span>
-                      <small>
-                        <span className="mall-faces">
-                          {pot.from.slice(0, 3).map((p) => (
-                            <Avatar key={p.id} user={face(p)} small />
-                          ))}
-                        </span>
-                        {money(pot.raised)} of {money(pot.goal)} from{" "}
-                        {pot.from.map((p) => p.name).join(", ")}
-                      </small>
-                    </span>
-                  ) : (
-                    <span className="wish-price">{money(item.price)}</span>
-                  )}
-                  {pot ? (
-                    <ChipIn
-                      pot={pot}
-                      onDone={async (amount) => {
-                        const r = await api<GiftView>(`/mall/gifts/${pot.id}/chip-in`, { amount });
-                        notify(
-                          r.status === "given"
-                            ? `Done. ${list.person.name} gets the ${item.name}.`
-                            : `You put in ${money(amount)}.`,
-                        );
-                        await load();
-                      }}
-                    />
-                  ) : (
-                    <button
-                      className="mall-give"
-                      onClick={() => setGiving({ person: list.person, item })}
-                    >
-                      <Gift size={15} /> Give
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+      <section className="wish-friends" aria-label="What friends wish for">
+        <label className="mall-search">
+          <Search size={16} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Search wishlists"
+            placeholder="Search a friend or a piece"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
+          />
+        </label>
+        <div className="mall-grid">
+          {lists.wishes.map(({ person, item, pot }) => (
+            <article
+              key={`${person.id}:${item.id}`}
+              className="mall-tile wish-tile"
+              aria-label={`${item.name} for ${person.name}`}
+            >
+              <div className="mall-card-media">
+                <span className={`mall-card-open ${item.slot}`}>
+                  <img src={sized(item.image, 500)} alt="" loading="lazy" />
+                </span>
+                <span className="mall-card-people">
+                  <Avatar user={face(person)} small /> {person.name.split(" ")[0]}
+                </span>
+              </div>
+              <small>{item.store.name}</small>
+              <strong>{item.name}</strong>
+              {pot ? (
+                <span
+                  className="mall-pot"
+                  aria-label={`${money(pot.raised)} of ${money(pot.goal)} raised`}
+                >
+                  <span className="mall-pot-bar">
+                    <span style={{ width: `${Math.min(100, (pot.raised / pot.goal) * 100)}%` }} />
+                  </span>
+                  <small>
+                    {money(pot.raised)} of {money(pot.goal)} from{" "}
+                    {pot.from.map((p) => p.name.split(" ")[0]).join(", ")}
+                  </small>
+                </span>
+              ) : (
+                <span className="mall-card-price">{money(item.price)}</span>
+              )}
+              {pot ? (
+                <ChipIn
+                  pot={pot}
+                  onDone={async (amount) => {
+                    const r = await api<GiftView>(`/mall/gifts/${pot.id}/chip-in`, { amount });
+                    notify(
+                      r.status === "given"
+                        ? `Done. ${person.name} gets the ${item.name}.`
+                        : `You put in ${money(amount)}.`,
+                    );
+                    await load();
+                  }}
+                />
+              ) : (
+                <button className="mall-give" onClick={() => setGiving({ person, item })}>
+                  <Gift size={15} /> Give
+                </button>
+              )}
+            </article>
+          ))}
+        </div>
+        {!lists.wishes.length && (
+          <p className="mall-fine">
+            {query.trim() ? "Nothing matches." : "Nobody you follow has wished for anything yet."}
+          </p>
+        )}
+        {lists.pages > 1 && (
+          <nav className="mall-pages" aria-label="Pages">
+            {pageNumbers(lists.page, lists.pages).map((n, i) =>
+              n ? (
+                <button
+                  key={n}
+                  aria-label={`Page ${n}`}
+                  aria-current={n === lists.page ? "page" : undefined}
+                  onClick={() => setPage(n)}
+                >
+                  {n}
+                </button>
+              ) : (
+                <span key={`gap-${i}`}>…</span>
+              ),
+            )}
+          </nav>
+        )}
+      </section>
       <section className="mall-card" aria-label="Your wishlist">
         <h2>
           <Bookmark size={18} aria-hidden="true" /> Your wishlist
@@ -497,6 +525,15 @@ function Wishlists({
       )}
     </div>
   );
+}
+
+/** 1 … 4 5 6 … 20: the first, the last, and those around the current page; 0 marks a gap. */
+function pageNumbers(page: number, pages: number) {
+  const out: number[] = [];
+  for (let n = 1; n <= pages; n++)
+    if (n === 1 || n === pages || Math.abs(n - page) <= 1) out.push(n);
+    else if (out[out.length - 1] !== 0) out.push(0);
+  return out;
 }
 
 function ChipIn({ pot, onDone }: { pot: GiftView; onDone: (amount: number) => Promise<void> }) {
