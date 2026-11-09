@@ -292,7 +292,7 @@ export function Shop({
           const card = (
             <article
               key={item.id}
-              className="mall-card"
+              className="mall-tile"
               aria-label={`${item.name} from ${item.store.name}`}
             >
               <div className="mall-card-media">
