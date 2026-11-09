@@ -26,12 +26,24 @@ function Fill({ id, piece }: { id: string; piece: Piece }) {
  * The 2D figure an outfit is tried on: a plain mannequin, each chosen piece drawn over it in
  * its colour, layered bottom to outer. Pieces left empty show the mannequin underneath.
  */
+/** Where each slot sits on the figure, to show one piece large without the mannequin. */
+const focusBox: Record<Slot, string> = {
+  outer: "30 62 140 158",
+  top: "32 60 136 142",
+  bottom: "40 178 120 142",
+  shoes: "56 300 88 34",
+  bag: "64 72 114 152",
+};
+
 export function MallFigure({
   pieces,
   className,
+  focus,
 }: {
   pieces: Partial<Record<Slot, Piece>>;
   className?: string;
+  /** Draws only this slot's piece, filling the frame, as a product shot. */
+  focus?: Slot;
 }) {
   const uid = useId().replace(/:/g, "");
   const fill = (slot: Slot) => {
@@ -46,7 +58,7 @@ export function MallFigure({
   return (
     <svg
       className={className ?? "mall-figure"}
-      viewBox="0 0 200 360"
+      viewBox={focus ? focusBox[focus] : "0 0 200 360"}
       role="img"
       aria-label={label ? `Outfit: ${label}` : "An empty figure"}
     >
@@ -55,7 +67,7 @@ export function MallFigure({
           <Fill key={slot} id={`${uid}-${slot}`} piece={pieces[slot]!} />
         ))}
       </defs>
-      <g className="mall-mannequin">
+      <g className="mall-mannequin" display={focus ? "none" : undefined}>
         <circle cx="100" cy="38" r="22" />
         <rect x="92" y="56" width="16" height="16" rx="6" />
         <path d="M64 78 Q100 66 136 78 L140 190 L60 190 Z" />

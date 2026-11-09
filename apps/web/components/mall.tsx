@@ -1,9 +1,8 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowUpRight, Award, Bookmark, Gift, Heart, MapPin, Shirt, Users } from "lucide-react";
 import {
   cities,
-  slots,
   type CatalogItem,
   type City,
   type FitView,
@@ -18,18 +17,12 @@ import { MallFigure, Swatch } from "./mall-figure";
 import { OutsidePage, PageSheet } from "./page-sheet";
 import { hostOf } from "./post-link";
 import { DropsList } from "./fans";
+import { FitDock, Shop } from "./mall-shop";
 
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: cents % 100 ? 2 : 0 })}`;
-const slotNames: Record<Slot, string> = {
-  outer: "Outer layer",
-  top: "Top",
-  bottom: "Bottom",
-  shoes: "Shoes",
-  bag: "Bag",
-};
 const face = (p: MallPerson) => ({ ...p, bio: "" });
-type Segment = "fits" | "make" | "wishlists" | "drops";
+type Segment = "shop" | "fits" | "wishlists" | "drops";
 
 /**
  * The Mall tab: fits people put together from shops' pieces, scrolled one at a time; a board to
@@ -45,7 +38,9 @@ export function MallPage({
   notify: (message: string) => void;
   onOpenUser: (id: string) => void;
 }) {
-  const [segment, setSegment] = useState<Segment>("fits");
+  const [segment, setSegment] = useState<Segment>("shop");
+  // Fits that wear one piece, when you came from that piece in Shop.
+  const [fitsWith, setFitsWith] = useState<CatalogItem | null>(null);
   const [data, setData] = useState<{
     city: City | null;
     catalog: CatalogItem[];
@@ -75,7 +70,16 @@ export function MallPage({
   }
   function tryOn(fit: FitView) {
     setBoard(Object.fromEntries(fit.items.map((i) => [i.slot, i.id])));
-    setSegment("make");
+    setSegment("shop");
+    notify(`You're wearing ${fit.owner.name.split(" ")[0]}'s fit. Swap pieces as you scroll.`);
+  }
+  async function saveFit(title: string) {
+    await api("/mall/fits", { title, items: board });
+    notify("Your fit is saved and in the Mall.");
+    setBoard({});
+    setFitsWith(null);
+    setSegment("fits");
+    await load();
   }
   return (
     <section className="mall" aria-label="Mall">
@@ -84,8 +88,8 @@ export function MallPage({
         <div className="mall-segments" role="tablist" aria-label="Mall sections">
           {(
             [
+              ["shop", "Shop"],
               ["fits", "Fits"],
-              ["make", "Make a fit"],
               ["wishlists", "Wishlists"],
               ["drops", "Drops"],
             ] as const
@@ -94,7 +98,10 @@ export function MallPage({
               key={key}
               role="tab"
               aria-selected={segment === key}
-              onClick={() => setSegment(key)}
+              onClick={() => {
+                setSegment(key);
+                setFitsWith(null);
+              }}
             >
               {label}
             </button>
@@ -118,9 +125,28 @@ export function MallPage({
       </header>
       {!data ? (
         <p className="mall-empty">Opening the Mall…</p>
+      ) : segment === "shop" ? (
+        <Shop
+          catalog={data.catalog}
+          fits={data.fits}
+          board={board}
+          onBoard={setBoard}
+          onWish={wish}
+          onShop={setShop}
+          onFitsWith={(item) => {
+            setFitsWith(item);
+            setSegment("fits");
+          }}
+        />
       ) : segment === "fits" ? (
         <Fits
-          fits={data.fits}
+          fits={
+            fitsWith
+              ? data.fits.filter((f) => f.items.some((i) => i.id === fitsWith.id))
+              : data.fits
+          }
+          only={fitsWith}
+          onAll={() => setFitsWith(null)}
           meId={meId}
           onLike={async (fit) => {
             await api(`/mall/fits/${fit.id}/like`, {});
@@ -130,29 +156,21 @@ export function MallPage({
           onWish={wish}
           onShop={setShop}
           onOpenUser={onOpenUser}
-          onMake={() => setSegment("make")}
-        />
-      ) : segment === "make" ? (
-        <Board
-          catalog={data.catalog}
-          city={data.city}
-          board={board}
-          setBoard={setBoard}
-          onWish={wish}
-          onShop={setShop}
-          onSave={async (title) => {
-            await api("/mall/fits", { title, items: board });
-            notify("Your fit is in the Mall.");
-            setBoard({});
-            setSegment("fits");
-            await load();
-          }}
-          notify={notify}
+          onMake={() => setSegment("shop")}
         />
       ) : segment === "drops" ? (
         <DropsList key={meId} notify={notify} />
       ) : (
         <Wishlists meId={meId} notify={notify} onWish={wish} onShop={setShop} />
+      )}
+      {data && (segment === "shop" || segment === "fits") && (
+        <FitDock
+          catalog={data.catalog}
+          board={board}
+          onBoard={setBoard}
+          onSave={saveFit}
+          notify={notify}
+        />
       )}
       {shop && (
         <PageSheet
@@ -212,6 +230,8 @@ function PieceRow({
 
 function Fits({
   fits,
+  only,
+  onAll,
   meId,
   onLike,
   onTry,
@@ -221,6 +241,8 @@ function Fits({
   onMake,
 }: {
   fits: FitView[];
+  only: CatalogItem | null;
+  onAll: () => void;
   meId: string;
   onLike: (fit: FitView) => void;
   onTry: (fit: FitView) => void;
@@ -232,14 +254,22 @@ function Fits({
   if (!fits.length)
     return (
       <div className="mall-empty">
-        <p>No fits yet. Put one together from the shops.</p>
+        <p>No fits yet. Try pieces on as you scroll the shops.</p>
         <button className="easy-go" onClick={onMake}>
-          Make a fit
+          Go shopping
         </button>
       </div>
     );
   return (
     <div className="mall-fits">
+      {only && (
+        <p className="mall-filter">
+          Fits wearing <strong>{only.name}</strong>
+          <button className="text-button" onClick={onAll}>
+            Show all fits
+          </button>
+        </p>
+      )}
       {fits.map((fit) => (
         <article
           key={fit.id}
@@ -285,120 +315,6 @@ function Fits({
           </div>
         </article>
       ))}
-    </div>
-  );
-}
-
-function Board({
-  catalog,
-  city,
-  board,
-  setBoard,
-  onWish,
-  onShop,
-  onSave,
-  notify,
-}: {
-  catalog: CatalogItem[];
-  city: City | null;
-  board: Partial<Record<Slot, string>>;
-  setBoard: (next: Partial<Record<Slot, string>>) => void;
-  onWish: (item: CatalogItem) => void;
-  onShop: (item: CatalogItem) => void;
-  onSave: (title: string) => Promise<void>;
-  notify: (message: string) => void;
-}) {
-  const [nearOnly, setNearOnly] = useState(false);
-  const [title, setTitle] = useState("");
-  const [busy, setBusy] = useState(false);
-  const byId = useMemo(() => new Map(catalog.map((i) => [i.id, i])), [catalog]);
-  const chosen = Object.fromEntries(
-    Object.entries(board).flatMap(([slot, id]) => (byId.has(id!) ? [[slot, byId.get(id!)!]] : [])),
-  ) as Partial<Record<Slot, CatalogItem>>;
-  const picked = Object.values(chosen) as CatalogItem[];
-  const total = picked.reduce((n, i) => n + i.price, 0);
-  return (
-    <div className="mall-board">
-      <div className="mall-board-stage">
-        <MallFigure pieces={chosen} />
-        <p className="mall-total">
-          {picked.length ? `Together: ${money(total)}` : "Pick pieces below"}
-        </p>
-      </div>
-      <div className="mall-board-pick">
-        {city && (
-          <label className="mall-near-toggle">
-            <input
-              type="checkbox"
-              checked={nearOnly}
-              onChange={(e) => setNearOnly(e.target.checked)}
-            />
-            Only what I can pick up in {city}
-          </label>
-        )}
-        {slots.map((slot) => {
-          const options = catalog.filter((i) => i.slot === slot && (!nearOnly || i.near > 0));
-          return (
-            <section key={slot} className="mall-slot" aria-label={slotNames[slot]}>
-              <h3>{slotNames[slot]}</h3>
-              <div className="mall-slot-row">
-                {options.map((item) => (
-                  <button
-                    key={item.id}
-                    className={board[slot] === item.id ? "mall-option on" : "mall-option"}
-                    aria-pressed={board[slot] === item.id}
-                    onClick={() => {
-                      const next = { ...board };
-                      if (next[slot] === item.id) delete next[slot];
-                      else next[slot] = item.id;
-                      setBoard(next);
-                    }}
-                  >
-                    <Swatch piece={item} />
-                    <span>
-                      {item.name}
-                      <small>
-                        {money(item.price)}
-                        {item.near > 0 ? ` · ${item.near} near you` : ""}
-                      </small>
-                    </span>
-                  </button>
-                ))}
-                {!options.length && <small className="mall-none">Nothing near you yet.</small>}
-              </div>
-            </section>
-          );
-        })}
-        {picked.length > 0 && (
-          <ul className="mall-pieces">
-            {picked.map((item) => (
-              <PieceRow key={item.id} item={item} onWish={onWish} onShop={onShop} />
-            ))}
-          </ul>
-        )}
-        <div className="mall-save">
-          <input
-            aria-label="Name your fit"
-            placeholder="Name it (optional): Sunday trail, first date…"
-            maxLength={60}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <button
-            className="easy-go"
-            disabled={busy || picked.length < 2}
-            onClick={() => {
-              setBusy(true);
-              onSave(title.trim())
-                .then(() => setTitle(""))
-                .catch((e: Error) => notify(e.message))
-                .finally(() => setBusy(false));
-            }}
-          >
-            Share this fit
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

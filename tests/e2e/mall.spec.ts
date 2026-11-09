@@ -12,27 +12,32 @@ test("the Mall: scroll people's fits, make your own, and give a friend something
     .getByRole("button", { name: "Mall" })
     .click();
   const mall = page.getByRole("region", { name: "Mall" });
-  // Maya's London fit leads this month; Alex follows Maya, so it comes first.
+  // Shop opens first: one piece per screen, with who wears it.
+  const tee = mall.getByRole("article", { name: "Breton tee from Rose Vintage" });
+  await expect(tee).toContainText("2 to pick up near you");
+  await expect(tee).toContainText(/In 2 fits by/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  // Fits: Maya's London fit leads this month; Alex follows Maya.
+  await mall.getByRole("tab", { name: "Fits" }).click();
   const maya = mall.getByRole("article", { name: "Tempo run, then coffee by Maya Chen" });
-  await expect(maya).toBeVisible();
   await expect(maya).toContainText("Leading in London this month");
-  await expect(maya).toContainText("near you");
   await expect(mall.getByRole("article", { name: /Shimokita Saturday/ })).toContainText(
     "Top fit in Tokyo",
   );
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
-  // Try Maya's fit, swap the shoes and share it.
+  // Wear Maya's fit, swap the shoes while scrolling the shop, and save it from the corner.
   await maya.getByRole("button", { name: "Try it, change it" }).click();
-  await expect(mall.getByRole("tab", { name: "Make a fit" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  const shoes = mall.getByRole("region", { name: "Shoes" });
-  await shoes.getByRole("button", { name: /Walking mule/ }).click();
-  await expect(mall.getByRole("img", { name: /Walking mule/ })).toBeVisible();
-  await mall.getByLabel("Name your fit").fill("Office, then rain");
-  await mall.getByRole("button", { name: "Share this fit" }).click();
+  await expect(mall.getByRole("tab", { name: "Shop" })).toHaveAttribute("aria-selected", "true");
+  const mule = mall.getByRole("article", { name: "Walking mule from Kumo Footwear" });
+  await mule.scrollIntoViewIfNeeded();
+  await mule.getByRole("button", { name: "Try on Walking mule" }).click();
+  await expect(mule.getByRole("button", { name: "Take off Walking mule" })).toBeVisible();
+  await page.getByRole("button", { name: "Open your fit, 4 pieces" }).click();
+  const fit = page.getByRole("dialog", { name: "Your fit" });
+  await expect(fit.getByRole("img", { name: /Walking mule/ })).toBeVisible();
+  await fit.getByLabel("Name your fit").fill("Office, then rain");
+  await fit.getByRole("button", { name: "Save this fit" }).click();
   await expect(mall.getByRole("article", { name: /^Office, then rain by/ })).toBeVisible();
 
   // Maya wishes for the moss shell, and Leo already started a group gift for it.
