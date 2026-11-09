@@ -34,6 +34,7 @@ import { OrgService } from "../../packages/core/src/orgs.js";
 import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { ActiveDays } from "../../packages/core/src/habit-report.js";
+import { SurpriseService } from "../../packages/core/src/surprises.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
 import {
@@ -61,7 +62,15 @@ import { gatheringRoutes } from "./gathering-routes.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
 import { sideRoutes } from "./side-routes.js";
-import { seedGamers, seedGift, seedPlan, seedSides, seedStamps, seedWeekly } from "./seed-sides.js";
+import {
+  seedGamers,
+  seedGift,
+  seedPlan,
+  seedSides,
+  seedStamps,
+  seedSurprises,
+  seedWeekly,
+} from "./seed-sides.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
@@ -218,6 +227,7 @@ if (config.demoContent) {
   seedPlan(service);
   seedGamers(service, sidesService);
   seedGift(service);
+  seedSurprises(service);
 }
 // Pages made on an older Paint wall are brought up to the template at start (ADR 0046).
 {
@@ -228,6 +238,10 @@ const sharing = new SharingService(service, community, identity, profiles);
 // Your now (ADR 0041): one-tap entries, read by the same people who may see your posts, and by
 // your own page program through profile.read.
 const nowService = new NowService(service, clock);
+// Cards between feed posts: what people you know just did that touches you.
+const surprises = new SurpriseService(service, clock);
+surprises.peopleFilter = (viewerId, userId) =>
+  community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 nowService.viewFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 accounts.erasers.push((userId) => nowService.erase(userId));
@@ -879,6 +893,7 @@ api.delete("/api/me/now/:id", (req, res) =>
 );
 api.get("/api/me/quiz", (_req, res) => res.json(programs.quiz(actor(res))));
 api.put("/api/me/quiz", (req, res) => res.json(programs.setQuiz(actor(res), req.body)));
+api.get("/api/me/surprises", (_req, res) => res.json(surprises.for(actor(res))));
 api.get("/api/me/friends-now", async (_req, res) => {
   await Promise.all(service.following(actor(res)).map((id) => spotify.poll(id)));
   res.json(nowService.friends(actor(res)));

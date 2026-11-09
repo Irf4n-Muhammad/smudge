@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   Home,
   Compass,
@@ -68,6 +68,7 @@ import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
 import { Setup } from "./setup";
 import { FriendsNow } from "./friends-now";
+import { SURPRISE_EVERY, SurpriseCard, useSurprises } from "./feed-surprise";
 import { SideHome, SideResults, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
@@ -385,6 +386,8 @@ export function FormaApp() {
     notify("You are logged out.");
   }
   const production = auth?.mode === "production";
+  // A card between posts, now and then, about what people you know just did that touches you.
+  const surprises = useSurprises(!!boot && (view === "home" || view === "following"), posts);
   if (auth && !auth.signedIn)
     return (
       <>
@@ -1139,44 +1142,59 @@ export function FormaApp() {
                   )}
                 <div className="post-list">
                   {boot &&
-                    visible.map((post, index) => (
-                      <PostCard
-                        key={`${boot.actor.userId}:${post.id}`}
-                        post={post}
-                        boot={boot}
-                        onRefresh={async () => {
-                          await refresh();
-                          if (view === "explore") await loadExplore(exploreQuery);
-                          if (view === "format" && formatPage) await loadFormat(formatPage.rootId);
-                        }}
-                        notify={notify}
-                        onFollow={() => void follow(post.ownerId)}
-                        onProfile={() => openUser(post.ownerId)}
-                        onUser={openUser}
-                        onFormat={(id) => void openFormat(id)}
-                        onEdit={() => void editPost(post.id)}
-                        openComments={view === "post"}
-                        onReuse={async () => {
-                          try {
-                            const { fields } = await api<{ fields: FillField[] }>(
-                              `/posts/${post.id}/fields`,
-                            );
-                            if (fields.length) setFilling({ post, fields });
-                            else await reuse(post.id);
-                          } catch (e) {
-                            notify((e as Error).message);
-                          }
-                        }}
-                        onSkip={() => {
-                          const next =
-                            document.querySelectorAll<HTMLElement>(".post-card")[index + 1];
-                          if (next) {
-                            next.scrollIntoView({ behavior: "smooth", block: "start" });
-                            next.focus({ preventScroll: true });
-                          } else notify("You’re all caught up. A good moment to make something.");
-                        }}
-                      />
-                    ))}
+                    visible.map((post, index) => {
+                      const surprise =
+                        (index + 1) % SURPRISE_EVERY === 0
+                          ? surprises[(index + 1) / SURPRISE_EVERY - 1]
+                          : undefined;
+                      return (
+                        <Fragment key={`${boot.actor.userId}:${post.id}`}>
+                          <PostCard
+                            post={post}
+                            boot={boot}
+                            onRefresh={async () => {
+                              await refresh();
+                              if (view === "explore") await loadExplore(exploreQuery);
+                              if (view === "format" && formatPage)
+                                await loadFormat(formatPage.rootId);
+                            }}
+                            notify={notify}
+                            onFollow={() => void follow(post.ownerId)}
+                            onProfile={() => openUser(post.ownerId)}
+                            onUser={openUser}
+                            onFormat={(id) => void openFormat(id)}
+                            onEdit={() => void editPost(post.id)}
+                            openComments={view === "post"}
+                            onReuse={async () => {
+                              try {
+                                const { fields } = await api<{ fields: FillField[] }>(
+                                  `/posts/${post.id}/fields`,
+                                );
+                                if (fields.length) setFilling({ post, fields });
+                                else await reuse(post.id);
+                              } catch (e) {
+                                notify((e as Error).message);
+                              }
+                            }}
+                            onSkip={() => {
+                              const next =
+                                document.querySelectorAll<HTMLElement>(".post-card")[index + 1];
+                              if (next) {
+                                next.scrollIntoView({ behavior: "smooth", block: "start" });
+                                next.focus({ preventScroll: true });
+                              } else
+                                notify("You’re all caught up. A good moment to make something.");
+                            }}
+                          />
+                          {surprise && (
+                            <SurpriseCard
+                              surprise={surprise}
+                              onOpen={() => openPost(surprise.postId)}
+                            />
+                          )}
+                        </Fragment>
+                      );
+                    })}
                 </div>
                 {!loading && visible.length > 0 && (
                   <footer className="feed-end">
