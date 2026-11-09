@@ -24,8 +24,10 @@ export interface MallItem {
   storeId: string;
   name: string;
   slot: Slot;
-  color: string;
-  pattern?: "stripe" | "check" | undefined;
+  /** The piece alone on a plain background, for laying out a fit. */
+  image: string;
+  /** The piece worn, when the shop has such a picture: the backdrop of its Shop card. */
+  photo?: string | undefined;
   /** In US cents; real shops would give local prices, the demo keeps one currency. */
   price: number;
   url: string;

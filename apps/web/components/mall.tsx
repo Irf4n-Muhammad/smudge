@@ -13,7 +13,7 @@ import {
 } from "../../../packages/contracts/src/mall";
 import { api } from "./runtime";
 import { Avatar } from "./ui";
-import { MallFigure, Swatch } from "./mall-figure";
+import { MallFigure, Swatch, sized } from "./mall-figure";
 import { OutsidePage, PageSheet } from "./page-sheet";
 import { hostOf } from "./post-link";
 import { DropsList } from "./fans";
@@ -524,7 +524,7 @@ function GiveDialog({
         aria-label={`Give ${person.name} the ${item.name}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <MallFigure pieces={{ [item.slot]: item }} className="mall-figure small" />
+        <img className="mall-gift-img" src={sized(item.image, 400)} alt="" />
         <h2>
           {item.name} for {person.name}
         </h2>

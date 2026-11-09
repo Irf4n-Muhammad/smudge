@@ -14,7 +14,7 @@ const item = (id: string, slot: MallItem["slot"], price: number, stock = {}): Ma
   storeId: "shop",
   name: id,
   slot,
-  color: "#333333",
+  image: `https://shop.example/${id}.jpg`,
   price,
   url: `https://shop.example/${id}`,
   stock,

@@ -10,7 +10,7 @@ import {
   type Slot,
 } from "../../../packages/contracts/src/mall";
 import { Avatar } from "./ui";
-import { MallFigure } from "./mall-figure";
+import { MallFigure, sized } from "./mall-figure";
 
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: cents % 100 ? 2 : 0 })}`;
@@ -65,12 +65,16 @@ export function Shop({
           return (
             <article
               key={item.id}
-              className="mall-item"
+              className={item.photo ? "mall-item worn" : "mall-item"}
               aria-label={`${item.name} from ${item.store.name}`}
             >
-              <div className="mall-item-art">
-                <MallFigure pieces={{ [item.slot]: item }} focus={item.slot} />
-              </div>
+              {/* Worn when the shop has such a picture, else the piece alone, large. */}
+              <img
+                className="mall-item-art"
+                src={sized(item.photo ?? item.image, 900)}
+                alt=""
+                loading="lazy"
+              />
               <div className="mall-item-info">
                 <small>{item.store.name}</small>
                 <h2>{item.name}</h2>
@@ -183,7 +187,7 @@ export function FitDock({
           aria-label={`Open your fit, ${worn.length} ${worn.length === 1 ? "piece" : "pieces"}`}
           onClick={() => setOpen(true)}
         >
-          <MallFigure pieces={pieces} />
+          <MallFigure pieces={pieces} hints />
           <Maximize2 size={13} className="fit-dock-grow" aria-hidden="true" />
         </button>
         {worn.length >= 2 ? (
@@ -206,7 +210,7 @@ export function FitDock({
               <button className="fan-close" aria-label="Close" onClick={() => setOpen(false)}>
                 <X size={18} />
               </button>
-              <MallFigure pieces={pieces} className="mall-figure fit-big-figure" />
+              <MallFigure pieces={pieces} className="fit-big-figure" hints />
               {worn.length ? (
                 <ul className="fit-big-pieces">
                   {worn.map((item) => (
