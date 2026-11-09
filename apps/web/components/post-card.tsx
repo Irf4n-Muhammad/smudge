@@ -438,12 +438,12 @@ export function PostCard({
             {!moment && (
               <button
                 className="action-button reuse-action"
-                aria-label="Use format"
-                title="Use format"
+                aria-label="Make your version"
+                title="Make your version"
                 onClick={onReuse}
               >
-                <Layers size={18} />
-                <span>Use format</span>
+                <Layers size={16} />
+                <span>Make yours</span>
               </button>
             )}
             <FullScreenButton onOpen={() => setFull(true)} />

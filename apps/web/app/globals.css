@@ -605,10 +605,20 @@ button:hover {
 .action-button.saved {
   color: var(--accent);
 }
+/* The way in to making your own version: the one filled action, so it reads as an invitation. */
 .reuse-action {
-  font-size: 9px;
-  color: #9b9e91;
+  gap: 5px;
   margin-left: 3px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.action-button.reuse-action:hover {
+  color: #fff;
+  filter: brightness(1.05);
 }
 .post-caption {
   font-size: 11px;
@@ -1426,7 +1436,7 @@ button:hover {
     gap: 17px;
   }
   .reuse-action span {
-    font-size: 8px;
+    font-size: 11px;
   }
   .mobile-nav {
     position: fixed;

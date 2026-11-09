@@ -61,7 +61,7 @@ test("signup, prove a campus email, publish a locked moment and receive one pres
   await dialog.getByRole("button", { name: "Publish milestone" }).click();
   const card = page.locator(".post-card", { hasText: title });
   await expect(card).toContainText("Graduation · Graduate, Lembayung University");
-  await expect(card.getByRole("button", { name: "Use format" })).toHaveCount(0);
+  await expect(card.getByRole("button", { name: "Make your version" })).toHaveCount(0);
 
   // Another account reacts with a preset sticker; free text is not an option anywhere.
   await api(page, "/session", { userId: "maya" });
