@@ -5,6 +5,7 @@ import { BadgeCheck, Clock, Lock, Package, Send, X } from "lucide-react";
 import type { DropView, FanPerson, FanRoomView } from "../../../packages/contracts/src/fans";
 import { api } from "./runtime";
 import { Avatar } from "./ui";
+import { sized } from "./mall-figure";
 
 const money = (cents: number) =>
   cents
@@ -34,10 +35,38 @@ export function DropCard({
   const [busy, setBusy] = useState(false);
   const wait = drop.opensForYou ? until(drop.opensForYou) : null;
   const soldOut = drop.left === 0;
+  // One word on the picture for where the viewer stands.
+  const tag = drop.code
+    ? "Yours"
+    : soldOut
+      ? "Gone"
+      : !drop.opensForYou
+        ? "Fans only"
+        : drop.wave === "fans"
+          ? "Fans first: you're in"
+          : wait
+            ? "Fans first"
+            : "Open to all";
   return (
-    <article className="drop-card" aria-label={`${drop.title} by ${drop.owner.name}`}>
-      <div className="drop-swatch" style={{ background: drop.color }}>
-        <Package size={28} aria-hidden="true" />
+    <article
+      className={soldOut && !drop.code ? "drop-card gone" : "drop-card"}
+      aria-label={`${drop.title} by ${drop.owner.name}`}
+    >
+      <div className="drop-art" style={{ background: drop.color }}>
+        {drop.image ? (
+          <img src={sized(drop.image, 700)} alt="" loading="lazy" />
+        ) : (
+          <Package size={28} aria-hidden="true" />
+        )}
+        <span className="drop-tag">
+          {tag === "Fans only" && <Lock size={12} aria-hidden="true" />}
+          {tag}
+        </span>
+        {wait && !soldOut && !drop.code && (
+          <span className="drop-count">
+            <Clock size={13} aria-hidden="true" /> {wait.replace(/^in /, "")}
+          </span>
+        )}
       </div>
       <div className="drop-body">
         <button className="drop-owner" onClick={() => onRoom?.(drop.owner.id)}>
@@ -46,8 +75,12 @@ export function DropCard({
         <h3>{drop.title}</h3>
         {drop.note && <p>{drop.note}</p>}
         <p className="drop-meta">
-          {money(drop.price)} · {soldOut ? "Sold out" : `${drop.left} of ${drop.quantity} left`}
+          <span>{drop.price ? money(drop.price) : "Free"}</span>
+          <span>{soldOut ? "Sold out" : `${drop.left} of ${drop.quantity} left`}</span>
         </p>
+        <span className="drop-stock" aria-hidden="true">
+          <span style={{ width: `${(drop.left / drop.quantity) * 100}%` }} />
+        </span>
         {drop.code ? (
           <p className="drop-claimed">
             <BadgeCheck size={16} aria-hidden="true" /> Yours. Code <code>{drop.code}</code>
@@ -291,27 +324,33 @@ export function DropsList({ notify }: { notify: (message: string) => void }) {
     void load();
   }, [load]);
   if (!drops) return <p className="mall-empty">Opening drops…</p>;
+  // What you can still get comes first; what sold out stays below, as a record.
+  const live = drops.filter((d) => d.left > 0 || d.code);
+  const gone = drops.filter((d) => d.left === 0 && !d.code);
+  const claim = async (drop: DropView) => {
+    try {
+      await api(`/fans/drops/${drop.id}/claim`, {});
+      notify(`${drop.title} is yours.`);
+    } catch (e) {
+      notify((e as Error).message);
+    }
+    await load();
+  };
   return (
     <div className="drops">
-      {drops.length ? (
-        drops.map((d) => (
-          <DropCard
-            key={d.id}
-            drop={d}
-            onRoom={setRoom}
-            onClaim={async (drop) => {
-              try {
-                await api(`/fans/drops/${drop.id}/claim`, {});
-                notify(`${drop.title} is yours.`);
-              } catch (e) {
-                notify((e as Error).message);
-              }
-              await load();
-            }}
-          />
-        ))
-      ) : (
-        <p className="mall-empty">No drops from people you follow yet.</p>
+      {!drops.length && <p className="mall-empty">No drops from people you follow yet.</p>}
+      {[live, gone].map(
+        (list, n) =>
+          list.length > 0 && (
+            <section key={n} aria-label={n ? "Gone" : "Drops now"}>
+              {n > 0 && <h2 className="drops-head">Gone</h2>}
+              <div className="drops-grid">
+                {list.map((d) => (
+                  <DropCard key={d.id} drop={d} onRoom={setRoom} onClaim={claim} />
+                ))}
+              </div>
+            </section>
+          ),
       )}
       {room && (
         <FanRoom

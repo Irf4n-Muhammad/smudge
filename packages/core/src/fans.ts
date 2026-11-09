@@ -47,6 +47,7 @@ interface Drop {
   opens: string;
   everyone?: string;
   color: string;
+  image?: string;
   createdAt: string;
 }
 interface Claim {
@@ -245,12 +246,13 @@ export class FansService {
     if (!this.room(me)) throw new AppError("NEEDS_FAN_ROOM");
     const value = dropSchema.parse(input);
     if (value.price && !this.payments) throw new AppError("PAYMENTS_OFF", 503);
-    const { everyone, ...rest } = value;
+    const { everyone, image, ...rest } = value;
     const drop: Drop = {
       id: randomUUID(),
       ownerId: me,
       ...rest,
       ...(everyone ? { everyone } : {}),
+      ...(image ? { image } : {}),
       createdAt: this.now().toISOString(),
     };
     this.store.transaction(() => this.store.put("drop", drop.id, drop));
@@ -288,6 +290,7 @@ export class FansService {
             quantity: d.quantity,
             left: Math.max(0, d.quantity - taken.length),
             color: d.color,
+            ...(d.image ? { image: d.image } : {}),
             opens: d.opens,
             ...(d.everyone ? { everyone: d.everyone } : {}),
             opensForYou: at,

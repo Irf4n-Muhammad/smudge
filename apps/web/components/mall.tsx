@@ -371,67 +371,58 @@ function Wishlists({
           </p>
         </section>
       )}
-      <section className="mall-card" aria-label="Your wishlist">
-        <h2>
-          <Bookmark size={18} aria-hidden="true" /> Your wishlist
-        </h2>
-        {lists.mine.items.length ? (
-          <ul className="mall-pieces">
-            {lists.mine.items.map((item) => (
-              <PieceRow
-                key={item.id}
-                item={item}
-                onWish={async (i) => {
-                  await onWish(i);
-                  await load();
-                }}
-                onShop={onShop}
-              />
-            ))}
-          </ul>
-        ) : (
-          <p className="mall-fine">
-            Tap the bookmark on any piece. Friends see your wishlist and can give you one.
-          </p>
-        )}
-      </section>
       {lists.friends.map((list) => (
         <section
           key={list.person.id}
-          className="mall-card"
+          className="wish-friend"
           aria-label={`${list.person.name}'s wishlist`}
         >
-          <h2 className="mall-person-head">
-            <Avatar user={face(list.person)} small /> {list.person.name} wishes for
+          <h2 className="wish-head">
+            <Avatar user={face(list.person)} />
+            <span>
+              {list.person.name.split(" ")[0]} wishes for
+              <small>
+                {list.items.length} {list.items.length === 1 ? "piece" : "pieces"}
+                {list.pots.length > 0 && " · a group gift is open"}
+              </small>
+            </span>
           </h2>
-          <ul className="mall-pieces">
+          <ul className="wish-row">
             {list.items.map((item) => {
               const pot = list.pots.find((p) => p.item.id === item.id);
               return (
-                <li key={item.id} className="mall-piece mall-wish">
-                  <Swatch piece={item} />
-                  <span className="mall-piece-text">
-                    <strong>{item.name}</strong>
-                    <small>
-                      {item.store.name} · {money(item.price)}
-                    </small>
-                    {pot && (
-                      <span
-                        className="mall-pot"
-                        aria-label={`${money(pot.raised)} of ${money(pot.goal)} raised`}
-                      >
-                        <span className="mall-pot-bar">
-                          <span
-                            style={{ width: `${Math.min(100, (pot.raised / pot.goal) * 100)}%` }}
-                          />
-                        </span>
-                        <small>
-                          <Users size={12} aria-hidden="true" /> {money(pot.raised)} of{" "}
-                          {money(pot.goal)} from {pot.from.map((p) => p.name).join(", ")}
-                        </small>
+                <li key={item.id} className={pot ? "wish-tile pot" : "wish-tile"}>
+                  <img
+                    className={`wish-art ${item.slot}`}
+                    src={sized(item.image, 500)}
+                    alt=""
+                    loading="lazy"
+                  />
+                  <small>{item.store.name}</small>
+                  <strong>{item.name}</strong>
+                  {pot ? (
+                    <span
+                      className="mall-pot"
+                      aria-label={`${money(pot.raised)} of ${money(pot.goal)} raised`}
+                    >
+                      <span className="mall-pot-bar">
+                        <span
+                          style={{ width: `${Math.min(100, (pot.raised / pot.goal) * 100)}%` }}
+                        />
                       </span>
-                    )}
-                  </span>
+                      <small>
+                        <span className="mall-faces">
+                          {pot.from.slice(0, 3).map((p) => (
+                            <Avatar key={p.id} user={face(p)} small />
+                          ))}
+                        </span>
+                        {money(pot.raised)} of {money(pot.goal)} from{" "}
+                        {pot.from.map((p) => p.name).join(", ")}
+                      </small>
+                    </span>
+                  ) : (
+                    <span className="wish-price">{money(item.price)}</span>
+                  )}
                   {pot ? (
                     <ChipIn
                       pot={pot}
@@ -459,6 +450,30 @@ function Wishlists({
           </ul>
         </section>
       ))}
+      <section className="mall-card" aria-label="Your wishlist">
+        <h2>
+          <Bookmark size={18} aria-hidden="true" /> Your wishlist
+        </h2>
+        {lists.mine.items.length ? (
+          <ul className="mall-pieces">
+            {lists.mine.items.map((item) => (
+              <PieceRow
+                key={item.id}
+                item={item}
+                onWish={async (i) => {
+                  await onWish(i);
+                  await load();
+                }}
+                onShop={onShop}
+              />
+            ))}
+          </ul>
+        ) : (
+          <p className="mall-fine">
+            Tap the bookmark on any piece. Friends see your wishlist and can give you one.
+          </p>
+        )}
+      </section>
       {giving && (
         <GiveDialog
           person={giving.person}

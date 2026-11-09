@@ -30,6 +30,8 @@ export const dropSchema = z
       .string()
       .regex(/^#[0-9a-fA-F]{6}$/)
       .default("#222222"),
+    /** A picture of the thing; without one the card shows the colour. */
+    image: z.string().url().startsWith("https://").max(500).optional(),
   })
   .strict()
   .refine((d) => !d.everyone || d.everyone >= d.opens, {
@@ -64,6 +66,7 @@ export interface DropView {
   quantity: number;
   left: number;
   color: string;
+  image?: string | undefined;
   opens: string;
   everyone?: string | undefined;
   /** When the viewer can claim: the presale if they are a fan or hold a stamp, else everyone. */

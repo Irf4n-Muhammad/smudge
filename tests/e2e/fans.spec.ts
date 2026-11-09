@@ -11,6 +11,14 @@ test("fans: a drop opens first for a creator's fans, joining the room lets you i
   // Alex follows Leo but isn't in his room and holds no marathon stamp: everyone's wave.
   const drop = mall.getByRole("article", { name: "Club singlet, run 01 by Leo Park" });
   await expect(drop).toContainText("29 of 30 left");
+  await expect(drop).toContainText("Fans first");
+  // A tee is open to everyone, and the first run is gone.
+  await expect(mall.getByRole("article", { name: "Recovery tee, plum by Leo Park" })).toContainText(
+    "Open to all",
+  );
+  await expect(
+    mall.getByRole("region", { name: "Gone" }).getByRole("article", { name: /run 00/ }),
+  ).toContainText("Sold out");
   await expect(drop).toContainText(/Opens for you in 2 days/);
   await drop.getByRole("button", { name: "Fans get it now" }).click();
 
@@ -23,7 +31,7 @@ test("fans: a drop opens first for a creator's fans, joining the room lets you i
   await room.getByRole("button", { name: "Send" }).click();
   await expect(room.locator(".fan-note").first()).toContainText("See you at the bridge");
   // The presale is Alex's now.
-  const inRoom = room.getByRole("article", { name: /Club singlet/ });
+  const inRoom = room.getByRole("article", { name: /Club singlet, run 01/ });
   await inRoom.getByRole("button", { name: "Get it, $35" }).click();
   await expect(inRoom).toContainText(/Yours\. Code DROP-[0-9A-F]{8}/);
   await room.getByRole("button", { name: "Close" }).click();
