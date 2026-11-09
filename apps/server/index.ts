@@ -33,6 +33,7 @@ import { PassportService } from "../../packages/core/src/passport.js";
 import { OrgService } from "../../packages/core/src/orgs.js";
 import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
+import { ActiveDays } from "../../packages/core/src/habit-report.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
 import {
@@ -111,6 +112,9 @@ const store = await Store.open(resolve(dataDir, "forma.sqlite"));
 // Opens of public posts and organisation pages, counted per day with no visitor id.
 const opens = new OpenCounter(store);
 setInterval(() => opens.flush(), 60_000).unref();
+// The days each signed-in account opened Smudge, for the "4+ days a week" number.
+const active = new ActiveDays(store);
+setInterval(() => active.flush(), 60_000).unref();
 const service = new SocialService(store);
 seedSharedAssets(service);
 if (config.demoContent) {
@@ -447,6 +451,7 @@ api.use((req, res, next) => {
   if (session) {
     res.locals.actor = session.actor;
     res.locals.session = session.id;
+    active.mark(session.actor.userId);
     if (session.renewed)
       res.cookie("forma_session", readCookie(req)!, { ...cookie, maxAge: 30 * 86400000 });
   } else if (
@@ -1702,6 +1707,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const)
     apiServer.close();
     runtimeServer.close();
     opens.flush();
+    active.flush();
     store.close();
     process.exit(0);
   });

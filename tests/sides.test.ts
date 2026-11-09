@@ -79,6 +79,8 @@ test("everyone is in Everyday; open sides are joined with a tap and left again",
 test("a post lives in one side: listed there, open by its link, and absent from Everyday", async () => {
   const { sides, post, titles, social } = await setup();
   sides.join(alice, "runners");
+  // Newest member first: Bob must join a moment later, not in the same millisecond.
+  await new Promise((r) => setTimeout(r, 5));
   sides.join(bob, "runners");
   post(alice, "Sunday long run", "runners");
   post(alice, "Breakfast");
@@ -173,6 +175,8 @@ test("the view filter answers for a person alone, as the theme lookup asks it", 
 test("a side's home counts everyone, shows the people the viewer may see, and keeps private sides to members", async () => {
   const { sides, post, social } = await setup();
   sides.join(alice, "runners");
+  // Newest member first: Bob must join a moment later, not in the same millisecond.
+  await new Promise((r) => setTimeout(r, 5));
   sides.join(bob, "runners");
   post(alice, "Sunday long run", "runners");
   post(alice, "Breakfast");
@@ -238,6 +242,8 @@ test("a side's link shows an open side's home to a guest; private sides and Ever
   const sharing = new SharingService(social, community, identity, new ProfileService(social));
   sharing.sideHome = (sideId) => sides.home({ userId: GUEST }, sideId);
   sides.join(alice, "runners");
+  // Newest member first: Bob must join a moment later, not in the same millisecond.
+  await new Promise((r) => setTimeout(r, 5));
   sides.join(bob, "runners");
   post(alice, "Sunday long run", "runners");
   post(alice, "Breakfast");
