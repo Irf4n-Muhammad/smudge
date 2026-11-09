@@ -25,7 +25,7 @@ import { ReportDialog, toggleBlock } from "./community";
 import { api, Runtime } from "./runtime";
 import { Avatar, askConfirm } from "./ui";
 import { PostLink } from "./post-link";
-import { labels } from "./types";
+import { labels, siteKindLabels } from "./types";
 import type { Boot } from "./types";
 import {
   DecorCredit,
@@ -205,10 +205,12 @@ export function PostCard({
           <span>
             <strong>
               {post.author.name}
+              {post.siteKind && <span className="site-badge">{siteKindLabels[post.siteKind]}</span>}
               <span className="author-dot">·</span>
               <small>@{post.author.handle}</small>
             </strong>
             <span>
+              {post.rising && <span className="rising-tag">Rising with people</span>}
               {moment ? moment.name : labels[post.metadata.format]}
               {post.side && (
                 <span

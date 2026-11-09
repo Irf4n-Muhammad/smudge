@@ -16,6 +16,9 @@ import {
 import type { User } from "../../../packages/contracts/src/experience";
 import { api } from "./runtime";
 import { Avatar } from "./ui";
+import { siteKindLabels } from "./types";
+
+type SiteKind = keyof typeof siteKindLabels;
 
 export interface OwnSite {
   url: string;
@@ -76,6 +79,7 @@ export function OwnSiteSetup({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [dns, setDns] = useState(false);
+  const [kind, setKind] = useState<SiteKind | null>(null);
   useEffect(() => {
     api<{ site: OwnSite | null }>("/me/site").then(
       (r) => {
@@ -88,6 +92,23 @@ export function OwnSiteSetup({
       },
     );
   }, []);
+  useEffect(() => {
+    if (!site?.verified) return;
+    api<{ kind: SiteKind | null }>("/me/site-kind").then(
+      (r) => setKind(r.kind),
+      () => undefined,
+    );
+  }, [site?.verified]);
+  const declare = (next: SiteKind | null) =>
+    run(async () => {
+      const r = await api<{ kind: SiteKind | null }>("/me/site-kind", { kind: next });
+      setKind(r.kind);
+      setMessage(
+        r.kind
+          ? `Your posts now show ${siteKindLabels[r.kind]}. Each one needs a link or something to do.`
+          : "You post as a person again.",
+      );
+    });
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", key);
@@ -313,6 +334,21 @@ export function OwnSiteSetup({
                 Change
               </button>
             </p>
+            <div className="site-kind-pick" role="radiogroup" aria-label="This account is">
+              <span>This account is</span>
+              {([null, "brand", "media", "place"] as const).map((k) => (
+                <button
+                  key={k ?? "person"}
+                  role="radio"
+                  aria-checked={kind === k}
+                  className={kind === k ? "own-site-chip on" : "own-site-chip"}
+                  disabled={busy}
+                  onClick={() => kind !== k && void declare(k)}
+                >
+                  {k ? siteKindLabels[k] : "A person"}
+                </button>
+              ))}
+            </div>
             {onSmudgeEditor && (
               <button className="own-site-quiet" onClick={onSmudgeEditor}>
                 Edit the Smudge profile shown when my site is down

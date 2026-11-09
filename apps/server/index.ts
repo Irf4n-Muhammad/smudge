@@ -36,6 +36,7 @@ import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-
 import { ActiveDays } from "../../packages/core/src/habit-report.js";
 import { SurpriseService } from "../../packages/core/src/surprises.js";
 import { buildPost, startPostDesign } from "../../packages/core/src/easy-post.js";
+import { SitesService } from "../../packages/core/src/sites.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
 import {
@@ -63,6 +64,7 @@ import { gatheringRoutes } from "./gathering-routes.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
 import { sideRoutes } from "./side-routes.js";
+import { seedSites } from "./seed-sites.js";
 import {
   seedGamers,
   seedGift,
@@ -239,6 +241,7 @@ if (config.demoContent) {
   seedGamers(service, sidesService);
   seedGift(service);
   seedSurprises(service);
+  seedSites(service);
 }
 // Pages made on an older Paint wall are brought up to the template at start (ADR 0046).
 {
@@ -578,11 +581,21 @@ api.post("/api/signup", (req, res) => {
   setSession(res, token);
   res.json(user);
 });
+// Sites (brands, media, places) stay a minority in the feed; see SitesService.mix.
+function siteTag(userId: string) {
+  const kind = sites.kindOf(userId);
+  return kind ? { siteKind: kind } : {};
+}
 api.get("/api/feed", (_req, res) =>
   res.json(
-    identity
-      .decorate(actor(res), service.feed(actor(res)))
-      .map((p) => ({ ...p, ...sidesService.tag(p) })),
+    sites
+      .mix(actor(res).userId, identity.decorate(actor(res), service.feed(actor(res))))
+      .map(({ post, rising }) => ({
+        ...post,
+        ...sidesService.tag(post),
+        ...siteTag(post.ownerId),
+        ...(rising ? { rising } : {}),
+      })),
   ),
 );
 api.get("/api/formats/:id", (req, res) => {
@@ -1450,6 +1463,11 @@ const ownSites = new OwnSiteService(
   { allowHttpHosts: importAllowHosts },
 );
 accounts.erasers.push((userId) => ownSites.erase(userId));
+// A proven website may say it is a brand, media or place: its posts then follow the site rules.
+const sites = new SitesService(service, (userId) => Boolean(ownSites.public(userId)));
+accounts.erasers.push((userId) => sites.erase(userId));
+api.get("/api/me/site-kind", (_req, res) => res.json({ kind: sites.kindOf(actor(res).userId) }));
+api.post("/api/me/site-kind", (req, res) => res.json(sites.declare(actor(res), req.body)));
 const siteLimit = rateLimit({ windowMs: 10 * 60_000, max: 30 });
 api.get("/api/me/site", (_req, res) => res.json({ site: ownSites.mine(actor(res)) }));
 api.post("/api/me/site", siteLimit, (req, res) =>
@@ -1458,7 +1476,12 @@ api.post("/api/me/site", siteLimit, (req, res) =>
 api.post("/api/me/site/verify", siteLimit, async (_req, res) =>
   res.json({ site: await ownSites.verify(actor(res)) }),
 );
-api.delete("/api/me/site", (_req, res) => res.json(ownSites.remove(actor(res))));
+// A site stops being a brand, media or place when it stops proving its domain.
+api.delete("/api/me/site", (_req, res) => {
+  const removed = ownSites.remove(actor(res));
+  store.transaction(() => sites.erase(actor(res).userId));
+  res.json(removed);
+});
 // Whether a profile is a website right now. Answers are kept a minute so visits don't hammer it.
 const siteSeen = new Map<string, { at: number; status: Awaited<ReturnType<typeof siteStatus>> }>();
 api.get("/api/profiles/:ownerId/site", frameLimit, async (req, res) => {
