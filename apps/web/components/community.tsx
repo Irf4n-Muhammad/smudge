@@ -351,6 +351,8 @@ function describe(n: NotificationView) {
       return "wants to add you as their partner. Confirm it on Who you are.";
     case "gift":
       return "gave you a theme. It is waiting in Themes.";
+    case "voucher":
+      return "gave you something from your wishlist. Your voucher is in the Mall.";
     case "post-removed":
       return `Your post ${title} was removed for breaking the community rules.`;
     default:

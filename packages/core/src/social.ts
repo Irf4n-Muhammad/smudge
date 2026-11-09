@@ -130,7 +130,7 @@ export type SocialEvent =
       postId: string;
     }
   | {
-      type: "partner-request" | "follow-request" | "follow-accepted" | "gift";
+      type: "partner-request" | "follow-request" | "follow-accepted" | "gift" | "voucher";
       actorId: string;
       targetId: string;
     };

@@ -24,7 +24,9 @@ import {
   LogIn,
   LogOut,
   Shapes,
+  ShoppingBag,
 } from "lucide-react";
+import { MallPage } from "./mall";
 import { AccountSwitch, MoreMenu } from "./app-nav";
 import type { MoreKey } from "./app-nav";
 import { MessagesPanel, ModerationPanel, NotificationsPanel, PeoplePanel } from "./community";
@@ -447,6 +449,7 @@ export function FormaApp() {
     ["home", Home, "Home"],
     ["explore", Search, "Search"],
     ["sides", Shapes, "Sides"],
+    ["mall", ShoppingBag, "Mall"],
     ["messages", MessageCircle, "Messages"],
     ["notifications", Bell, "Notifications"],
     ["create", Plus, "Create"],
@@ -588,7 +591,7 @@ export function FormaApp() {
         </div>
       )}
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        {["home", "explore", "create", "sides", "profile"]
+        {["home", "explore", "create", "mall", "profile"]
           .map((k) => mainTabs.find(([key]) => key === k)!)
           .map(([key, Icon, label]) => {
             const I = Icon as typeof Home;
@@ -913,6 +916,15 @@ export function FormaApp() {
                 <ModerationPanel notify={notify} />
                 <ThemeReviews notify={notify} />
               </>
+            ) : view === "mall" && boot ? (
+              <MallPage
+                meId={boot.actor.userId}
+                notify={notify}
+                onOpenUser={(id) => {
+                  setProfile(id);
+                  setView("profile");
+                }}
+              />
             ) : view === "sides" && boot ? (
               <SidesPage
                 sides={boot.sides}

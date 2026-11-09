@@ -1,0 +1,165 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Store } from "../packages/core/src/database.js";
+import { SocialService } from "../packages/core/src/social.js";
+import { MallService } from "../packages/core/src/mall.js";
+import type { MallItem } from "../packages/contracts/src/mall.js";
+
+const now = new Date("2026-11-20T12:00:00Z");
+const item = (id: string, slot: MallItem["slot"], price: number, stock = {}): MallItem => ({
+  id,
+  storeId: "shop",
+  name: id,
+  slot,
+  color: "#333333",
+  price,
+  url: `https://shop.example/${id}`,
+  stock,
+});
+
+async function setup() {
+  const store = await Store.open(join(mkdtempSync(join(tmpdir(), "forma-mall-")), "db.sqlite"));
+  store.transaction(() => {
+    for (const id of ["alex", "maya", "leo", "kai", "shop", "bot"])
+      store.put("user", id, { id, name: id, handle: id, initials: "X", color: "#fff", bio: "" });
+    store.put("follow", "alex:maya", { userId: "alex", target: "maya" });
+    for (const i of [
+      item("shell", "outer", 18900, { London: 2 }),
+      item("tee", "top", 2200, { Tokyo: 1 }),
+      item("denim", "bottom", 3900, { London: 1 }),
+      item("runner", "shoes", 12500),
+    ])
+      store.put("mall-item", i.id, i);
+    // A brand-new account: its likes must not count toward awards.
+    store.put("credential", "bot", { createdAt: "2026-11-19T00:00:00Z" });
+  });
+  const social = new SocialService(store);
+  const mall = new MallService(social, () => now);
+  return { store, social, mall };
+}
+
+test("the catalog puts what you can pick up in your city first", async () => {
+  const { mall } = await setup();
+  mall.setCity({ userId: "alex" }, { city: "London" });
+  const ids = mall.catalog({ userId: "alex" }).map((i) => [i.id, i.near]);
+  assert.deepEqual(ids, [
+    ["denim", 1],
+    ["shell", 2],
+    ["runner", 0],
+    ["tee", 0],
+  ]);
+  assert.throws(() => mall.setCity({ userId: "alex" }, { city: "Atlantis" }));
+});
+
+test("fits need two real pieces in their slots; people you follow come first, then your city", async () => {
+  const { mall } = await setup();
+  mall.setCity({ userId: "alex" }, { city: "London" });
+  mall.setCity({ userId: "leo" }, { city: "London" });
+  assert.throws(() => mall.saveFit({ userId: "maya" }, { items: { outer: "shell" } }));
+  assert.throws(
+    () => mall.saveFit({ userId: "maya" }, { items: { outer: "tee", top: "shell" } }),
+    /UNKNOWN_PIECE/,
+  );
+  const kai = mall.saveFit({ userId: "kai" }, { items: { top: "tee", shoes: "runner" } });
+  const leo = mall.saveFit({ userId: "leo" }, { items: { top: "tee", bottom: "denim" } });
+  const maya = mall.saveFit(
+    { userId: "maya" },
+    { title: "Rain", items: { outer: "shell", bottom: "denim" } },
+  );
+  assert.equal(maya.total, 18900 + 3900);
+  assert.deepEqual(
+    mall.fits({ userId: "alex" }).map((f) => f.id),
+    [maya.id, leo.id, kai.id],
+  );
+});
+
+test("each city's top fit comes from likes of accounts old enough, never the owner's", async () => {
+  const { store, mall } = await setup();
+  mall.setCity({ userId: "maya" }, { city: "London" });
+  mall.setCity({ userId: "leo" }, { city: "London" });
+  const maya = mall.saveFit({ userId: "maya" }, { items: { outer: "shell", bottom: "denim" } });
+  const leo = mall.saveFit({ userId: "leo" }, { items: { top: "tee", bottom: "denim" } });
+  for (const u of ["alex", "kai"]) mall.likeFit({ userId: u }, maya.id);
+  // Leo's fit has more likes, but from himself and a day-old account.
+  for (const u of ["leo", "bot", "alex"]) mall.likeFit({ userId: u }, leo.id);
+  const fits = mall.fits({ userId: "alex" });
+  assert.equal(fits.find((f) => f.id === maya.id)!.award, "Leading in London this month");
+  assert.equal(fits.find((f) => f.id === leo.id)!.award, undefined);
+  assert.equal(fits.find((f) => f.id === leo.id)!.likes, 3);
+  // Last month's likes make last month's winner.
+  for (const u of ["alex", "kai"])
+    store.put("fit-like", `${leo.id}:${u}-old`, {
+      fitId: leo.id,
+      userId: u,
+      at: "2026-10-12T10:00:00Z",
+    });
+  assert.equal(
+    mall.fits({ userId: "alex" }).find((f) => f.id === leo.id)!.award,
+    "Top fit in London, October 2026",
+  );
+  // Unliking toggles.
+  assert.deepEqual(mall.likeFit({ userId: "alex" }, maya.id), { liked: false });
+});
+
+test("a wish becomes a voucher: alone at once, together once friends cover the price", async () => {
+  const { store, mall } = await setup();
+  mall.wish({ userId: "maya" }, "shell");
+  mall.wish({ userId: "maya" }, "runner");
+  const list = mall.wishlist({ userId: "alex" }, "maya");
+  assert.deepEqual(list.items.map((i) => i.id).sort(), ["runner", "shell"]);
+  assert.deepEqual(
+    mall.friendsWishing({ userId: "alex" }).map((l) => l.person.id),
+    ["maya"],
+  );
+  assert.throws(
+    () => mall.give({ userId: "maya" }, { toId: "maya", itemId: "shell" }),
+    /GIFT_TO_SELF/,
+  );
+
+  const solo = mall.give({ userId: "alex" }, { toId: "maya", itemId: "runner", note: "Run!" });
+  assert.equal(solo.status, "given");
+  assert.equal(solo.code, undefined, "only the recipient sees the code");
+
+  const pot = mall.give(
+    { userId: "alex" },
+    { toId: "maya", itemId: "shell", group: true, amount: 8000 },
+  );
+  assert.equal(pot.status, "open");
+  assert.equal(pot.raised, 8000);
+  // The recipient doesn't see an open pot; friends do.
+  assert.equal(mall.wishlist({ userId: "maya" }, "maya").pots.length, 0);
+  assert.equal(mall.gifts({ userId: "maya" }).received.length, 1);
+  assert.equal(mall.wishlist({ userId: "leo" }, "maya").pots[0]!.id, pot.id);
+  assert.throws(() => mall.chipIn({ userId: "maya" }, pot.id, { amount: 1000 }), /NOT_FOUND/);
+  const done = mall.chipIn({ userId: "leo" }, pot.id, { amount: 50000 });
+  assert.equal(done.status, "given");
+  assert.equal(done.raised, 18900, "nobody pays more than what is left");
+  const received = mall.gifts({ userId: "maya" }).received;
+  assert.equal(received.length, 2);
+  const together = received.find((g) => g.id === pot.id)!;
+  assert.match(together.code!, /^SMUDGE-[0-9A-F]{8}$/);
+  assert.deepEqual(
+    together.from.map((p) => p.id),
+    ["alex", "leo"],
+  );
+  assert.throws(() => mall.chipIn({ userId: "kai" }, pot.id, { amount: 1000 }), /GIFT_COMPLETE/);
+  const notes = store
+    .all<{ type: string; userId: string }>("notification")
+    .filter((n) => n.type === "voucher");
+  assert.equal(notes.length, 0, "no community layer here, so no notifications are stored");
+});
+
+test("erasing an account takes its city, fits, likes, wishes and gifts to it", async () => {
+  const { store, mall } = await setup();
+  mall.setCity({ userId: "maya" }, { city: "London" });
+  const fit = mall.saveFit({ userId: "maya" }, { items: { outer: "shell", bottom: "denim" } });
+  mall.likeFit({ userId: "alex" }, fit.id);
+  mall.wish({ userId: "maya" }, "shell");
+  mall.give({ userId: "alex" }, { toId: "maya", itemId: "shell", group: true, amount: 1000 });
+  store.transaction(() => mall.erase("maya"));
+  for (const kind of ["mall-city", "fit", "fit-like", "wish", "mall-gift"])
+    assert.equal(store.all(kind).length, 0, kind);
+});

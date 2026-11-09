@@ -35,6 +35,8 @@ import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { ActiveDays } from "../../packages/core/src/habit-report.js";
 import { SurpriseService } from "../../packages/core/src/surprises.js";
+import { MallService } from "../../packages/core/src/mall.js";
+import { FansService } from "../../packages/core/src/fans.js";
 import { buildPost, startPostDesign } from "../../packages/core/src/easy-post.js";
 import { SitesService } from "../../packages/core/src/sites.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
@@ -65,6 +67,8 @@ import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
 import { sideRoutes } from "./side-routes.js";
 import { seedSites } from "./seed-sites.js";
+import { seedMall } from "./seed-mall.js";
+import { seedFans } from "./seed-fans.js";
 import {
   seedGamers,
   seedGift,
@@ -242,6 +246,8 @@ if (config.demoContent) {
   seedGift(service);
   seedSurprises(service);
   seedSites(service);
+  seedMall(service);
+  seedFans(service);
 }
 // Pages made on an older Paint wall are brought up to the template at start (ADR 0046).
 {
@@ -256,6 +262,17 @@ const nowService = new NowService(service, clock);
 const surprises = new SurpriseService(service, clock);
 surprises.peopleFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
+// The Mall: shops' pieces, people's fits, wishlists and vouchers friends give.
+const mall = new MallService(service, clock);
+mall.peopleFilter = (viewerId, userId) =>
+  community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
+accounts.erasers.push((userId) => mall.erase(userId));
+// Fans: a creator's room and drops that open first for fans and stamp holders.
+const fans = new FansService(service, clock);
+fans.payments = orgEvents.payments;
+fans.peopleFilter = (viewerId, userId) =>
+  community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
+accounts.erasers.push((userId) => fans.erase(userId));
 nowService.viewFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 accounts.erasers.push((userId) => nowService.erase(userId));
@@ -918,6 +935,61 @@ api.delete("/api/me/now/:id", (req, res) =>
 api.get("/api/me/quiz", (_req, res) => res.json(programs.quiz(actor(res))));
 api.put("/api/me/quiz", (req, res) => res.json(programs.setQuiz(actor(res), req.body)));
 api.get("/api/me/surprises", (_req, res) => res.json(surprises.for(actor(res))));
+api.get("/api/mall", (_req, res) => {
+  const me = actor(res);
+  res.json({
+    city: mall.cityOf(me.userId),
+    catalog: mall.catalog(me),
+    fits: mall.fits(me),
+  });
+});
+api.post("/api/mall/city", (req, res) => res.json(mall.setCity(actor(res), req.body)));
+api.post("/api/mall/fits", (req, res) => res.json(mall.saveFit(actor(res), req.body)));
+api.delete("/api/mall/fits/:id", (req, res) =>
+  res.json(mall.removeFit(actor(res), String(req.params.id))),
+);
+api.post("/api/mall/fits/:id/like", (req, res) =>
+  res.json(mall.likeFit(actor(res), String(req.params.id))),
+);
+api.post("/api/mall/items/:id/wish", (req, res) =>
+  res.json(mall.wish(actor(res), String(req.params.id))),
+);
+api.get("/api/mall/wishlists", (_req, res) => {
+  const me = actor(res);
+  res.json({ mine: mall.wishlist(me, me.userId), friends: mall.friendsWishing(me) });
+});
+api.get("/api/mall/wishlists/:userId", (req, res) =>
+  res.json(mall.wishlist(actor(res), String(req.params.userId))),
+);
+api.get("/api/mall/gifts", (_req, res) => res.json(mall.gifts(actor(res))));
+api.get("/api/fans/drops", (_req, res) => res.json(fans.drops(actor(res))));
+api.post("/api/fans/drops", (req, res) => res.json(fans.createDrop(actor(res), req.body)));
+api.post("/api/fans/drops/:id/claim", (req, res) =>
+  res.json(fans.claim(actor(res), String(req.params.id))),
+);
+api.post("/api/fans/room", (req, res) => res.json(fans.setRoom(actor(res), req.body)));
+// Whether a person has a fan room, for the button on their page; null when they have none.
+api.get("/api/fans/:ownerId", (req, res) => {
+  try {
+    res.json(fans.view(actor(res), String(req.params.ownerId)));
+  } catch (e) {
+    if (e instanceof AppError && e.status === 404) res.json(null);
+    else throw e;
+  }
+});
+api.post("/api/fans/:ownerId/join", (req, res) =>
+  res.json(fans.join(actor(res), String(req.params.ownerId))),
+);
+api.post("/api/fans/:ownerId/leave", (req, res) =>
+  res.json(fans.leave(actor(res), String(req.params.ownerId))),
+);
+api.post("/api/fans/:ownerId/notes", (req, res) =>
+  res.json(fans.post(actor(res), String(req.params.ownerId), req.body)),
+);
+api.post("/api/mall/gifts", (req, res) => res.json(mall.give(actor(res), req.body)));
+api.post("/api/mall/gifts/:id/chip-in", (req, res) =>
+  res.json(mall.chipIn(actor(res), String(req.params.id), req.body)),
+);
 api.get("/api/me/friends-now", async (_req, res) => {
   await Promise.all(service.following(actor(res)).map((id) => spotify.poll(id)));
   res.json(nowService.friends(actor(res)));

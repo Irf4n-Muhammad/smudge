@@ -28,7 +28,8 @@ import {
   applyProfileDesign,
   defaultProfileDesign,
 } from "../../../packages/core/src/profile-design";
-import { ArrowLeft, Search, BadgeCheck, Pencil, Lock } from "lucide-react";
+import { ArrowLeft, Search, BadgeCheck, Pencil, Lock, Sparkles } from "lucide-react";
+import { FanRoom } from "./fans";
 import type { Chapter } from "../../../packages/contracts/src/identity";
 import { ChapterList } from "./identity-hub";
 import { DecorFrame, themeStyle } from "./post-decor";
@@ -142,6 +143,14 @@ export function ProfilePage({
       setChapters([]),
     );
   }, [ownerId]);
+  // A creator's fan room, when they opened one.
+  const [fanRoom, setFanRoom] = useState<{ title: string } | null>(null),
+    [fanOpen, setFanOpen] = useState(false);
+  useEffect(() => {
+    api<{ title: string } | null>(`/fans/${encodeURIComponent(ownerId)}`).then(setFanRoom, () =>
+      setFanRoom(null),
+    );
+  }, [ownerId]);
   const loadTheme = useCallback(
     () =>
       api<{ theme: DecoratedPost["decoration"] | null }>(
@@ -237,11 +246,15 @@ export function ProfilePage({
       </p>
     </Dialog>
   );
+  const fanSheet = fanOpen && (
+    <FanRoom ownerId={ownerId} notify={setError} onClose={() => setFanOpen(false)} />
+  );
   return (
     <main
       className={`profile-page ${profile?.manifest?.schemaVersion === 2 ? "profile-illustrated" : ""} ${profile?.manifest?.schemaVersion === 2 && profile.manifest.headerOverlay && !editing ? "profile-overlay" : ""} ${!editing ? "has-side-nav" : ""} ${editing ? "" : look.className} ${siteMode ? "own-site-page" : ""} ${siteShows ? "has-site" : ""}`}
       style={editing ? undefined : look.style}
     >
+      {fanSheet}
       {siteMode ? (
         <OwnSiteProfile
           owner={owner}
@@ -270,6 +283,15 @@ export function ProfilePage({
                   onClick={() => setShowChapters(true)}
                 >
                   <BadgeCheck size={13} /> {chapters.length}
+                </button>
+              )}
+              {fanRoom && (
+                <button
+                  className="fan-chip"
+                  aria-label={`Fan room: ${fanRoom.title}`}
+                  onClick={() => setFanOpen(true)}
+                >
+                  <Sparkles size={13} aria-hidden="true" /> {fanRoom.title}
                 </button>
               )}
             </div>
