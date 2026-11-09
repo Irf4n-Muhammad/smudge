@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openMore, openPeople, pickFeed, previewAs } from "./nav";
+import { openMore, openStudio, openPeople, pickFeed, previewAs } from "./nav";
 import type { Locator, Page } from "@playwright/test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -86,7 +86,7 @@ test("feed formats, progress persistence, comments and bookmarks", async ({ page
 
 test("studio edits, uploads, previews and publishes an immutable revision", async ({ page }) => {
   await boot(page);
-  await openMore(page, "My studio");
+  await openStudio(page);
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "New draft", exact: true }).click();
   const title = `A studio story ${Date.now()}`;

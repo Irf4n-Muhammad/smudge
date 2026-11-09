@@ -60,3 +60,16 @@ export async function previewAs(page: Page, who: string | { label: string }) {
   if (typeof who === "string") await menu.locator(`[data-user="${who}"]`).click();
   else await menu.getByRole("menuitemradio", { name: who.label, exact: true }).click();
 }
+
+/** The studio sits behind Create: the easy post editor's "Open the studio". */
+export async function openStudio(page: Page) {
+  await page
+    .getByRole("button", { name: "Create a post" })
+    .filter({ visible: true })
+    .first()
+    .click();
+  await page
+    .getByRole("dialog", { name: "Pick a post style" })
+    .getByRole("button", { name: "Open the studio" })
+    .click();
+}

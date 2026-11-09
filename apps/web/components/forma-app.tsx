@@ -14,14 +14,12 @@ import {
   Feather,
   Layers,
   ChevronDown,
-  Sparkles,
   RefreshCw,
   X,
   Gift,
   Bell,
   MessageCircle,
   Menu,
-  Globe,
   UserPlus,
   LogIn,
   LogOut,
@@ -88,7 +86,6 @@ export function FormaApp() {
   const [toast, setToast] = useState(""),
     [studio, setStudio] = useState(false),
     [activeDraft, setActiveDraft] = useState<string | undefined>(),
-    [connect, setConnect] = useState(false),
     [profile, setProfile] = useState<string | null>(null),
     [momentOpen, setMomentOpen] = useState(false),
     [importOpen, setImportOpen] = useState(false),
@@ -487,7 +484,6 @@ export function FormaApp() {
   function pickMore(key: MoreKey) {
     setMore(false);
     if (key === "card") navigate("sides");
-    else if (key === "studio") void create();
     else if (key === "moment") setMomentOpen(true);
     else if (key === "moments") window.location.assign("/m");
     else if (key === "import") setImportOpen(true);
@@ -1057,16 +1053,6 @@ export function FormaApp() {
                         <Gift size={15} /> Moment
                       </button>
                     )}
-                    {!inSide && (
-                      <button
-                        className="quiet-button composer-import"
-                        aria-label="Import a website"
-                        title="Import a website"
-                        onClick={() => setImportOpen(true)}
-                      >
-                        <Globe size={15} /> Website
-                      </button>
-                    )}
                     <button
                       className="composer-plus"
                       aria-label="Create a post"
@@ -1294,18 +1280,6 @@ export function FormaApp() {
                   </div>
                 ))}
             </section>
-            <section className="ai-card">
-              <span className="ai-icon">
-                <Sparkles size={19} />
-              </span>
-              <div>
-                <h3>Your AI. Your imagination.</h3>
-                <p>Bring an idea to life with the AI you already use.</p>
-                <button onClick={() => (production ? create() : setConnect(true))}>
-                  Connect your creative tools <ArrowUpRight size={13} />
-                </button>
-              </div>
-            </section>
             <footer className="side-footer">
               <span>Made for a little more expression.</span>
               <span>{production ? "Smudge" : "Smudge · Local preview · No cloud required"}</span>
@@ -1438,40 +1412,6 @@ export function FormaApp() {
               notify("Password saved. Other devices were signed out.");
             }}
           />
-        </Dialog>
-      )}
-      {connect && (
-        <Dialog title="Bring your own imagination." onClose={() => setConnect(false)}>
-          <div className="connect-content">
-            <span className="connect-symbol">✳</span>
-            <p>
-              Smudge gives your AI the tools to make a real, interactive post. You keep using the AI
-              you already have.
-            </p>
-            <ol>
-              <li>Keep this local app running.</li>
-              <li>
-                Connect a local MCP client using the setup in <code>docs/mcp.md</code>.
-              </li>
-              <li>Ask it to create a draft, preview it here, then publish when you’re ready.</li>
-            </ol>
-            <div className="prompt-example">
-              “Make a notebook from my weekend photos. Let Maya add her memories, too.”
-            </div>
-            <p className="fineprint">
-              The MCP server works over local stdio. It acts as Alex’s demo account. A hosted
-              ChatGPT connection is not configured.
-            </p>
-            <button
-              className="primary"
-              onClick={() => {
-                setConnect(false);
-                create();
-              }}
-            >
-              Explore the studio <ArrowUpRight size={16} />
-            </button>
-          </div>
         </Dialog>
       )}
     </div>

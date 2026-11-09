@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { openMore, openPeople, pickFeed } from "./nav";
+import { openStudio, openPeople, pickFeed } from "./nav";
 import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
 async function api(page: Page, path: string, body?: unknown) {
@@ -31,7 +31,7 @@ test("uploaded photo and caption persist in Cutouts and Photo stack; reuse remap
   const expectedSrc =
     "data:image/jpeg;base64," + readFileSync(resolve("assets/demo/forest.jpg")).toString("base64");
   try {
-    await openMore(page, "My studio");
+    await openStudio(page);
     const dialog = page.getByRole("dialog");
     const chooser = page.waitForEvent("filechooser");
     await dialog.getByRole("button", { name: "New photo post", exact: true }).click();
