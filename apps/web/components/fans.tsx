@@ -1,11 +1,12 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { BadgeCheck, Clock, Lock, Package, Send, X } from "lucide-react";
+import { BadgeCheck, Clock, Lock, Package, Send, Users, X } from "lucide-react";
 import type { DropView, FanPerson, FanRoomView } from "../../../packages/contracts/src/fans";
 import { api } from "./runtime";
 import { Avatar } from "./ui";
 import { sized } from "./mall-figure";
+import { ClaimsSheet, SellerBar } from "./fans-seller";
 
 const money = (cents: number) =>
   cents
@@ -27,29 +28,34 @@ export function DropCard({
   drop,
   onClaim,
   onRoom,
+  onClaims,
 }: {
   drop: DropView;
   onClaim: (drop: DropView) => Promise<void>;
   onRoom?: (ownerId: string) => void;
+  /** For the drop's maker: open the list of who claimed. */
+  onClaims?: (drop: DropView) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const wait = drop.opensForYou ? until(drop.opensForYou) : null;
   const soldOut = drop.left === 0;
   // One word on the picture for where the viewer stands.
-  const tag = drop.code
-    ? "Yours"
-    : soldOut
-      ? "Gone"
-      : !drop.opensForYou
-        ? "Fans only"
-        : drop.wave === "fans"
-          ? "Fans first: you're in"
-          : wait
-            ? "Fans first"
-            : "Open to all";
+  const tag = drop.mine
+    ? "Your drop"
+    : drop.code
+      ? `Yours · #${drop.number} of ${drop.quantity}`
+      : soldOut
+        ? "Gone"
+        : !drop.opensForYou
+          ? "Fans only"
+          : drop.wave === "fans"
+            ? "Fans first: you're in"
+            : wait
+              ? "Fans first"
+              : "Open to all";
   return (
     <article
-      className={soldOut && !drop.code ? "drop-card gone" : "drop-card"}
+      className={soldOut && !drop.code && !drop.mine ? "drop-card gone" : "drop-card"}
       aria-label={`${drop.title} by ${drop.owner.name}`}
     >
       <div className="drop-art" style={{ background: drop.color }}>
@@ -81,7 +87,11 @@ export function DropCard({
         <span className="drop-stock" aria-hidden="true">
           <span style={{ width: `${(drop.left / drop.quantity) * 100}%` }} />
         </span>
-        {drop.code ? (
+        {drop.mine ? (
+          <button className="mall-try" onClick={() => onClaims?.(drop)}>
+            <Users size={15} /> {drop.claimed} claimed: see who
+          </button>
+        ) : drop.code ? (
           <p className="drop-claimed">
             <BadgeCheck size={16} aria-hidden="true" /> Yours. Code <code>{drop.code}</code>
           </p>
@@ -316,6 +326,7 @@ export function FanRoom({
 export function DropsList({ notify }: { notify: (message: string) => void }) {
   const [drops, setDrops] = useState<DropView[] | null>(null);
   const [room, setRoom] = useState<string | null>(null);
+  const [claims, setClaims] = useState<DropView | null>(null);
   const load = useCallback(
     () => api<DropView[]>("/fans/drops").then(setDrops, (e: Error) => notify(e.message)),
     [notify],
@@ -325,8 +336,8 @@ export function DropsList({ notify }: { notify: (message: string) => void }) {
   }, [load]);
   if (!drops) return <p className="mall-empty">Opening drops…</p>;
   // What you can still get comes first; what sold out stays below, as a record.
-  const live = drops.filter((d) => d.left > 0 || d.code);
-  const gone = drops.filter((d) => d.left === 0 && !d.code);
+  const live = drops.filter((d) => d.left > 0 || d.code || d.mine);
+  const gone = drops.filter((d) => d.left === 0 && !d.code && !d.mine);
   const claim = async (drop: DropView) => {
     try {
       await api(`/fans/drops/${drop.id}/claim`, {});
@@ -338,6 +349,10 @@ export function DropsList({ notify }: { notify: (message: string) => void }) {
   };
   return (
     <div className="drops">
+      <p className="drops-about">
+        Small runs from people you follow. Their fans go first, then everyone, until it&apos;s gone.
+      </p>
+      <SellerBar notify={notify} onChange={() => void load()} />
       {!drops.length && <p className="mall-empty">No drops from people you follow yet.</p>}
       {[live, gone].map(
         (list, n) =>
@@ -346,7 +361,13 @@ export function DropsList({ notify }: { notify: (message: string) => void }) {
               {n > 0 && <h2 className="drops-head">Gone</h2>}
               <div className="drops-grid">
                 {list.map((d) => (
-                  <DropCard key={d.id} drop={d} onRoom={setRoom} onClaim={claim} />
+                  <DropCard
+                    key={d.id}
+                    drop={d}
+                    onRoom={setRoom}
+                    onClaim={claim}
+                    onClaims={setClaims}
+                  />
                 ))}
               </div>
             </section>
@@ -362,6 +383,7 @@ export function DropsList({ notify }: { notify: (message: string) => void }) {
           }}
         />
       )}
+      {claims && <ClaimsSheet drop={claims} notify={notify} onClose={() => setClaims(null)} />}
     </div>
   );
 }

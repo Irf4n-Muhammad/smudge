@@ -1310,3 +1310,120 @@
   background: var(--ink);
   color: var(--paper);
 }
+
+/* For people who make drops: the bar above the drops, and its sheets. */
+.drops-about {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.seller-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 12px 16px;
+  border: 1px dashed var(--line);
+  border-radius: 18px;
+}
+.seller-bar p {
+  flex: 1 1 240px;
+  margin: 0;
+  font-size: 14px;
+}
+.seller-bar > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.seller-bar .drop-claim {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.seller-sheet {
+  position: relative;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+.seller-field {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font: 600 12px var(--ui, inherit);
+}
+.seller-field input,
+.seller-field textarea,
+.seller-field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 500 15px var(--ui, inherit);
+}
+.seller-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.seller-photo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1.5px dashed var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--muted);
+  aspect-ratio: 16 / 9;
+  font: 600 14px var(--ui, inherit);
+  cursor: pointer;
+}
+.seller-photo span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.seller-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.seller-photo input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.seller-claims {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.seller-claims li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--paper);
+}
+.seller-claims span {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.seller-claims small {
+  color: var(--muted);
+}
+.seller-claims label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 13px var(--ui, inherit);
+}

@@ -120,6 +120,50 @@ test("a drop opens first for fans and stamp holders, then everyone, and sells ou
   clock = new Date(clock.getTime() + 48 * 3600000);
   assert.throws(() => fans.claim({ userId: "alex" }, drop.id), /SOLD_OUT/);
   assert.equal(charges.filter((c) => c.amount === 3500).length, 2);
+  // Each claim has its number in the run; the maker sees who, and ticks them off.
+  assert.equal(mine.number, 1);
+  assert.equal(fans.drops({ userId: "ines" })[0]!.mine, true);
+  assert.deepEqual(
+    fans.claims({ userId: "ines" }, drop.id).map((c) => [c.person.id, c.number, c.collected]),
+    [
+      ["maya", 1, false],
+      ["kai", 2, false],
+    ],
+  );
+  assert.throws(() => fans.claims({ userId: "maya" }, drop.id), /NOT_FOUND/);
+  const ticked = fans.collect({ userId: "ines" }, drop.id, { userId: "kai", collected: true });
+  assert.deepEqual(
+    ticked.map((c) => c.collected),
+    [false, true],
+  );
+});
+
+test("a drop carries its maker's own picture, and nobody else's", async () => {
+  const { store, fans } = await setup();
+  store.transaction(() => {
+    store.put("asset", "11111111-1111-4111-8111-111111111111", {
+      id: "11111111-1111-4111-8111-111111111111",
+      ownerId: "ines",
+      name: "a.png",
+      mime: "image/png",
+      base64: "AAAA",
+    });
+    store.put("follow", "maya:ines", { userId: "maya", target: "ines" });
+  });
+  const input = {
+    title: "Cap",
+    price: 0,
+    quantity: 5,
+    opens: at(0),
+    assetId: "11111111-1111-4111-8111-111111111111",
+  };
+  const drop = fans.createDrop({ userId: "ines" }, input);
+  assert.equal(drop.image, `/api/fans/drops/${drop.id}/image`);
+  assert.equal(fans.dropImage({ userId: "maya" }, drop.id).mime, "image/png");
+  fans.setRoom({ userId: "maya" }, { title: "Maya's", price: 0 });
+  assert.throws(() => fans.createDrop({ userId: "maya" }, input), /NOT_FOUND/);
+  assert.equal(fans.mine({ userId: "maya" }).room?.title, "Maya's");
+  assert.equal(fans.mine({ userId: "alex" }).room, null);
 });
 
 test("erasing a creator takes the room, its fans, notes, drops and claims", async () => {

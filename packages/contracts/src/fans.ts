@@ -32,6 +32,8 @@ export const dropSchema = z
       .default("#222222"),
     /** A picture of the thing; without one the card shows the colour. */
     image: z.string().url().startsWith("https://").max(500).optional(),
+    /** The creator's own uploaded picture; it wins over `image`. */
+    assetId: z.string().uuid().optional(),
   })
   .strict()
   .refine((d) => !d.everyone || d.everyone >= d.opens, {
@@ -75,7 +77,30 @@ export interface DropView {
   wave: "fans" | "everyone" | null;
   /** Set once the viewer claimed: a sandbox code to collect it with. */
   code?: string | undefined;
+  /** Which one of the run is the viewer's: 2 of 30. */
+  number?: number | undefined;
   claimed: number;
+  /** The viewer made this drop. */
+  mine: boolean;
+}
+/** One claim, as the drop's maker sees it. */
+export interface DropClaimView {
+  person: FanPerson;
+  number: number;
+  code: string;
+  at: string;
+  /** The maker handed it over. */
+  collected: boolean;
+}
+export const collectSchema = z
+  .object({ userId: z.string().min(1).max(80), collected: z.boolean() })
+  .strict();
+/** What a creator needs to set up or change their own room. */
+export interface MyFanRoom {
+  room: { title: string; perks: string; price: number; stampOrgId: string | null } | null;
+  orgs: { id: string; name: string }[];
+  /** Whether money can be taken; without it only free rooms and drops can be made. */
+  paid: boolean;
 }
 export interface FanRoomView {
   owner: FanPerson;

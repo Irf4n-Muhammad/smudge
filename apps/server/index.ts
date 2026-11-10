@@ -967,6 +967,17 @@ api.post("/api/fans/drops", (req, res) => res.json(fans.createDrop(actor(res), r
 api.post("/api/fans/drops/:id/claim", (req, res) =>
   res.json(fans.claim(actor(res), String(req.params.id))),
 );
+api.get("/api/fans/drops/:id/image", (req, res) => {
+  const a = fans.dropImage(actor(res), String(req.params.id));
+  res.type(a.mime).send(Buffer.from(a.base64, "base64"));
+});
+api.get("/api/fans/drops/:id/claims", (req, res) =>
+  res.json(fans.claims(actor(res), String(req.params.id))),
+);
+api.post("/api/fans/drops/:id/collect", (req, res) =>
+  res.json(fans.collect(actor(res), String(req.params.id), req.body)),
+);
+api.get("/api/fans/mine", (_req, res) => res.json(fans.mine(actor(res))));
 api.post("/api/fans/room", (req, res) => res.json(fans.setRoom(actor(res), req.body)));
 // Whether a person has a fan room, for the button on their page; null when they have none.
 api.get("/api/fans/:ownerId", (req, res) => {

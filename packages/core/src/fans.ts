@@ -1,15 +1,18 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import {
+  collectSchema,
   dropSchema,
   fanNoteSchema,
   fanRoomSchema,
+  type DropClaimView,
   type DropView,
+  type MyFanRoom,
   type FanNote,
   type FanPerson,
   type FanRoomView,
 } from "../../contracts/src/fans.js";
 import type { User } from "../../contracts/src/experience.js";
-import { orgById, type Chapter } from "../../contracts/src/identity.js";
+import { orgById, orgs, type Chapter } from "../../contracts/src/identity.js";
 import type { Actor } from "./index.js";
 import type { Payments } from "./org-events.js";
 import { AppError } from "./social.js";
@@ -48,12 +51,16 @@ interface Drop {
   everyone?: string;
   color: string;
   image?: string;
+  assetId?: string;
   createdAt: string;
 }
 interface Claim {
   dropId: string;
   userId: string;
   code: string;
+  /** Which one of the run; claims from before numbers get theirs from the order they came in. */
+  number?: number;
+  collected?: boolean;
   ref?: string;
   at: string;
 }
@@ -246,13 +253,16 @@ export class FansService {
     if (!this.room(me)) throw new AppError("NEEDS_FAN_ROOM");
     const value = dropSchema.parse(input);
     if (value.price && !this.payments) throw new AppError("PAYMENTS_OFF", 503);
-    const { everyone, image, ...rest } = value;
+    const { everyone, image, assetId, ...rest } = value;
+    if (assetId && this.store.get<{ ownerId: string }>("asset", assetId)?.ownerId !== me)
+      throw new AppError("NOT_FOUND", 404);
     const drop: Drop = {
       id: randomUUID(),
       ownerId: me,
       ...rest,
       ...(everyone ? { everyone } : {}),
       ...(image ? { image } : {}),
+      ...(assetId ? { assetId } : {}),
       createdAt: this.now().toISOString(),
     };
     this.store.transaction(() => this.store.put("drop", drop.id, drop));
@@ -277,8 +287,9 @@ export class FansService {
       .flatMap((d) => {
         const owner = this.person(d.ownerId);
         if (!owner || !this.sees(viewerId, d.ownerId)) return [];
-        const taken = claims.filter((c) => c.dropId === d.id);
+        const taken = this.numbered(claims.filter((c) => c.dropId === d.id));
         const mine = taken.find((c) => c.userId === viewerId);
+        const image = d.assetId ? `/api/fans/drops/${d.id}/image` : d.image;
         const { at, wave } = this.waveOf(viewerId, d);
         return [
           {
@@ -290,13 +301,14 @@ export class FansService {
             quantity: d.quantity,
             left: Math.max(0, d.quantity - taken.length),
             color: d.color,
-            ...(d.image ? { image: d.image } : {}),
+            ...(image ? { image } : {}),
             opens: d.opens,
             ...(d.everyone ? { everyone: d.everyone } : {}),
             opensForYou: at,
             wave,
-            ...(mine ? { code: mine.code } : {}),
+            ...(mine ? { code: mine.code, number: mine.number } : {}),
             claimed: taken.length,
+            mine: d.ownerId === viewerId,
           },
         ];
       });
@@ -330,11 +342,77 @@ export class FansService {
         dropId,
         userId: me,
         code: `DROP-${randomBytes(4).toString("hex").toUpperCase()}`,
+        number: taken + 1,
         ...(ref ? { ref } : {}),
         at: this.now().toISOString(),
       } satisfies Claim),
     );
     return this.dropViews(me, [drop])[0]!;
+  }
+
+  /** Claims in the order they came in, each with its number in the run. */
+  private numbered(claims: Claim[]) {
+    return claims
+      .sort((a, b) => a.at.localeCompare(b.at))
+      .map((c, n) => ({ ...c, number: c.number ?? n + 1 }));
+  }
+
+  private own(me: string, dropId: string) {
+    const drop = this.store.get<Drop>("drop", dropId);
+    if (!drop || drop.ownerId !== me) throw new AppError("NOT_FOUND", 404);
+    return drop;
+  }
+
+  /** For the maker: who claimed, with which number and code, and what was handed over. */
+  claims(actor: Actor, dropId: string): DropClaimView[] {
+    const me = this.social.actor(actor);
+    this.own(me, dropId);
+    return this.numbered(
+      this.store.all<Claim>("drop-claim").filter((c) => c.dropId === dropId),
+    ).flatMap((c) => {
+      const person = this.person(c.userId);
+      if (!person) return [];
+      return [
+        { person, number: c.number, code: c.code, at: c.at, collected: c.collected === true },
+      ];
+    });
+  }
+
+  /** The maker ticks a claim off once the thing is in its owner's hands. */
+  collect(actor: Actor, dropId: string, input: unknown): DropClaimView[] {
+    const me = this.social.actor(actor);
+    this.own(me, dropId);
+    const { userId, collected } = collectSchema.parse(input);
+    const key = `${dropId}:${userId}`;
+    const claim = this.store.get<Claim>("drop-claim", key);
+    if (!claim) throw new AppError("NOT_FOUND", 404);
+    this.store.transaction(() => this.store.put("drop-claim", key, { ...claim, collected }));
+    return this.claims(actor, dropId);
+  }
+
+  /** A drop's uploaded picture, for anyone who may see its maker. */
+  dropImage(actor: Actor, dropId: string) {
+    const me = this.social.actor(actor);
+    const drop = this.store.get<Drop>("drop", dropId);
+    const asset =
+      drop?.assetId && this.sees(me, drop.ownerId)
+        ? this.store.get<{ mime: string; base64: string }>("asset", drop.assetId)
+        : undefined;
+    if (!asset) throw new AppError("NOT_FOUND", 404);
+    return asset;
+  }
+
+  /** What the viewer needs to open or change their own room. */
+  mine(actor: Actor): MyFanRoom {
+    const me = this.social.actor(actor);
+    const room = this.room(me);
+    return {
+      room: room
+        ? { title: room.title, perks: room.perks, price: room.price, stampOrgId: room.stampOrgId }
+        : null,
+      orgs: orgs.map((o) => ({ id: o.id, name: o.name })),
+      paid: !!this.payments,
+    };
   }
 
   /** Runs inside the account-deletion transaction. */
