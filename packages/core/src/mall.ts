@@ -13,7 +13,9 @@ import {
   type MallStore,
   type Slot,
   type WishlistView,
+  type WishAudience,
   type WishPage,
+  wishAudienceSchema,
   wishPageSchema,
 } from "../../contracts/src/mall.js";
 import type { User } from "../../contracts/src/experience.js";
@@ -303,11 +305,35 @@ export class MallService {
     return { wished };
   }
 
+  private audienceOf(userId: string): WishAudience {
+    return (
+      this.store.get<{ audience: WishAudience }>("wish-audience", userId)?.audience ?? "everyone"
+    );
+  }
+  /** Whether a viewer may see a person's wishes and give from them. */
+  private maySeeWishes(viewerId: string, userId: string) {
+    if (viewerId === userId) return true;
+    const audience = this.audienceOf(userId);
+    if (audience === "me") return false;
+    if (audience === "everyone") return true;
+    return (
+      !!this.store.get("follow", `${viewerId}:${userId}`) &&
+      !!this.store.get("follow", `${userId}:${viewerId}`)
+    );
+  }
+  setWishAudience(actor: Actor, input: unknown) {
+    const me = this.social.actor(actor);
+    const { audience } = wishAudienceSchema.parse(input);
+    this.store.transaction(() => this.store.put("wish-audience", me, { audience }));
+    return { audience };
+  }
+
   /** A person's wishlist, newest first, with the group gifts friends opened for it. */
   wishlist(actor: Actor, userId: string): WishlistView {
     const me = this.social.actor(actor);
     const person = this.visiblePerson(me, userId);
     if (!person) throw new AppError("NOT_FOUND", 404);
+    if (!this.maySeeWishes(me, userId)) return { person, items: [], pots: [] };
     const items = this.items();
     const wished = this.store
       .all<Wish>("wish")
@@ -321,7 +347,12 @@ export class MallService {
             .all<Gift>("mall-gift")
             .filter((g) => g.toId === userId && g.status === "open")
             .flatMap((g) => this.giftViews(me, [g]));
-    return { person, items: this.catalogItems(me, wished), pots };
+    return {
+      ...(userId === me ? { audience: this.audienceOf(me) } : {}),
+      person,
+      items: this.catalogItems(me, wished),
+      pots,
+    };
   }
 
   /**
@@ -341,7 +372,13 @@ export class MallService {
     };
     const found = this.store
       .all<Wish>("wish")
-      .filter((w) => following.has(w.userId) && items.has(w.itemId) && person(w.userId))
+      .filter(
+        (w) =>
+          following.has(w.userId) &&
+          items.has(w.itemId) &&
+          person(w.userId) &&
+          this.maySeeWishes(me, w.userId),
+      )
       .filter((w) => {
         if (!words) return true;
         const p = person(w.userId)!;
@@ -412,7 +449,8 @@ export class MallService {
     const me = this.social.actor(actor);
     const { toId, itemId, note, group, amount } = giftSchema.parse(input);
     if (toId === me) throw new AppError("GIFT_TO_SELF");
-    if (!this.visiblePerson(me, toId)) throw new AppError("NOT_FOUND", 404);
+    if (!this.visiblePerson(me, toId) || !this.maySeeWishes(me, toId))
+      throw new AppError("NOT_FOUND", 404);
     this.social.relationGuard(me, toId);
     const item = this.store.get<MallItem>("mall-item", itemId);
     if (!item) throw new AppError("NOT_FOUND", 404);
@@ -482,6 +520,7 @@ export class MallService {
   erase(userId: string) {
     const s = this.store;
     s.remove("mall-city", userId);
+    s.remove("wish-audience", userId);
     for (const f of s.all<Fit>("fit")) if (f.ownerId === userId) s.remove("fit", f.id);
     for (const l of s.all<FitLike>("fit-like"))
       if (l.userId === userId || !s.get("fit", l.fitId))

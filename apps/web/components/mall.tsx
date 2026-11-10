@@ -501,6 +501,22 @@ function Wishlists({
             Tap the bookmark on any piece. Friends see your wishlist and can give you one.
           </p>
         )}
+        <label className="wish-audience">
+          Who sees it and can give
+          <select
+            aria-label="Who sees your wishlist"
+            value={lists.mine.audience ?? "everyone"}
+            onChange={(e) =>
+              api("/mall/wishlist/audience", { audience: e.target.value })
+                .then(load)
+                .catch((err: Error) => notify(err.message))
+            }
+          >
+            <option value="everyone">Everyone who can see me</option>
+            <option value="friends">Friends: we follow each other</option>
+            <option value="me">Only me</option>
+          </select>
+        </label>
       </section>
       {giving && (
         <GiveDialog

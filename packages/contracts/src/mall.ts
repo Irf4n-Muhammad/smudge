@@ -111,7 +111,14 @@ export interface GiftView {
   createdAt: string;
 }
 
+/** Who may see a wishlist and give from it: anyone who can see you, friends (you follow each other), or only you. */
+export const wishAudiences = ["everyone", "friends", "me"] as const;
+export type WishAudience = (typeof wishAudiences)[number];
+export const wishAudienceSchema = z.object({ audience: z.enum(wishAudiences) }).strict();
+
 export interface WishlistView {
+  /** Set on your own wishlist: who may see it. */
+  audience?: WishAudience | undefined;
   person: MallPerson;
   items: CatalogItem[];
   /** Group gifts friends opened for this person that you may join; never shown to the person. */

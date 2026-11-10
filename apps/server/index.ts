@@ -944,6 +944,9 @@ api.get("/api/mall", (_req, res) => {
   });
 });
 api.post("/api/mall/city", (req, res) => res.json(mall.setCity(actor(res), req.body)));
+api.post("/api/mall/wishlist/audience", (req, res) =>
+  res.json(mall.setWishAudience(actor(res), req.body)),
+);
 api.post("/api/mall/fits", (req, res) => res.json(mall.saveFit(actor(res), req.body)));
 api.delete("/api/mall/fits/:id", (req, res) =>
   res.json(mall.removeFit(actor(res), String(req.params.id))),

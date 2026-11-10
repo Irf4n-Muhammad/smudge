@@ -118,6 +118,20 @@ test("a wish becomes a voucher: alone at once, together once friends cover the p
   assert.equal(mall.friendWishes({ userId: "alex" }, { q: "shell" }).total, 1);
   assert.equal(mall.friendWishes({ userId: "alex" }, { q: "nobody" }).total, 0);
   assert.equal(mall.friendWishes({ userId: "alex" }, { page: 9 }).page, 1);
+  // Maya narrows her wishlist to friends: Alex follows her, she doesn't follow back.
+  mall.setWishAudience({ userId: "maya" }, { audience: "friends" });
+  assert.equal(mall.friendWishes({ userId: "alex" }).total, 0);
+  assert.equal(mall.wishlist({ userId: "alex" }, "maya").items.length, 0);
+  assert.throws(
+    () => mall.give({ userId: "alex" }, { toId: "maya", itemId: "shell" }),
+    /NOT_FOUND/,
+  );
+  assert.equal(mall.wishlist({ userId: "maya" }, "maya").audience, "friends");
+  store.transaction(() => store.put("follow", "maya:alex", { userId: "maya", target: "alex" }));
+  assert.equal(mall.friendWishes({ userId: "alex" }).total, 2);
+  mall.setWishAudience({ userId: "maya" }, { audience: "me" });
+  assert.equal(mall.friendWishes({ userId: "alex" }).total, 0);
+  mall.setWishAudience({ userId: "maya" }, { audience: "everyone" });
   assert.throws(
     () => mall.give({ userId: "maya" }, { toId: "maya", itemId: "shell" }),
     /GIFT_TO_SELF/,
