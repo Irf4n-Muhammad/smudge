@@ -94,8 +94,9 @@ import { SpotifyService, spotifyStart } from "./spotify.js";
 import type { NowView } from "../../packages/contracts/src/now.js";
 import type { Publication } from "../../packages/core/src/social.js";
 import { importSite } from "./site-import.js";
-import { frameCheck, readSiteText, siteStatus } from "./site-fetch.js";
+import { frameCheck, readSiteText, safeGet, siteStatus } from "./site-fetch.js";
 import { readShop } from "./shop-import.js";
+import { cutout } from "./cutout.js";
 import {
   shopImportSchema,
   type ShopProduct,
@@ -1600,6 +1601,53 @@ api.post("/api/mall/shop/import", importLimit, async (req, res) => {
       }),
     ),
   );
+});
+// Every piece on one background: its picture with the shop's plain studio backdrop lifted off,
+// made once and kept. A picture we can't fetch or cut is shown as the shop has it.
+const cutting = new Map<string, Promise<string | null>>();
+const cutFailed = new Map<string, number>();
+let cutsRunning = 0;
+const cutWaiting: (() => void)[] = [];
+async function cutPicture(id: string, src: string): Promise<string | null> {
+  if (cutsRunning >= 4) await new Promise<void>((go) => cutWaiting.push(go));
+  cutsRunning++;
+  try {
+    const url = new URL(src);
+    if (url.hostname === "cdn.shopify.com") url.searchParams.set("width", "800");
+    const file = await safeGet(url.href, 8_000_000, (type) => type.startsWith("image/"), {
+      allowHosts: importAllowHosts,
+    });
+    const cut = await cutout(file.body);
+    const base64 = cut ? cut.toString("base64") : null;
+    store.transaction(() => store.put("mall-cutout", id, { id, src, base64 }));
+    return base64;
+  } finally {
+    cutsRunning--;
+    cutWaiting.shift()?.();
+  }
+}
+api.get("/api/mall/items/:id/cutout", async (req, res) => {
+  actor(res);
+  const id = String(req.params.id);
+  const item = mall.piece(id);
+  if (!item) throw new AppError("NOT_FOUND", 404);
+  const kept = store.get<{ src: string; base64: string | null }>("mall-cutout", id);
+  let base64 = kept?.src === item.image ? kept.base64 : undefined;
+  if (base64 === undefined && (cutFailed.get(item.image) ?? 0) < Date.now()) {
+    let job = cutting.get(id);
+    if (!job) {
+      job = cutPicture(id, item.image).finally(() => cutting.delete(id));
+      cutting.set(id, job);
+    }
+    base64 = await job.catch(() => {
+      if (cutFailed.size > 5000) cutFailed.clear();
+      cutFailed.set(item.image, Date.now() + 10 * 60_000);
+      return null;
+    });
+  }
+  if (!base64) return res.redirect(302, item.image);
+  res.set("cache-control", "private, max-age=86400").type("image/webp");
+  res.send(Buffer.from(base64, "base64"));
 });
 api.delete("/api/mall/shop/items/:id", (req, res) =>
   res.json(mall.removeShopItem(actor(res), String(req.params.id))),

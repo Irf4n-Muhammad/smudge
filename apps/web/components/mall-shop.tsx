@@ -19,7 +19,7 @@ import {
   type Slot,
 } from "../../../packages/contracts/src/mall";
 import { Avatar } from "./ui";
-import { MallFigure, sized } from "./mall-figure";
+import { MallFigure, cut, sized } from "./mall-figure";
 
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: cents % 100 ? 2 : 0 })}`;
@@ -160,7 +160,7 @@ export function Shop({
       <ul className="mall-grid-fit-pieces">
         {fit.items.map((i) => (
           <li key={i.id}>
-            <img src={sized(i.image, 160)} alt="" loading="lazy" />
+            <img src={cut(i)} alt="" loading="lazy" />
             <span>
               <small>{i.store.name}</small>
               {i.name}
@@ -301,7 +301,7 @@ export function Shop({
                   aria-label={`Open ${item.name}`}
                   onClick={() => setReelAt(item.id)}
                 >
-                  <img src={sized(item.image, 500)} alt="" loading="lazy" />
+                  <img src={cut(item)} alt="" loading="lazy" />
                 </button>
                 <div className="mall-card-acts">{tryOn(item, 16)}</div>
                 {faces(item)}

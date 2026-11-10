@@ -122,6 +122,10 @@ export class MallService {
   private items() {
     return new Map(this.store.all<MallItem>("mall-item").map((i) => [i.id, i]));
   }
+  /** A piece's own record, for the server to prepare its picture. */
+  piece(itemId: string): MallItem | null {
+    return this.store.get<MallItem>("mall-item", itemId) ?? null;
+  }
   private stores(items: Iterable<MallItem>) {
     const out = new Map<string, MallStore>();
     for (const i of items)
@@ -584,6 +588,7 @@ export class MallService {
     this.ownItem(me, itemId);
     this.store.transaction(() => {
       this.store.remove("mall-item", itemId);
+      this.store.remove("mall-cutout", itemId);
       for (const w of this.store.all<Wish>("wish"))
         if (w.itemId === itemId) this.store.remove("wish", `${w.userId}:${w.itemId}`);
     });
@@ -609,6 +614,7 @@ export class MallService {
     for (const i of s.all<MallItem>("mall-item"))
       if (i.storeId === userId) {
         s.remove("mall-item", i.id);
+        s.remove("mall-cutout", i.id);
         gone.add(i.id);
       }
     if (gone.size)

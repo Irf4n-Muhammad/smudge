@@ -13,6 +13,10 @@ export function sized(src: string, width: number) {
   }
 }
 
+/** A piece's picture with the shop's backdrop lifted off, so every piece sits on one background. */
+export const cut = (piece: { id: string }) =>
+  `/api/mall/items/${encodeURIComponent(piece.id)}/cutout`;
+
 /** Where each piece lies on a fit laid flat, in percent of the board: left, top, width, height. */
 const spots: Record<Slot, [number, number, number, number]> = {
   outer: [3, 3, 45.5, 40],
@@ -63,7 +67,7 @@ export function MallFigure({
             <img
               key={slot}
               className={`fit-piece fit-${slot}`}
-              src={sized(piece.image, 400)}
+              src={cut(piece)}
               alt=""
               loading="lazy"
               style={style}
@@ -82,5 +86,5 @@ export function MallFigure({
 
 /** A small picture of a piece, for lists of pieces. */
 export function Swatch({ piece }: { piece: Piece }) {
-  return <img className="mall-swatch" src={sized(piece.image, 120)} alt="" loading="lazy" />;
+  return <img className="mall-swatch" src={cut(piece)} alt="" loading="lazy" />;
 }

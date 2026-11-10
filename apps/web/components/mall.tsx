@@ -24,7 +24,7 @@ import {
 } from "../../../packages/contracts/src/mall";
 import { api } from "./runtime";
 import { Avatar } from "./ui";
-import { MallFigure, Swatch, sized } from "./mall-figure";
+import { MallFigure, Swatch, cut } from "./mall-figure";
 import { OutsidePage, PageSheet } from "./page-sheet";
 import { hostOf } from "./post-link";
 import { DropsList } from "./fans";
@@ -413,7 +413,7 @@ function Wishlists({
             >
               <div className="mall-card-media">
                 <span className={`mall-card-open ${item.slot}`}>
-                  <img src={sized(item.image, 500)} alt="" loading="lazy" />
+                  <img src={cut(item)} alt="" loading="lazy" />
                 </span>
                 <span className="mall-card-people">
                   <Avatar user={face(person)} small /> {person.name.split(" ")[0]}
@@ -597,7 +597,7 @@ function GiveDialog({
         aria-label={`Give ${person.name} the ${item.name}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <img className="mall-gift-img" src={sized(item.image, 400)} alt="" />
+        <img className="mall-gift-img" src={cut(item)} alt="" />
         <h2>
           {item.name} for {person.name}
         </h2>
