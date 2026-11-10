@@ -20,6 +20,7 @@ import {
 } from "../../contracts/src/mall.js";
 import type { User } from "../../contracts/src/experience.js";
 import type { Actor } from "./index.js";
+import type { Payments } from "./org-events.js";
 import { AppError } from "./social.js";
 import type { SocialService } from "./social.js";
 
@@ -47,7 +48,8 @@ interface Gift {
   itemId: string;
   note: string;
   goal: number;
-  chips: { userId: string; amount: number; at: string }[];
+  /** What each giver put in; `ref` is the payment partner's receipt for it. */
+  chips: { userId: string; amount: number; at: string; ref?: string }[];
   status: "open" | "given";
   code?: string;
   createdAt: string;
@@ -71,10 +73,16 @@ const monthName = (m: string) =>
  * gets its own monthly top fit from people's likes, so there is never one global leaderboard.
  */
 export class MallService {
+  /** Takes the money for gifts. With none, giving is off rather than free. */
+  payments: Payments | undefined;
   constructor(
     private readonly social: SocialService,
     private readonly now: () => Date = () => new Date(),
   ) {}
+  private charge(userId: string, amount: number, description: string) {
+    if (!this.payments) throw new AppError("PAYMENTS_OFF", 503);
+    return this.payments.charge({ userId, amount, currency: "USD", description }).ref;
+  }
   /** Whether the viewer may see a person; the server installs the privacy rules. */
   peopleFilter: (viewerId: string, userId: string) => boolean = () => true;
 
@@ -456,13 +464,14 @@ export class MallService {
     if (!item) throw new AppError("NOT_FOUND", 404);
     const at = this.now().toISOString();
     const first = group ? Math.min(amount ?? 0, item.price) : item.price;
+    const ref = first ? this.charge(me, first, `Gift: ${item.name}`) : undefined;
     const gift = this.complete({
       id: randomUUID(),
       toId,
       itemId,
       note,
       goal: item.price,
-      chips: first ? [{ userId: me, amount: first, at }] : [],
+      chips: first ? [{ userId: me, amount: first, at, ...(ref ? { ref } : {}) }] : [],
       status: "open",
       createdAt: at,
     });
@@ -482,12 +491,12 @@ export class MallService {
       throw new AppError("NOT_FOUND", 404);
     if (gift.status !== "open") throw new AppError("GIFT_COMPLETE", 409);
     const raised = gift.chips.reduce((n, c) => n + c.amount, 0);
+    const put = Math.min(amount, gift.goal - raised);
+    const item = this.store.get<MallItem>("mall-item", gift.itemId);
+    const ref = this.charge(me, put, `Gift: ${item?.name ?? "a piece"}`);
     const next = this.complete({
       ...gift,
-      chips: [
-        ...gift.chips,
-        { userId: me, amount: Math.min(amount, gift.goal - raised), at: this.now().toISOString() },
-      ],
+      chips: [...gift.chips, { userId: me, amount: put, at: this.now().toISOString(), ref }],
     });
     this.store.transaction(() => {
       this.store.put("mall-gift", giftId, next);

@@ -38,7 +38,15 @@ async function setup() {
   });
   const social = new SocialService(store);
   const mall = new MallService(social, () => now);
-  return { store, social, mall };
+  const charges: { userId: string; amount: number }[] = [];
+  mall.payments = {
+    name: "test",
+    charge: (c) => {
+      charges.push(c);
+      return { ref: `ref-${charges.length}` };
+    },
+  };
+  return { store, social, mall, charges };
 }
 
 test("the catalog puts what you can pick up in your city first", async () => {
@@ -105,7 +113,7 @@ test("each city's top fit comes from likes of accounts old enough, never the own
 });
 
 test("a wish becomes a voucher: alone at once, together once friends cover the price", async () => {
-  const { store, mall } = await setup();
+  const { store, mall, charges } = await setup();
   mall.wish({ userId: "maya" }, "shell");
   mall.wish({ userId: "maya" }, "runner");
   const list = mall.wishlist({ userId: "alex" }, "maya");
@@ -164,6 +172,21 @@ test("a wish becomes a voucher: alone at once, together once friends cover the p
     ["alex", "leo"],
   );
   assert.throws(() => mall.chipIn({ userId: "kai" }, pot.id, { amount: 1000 }), /GIFT_COMPLETE/);
+  // Every amount went through the payment partner, capped at what was left.
+  assert.deepEqual(
+    charges.map((c) => [c.userId, c.amount]),
+    [
+      ["alex", 12500],
+      ["alex", 8000],
+      ["leo", 10900],
+    ],
+  );
+  // With no partner, giving is off rather than free.
+  mall.payments = undefined;
+  assert.throws(
+    () => mall.give({ userId: "leo" }, { toId: "maya", itemId: "runner" }),
+    /PAYMENTS_OFF/,
+  );
   const notes = store
     .all<{ type: string; userId: string }>("notification")
     .filter((n) => n.type === "voucher");

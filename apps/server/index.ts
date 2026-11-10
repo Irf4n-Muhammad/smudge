@@ -270,6 +270,7 @@ accounts.erasers.push((userId) => mall.erase(userId));
 // Fans: a creator's room and drops that open first for fans and stamp holders.
 const fans = new FansService(service, clock);
 fans.payments = orgEvents.payments;
+mall.payments = orgEvents.payments;
 fans.peopleFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 accounts.erasers.push((userId) => fans.erase(userId));
