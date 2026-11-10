@@ -141,3 +141,36 @@ test("a brand with a proven website brings its own pieces into the Mall", async 
   // Without the website, the pieces leave with it.
   expect(((await api(page, "/mall/shop")) as { allowed: boolean }).allowed).toBe(false);
 });
+
+test("a website that isn't on a shop platform is read from its product pages", async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  await api(page, "/session", { userId: "you" });
+  try {
+    await page.request.put("http://127.0.0.1:3010/__plain-shop", { headers: { "x-on": "1" } });
+    const { site } = (await api(page, "/me/site", { url: "http://127.0.0.1:3010/portfolio" })) as {
+      site: { token: string };
+    };
+    await page.request.put("http://127.0.0.1:3010/__proof", { data: site.token });
+    await api(page, "/me/site/verify", {});
+    await api(page, "/me/site-kind", { kind: "brand" });
+    await page.goto("/");
+    await page.locator(".sidebar").getByRole("button", { name: "Mall" }).click();
+    const corner = page.getByRole("region", { name: "Your shop" });
+    await corner.getByRole("button", { name: "Bring pieces" }).click();
+    const bring = page.getByRole("dialog", { name: /^Bring pieces from/ });
+    await bring.getByLabel("Bring Field cap").check();
+    await bring.getByRole("button", { name: "Bring 1 into the Mall" }).click();
+    await expect(corner).toContainText("1 of your pieces is in the Mall");
+    const shop = (await api(page, "/mall/shop")) as { items: { name: string; url: string }[] };
+    expect(shop.items.map((i) => [i.name, i.url])).toEqual([
+      ["Field cap", "http://127.0.0.1:3010/product/field-cap"],
+    ]);
+  } finally {
+    await api(page, "/session", { userId: "you" });
+    await api(page, "/me/site", undefined, "DELETE");
+    await page.request.put("http://127.0.0.1:3010/__proof", { data: "" });
+    await page.request.put("http://127.0.0.1:3010/__plain-shop", { headers: { "x-on": "0" } });
+  }
+});

@@ -60,7 +60,7 @@ export function ShopCorner({
         </strong>
         <p>
           {shop.items.length
-            ? `${shop.items.length} of your pieces are in the Mall, read from ${host}.`
+            ? `${shop.items.length === 1 ? "1 of your pieces is" : `${shop.items.length} of your pieces are`} in the Mall, read from ${host}.`
             : `Bring your pieces into the Mall from ${host}.`}
         </p>
       </span>
@@ -119,8 +119,9 @@ function BringSheet({
     <Sheet label={`Bring pieces from ${host}`} onClose={onClose}>
       {failed ? (
         <p className="mall-fine">
-          We couldn&apos;t read a product list at {host}/products.json. Shops on Shopify publish one
-          by default; other shop systems aren&apos;t read yet.
+          We couldn&apos;t find products on {host}. Shopify and WooCommerce shops are read directly;
+          on other websites, each product page needs to describe its product the way search engines
+          read it (name, picture and price).
         </p>
       ) : !found ? (
         <p className="mall-fine">Reading {host}…</p>

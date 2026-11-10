@@ -25,9 +25,15 @@ const photos = {
 
 // The proof file for "Use my website": a test puts the code here, as the owner would upload it.
 let proof = "";
+// When on, the shop product list is gone, as on a website that isn't on a shop platform.
+let plainShop = false;
 
 createServer((req, res) => {
   const path = (req.url ?? "/").split("?")[0];
+  if (path === "/__plain-shop" && req.method === "PUT") {
+    plainShop = req.headers["x-on"] === "1";
+    return res.writeHead(204).end();
+  }
   if (path === "/__proof" && req.method === "PUT") {
     let body = "";
     req.on("data", (c) => (body += c));
@@ -52,6 +58,26 @@ createServer((req, res) => {
     res.writeHead(200, { "content-type": "image/jpeg" });
     return res.end(readFileSync(resolve(root, "assets/demo", `${photos[img[1]]}.jpg`)));
   }
+  // A second shop with no product list of its own kind: only a sitemap and a product page that
+  // describes itself for search engines.
+  if (path === "/sitemap.xml") {
+    res.writeHead(200, { "content-type": "application/xml" });
+    return res.end(
+      `<urlset><url><loc>http://127.0.0.1:${port}/product/field-cap</loc></url></urlset>`,
+    );
+  }
+  if (path === "/product/field-cap") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    return res.end(
+      `<title>Field cap</title><script type="application/ld+json">${JSON.stringify({
+        "@type": "Product",
+        name: "Field cap",
+        image: "https://shop.example/field-cap.jpg",
+        offers: { "@type": "Offer", price: "32.00" },
+      })}</script><h1>Field cap</h1>`,
+    );
+  }
+  if (path === "/products.json" && plainShop) return res.writeHead(404).end();
   if (path === "/products.json") {
     // The product list a shop platform publishes; pictures must be https, so they point outward.
     res.writeHead(200, { "content-type": "application/json" });

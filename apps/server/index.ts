@@ -95,7 +95,7 @@ import type { NowView } from "../../packages/contracts/src/now.js";
 import type { Publication } from "../../packages/core/src/social.js";
 import { importSite } from "./site-import.js";
 import { frameCheck, readSiteText, safeGet, siteStatus } from "./site-fetch.js";
-import { readShop } from "./shop-import.js";
+import { readShop, type ReadProduct } from "./shop-import.js";
 import { cutout } from "./cutout.js";
 import {
   shopImportSchema,
@@ -1564,10 +1564,18 @@ api.get("/api/me/site-kind", (_req, res) => res.json({ kind: sites.kindOf(actor(
 api.post("/api/me/site-kind", (req, res) => res.json(sites.declare(actor(res), req.body)));
 // A shop's own pieces in the Mall, read from the website it proved is its own.
 mall.isShop = (userId) => sites.kindOf(userId) === "brand" && Boolean(ownSites.public(userId));
+const shopFeeds = new Map<string, { url: string; until: number; products: ReadProduct[] }>();
 const shopFeed = async (userId: string) => {
   const site = ownSites.public(userId);
   if (!site || !mall.isShop(userId)) throw new AppError("NOT_A_SHOP", 403);
-  return readShop(site.url, { allowHosts: importAllowHosts });
+  // Reading a whole site is slow: what it said is kept ten minutes, so the list and the import
+  // that follows it read the site once.
+  const kept = shopFeeds.get(userId);
+  if (kept && kept.url === site.url && kept.until > Date.now()) return kept.products;
+  const products = await readShop(site.url, { allowHosts: importAllowHosts });
+  if (shopFeeds.size > 500) shopFeeds.clear();
+  shopFeeds.set(userId, { url: site.url, until: Date.now() + 10 * 60_000, products });
+  return products;
 };
 api.get("/api/mall/shop", (_req, res) => {
   const me = actor(res);
@@ -1670,6 +1678,7 @@ api.delete("/api/me/site", (_req, res) => {
     sites.erase(actor(res).userId);
     mall.closeShop(actor(res).userId);
   });
+  shopFeeds.delete(actor(res).userId);
   res.json(removed);
 });
 // Whether a profile is a website right now. Answers are kept a minute so visits don't hammer it.
