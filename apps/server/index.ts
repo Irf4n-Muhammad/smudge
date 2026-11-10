@@ -95,6 +95,12 @@ import type { NowView } from "../../packages/contracts/src/now.js";
 import type { Publication } from "../../packages/core/src/social.js";
 import { importSite } from "./site-import.js";
 import { frameCheck, readSiteText, siteStatus } from "./site-fetch.js";
+import { readShop } from "./shop-import.js";
+import {
+  shopImportSchema,
+  type ShopProduct,
+  type ShopView,
+} from "../../packages/contracts/src/mall.js";
 import { resolveTxt } from "node:dns/promises";
 import { OwnSiteService } from "../../packages/core/src/own-site.js";
 import { SharingService } from "../../packages/core/src/sharing.js";
@@ -1555,6 +1561,52 @@ const sites = new SitesService(service, (userId) => Boolean(ownSites.public(user
 accounts.erasers.push((userId) => sites.erase(userId));
 api.get("/api/me/site-kind", (_req, res) => res.json({ kind: sites.kindOf(actor(res).userId) }));
 api.post("/api/me/site-kind", (req, res) => res.json(sites.declare(actor(res), req.body)));
+// A shop's own pieces in the Mall, read from the website it proved is its own.
+mall.isShop = (userId) => sites.kindOf(userId) === "brand" && Boolean(ownSites.public(userId));
+const shopFeed = async (userId: string) => {
+  const site = ownSites.public(userId);
+  if (!site || !mall.isShop(userId)) throw new AppError("NOT_A_SHOP", 403);
+  return readShop(site.url, { allowHosts: importAllowHosts });
+};
+api.get("/api/mall/shop", (_req, res) => {
+  const me = actor(res);
+  const allowed = mall.isShop(me.userId);
+  res.json({
+    allowed,
+    site: allowed ? (ownSites.public(me.userId)?.url ?? null) : null,
+    items: allowed ? mall.shopItems(me) : [],
+  } satisfies ShopView);
+});
+api.get("/api/mall/shop/products", importLimit, async (_req, res) => {
+  const me = actor(res);
+  const have = new Set(mall.shopItems(me).map((i) => i.id));
+  res.json(
+    (await shopFeed(me.userId)).map((p) => ({
+      ...p,
+      added: have.has(`${me.userId}:${p.key}`.slice(0, 80)),
+    })) satisfies ShopProduct[],
+  );
+});
+api.post("/api/mall/shop/import", importLimit, async (req, res) => {
+  const me = actor(res);
+  const { picks } = shopImportSchema.parse(req.body);
+  const feed = new Map((await shopFeed(me.userId)).map((p) => [p.key, p]));
+  res.json(
+    mall.addShopItems(
+      me,
+      picks.flatMap((pick) => {
+        const product = feed.get(pick.key);
+        return product ? [{ ...product, slot: pick.slot }] : [];
+      }),
+    ),
+  );
+});
+api.delete("/api/mall/shop/items/:id", (req, res) =>
+  res.json(mall.removeShopItem(actor(res), String(req.params.id))),
+);
+api.post("/api/mall/shop/items/:id/stock", (req, res) =>
+  res.json(mall.setStock(actor(res), String(req.params.id), req.body)),
+);
 const siteLimit = rateLimit({ windowMs: 10 * 60_000, max: 30 });
 api.get("/api/me/site", (_req, res) => res.json({ site: ownSites.mine(actor(res)) }));
 api.post("/api/me/site", siteLimit, (req, res) =>
@@ -1566,7 +1618,10 @@ api.post("/api/me/site/verify", siteLimit, async (_req, res) =>
 // A site stops being a brand, media or place when it stops proving its domain.
 api.delete("/api/me/site", (_req, res) => {
   const removed = ownSites.remove(actor(res));
-  store.transaction(() => sites.erase(actor(res).userId));
+  store.transaction(() => {
+    sites.erase(actor(res).userId);
+    mall.closeShop(actor(res).userId);
+  });
   res.json(removed);
 });
 // Whether a profile is a website right now. Answers are kept a minute so visits don't hammer it.

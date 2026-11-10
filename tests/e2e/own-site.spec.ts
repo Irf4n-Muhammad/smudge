@@ -91,3 +91,53 @@ test("your own website becomes your profile once you prove it's yours, under Smu
     await page.request.put("http://127.0.0.1:3010/__proof", { data: "" });
   }
 });
+
+test("a brand with a proven website brings its own pieces into the Mall", async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto("/");
+  await page.locator(".post-card").first().waitFor();
+  await api(page, "/session", { userId: "you" });
+  try {
+    const { site } = (await api(page, "/me/site", { url: "http://127.0.0.1:3010/portfolio" })) as {
+      site: { token: string };
+    };
+    await page.request.put("http://127.0.0.1:3010/__proof", { data: site.token });
+    await api(page, "/me/site/verify", {});
+    await api(page, "/me/site-kind", { kind: "brand" });
+    await page.goto("/");
+    await page.locator(".sidebar").getByRole("button", { name: "Mall" }).click();
+    const mall = page.getByRole("region", { name: "Mall" });
+    const corner = mall.getByRole("region", { name: "Your shop" });
+    await expect(corner).toContainText("Bring your pieces into the Mall from 127.0.0.1");
+    await corner.getByRole("button", { name: "Bring pieces" }).click();
+    const bring = page.getByRole("dialog", { name: /^Bring pieces from/ });
+    // Where each piece goes is guessed from the shop's own words.
+    await expect(bring.getByLabel("Where Wide trousers goes")).toHaveValue("bottom");
+    await expect(bring.getByLabel("Where Canvas tote goes")).toHaveValue("bag");
+    await bring.getByLabel("Bring Wide trousers").check();
+    await bring.getByLabel("Bring Canvas tote").check();
+    await bring.getByRole("button", { name: "Bring 2 into the Mall" }).click();
+    await expect(bring).toHaveCount(0);
+    await expect(corner).toContainText("2 of your pieces are in the Mall");
+    await expect(mall.getByRole("article", { name: /^Wide trousers from / })).toBeVisible();
+
+    // The shop says how many can be picked up in a city, and takes a piece out.
+    await corner.getByRole("button", { name: "Your pieces" }).click();
+    const pieces = page.getByRole("dialog", { name: "Your pieces in the Mall" });
+    await pieces.getByLabel("City for pick-up counts").selectOption("London");
+    await pieces.getByLabel("Wide trousers in London").fill("4");
+    await pieces.getByLabel("Wide trousers in London").blur();
+    await pieces.getByRole("button", { name: "Take Canvas tote out of the Mall" }).click();
+    await expect(pieces.getByText("Canvas tote")).toHaveCount(0);
+    const shop = (await api(page, "/mall/shop")) as {
+      items: { name: string; stock: Record<string, number> }[];
+    };
+    expect(shop.items.map((i) => [i.name, i.stock])).toEqual([["Wide trousers", { London: 4 }]]);
+  } finally {
+    await api(page, "/session", { userId: "you" });
+    await api(page, "/me/site", undefined, "DELETE");
+    await page.request.put("http://127.0.0.1:3010/__proof", { data: "" });
+  }
+  // Without the website, the pieces leave with it.
+  expect(((await api(page, "/mall/shop")) as { allowed: boolean }).allowed).toBe(false);
+});

@@ -204,3 +204,45 @@ test("erasing an account takes its city, fits, likes, wishes and gifts to it", a
   for (const kind of ["mall-city", "fit", "fit-like", "wish", "mall-gift"])
     assert.equal(store.all(kind).length, 0, kind);
 });
+
+test("a shop brings its own pieces in, sets pick-up counts, and takes them out", async () => {
+  const { store, mall } = await setup();
+  const product = {
+    key: "linen-overshirt",
+    name: "Linen overshirt",
+    image: "https://shop.example/a.jpg",
+    price: 12800,
+    url: "https://shop.example/products/linen-overshirt",
+    slot: "top" as const,
+  };
+  assert.throws(() => mall.addShopItems({ userId: "kai" }, [product]), /NOT_A_SHOP/);
+  mall.isShop = (id) => id === "kai";
+  const [piece] = mall.addShopItems({ userId: "kai" }, [product]);
+  assert.equal(piece!.id, "kai:linen-overshirt");
+  assert.equal(piece!.storeId, "kai");
+  assert.ok(mall.catalog({ userId: "alex" }).some((i) => i.id === piece!.id));
+  mall.setStock({ userId: "kai" }, piece!.id, { city: "London", count: 3 });
+  // Bringing it again refreshes the price and keeps the counts.
+  const [again] = mall.addShopItems({ userId: "kai" }, [{ ...product, price: 11000 }]);
+  assert.equal(again!.price, 11000);
+  assert.deepEqual(again!.stock, { London: 3 });
+  assert.deepEqual(
+    mall.setStock({ userId: "kai" }, piece!.id, { city: "London", count: 0 })[0]!.stock,
+    {},
+  );
+  // Nobody else's pieces: not the catalog's, not another shop's.
+  assert.throws(() => mall.removeShopItem({ userId: "kai" }, "shell"), /NOT_FOUND/);
+  assert.throws(
+    () => mall.setStock({ userId: "leo" }, piece!.id, { city: "London", count: 1 }),
+    /NOT_FOUND/,
+  );
+  mall.wish({ userId: "maya" }, piece!.id);
+  assert.deepEqual(mall.removeShopItem({ userId: "kai" }, piece!.id), []);
+  assert.equal(store.all("wish").length, 0);
+  mall.addShopItems({ userId: "kai" }, [product]);
+  store.transaction(() => mall.erase("kai"));
+  assert.equal(
+    store.all<{ storeId: string }>("mall-item").filter((i) => i.storeId === "kai").length,
+    0,
+  );
+});

@@ -143,3 +143,36 @@ export interface WishPage {
   pages: number;
   total: number;
 }
+
+/** One product read from a shop's own website, before its owner brings it into the Mall. */
+export interface ShopProduct {
+  /** The product's handle on the shop's site. */
+  key: string;
+  name: string;
+  image: string;
+  price: number;
+  url: string;
+  /** A first guess from the product's type and name; the owner corrects it. */
+  slot: Slot;
+  /** Already in the Mall. */
+  added: boolean;
+}
+export const shopImportSchema = z
+  .object({
+    picks: z
+      .array(z.object({ key: z.string().min(1).max(120), slot: z.enum(slots) }).strict())
+      .min(1)
+      .max(50),
+  })
+  .strict();
+export const stockSchema = z
+  .object({ city: z.enum(cities), count: z.number().int().min(0).max(9999) })
+  .strict();
+/** A shop's own corner of the Mall: whether this account may keep one, and its pieces. */
+export interface ShopView {
+  /** A proven website that says it is a brand. */
+  allowed: boolean;
+  /** The proven website the pieces are read from. */
+  site: string | null;
+  items: MallItem[];
+}

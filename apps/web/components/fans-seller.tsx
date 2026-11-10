@@ -21,7 +21,7 @@ async function uploadPhoto(file: File) {
   return (await api<{ id: string }>("/assets", { name: file.name.slice(0, 120), mime, base64 })).id;
 }
 
-function Sheet({
+export function Sheet({
   label,
   onClose,
   children,

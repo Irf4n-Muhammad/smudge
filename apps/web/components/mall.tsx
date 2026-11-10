@@ -29,6 +29,7 @@ import { OutsidePage, PageSheet } from "./page-sheet";
 import { hostOf } from "./post-link";
 import { DropsList } from "./fans";
 import { FitDock, Shop } from "./mall-shop";
+import { ShopCorner } from "./mall-seller";
 
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: cents % 100 ? 2 : 0 })}`;
@@ -137,19 +138,22 @@ export function MallPage({
       {!data ? (
         <p className="mall-empty">Opening the Mall…</p>
       ) : segment === "shop" ? (
-        <Shop
-          catalog={data.catalog}
-          fits={data.fits}
-          board={board}
-          onBoard={setBoard}
-          onWish={wish}
-          onShop={setShop}
-          onFitsWith={(item) => {
-            setFitsWith(item);
-            setSegment("fits");
-          }}
-          onTryFit={tryOn}
-        />
+        <>
+          <ShopCorner key={meId} city={data.city} notify={notify} onChange={() => void load()} />
+          <Shop
+            catalog={data.catalog}
+            fits={data.fits}
+            board={board}
+            onBoard={setBoard}
+            onWish={wish}
+            onShop={setShop}
+            onFitsWith={(item) => {
+              setFitsWith(item);
+              setSegment("fits");
+            }}
+            onTryFit={tryOn}
+          />
+        </>
       ) : segment === "fits" ? (
         <Fits
           fits={

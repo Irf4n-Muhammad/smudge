@@ -52,6 +52,25 @@ createServer((req, res) => {
     res.writeHead(200, { "content-type": "image/jpeg" });
     return res.end(readFileSync(resolve(root, "assets/demo", `${photos[img[1]]}.jpg`)));
   }
+  if (path === "/products.json") {
+    // The product list a shop platform publishes; pictures must be https, so they point outward.
+    res.writeHead(200, { "content-type": "application/json" });
+    return res.end(
+      JSON.stringify({
+        products: [
+          ["linen-overshirt", "Linen overshirt", "Shirts", "128.00"],
+          ["wide-trousers", "Wide trousers", "Pants", "145.00"],
+          ["canvas-tote", "Canvas tote", "Bags", "60.00"],
+        ].map(([handle, title, product_type, price]) => ({
+          handle,
+          title,
+          product_type,
+          images: [{ src: `https://shop.example/${handle}.jpg` }],
+          variants: [{ price }],
+        })),
+      }),
+    );
+  }
   const page = pages[path];
   if (!page) return res.writeHead(404).end();
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });

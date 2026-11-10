@@ -16,6 +16,7 @@ import {
   type WishAudience,
   type WishPage,
   wishAudienceSchema,
+  stockSchema,
   wishPageSchema,
 } from "../../contracts/src/mall.js";
 import type { User } from "../../contracts/src/experience.js";
@@ -85,6 +86,8 @@ export class MallService {
   }
   /** Whether the viewer may see a person; the server installs the privacy rules. */
   peopleFilter: (viewerId: string, userId: string) => boolean = () => true;
+  /** Whether an account is a shop: a proven website that says it is a brand. */
+  isShop: (userId: string) => boolean = () => false;
 
   private get store() {
     return this.social.store;
@@ -525,11 +528,100 @@ export class MallService {
     };
   }
 
+  /** A shop's own pieces, newest first. */
+  shopItems(actor: Actor): MallItem[] {
+    const me = this.social.actor(actor);
+    return [...this.items().values()].filter((i) => i.storeId === me);
+  }
+
+  /**
+   * Brings pieces into the Mall under the shop's own account. The server read them from the
+   * shop's proven website, so names, pictures and links are the shop's, not typed in.
+   */
+  addShopItems(
+    actor: Actor,
+    products: {
+      key: string;
+      name: string;
+      image: string;
+      price: number;
+      url: string;
+      slot: Slot;
+    }[],
+  ): MallItem[] {
+    const me = this.social.actor(actor);
+    if (!this.isShop(me)) throw new AppError("NOT_A_SHOP", 403);
+    const mine = this.shopItems(actor);
+    if (mine.length + products.length > 500) throw new AppError("SHOP_FULL", 409);
+    this.store.transaction(() => {
+      for (const p of products) {
+        const id = `${me}:${p.key}`.slice(0, 80);
+        const old = this.store.get<MallItem>("mall-item", id);
+        this.store.put("mall-item", id, {
+          id,
+          storeId: me,
+          name: p.name.slice(0, 80),
+          slot: p.slot,
+          image: p.image,
+          price: p.price,
+          url: p.url,
+          stock: old?.stock ?? {},
+        } satisfies MallItem);
+      }
+    });
+    return this.shopItems(actor);
+  }
+
+  private ownItem(me: string, itemId: string) {
+    const item = this.store.get<MallItem>("mall-item", itemId);
+    if (!item || item.storeId !== me) throw new AppError("NOT_FOUND", 404);
+    return item;
+  }
+
+  /** Takes a piece out of the Mall, with the wishes for it; fits keep their other pieces. */
+  removeShopItem(actor: Actor, itemId: string): MallItem[] {
+    const me = this.social.actor(actor);
+    this.ownItem(me, itemId);
+    this.store.transaction(() => {
+      this.store.remove("mall-item", itemId);
+      for (const w of this.store.all<Wish>("wish"))
+        if (w.itemId === itemId) this.store.remove("wish", `${w.userId}:${w.itemId}`);
+    });
+    return this.shopItems(actor);
+  }
+
+  /** How many of a piece can be picked up in a city. */
+  setStock(actor: Actor, itemId: string, input: unknown): MallItem[] {
+    const me = this.social.actor(actor);
+    const item = this.ownItem(me, itemId);
+    const { city, count } = stockSchema.parse(input);
+    const stock = { ...item.stock };
+    if (count) stock[city] = count;
+    else delete stock[city];
+    this.store.transaction(() => this.store.put("mall-item", itemId, { ...item, stock }));
+    return this.shopItems(actor);
+  }
+
+  /** Takes all of a shop's pieces out, with the wishes for them. Runs inside a transaction. */
+  closeShop(userId: string) {
+    const s = this.store;
+    const gone = new Set<string>();
+    for (const i of s.all<MallItem>("mall-item"))
+      if (i.storeId === userId) {
+        s.remove("mall-item", i.id);
+        gone.add(i.id);
+      }
+    if (gone.size)
+      for (const w of s.all<Wish>("wish"))
+        if (gone.has(w.itemId)) s.remove("wish", `${w.userId}:${w.itemId}`);
+  }
+
   /** Runs inside the account-deletion transaction. */
   erase(userId: string) {
     const s = this.store;
     s.remove("mall-city", userId);
     s.remove("wish-audience", userId);
+    this.closeShop(userId);
     for (const f of s.all<Fit>("fit")) if (f.ownerId === userId) s.remove("fit", f.id);
     for (const l of s.all<FitLike>("fit-like"))
       if (l.userId === userId || !s.get("fit", l.fitId))
