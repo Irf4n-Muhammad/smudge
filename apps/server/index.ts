@@ -34,6 +34,11 @@ import { OrgService } from "../../packages/core/src/orgs.js";
 import { OprecService } from "../../packages/core/src/oprec.js";
 import { OpenCounter, orgTrial, postTrial } from "../../packages/core/src/trial-report.js";
 import { ActiveDays } from "../../packages/core/src/habit-report.js";
+import { SurpriseService } from "../../packages/core/src/surprises.js";
+import { MallService } from "../../packages/core/src/mall.js";
+import { FansService } from "../../packages/core/src/fans.js";
+import { buildPost, startPostDesign } from "../../packages/core/src/easy-post.js";
+import { SitesService } from "../../packages/core/src/sites.js";
 import { signupSchema } from "../../packages/contracts/src/identity.js";
 import { renderMoment } from "./moments.js";
 import {
@@ -61,7 +66,18 @@ import { gatheringRoutes } from "./gathering-routes.js";
 import { ShareCardService } from "../../packages/core/src/share-card.js";
 import { sideById } from "../../packages/contracts/src/sides.js";
 import { sideRoutes } from "./side-routes.js";
-import { seedGamers, seedGift, seedPlan, seedSides, seedStamps, seedWeekly } from "./seed-sides.js";
+import { seedSites } from "./seed-sites.js";
+import { seedMall } from "./seed-mall.js";
+import { seedFans } from "./seed-fans.js";
+import {
+  seedGamers,
+  seedGift,
+  seedPlan,
+  seedSides,
+  seedStamps,
+  seedSurprises,
+  seedWeekly,
+} from "./seed-sides.js";
 import { AccountService } from "../../packages/core/src/accounts.js";
 import type { AuthState } from "../../packages/contracts/src/accounts.js";
 import { loadConfig } from "./config.js";
@@ -78,7 +94,14 @@ import { SpotifyService, spotifyStart } from "./spotify.js";
 import type { NowView } from "../../packages/contracts/src/now.js";
 import type { Publication } from "../../packages/core/src/social.js";
 import { importSite } from "./site-import.js";
-import { frameCheck, readSiteText, siteStatus } from "./site-fetch.js";
+import { frameCheck, readSiteText, safeGet, siteStatus } from "./site-fetch.js";
+import { readShop, type ReadProduct } from "./shop-import.js";
+import { cutout } from "./cutout.js";
+import {
+  shopImportSchema,
+  type ShopProduct,
+  type ShopView,
+} from "../../packages/contracts/src/mall.js";
 import { resolveTxt } from "node:dns/promises";
 import { OwnSiteService } from "../../packages/core/src/own-site.js";
 import { SharingService } from "../../packages/core/src/sharing.js";
@@ -169,6 +192,16 @@ accounts.loginGate = (userId) => {
 accounts.erasers.push((userId) => community.erase(userId));
 const privacy = new PrivacyService(service, community, clock);
 const sidesService = new SidesService(service, clock);
+// People are found by what they do too: their proven chapters and the open sides they are in.
+community.contextOf = (viewerId, userId) => [
+  ...identity.chaptersFor({ userId: viewerId }, userId).map((c) => c.label),
+  ...service.store
+    .all<{ sideId: string; userId: string }>("side-member")
+    .filter((m) => m.userId === userId)
+    .map((m) => sideById(m.sideId))
+    .filter((side) => side && !side.private)
+    .map((side) => `In ${side!.name}`),
+];
 // A plan's list of names follows who may see whom (blocks, hidden accounts), like comments do.
 const plans = new PlansService(service, clock);
 plans.peopleFilter = (viewerId, userId) => community.canSeeUser(viewerId, userId);
@@ -218,6 +251,10 @@ if (config.demoContent) {
   seedPlan(service);
   seedGamers(service, sidesService);
   seedGift(service);
+  seedSurprises(service);
+  seedSites(service);
+  seedMall(service);
+  seedFans(service);
 }
 // Pages made on an older Paint wall are brought up to the template at start (ADR 0046).
 {
@@ -228,6 +265,22 @@ const sharing = new SharingService(service, community, identity, profiles);
 // Your now (ADR 0041): one-tap entries, read by the same people who may see your posts, and by
 // your own page program through profile.read.
 const nowService = new NowService(service, clock);
+// Cards between feed posts: what people you know just did that touches you.
+const surprises = new SurpriseService(service, clock);
+surprises.peopleFilter = (viewerId, userId) =>
+  community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
+// The Mall: shops' pieces, people's fits, wishlists and vouchers friends give.
+const mall = new MallService(service, clock);
+mall.peopleFilter = (viewerId, userId) =>
+  community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
+accounts.erasers.push((userId) => mall.erase(userId));
+// Fans: a creator's room and drops that open first for fans and stamp holders.
+const fans = new FansService(service, clock);
+fans.payments = orgEvents.payments;
+mall.payments = orgEvents.payments;
+fans.peopleFilter = (viewerId, userId) =>
+  community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
+accounts.erasers.push((userId) => fans.erase(userId));
 nowService.viewFilter = (viewerId, userId) =>
   community.canSeeUser(viewerId, userId) && privacy.canSeePosts(viewerId, userId);
 accounts.erasers.push((userId) => nowService.erase(userId));
@@ -553,11 +606,21 @@ api.post("/api/signup", (req, res) => {
   setSession(res, token);
   res.json(user);
 });
+// Sites (brands, media, places) stay a minority in the feed; see SitesService.mix.
+function siteTag(userId: string) {
+  const kind = sites.kindOf(userId);
+  return kind ? { siteKind: kind } : {};
+}
 api.get("/api/feed", (_req, res) =>
   res.json(
-    identity
-      .decorate(actor(res), service.feed(actor(res)))
-      .map((p) => ({ ...p, ...sidesService.tag(p) })),
+    sites
+      .mix(actor(res).userId, identity.decorate(actor(res), service.feed(actor(res))))
+      .map(({ post, rising }) => ({
+        ...post,
+        ...sidesService.tag(post),
+        ...siteTag(post.ownerId),
+        ...(rising ? { rising } : {}),
+      })),
   ),
 );
 api.get("/api/formats/:id", (req, res) => {
@@ -879,6 +942,76 @@ api.delete("/api/me/now/:id", (req, res) =>
 );
 api.get("/api/me/quiz", (_req, res) => res.json(programs.quiz(actor(res))));
 api.put("/api/me/quiz", (req, res) => res.json(programs.setQuiz(actor(res), req.body)));
+api.get("/api/me/surprises", (_req, res) => res.json(surprises.for(actor(res))));
+api.get("/api/mall", (_req, res) => {
+  const me = actor(res);
+  res.json({
+    city: mall.cityOf(me.userId),
+    catalog: mall.catalog(me),
+    fits: mall.fits(me),
+  });
+});
+api.post("/api/mall/city", (req, res) => res.json(mall.setCity(actor(res), req.body)));
+api.post("/api/mall/wishlist/audience", (req, res) =>
+  res.json(mall.setWishAudience(actor(res), req.body)),
+);
+api.post("/api/mall/fits", (req, res) => res.json(mall.saveFit(actor(res), req.body)));
+api.delete("/api/mall/fits/:id", (req, res) =>
+  res.json(mall.removeFit(actor(res), String(req.params.id))),
+);
+api.post("/api/mall/fits/:id/like", (req, res) =>
+  res.json(mall.likeFit(actor(res), String(req.params.id))),
+);
+api.post("/api/mall/items/:id/wish", (req, res) =>
+  res.json(mall.wish(actor(res), String(req.params.id))),
+);
+api.get("/api/mall/wishlists", (req, res) => {
+  const me = actor(res);
+  res.json({ mine: mall.wishlist(me, me.userId), ...mall.friendWishes(me, req.query) });
+});
+api.get("/api/mall/wishlists/:userId", (req, res) =>
+  res.json(mall.wishlist(actor(res), String(req.params.userId))),
+);
+api.get("/api/mall/gifts", (_req, res) => res.json(mall.gifts(actor(res))));
+api.get("/api/fans/drops", (_req, res) => res.json(fans.drops(actor(res))));
+api.post("/api/fans/drops", (req, res) => res.json(fans.createDrop(actor(res), req.body)));
+api.post("/api/fans/drops/:id/claim", (req, res) =>
+  res.json(fans.claim(actor(res), String(req.params.id))),
+);
+api.get("/api/fans/drops/:id/image", (req, res) => {
+  const a = fans.dropImage(actor(res), String(req.params.id));
+  res.type(a.mime).send(Buffer.from(a.base64, "base64"));
+});
+api.get("/api/fans/drops/:id/claims", (req, res) =>
+  res.json(fans.claims(actor(res), String(req.params.id))),
+);
+api.post("/api/fans/drops/:id/collect", (req, res) =>
+  res.json(fans.collect(actor(res), String(req.params.id), req.body)),
+);
+api.get("/api/fans/mine", (_req, res) => res.json(fans.mine(actor(res))));
+api.post("/api/fans/room", (req, res) => res.json(fans.setRoom(actor(res), req.body)));
+// Whether a person has a fan room, for the button on their page; null when they have none.
+api.get("/api/fans/:ownerId", (req, res) => {
+  try {
+    res.json(fans.view(actor(res), String(req.params.ownerId)));
+  } catch (e) {
+    if (e instanceof AppError && e.status === 404) res.json(null);
+    else throw e;
+  }
+});
+api.post("/api/fans/:ownerId/join", (req, res) =>
+  res.json(fans.join(actor(res), String(req.params.ownerId))),
+);
+api.post("/api/fans/:ownerId/leave", (req, res) =>
+  res.json(fans.leave(actor(res), String(req.params.ownerId))),
+);
+api.post("/api/fans/:ownerId/notes", (req, res) =>
+  res.json(fans.post(actor(res), String(req.params.ownerId), req.body)),
+);
+api.post("/api/mall/gifts", (req, res) => res.json(mall.give(actor(res), req.body)));
+api.post("/api/mall/gifts/:id/chip-in", (req, res) =>
+  res.json(mall.chipIn(actor(res), String(req.params.id), req.body)),
+);
 api.get("/api/me/friends-now", async (_req, res) => {
   await Promise.all(service.following(actor(res)).map((id) => spotify.poll(id)));
   res.json(nowService.friends(actor(res)));
@@ -1301,6 +1434,27 @@ function copyForReuse(res: Response, id: string) {
   const { side: _side, ...metadata } = post.metadata;
   return { post, pkg, metadata: { ...metadata, coverAssetId, contributors: [] } };
 }
+// A search that found nobody becomes a question to the people you know: a Big note draft with
+// the question as its headline, opened in the editor so one tap posts it.
+const askSchema = z.object({ question: z.string().trim().min(1).max(88) }).strict();
+api.post("/api/asks", (req, res) => {
+  const { question } = askSchema.parse(req.body);
+  const asked = question[0]!.toUpperCase() + question.slice(1);
+  const headline = /[?？]$/.test(asked) ? asked : `${asked}?`;
+  const built = buildPost(
+    startPostDesign("note", {
+      kicker: "Asking my people",
+      headline,
+      text: "Know someone, or been there? Tell me in the comments.",
+    }),
+  );
+  res.json(
+    service.createDraft(actor(res), {
+      package: built.package,
+      metadata: { ...built.metadata, caption: headline, contributors: [] },
+    }),
+  );
+});
 api.post("/api/posts/:id/reuse", (req, res) => {
   const { post, pkg, metadata } = copyForReuse(res, String(req.params.id));
   res.json(
@@ -1403,6 +1557,112 @@ const ownSites = new OwnSiteService(
   { allowHttpHosts: importAllowHosts },
 );
 accounts.erasers.push((userId) => ownSites.erase(userId));
+// A proven website may say it is a brand, media or place: its posts then follow the site rules.
+const sites = new SitesService(service, (userId) => Boolean(ownSites.public(userId)));
+accounts.erasers.push((userId) => sites.erase(userId));
+api.get("/api/me/site-kind", (_req, res) => res.json({ kind: sites.kindOf(actor(res).userId) }));
+api.post("/api/me/site-kind", (req, res) => res.json(sites.declare(actor(res), req.body)));
+// A shop's own pieces in the Mall, read from the website it proved is its own.
+mall.isShop = (userId) => sites.kindOf(userId) === "brand" && Boolean(ownSites.public(userId));
+const shopFeeds = new Map<string, { url: string; until: number; products: ReadProduct[] }>();
+const shopFeed = async (userId: string) => {
+  const site = ownSites.public(userId);
+  if (!site || !mall.isShop(userId)) throw new AppError("NOT_A_SHOP", 403);
+  // Reading a whole site is slow: what it said is kept ten minutes, so the list and the import
+  // that follows it read the site once.
+  const kept = shopFeeds.get(userId);
+  if (kept && kept.url === site.url && kept.until > Date.now()) return kept.products;
+  const products = await readShop(site.url, { allowHosts: importAllowHosts });
+  if (shopFeeds.size > 500) shopFeeds.clear();
+  shopFeeds.set(userId, { url: site.url, until: Date.now() + 10 * 60_000, products });
+  return products;
+};
+api.get("/api/mall/shop", (_req, res) => {
+  const me = actor(res);
+  const allowed = mall.isShop(me.userId);
+  res.json({
+    allowed,
+    site: allowed ? (ownSites.public(me.userId)?.url ?? null) : null,
+    items: allowed ? mall.shopItems(me) : [],
+  } satisfies ShopView);
+});
+api.get("/api/mall/shop/products", importLimit, async (_req, res) => {
+  const me = actor(res);
+  const have = new Set(mall.shopItems(me).map((i) => i.id));
+  res.json(
+    (await shopFeed(me.userId)).map((p) => ({
+      ...p,
+      added: have.has(`${me.userId}:${p.key}`.slice(0, 80)),
+    })) satisfies ShopProduct[],
+  );
+});
+api.post("/api/mall/shop/import", importLimit, async (req, res) => {
+  const me = actor(res);
+  const { picks } = shopImportSchema.parse(req.body);
+  const feed = new Map((await shopFeed(me.userId)).map((p) => [p.key, p]));
+  res.json(
+    mall.addShopItems(
+      me,
+      picks.flatMap((pick) => {
+        const product = feed.get(pick.key);
+        return product ? [{ ...product, slot: pick.slot }] : [];
+      }),
+    ),
+  );
+});
+// Every piece on one background: its picture with the shop's plain studio backdrop lifted off,
+// made once and kept. A picture we can't fetch or cut is shown as the shop has it.
+const cutting = new Map<string, Promise<string | null>>();
+const cutFailed = new Map<string, number>();
+let cutsRunning = 0;
+const cutWaiting: (() => void)[] = [];
+async function cutPicture(id: string, src: string): Promise<string | null> {
+  if (cutsRunning >= 4) await new Promise<void>((go) => cutWaiting.push(go));
+  cutsRunning++;
+  try {
+    const url = new URL(src);
+    if (url.hostname === "cdn.shopify.com") url.searchParams.set("width", "800");
+    const file = await safeGet(url.href, 8_000_000, (type) => type.startsWith("image/"), {
+      allowHosts: importAllowHosts,
+    });
+    const cut = await cutout(file.body);
+    const base64 = cut ? cut.toString("base64") : null;
+    store.transaction(() => store.put("mall-cutout", id, { id, src, base64 }));
+    return base64;
+  } finally {
+    cutsRunning--;
+    cutWaiting.shift()?.();
+  }
+}
+api.get("/api/mall/items/:id/cutout", async (req, res) => {
+  actor(res);
+  const id = String(req.params.id);
+  const item = mall.piece(id);
+  if (!item) throw new AppError("NOT_FOUND", 404);
+  const kept = store.get<{ src: string; base64: string | null }>("mall-cutout", id);
+  let base64 = kept?.src === item.image ? kept.base64 : undefined;
+  if (base64 === undefined && (cutFailed.get(item.image) ?? 0) < Date.now()) {
+    let job = cutting.get(id);
+    if (!job) {
+      job = cutPicture(id, item.image).finally(() => cutting.delete(id));
+      cutting.set(id, job);
+    }
+    base64 = await job.catch(() => {
+      if (cutFailed.size > 5000) cutFailed.clear();
+      cutFailed.set(item.image, Date.now() + 10 * 60_000);
+      return null;
+    });
+  }
+  if (!base64) return res.redirect(302, item.image);
+  res.set("cache-control", "private, max-age=86400").type("image/webp");
+  res.send(Buffer.from(base64, "base64"));
+});
+api.delete("/api/mall/shop/items/:id", (req, res) =>
+  res.json(mall.removeShopItem(actor(res), String(req.params.id))),
+);
+api.post("/api/mall/shop/items/:id/stock", (req, res) =>
+  res.json(mall.setStock(actor(res), String(req.params.id), req.body)),
+);
 const siteLimit = rateLimit({ windowMs: 10 * 60_000, max: 30 });
 api.get("/api/me/site", (_req, res) => res.json({ site: ownSites.mine(actor(res)) }));
 api.post("/api/me/site", siteLimit, (req, res) =>
@@ -1411,7 +1671,16 @@ api.post("/api/me/site", siteLimit, (req, res) =>
 api.post("/api/me/site/verify", siteLimit, async (_req, res) =>
   res.json({ site: await ownSites.verify(actor(res)) }),
 );
-api.delete("/api/me/site", (_req, res) => res.json(ownSites.remove(actor(res))));
+// A site stops being a brand, media or place when it stops proving its domain.
+api.delete("/api/me/site", (_req, res) => {
+  const removed = ownSites.remove(actor(res));
+  store.transaction(() => {
+    sites.erase(actor(res).userId);
+    mall.closeShop(actor(res).userId);
+  });
+  shopFeeds.delete(actor(res).userId);
+  res.json(removed);
+});
 // Whether a profile is a website right now. Answers are kept a minute so visits don't hammer it.
 const siteSeen = new Map<string, { at: number; status: Awaited<ReturnType<typeof siteStatus>> }>();
 api.get("/api/profiles/:ownerId/site", frameLimit, async (req, res) => {

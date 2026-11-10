@@ -355,3 +355,51 @@ export function seedStamps(service: SocialService) {
     store.put("system", "seed-stamps-v1", { complete: true });
   });
 }
+
+/**
+ * Something fresh for the feed's surprise cards: Maya made her version of one of Alex's posts,
+ * Leo made his version of Ines's track night, and Nadia just joined Maya's tempo run, which Alex
+ * is in. Runs once.
+ */
+export function seedSurprises(service: SocialService) {
+  const store = service.store;
+  if (store.get("system", "seed-surprises-v1")) return;
+  const posts = store.all<Publication>("post");
+  const alexs = posts.find((p) => p.ownerId === "you" && !p.remixOf);
+  const track = posts.find(
+    (p) => p.ownerId === "ines" && p.metadata.title.startsWith("Track night"),
+  );
+  const tempo = posts.find((p) => p.ownerId === "maya" && p.metadata.title.startsWith("Tempo"));
+  const hoursAgo = (n: number) => new Date(Date.now() - n * 3_600_000).toISOString();
+  const version = (
+    owner: string,
+    rootId: string,
+    headline: string,
+    caption: string,
+    at: string,
+  ) => {
+    if (!store.get("user", owner)) return;
+    const built = buildPost(startPostDesign("poster", { headline, motion: true }));
+    const actor = { userId: owner };
+    const draft = service.createDraft(
+      actor,
+      { package: built.package, metadata: { ...built.metadata, caption, contributors: [] } },
+      rootId,
+    );
+    const post = service.publish(actor, draft.id, draft.revision);
+    const stored = store.get<Publication>("post", post.id);
+    if (stored) store.put("post", post.id, { ...stored, createdAt: at });
+  };
+  if (alexs) version("maya", alexs.id, "My take, *same idea*", "Had to make my own.", hoursAgo(3));
+  if (track)
+    version("leo", track.id, "Slow lane, *easy 5K*", "Easy 5K crew, join me.", hoursAgo(6));
+  store.transaction(() => {
+    if (tempo && store.get("user", "nadia") && store.get(`rsvp`, `${tempo.id}:you`))
+      store.put("rsvp", `${tempo.id}:nadia`, {
+        postId: tempo.id,
+        userId: "nadia",
+        at: hoursAgo(5),
+      });
+    store.put("system", "seed-surprises-v1", { complete: true });
+  });
+}

@@ -15,6 +15,10 @@ export type SideTag = {
   side?: { id: string; name: string; accent: string } | undefined;
   /** The writer also shares it to Everyday. */
   shared?: boolean | undefined;
+  /** Set when the writer is a website account: a brand, a media outlet or a place. */
+  siteKind?: "brand" | "media" | "place" | undefined;
+  /** A site you don't follow, shown because people you may know saved or remade it. */
+  rising?: boolean | undefined;
 };
 export const labels: Record<string, string> = {
   scrapbook: "Scrapbook",
@@ -22,4 +26,9 @@ export const labels: Record<string, string> = {
   collaborative: "Made together",
   photo: "Photo gallery",
   custom: "Something different",
+};
+export const siteKindLabels: Record<"brand" | "media" | "place", string> = {
+  brand: "Brand",
+  media: "Media",
+  place: "Place",
 };

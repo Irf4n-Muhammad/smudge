@@ -37,7 +37,7 @@ test("anyone makes their own version of a fill-in format from a form, without th
     );
     await page.waitForTimeout(500);
     await page.screenshot({ path: "test-results/quiz-feed-cover.png" });
-    await card.getByRole("button", { name: "Use format" }).click();
+    await card.getByRole("button", { name: "Make your version" }).click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByLabel("Clue 1 (emoji)")).toHaveValue("☔️🎤💃");

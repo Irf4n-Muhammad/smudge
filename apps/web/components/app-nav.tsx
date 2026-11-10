@@ -7,7 +7,6 @@ import {
   Gift,
   Globe,
   IdCard,
-  Layers,
   LogIn,
   LogOut,
   Palette,
@@ -34,7 +33,6 @@ export type MoreKey =
   | "who"
   | "card"
   | "account"
-  | "studio"
   | "moderation"
   | "moment"
   | "moments"
@@ -50,7 +48,6 @@ export function moreItems(
     ["decor", Palette, "Themes"],
     ["who", BadgeCheck, "Who you are"],
     ["card", IdCard, "Share card"],
-    ["studio", Layers, "My studio"],
     ["moments", CalendarDays, "Moments"],
     ["moment", Gift, "Share a milestone"],
     ["import", Globe, "Import a website"],

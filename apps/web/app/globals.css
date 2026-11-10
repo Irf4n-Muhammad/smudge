@@ -605,10 +605,20 @@ button:hover {
 .action-button.saved {
   color: var(--accent);
 }
+/* The way in to making your own version: the one filled action, so it reads as an invitation. */
 .reuse-action {
-  font-size: 9px;
-  color: #9b9e91;
+  gap: 5px;
   margin-left: 3px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.action-button.reuse-action:hover {
+  color: #fff;
+  filter: brightness(1.05);
 }
 .post-caption {
   font-size: 11px;
@@ -820,43 +830,6 @@ button:hover {
 .follow-button.is-following {
   background: #eeeee6;
   border-color: #eeeee6;
-}
-.ai-card {
-  margin-top: 29px;
-  padding-top: 25px;
-  border-top: 1px solid var(--line);
-  display: flex;
-  gap: 11px;
-}
-.ai-icon {
-  background: #f0eadf;
-  color: #b19972;
-  height: 32px;
-  width: 32px;
-  display: grid;
-  place-items: center;
-  flex: none;
-  border-radius: 7px;
-}
-.ai-card h3 {
-  font-size: 10px;
-  font-weight: 600;
-  margin: 2px 0 7px;
-}
-.ai-card p {
-  font-size: 10px;
-  line-height: 1.8;
-  color: #999e90;
-}
-.ai-card button {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  color: #a9865d;
-  margin: 11px 0 0;
-  padding: 0;
-  text-align: left;
 }
 .side-footer {
   display: flex;
@@ -1463,7 +1436,7 @@ button:hover {
     gap: 17px;
   }
   .reuse-action span {
-    font-size: 8px;
+    font-size: 11px;
   }
   .mobile-nav {
     position: fixed;

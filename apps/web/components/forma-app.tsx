@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   Home,
   Compass,
@@ -14,19 +14,19 @@ import {
   Feather,
   Layers,
   ChevronDown,
-  Sparkles,
   RefreshCw,
   X,
   Gift,
   Bell,
   MessageCircle,
   Menu,
-  Globe,
   UserPlus,
   LogIn,
   LogOut,
   Shapes,
+  ShoppingBag,
 } from "lucide-react";
+import { MallPage } from "./mall";
 import { AccountSwitch, MoreMenu } from "./app-nav";
 import type { MoreKey } from "./app-nav";
 import { MessagesPanel, ModerationPanel, NotificationsPanel, PeoplePanel } from "./community";
@@ -70,6 +70,7 @@ import { SeasonLayer } from "./season";
 import { AmbientLight } from "./gallery";
 import { Setup } from "./setup";
 import { FriendsNow } from "./friends-now";
+import { SURPRISE_EVERY, SurpriseCard, useSurprises } from "./feed-surprise";
 import { SideHome, SideResults, SidesBar, SidesPage } from "./sides";
 import type { SidesView } from "../../../packages/contracts/src/sides";
 import { EVERYDAY } from "../../../packages/contracts/src/sides";
@@ -88,7 +89,6 @@ export function FormaApp() {
   const [toast, setToast] = useState(""),
     [studio, setStudio] = useState(false),
     [activeDraft, setActiveDraft] = useState<string | undefined>(),
-    [connect, setConnect] = useState(false),
     [profile, setProfile] = useState<string | null>(null),
     [momentOpen, setMomentOpen] = useState(false),
     [importOpen, setImportOpen] = useState(false),
@@ -388,6 +388,8 @@ export function FormaApp() {
     notify("You are logged out.");
   }
   const production = auth?.mode === "production";
+  // A card between posts, now and then, about what people you know just did that touches you.
+  const surprises = useSurprises(!!boot && (view === "home" || view === "following"), posts);
   if (auth && !auth.signedIn)
     return (
       <>
@@ -447,6 +449,7 @@ export function FormaApp() {
     ["home", Home, "Home"],
     ["explore", Search, "Search"],
     ["sides", Shapes, "Sides"],
+    ["mall", ShoppingBag, "Mall"],
     ["messages", MessageCircle, "Messages"],
     ["notifications", Bell, "Notifications"],
     ["create", Plus, "Create"],
@@ -487,7 +490,6 @@ export function FormaApp() {
   function pickMore(key: MoreKey) {
     setMore(false);
     if (key === "card") navigate("sides");
-    else if (key === "studio") void create();
     else if (key === "moment") setMomentOpen(true);
     else if (key === "moments") window.location.assign("/m");
     else if (key === "import") setImportOpen(true);
@@ -589,7 +591,7 @@ export function FormaApp() {
         </div>
       )}
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        {["home", "explore", "create", "sides", "profile"]
+        {["home", "explore", "create", "mall", "profile"]
           .map((k) => mainTabs.find(([key]) => key === k)!)
           .map(([key, Icon, label]) => {
             const I = Icon as typeof Home;
@@ -879,6 +881,15 @@ export function FormaApp() {
                     setProfile(id);
                     setView("profile");
                   }}
+                  onAsk={(question) =>
+                    void api<DraftView>("/asks", { question: question.slice(0, 88) }).then(
+                      (d) => {
+                        setEditingPost(false);
+                        setPostEditor({ draftId: d.id });
+                      },
+                      (e: Error) => notify(e.message),
+                    )
+                  }
                 />
               </>
             ) : view === "notifications" && boot ? (
@@ -905,6 +916,15 @@ export function FormaApp() {
                 <ModerationPanel notify={notify} />
                 <ThemeReviews notify={notify} />
               </>
+            ) : view === "mall" && boot ? (
+              <MallPage
+                meId={boot.actor.userId}
+                notify={notify}
+                onOpenUser={(id) => {
+                  setProfile(id);
+                  setView("profile");
+                }}
+              />
             ) : view === "sides" && boot ? (
               <SidesPage
                 sides={boot.sides}
@@ -1057,16 +1077,6 @@ export function FormaApp() {
                         <Gift size={15} /> Moment
                       </button>
                     )}
-                    {!inSide && (
-                      <button
-                        className="quiet-button composer-import"
-                        aria-label="Import a website"
-                        title="Import a website"
-                        onClick={() => setImportOpen(true)}
-                      >
-                        <Globe size={15} /> Website
-                      </button>
-                    )}
                     <button
                       className="composer-plus"
                       aria-label="Create a post"
@@ -1153,44 +1163,59 @@ export function FormaApp() {
                   )}
                 <div className="post-list">
                   {boot &&
-                    visible.map((post, index) => (
-                      <PostCard
-                        key={`${boot.actor.userId}:${post.id}`}
-                        post={post}
-                        boot={boot}
-                        onRefresh={async () => {
-                          await refresh();
-                          if (view === "explore") await loadExplore(exploreQuery);
-                          if (view === "format" && formatPage) await loadFormat(formatPage.rootId);
-                        }}
-                        notify={notify}
-                        onFollow={() => void follow(post.ownerId)}
-                        onProfile={() => openUser(post.ownerId)}
-                        onUser={openUser}
-                        onFormat={(id) => void openFormat(id)}
-                        onEdit={() => void editPost(post.id)}
-                        openComments={view === "post"}
-                        onReuse={async () => {
-                          try {
-                            const { fields } = await api<{ fields: FillField[] }>(
-                              `/posts/${post.id}/fields`,
-                            );
-                            if (fields.length) setFilling({ post, fields });
-                            else await reuse(post.id);
-                          } catch (e) {
-                            notify((e as Error).message);
-                          }
-                        }}
-                        onSkip={() => {
-                          const next =
-                            document.querySelectorAll<HTMLElement>(".post-card")[index + 1];
-                          if (next) {
-                            next.scrollIntoView({ behavior: "smooth", block: "start" });
-                            next.focus({ preventScroll: true });
-                          } else notify("You’re all caught up. A good moment to make something.");
-                        }}
-                      />
-                    ))}
+                    visible.map((post, index) => {
+                      const surprise =
+                        (index + 1) % SURPRISE_EVERY === 0
+                          ? surprises[(index + 1) / SURPRISE_EVERY - 1]
+                          : undefined;
+                      return (
+                        <Fragment key={`${boot.actor.userId}:${post.id}`}>
+                          <PostCard
+                            post={post}
+                            boot={boot}
+                            onRefresh={async () => {
+                              await refresh();
+                              if (view === "explore") await loadExplore(exploreQuery);
+                              if (view === "format" && formatPage)
+                                await loadFormat(formatPage.rootId);
+                            }}
+                            notify={notify}
+                            onFollow={() => void follow(post.ownerId)}
+                            onProfile={() => openUser(post.ownerId)}
+                            onUser={openUser}
+                            onFormat={(id) => void openFormat(id)}
+                            onEdit={() => void editPost(post.id)}
+                            openComments={view === "post"}
+                            onReuse={async () => {
+                              try {
+                                const { fields } = await api<{ fields: FillField[] }>(
+                                  `/posts/${post.id}/fields`,
+                                );
+                                if (fields.length) setFilling({ post, fields });
+                                else await reuse(post.id);
+                              } catch (e) {
+                                notify((e as Error).message);
+                              }
+                            }}
+                            onSkip={() => {
+                              const next =
+                                document.querySelectorAll<HTMLElement>(".post-card")[index + 1];
+                              if (next) {
+                                next.scrollIntoView({ behavior: "smooth", block: "start" });
+                                next.focus({ preventScroll: true });
+                              } else
+                                notify("You’re all caught up. A good moment to make something.");
+                            }}
+                          />
+                          {surprise && (
+                            <SurpriseCard
+                              surprise={surprise}
+                              onOpen={() => openPost(surprise.postId)}
+                            />
+                          )}
+                        </Fragment>
+                      );
+                    })}
                 </div>
                 {!loading && visible.length > 0 && (
                   <footer className="feed-end">
@@ -1293,18 +1318,6 @@ export function FormaApp() {
                     </button>
                   </div>
                 ))}
-            </section>
-            <section className="ai-card">
-              <span className="ai-icon">
-                <Sparkles size={19} />
-              </span>
-              <div>
-                <h3>Your AI. Your imagination.</h3>
-                <p>Bring an idea to life with the AI you already use.</p>
-                <button onClick={() => (production ? create() : setConnect(true))}>
-                  Connect your creative tools <ArrowUpRight size={13} />
-                </button>
-              </div>
             </section>
             <footer className="side-footer">
               <span>Made for a little more expression.</span>
@@ -1438,40 +1451,6 @@ export function FormaApp() {
               notify("Password saved. Other devices were signed out.");
             }}
           />
-        </Dialog>
-      )}
-      {connect && (
-        <Dialog title="Bring your own imagination." onClose={() => setConnect(false)}>
-          <div className="connect-content">
-            <span className="connect-symbol">✳</span>
-            <p>
-              Smudge gives your AI the tools to make a real, interactive post. You keep using the AI
-              you already have.
-            </p>
-            <ol>
-              <li>Keep this local app running.</li>
-              <li>
-                Connect a local MCP client using the setup in <code>docs/mcp.md</code>.
-              </li>
-              <li>Ask it to create a draft, preview it here, then publish when you’re ready.</li>
-            </ol>
-            <div className="prompt-example">
-              “Make a notebook from my weekend photos. Let Maya add her memories, too.”
-            </div>
-            <p className="fineprint">
-              The MCP server works over local stdio. It acts as Alex’s demo account. A hosted
-              ChatGPT connection is not configured.
-            </p>
-            <button
-              className="primary"
-              onClick={() => {
-                setConnect(false);
-                create();
-              }}
-            >
-              Explore the studio <ArrowUpRight size={16} />
-            </button>
-          </div>
         </Dialog>
       )}
     </div>

@@ -6,6 +6,7 @@ import {
   Bell,
   Flag,
   MessageCircle,
+  MessageCircleQuestion,
   Search,
   Send,
   ShieldCheck,
@@ -148,6 +149,7 @@ function PersonRow({
             {person.followsYou ? " · Follows you" : ""}
             {person.mutuals ? ` · ${person.mutuals} you know follow` : ""}
           </small>
+          {person.why && <small className="person-why">{person.why}</small>}
         </span>
       </button>
       <div className="person-actions">
@@ -211,11 +213,14 @@ export function PeoplePanel({
   onMessage,
   onOpen,
   onFollowChanged,
+  onAsk,
 }: {
   notify: (m: string) => void;
   onMessage: (id: string) => void;
   onOpen: (id: string) => void;
   onFollowChanged: () => Promise<void> | void;
+  /** Turns the search into a question to the people you know. */
+  onAsk?: (question: string) => void;
 }) {
   const [query, setQuery] = useState(""),
     [results, setResults] = useState<PersonView[] | null>(null),
@@ -258,7 +263,7 @@ export function PeoplePanel({
         <Search size={17} />
         <input
           aria-label="Search people"
-          placeholder="Name or @handle"
+          placeholder="A name, or what they do: “photographer”, “Runners”"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -269,7 +274,16 @@ export function PeoplePanel({
           {results.length ? (
             <ul className="person-list">{results.map(row)}</ul>
           ) : (
-            <p className="fineprint">Nobody matches “{query}”.</p>
+            <p className="fineprint">Nobody matches “{query}” yet.</p>
+          )}
+          {onAsk && query.trim().length > 1 && (
+            <button className="ask-circle" onClick={() => onAsk(query.trim())}>
+              <MessageCircleQuestion size={17} />
+              <span>
+                <strong>Ask your people</strong>
+                <small>Post “{query.trim()}” as a question to the people you know</small>
+              </span>
+            </button>
           )}
         </div>
       )}
@@ -337,6 +351,8 @@ function describe(n: NotificationView) {
       return "wants to add you as their partner. Confirm it on Who you are.";
     case "gift":
       return "gave you a theme. It is waiting in Themes.";
+    case "voucher":
+      return "gave you something from your wishlist. Your voucher is in the Mall.";
     case "post-removed":
       return `Your post ${title} was removed for breaking the community rules.`;
     default:

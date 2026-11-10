@@ -21,6 +21,7 @@ import "./pages.css";
 import "./own-site.css";
 import "./frame.css";
 import "./code-editor.css";
+import "./mall.css";
 import { seasonScript } from "../components/season-script";
 
 export const metadata: Metadata = {

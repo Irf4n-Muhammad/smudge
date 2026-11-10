@@ -526,3 +526,26 @@
     font-size: 19px;
   }
 }
+.site-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--ink, #1b1b1b);
+  color: var(--paper, #fff);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+.rising-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, #e4572e) 14%, transparent);
+  color: var(--accent, #e4572e);
+  font-size: 10px;
+  font-weight: 600;
+}
